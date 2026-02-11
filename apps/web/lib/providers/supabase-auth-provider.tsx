@@ -22,7 +22,7 @@ interface AuthContextType {
   user: UserProfile | null;
   supabaseUser: User | null;
   isLoading: boolean;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string, userType?: 'coach' | 'client') => Promise<void>;
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
   verifyOTP: (email: string, token: string) => Promise<any>;
@@ -64,13 +64,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   // Listen for session expired events from axios interceptor
   useEffect(() => {
     const unsubscribe = authEvents.onSessionExpired(() => {
-      // Don't show dialog on auth pages - user is already trying to log in
-      const currentPath = pathnameRef.current;
-      if (currentPath?.startsWith('/auth') || currentPath?.startsWith('/client/')) {
-        return;
-      }
-      // Only show dialog if user was authenticated
-      if (wasAuthenticatedRef.current) {
+      // Only show dialog on protected routes and if user was authenticated
+      if (isOnProtectedRoute() && wasAuthenticatedRef.current) {
         setShowSessionExpiredDialog(true);
       }
     });
@@ -78,13 +73,19 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
+  // Helper to check if current path is a protected route (where session expired dialog should show)
+  const isOnProtectedRoute = () => {
+    const currentPath = pathnameRef.current;
+    const protectedPrefixes = ['/training', '/business', '/settings', '/onboarding', '/dashboard'];
+    return protectedPrefixes.some(prefix => currentPath?.startsWith(prefix));
+  };
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error?.message?.includes('Refresh Token') || error?.message?.includes('refresh_token')) {
-        // Only show dialog if not on auth pages
-        const currentPath = pathnameRef.current;
-        if (!currentPath?.startsWith('/auth') && !currentPath?.startsWith('/client/')) {
+        // Only show dialog on protected routes
+        if (isOnProtectedRoute()) {
           setShowSessionExpiredDialog(true);
         }
         setSupabaseUser(null);
@@ -104,8 +105,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
       // Handle token refresh errors
       if (event === 'TOKEN_REFRESHED' && !session) {
-        const currentPath = pathnameRef.current;
-        if (!currentPath?.startsWith('/auth') && !currentPath?.startsWith('/client/')) {
+        if (isOnProtectedRoute()) {
           setShowSessionExpiredDialog(true);
         }
         setSupabaseUser(null);
@@ -116,8 +116,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       // Handle sign out due to invalid session
       if (event === 'SIGNED_OUT' && wasAuthenticatedRef.current && !isSigningOutRef.current) {
         // User was signed out unexpectedly (likely due to invalid refresh token)
-        const currentPath = pathnameRef.current;
-        if (!currentPath?.startsWith('/auth') && !currentPath?.startsWith('/client/')) {
+        if (isOnProtectedRoute()) {
           setShowSessionExpiredDialog(true);
         }
       }
@@ -157,14 +156,14 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const isLoading = isAuthLoading || (!!supabaseUser && isProfileLoading);
   const user = userProfile || null;
 
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (email: string, password: string, name: string, userType: 'coach' | 'client' = 'coach') => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           name: name,
-          user_type: 'coach', // Default to coach for /auth registration
+          user_type: userType,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         },
         emailRedirectTo: `${window.location.origin}/auth/verify-email`,
@@ -312,8 +311,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       console.error('Error refreshing session:', error);
       // Check if it's a refresh token error
       if (error.message?.includes('Refresh Token') || error.message?.includes('refresh_token')) {
-        const currentPath = pathnameRef.current;
-        if (!currentPath?.startsWith('/auth') && !currentPath?.startsWith('/client/')) {
+        if (isOnProtectedRoute()) {
           setShowSessionExpiredDialog(true);
         }
         setSupabaseUser(null);

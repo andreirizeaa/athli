@@ -47,11 +47,11 @@ export function PackageCard({
       className={`flex flex-col rounded-xl border bg-card shadow-sm overflow-hidden max-w-[380px] w-full${!pkg.is_active ? ' opacity-60' : ''} ${className}`}
     >
       {/* Image */}
-      <div className="w-full aspect-[3/2] bg-muted">
+      <div className="w-full aspect-[3/2] bg-muted relative">
         <img
           src={pkg.image_url || DEFAULT_PACKAGE_IMAGE}
           alt=""
-          className="w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-contain"
         />
       </div>
 

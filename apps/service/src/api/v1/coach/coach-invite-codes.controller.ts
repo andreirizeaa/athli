@@ -43,28 +43,39 @@ export const coachInviteCodesController = {
             return success(res, { data: { code: existing.code } });
         }
 
-        const newCode = generateCode(12);
+        // Try to insert with retry on code collision
+        const maxRetries = 5;
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            const newCode = generateCode(12);
 
-        const { error: insertError } = await supabase
-            .from('coach_unique_codes')
-            .insert({
-                coach_id: coachId,
-                code: newCode,
-                onboarding_id: onboardingId || null,
-            });
+            const { error: insertError } = await supabase
+                .from('coach_unique_codes')
+                .insert({
+                    coach_id: coachId,
+                    code: newCode,
+                    onboarding_id: onboardingId || null,
+                });
 
-        if (insertError) {
-            // Race condition: code might have been created by another request
+            if (!insertError) {
+                return success(res, { data: { code: newCode } });
+            }
+
+            // Handle duplicate key violation
             if (insertError.code === '23505') {
+                // Check if it's because this coach+onboarding already has a code (race condition)
                 const { data: retryData } = await query.maybeSingle();
                 if (retryData) {
                     return success(res, { data: { code: retryData.code } });
                 }
+                // Otherwise it's a code collision, retry with new code
+                continue;
             }
+
+            // Other error, fail immediately
             return badRequest(res, { message: 'Failed to create invite code' });
         }
 
-        success(res, { data: { code: newCode } });
+        return badRequest(res, { message: 'Failed to generate unique code after multiple attempts' });
     },
 
     /**

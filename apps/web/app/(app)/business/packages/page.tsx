@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus, Trash2, X, Loader2, FileText, ExternalLink, MoreHorizontal, Share2, Archive, ArchiveRestore } from 'lucide-react';
+import { Plus, X, Loader2, FileText, MoreHorizontal, Share2, Archive, ArchiveRestore } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +20,6 @@ import {
 import { AddPackageSidePanel, type PackageFormData } from '@/components/business/add-package-side-panel';
 import { PackageRedemptionsDialog } from '@/components/business/package-redemptions-dialog';
 import { useStripeConnection, useCoachPackages, useAllPackageStats } from '@/hooks/use-coach-packages';
-import { usePlatformSettings } from '@/hooks/use-platform-settings';
 import { DEFAULT_PACKAGE_IMAGE } from '@/lib/constants/package-presets';
 import type { CoachPackage } from '@athli/shared-types';
 
@@ -42,11 +40,9 @@ const PackagesPage = () => {
     isOnboarding,
     createPackage,
     updatePackage,
-    deletePackage,
     togglePackage,
   } = useCoachPackages();
 
-  const { uniqueCode } = usePlatformSettings();
   const { data: packageStats } = useAllPackageStats();
 
   const isConnected = stripeAccount?.onboarding_complete && stripeAccount?.charges_enabled;
@@ -56,8 +52,6 @@ const PackagesPage = () => {
   const [editingPackage, setEditingPackage] = useState<CoachPackage | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false);
-  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
-  const [packageToDelete, setPackageToDelete] = useState<string | null>(null);
   const [redemptionsPackage, setRedemptionsPackage] = useState<CoachPackage | null>(null);
 
   const filteredPackages = packages.filter((p) => showArchived ? !p.is_active : p.is_active);
@@ -81,11 +75,6 @@ const PackagesPage = () => {
     }
   };
 
-  const handleDeletePackage = async (id: string) => {
-    await deletePackage(id);
-    toast.success(t('business.packages.toast.deleted'));
-  };
-
   const handleToggle = async (pkg: CoachPackage, field: 'is_active' | 'is_visible', value: boolean) => {
     try {
       await togglePackage({ id: pkg.id, field, value });
@@ -105,16 +94,6 @@ const PackagesPage = () => {
     }
   };
 
-  const handleBulkDelete = async () => {
-    try {
-      await Promise.all(Array.from(selectedIds).map((id) => deletePackage(id)));
-      toast.success(t('general.deleteSuccessCount', { count: selectedIds.size, item: 'packages' }));
-      setSelectedIds(new Set());
-    } catch {
-      toast.error(t('general.deleteError'));
-    }
-  };
-
   const handleBulkArchiveToggle = async () => {
     try {
       const newIsActive = showArchived; // archived → make active, active → make inactive
@@ -130,18 +109,6 @@ const PackagesPage = () => {
       setSelectedIds(new Set());
     } catch {
       toast.error('Failed to update packages');
-    }
-  };
-
-  const handleDeleteSingle = async () => {
-    if (!packageToDelete) return;
-    try {
-      const pkg = packages.find((p) => p.id === packageToDelete);
-      await deletePackage(packageToDelete);
-      toast.success(pkg ? t('general.deleteSuccessName', { name: pkg.name }) : t('business.packages.toast.deleted'));
-      setPackageToDelete(null);
-    } catch {
-      toast.error(t('general.deleteError'));
     }
   };
 
@@ -350,16 +317,6 @@ const PackagesPage = () => {
                   </>
                 )}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPackageToDelete(row.id);
-                }}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="h-4 w-4 mr-2 text-destructive" />
-                {t('general.delete')}
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -442,22 +399,10 @@ const PackagesPage = () => {
           </Tabs>
         )}
         filterBarActions={(
-          <div className="flex items-center gap-2">
-            {uniqueCode && (
-              <Button
-                variant="outline"
-                onClick={() => window.open(`/${uniqueCode}/packages`, '_blank')}
-                className="gap-2"
-              >
-                <ExternalLink className="size-4" />
-                <span>View Packages</span>
-              </Button>
-            )}
-            <Button onClick={() => setIsAddOpen(true)} className="gap-2" disabled={!isConnected}>
-              <Plus className="size-4" />
-              <span>{t('business.packages.addPackage')}</span>
-            </Button>
-          </div>
+          <Button onClick={() => setIsAddOpen(true)} className="gap-2" disabled={!isConnected}>
+            <Plus className="size-4" />
+            <span>{t('business.packages.addPackage')}</span>
+          </Button>
         )}
         selectionActions={
           selectedIds.size > 0 ? (
@@ -469,14 +414,6 @@ const PackagesPage = () => {
               <Button variant="ghost" onClick={handleBulkArchiveToggle} className="gap-2">
                 {showArchived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
                 <span>{showArchived ? t('business.packages.actions.unarchive') : t('business.packages.actions.archive')}</span>
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setIsBulkDeleteOpen(true)}
-                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="size-4" />
-                <span>{t('general.delete')}</span>
               </Button>
             </div>
           ) : undefined
@@ -512,26 +449,9 @@ const PackagesPage = () => {
             if (!open) setEditingPackage(null);
           }}
           onSave={handleSavePackage}
-          onDelete={handleDeletePackage}
           package={editingPackage}
         />
       )}
-
-      <ConfirmDeleteDialog
-        open={isBulkDeleteOpen}
-        onOpenChange={setIsBulkDeleteOpen}
-        onConfirm={handleBulkDelete}
-        count={selectedIds.size}
-        itemType="packages"
-      />
-
-      <ConfirmDeleteDialog
-        open={packageToDelete !== null}
-        onOpenChange={(open) => !open && setPackageToDelete(null)}
-        onConfirm={handleDeleteSingle}
-        itemName={packages.find((p) => p.id === packageToDelete)?.name}
-        itemType="package"
-      />
 
       <PackageRedemptionsDialog
         open={redemptionsPackage !== null}

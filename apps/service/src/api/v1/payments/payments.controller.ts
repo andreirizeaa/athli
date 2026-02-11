@@ -16,6 +16,7 @@ import {
   syncProductsFromStripe,
 } from '../../../services/stripe-sync.service';
 import Stripe from 'stripe';
+import { sequenceExecutor } from '../../../services/sequence-executor.service';
 
 export const paymentsController = {
   // ─── Connect ────────────────────────────────────────────
@@ -329,83 +330,71 @@ export const paymentsController = {
     const supabase = getSupabaseClient();
 
     try {
-      // Try with joins first
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*, client:user_profiles!payments_client_id_fkey(name, email), package:coach_packages!payments_package_id_fkey(name)')
+      // Fetch billing activity
+      const { data: activities, error: activitiesError } = await supabase
+        .from('billing_activity')
+        .select('*')
         .eq('coach_id', userId)
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(500);
 
-      if (error) {
-        // Fallback without joins
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('payments')
-          .select('*')
-          .eq('coach_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(200);
-
-        if (fallbackError) {
-          return internalError(res, { message: 'Failed to fetch payment activity' });
-        }
-
-        const rows = (fallbackData || []).map((p: any) => ({
-          id: p.id,
-          client_id: p.client_id,
-          client_name: null,
-          client_email: null,
-          package_id: p.package_id,
-          package_name: null,
-          amount_cents: p.amount_cents,
-          currency: p.currency,
-          status: p.status,
-          failure_reason: p.failure_reason,
-          payment_type: 'one_time' as const,
-          paid_at: p.paid_at,
-          created_at: p.created_at,
-        }));
-
-        return success(res, {
-          message: 'Payment activity retrieved',
-          data: { activity: rows },
-        });
+      if (activitiesError) {
+        return internalError(res, { message: 'Failed to fetch billing activity' });
       }
 
-      // Get active subscriptions to determine payment_type
-      const { data: activeSubs } = await supabase
-        .from('client_subscriptions')
-        .select('client_id, package_id')
-        .eq('coach_id', userId)
-        .eq('status', 'active');
+      // Extract unique client and package IDs
+      const clientIds = [...new Set((activities || []).map(a => a.client_id).filter(Boolean))];
+      const packageIds = [...new Set((activities || []).map(a => a.package_id).filter(Boolean))];
 
-      const subSet = new Set(
-        (activeSubs || []).map(s => `${s.client_id}:${s.package_id}`)
-      );
+      // Batch fetch client profiles
+      const clientMap: Record<string, { name: string | null; email: string | null; avatar_url: string | null }> = {};
+      if (clientIds.length > 0) {
+        const { data: clients } = await supabase
+          .from('user_profiles')
+          .select('id, name, email, profile_picture_url')
+          .in('id', clientIds);
 
-      const rows = (data || []).map((p: any) => ({
-        id: p.id,
-        client_id: p.client_id,
-        client_name: p.client?.name || null,
-        client_email: p.client?.email || null,
-        package_id: p.package_id,
-        package_name: p.package?.name || null,
-        amount_cents: p.amount_cents,
-        currency: p.currency,
-        status: p.status,
-        failure_reason: p.failure_reason,
-        payment_type: subSet.has(`${p.client_id}:${p.package_id}`) ? 'subscription' as const : 'one_time' as const,
-        paid_at: p.paid_at,
-        created_at: p.created_at,
+        for (const c of clients || []) {
+          clientMap[c.id] = { name: c.name, email: c.email, avatar_url: c.profile_picture_url };
+        }
+      }
+
+      // Batch fetch packages
+      const packageMap: Record<string, string> = {};
+      if (packageIds.length > 0) {
+        const { data: packages } = await supabase
+          .from('coach_packages')
+          .select('id, name')
+          .in('id', packageIds);
+
+        for (const p of packages || []) {
+          packageMap[p.id] = p.name;
+        }
+      }
+
+      const rows = (activities || []).map((a: any) => ({
+        id: a.id,
+        client_id: a.client_id,
+        client_name: clientMap[a.client_id]?.name || null,
+        client_email: clientMap[a.client_id]?.email || null,
+        client_avatar_url: clientMap[a.client_id]?.avatar_url || null,
+        package_id: a.package_id,
+        package_name: packageMap[a.package_id] || null,
+        event_type: a.event_type,
+        description: a.description,
+        amount_cents: a.amount_cents || 0,
+        currency: a.currency || 'usd',
+        metadata: a.metadata || {},
+        created_at: a.created_at,
       }));
 
       success(res, {
-        message: 'Payment activity retrieved',
+        message: 'Billing activity retrieved',
         data: { activity: rows },
       });
     } catch (error: any) {
-      logger.error({ err: error.message }, 'Failed to fetch payment activity');
-      return internalError(res, { message: 'Failed to fetch payment activity' });
+      logger.error({ err: error.message }, 'Failed to fetch billing activity');
+      return internalError(res, { message: 'Failed to fetch billing activity' });
     }
   },
 
@@ -798,6 +787,147 @@ export const paymentsController = {
       });
     } catch (error: any) {
       return internalError(res, { message: 'An unexpected error occurred' });
+    }
+  },
+
+  // ─── Client Self-Service ────────────────────────────────
+
+  // Get packages for the authenticated client (self-service)
+  getMyPackages: async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    logger.info({ userId }, '[getMyPackages] Fetching packages for client');
+
+    const supabase = getSupabaseClient();
+
+    try {
+      // Fetch package assignments with package details and subscription info
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('client_package_assignments')
+        .select(`
+          id,
+          coach_id,
+          package_id,
+          assigned_at,
+          is_active,
+          package:coach_packages(
+            id,
+            name,
+            description,
+            amount_cents,
+            currency,
+            interval,
+            interval_count,
+            image_url,
+            features
+          )
+        `)
+        .eq('client_id', userId)
+        .eq('is_active', true);
+
+      logger.info({ userId, assignmentsCount: assignments?.length || 0, error: assignmentsError?.message }, '[getMyPackages] Query result');
+
+      if (assignmentsError) {
+        logger.error({ err: assignmentsError.message }, 'Failed to fetch client packages');
+        return internalError(res, { message: 'Failed to fetch packages' });
+      }
+
+      // Fetch subscriptions for this client
+      const { data: subscriptions, error: subscriptionsError } = await supabase
+        .from('client_subscriptions')
+        .select('*')
+        .eq('client_id', userId);
+
+      if (subscriptionsError) {
+        logger.warn({ err: subscriptionsError.message }, 'Failed to fetch subscriptions');
+      }
+
+      // Merge subscription info into assignments
+      const packagesWithSubscriptions = (assignments || []).map((assignment: any) => {
+        const subscription = (subscriptions || []).find(
+          (s: any) => s.package_id === assignment.package_id && s.coach_id === assignment.coach_id
+        );
+        return {
+          ...assignment,
+          subscription: subscription || null,
+        };
+      });
+
+      success(res, {
+        message: 'Packages retrieved',
+        data: { packages: packagesWithSubscriptions },
+      });
+    } catch (error: any) {
+      logger.error({ err: error.message }, 'Error fetching client packages');
+      return internalError(res, { message: 'An unexpected error occurred' });
+    }
+  },
+
+  // Create Stripe Customer Portal session for a client
+  createBillingPortalSession: async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    const { subscriptionId } = req.body;
+    if (!subscriptionId) {
+      return badRequest(res, { message: 'subscriptionId is required' });
+    }
+
+    const supabase = getSupabaseClient();
+    const stripe = getStripeClient();
+
+    try {
+      // Get the subscription to find stripe_customer_id and coach's stripe account
+      const { data: subscription, error: subError } = await supabase
+        .from('client_subscriptions')
+        .select('stripe_customer_id, coach_id')
+        .eq('id', subscriptionId)
+        .eq('client_id', userId)
+        .single();
+
+      if (subError || !subscription) {
+        return notFound(res, { message: 'Subscription not found' });
+      }
+
+      // Get the coach's Stripe connected account
+      const { data: stripeAccount, error: accountError } = await supabase
+        .from('coach_stripe_accounts')
+        .select('stripe_account_id')
+        .eq('coach_id', subscription.coach_id)
+        .single();
+
+      if (accountError || !stripeAccount?.stripe_account_id) {
+        return badRequest(res, { message: 'Coach Stripe account not found' });
+      }
+
+      // Get the web app URL for return
+      const webAppUrl = env.WEB_APP_URL;
+
+      // Create billing portal session on the connected account
+      const session = await stripe.billingPortal.sessions.create(
+        {
+          customer: subscription.stripe_customer_id,
+          return_url: webAppUrl,
+        },
+        { stripeAccount: stripeAccount.stripe_account_id }
+      );
+
+      logger.info({ userId, subscriptionId }, 'Billing portal session created');
+
+      success(res, {
+        message: 'Billing portal session created',
+        data: { url: session.url },
+      });
+    } catch (error: any) {
+      logger.error({ err: error.message }, 'Failed to create billing portal session');
+      return internalError(res, { message: 'Failed to create billing portal session' });
     }
   },
 
@@ -1392,7 +1522,7 @@ export const paymentsController = {
       return;
     }
 
-    const { packageId, coachCode } = req.body;
+    const { packageId, coachCode, email: providedEmail } = req.body;
 
     if (!packageId || !coachCode) {
       return badRequest(res, { message: 'packageId and coachCode are required' });
@@ -1408,7 +1538,7 @@ export const paymentsController = {
 
       const { data: codeRow } = await supabase
         .from('coach_unique_codes')
-        .select('coach_id, onboarding_id, sequence_id')
+        .select('coach_id, onboarding_id')
         .eq('code', coachCode)
         .maybeSingle();
 
@@ -1459,6 +1589,20 @@ export const paymentsController = {
         return badRequest(res, { message: 'Package not synced to Stripe' });
       }
 
+      // Check if user already has an active assignment for this package
+      const { data: existingAssignment } = await supabase
+        .from('client_package_assignments')
+        .select('id, is_active')
+        .eq('coach_id', coachId)
+        .eq('client_id', userId)
+        .eq('package_id', packageId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (existingAssignment) {
+        return badRequest(res, { message: 'You already have access to this package' });
+      }
+
       // Get client email
       const { data: clientProfile } = await supabase
         .from('user_profiles')
@@ -1504,14 +1648,13 @@ export const paymentsController = {
         line_items: lineItems,
         success_url: `${webAppUrl}/auth/checkout/${coachCode}/${packageId}/complete?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${webAppUrl}/auth/checkout/${coachCode}/${packageId}`,
-        customer_email: clientProfile?.email,
+        customer_email: clientProfile?.email || providedEmail,
         metadata: {
           coach_id: coachId,
           client_id: userId,
           package_id: packageId,
           coach_code: coachCode,
           onboarding_id: codeRow?.onboarding_id || '',
-          sequence_id: codeRow?.sequence_id || '',
         },
         allow_promotion_codes: true,
       };
@@ -1661,6 +1804,220 @@ export const paymentsController = {
     }
   },
 
+  // ─── Public Checkout Session ────────────────────────────────────────────
+  // This endpoint allows authenticated users to create checkout sessions
+  // Security: Validates client exists, package is active, and checks for duplicates
+
+  createPublicCheckoutSession: async (req: Request, res: Response) => {
+    const { packageId, coachCode, clientId, email } = req.body;
+
+    // Validate required fields
+    if (!packageId || !coachCode) {
+      return badRequest(res, { message: 'packageId and coachCode are required' });
+    }
+
+    // clientId is required - we need to know who is purchasing
+    if (!clientId) {
+      return badRequest(res, { message: 'clientId is required' });
+    }
+
+    // Basic input validation
+    if (typeof packageId !== 'string' || packageId.length > 100) {
+      return badRequest(res, { message: 'Invalid packageId' });
+    }
+    if (typeof coachCode !== 'string' || coachCode.length > 50) {
+      return badRequest(res, { message: 'Invalid coachCode' });
+    }
+    if (typeof clientId !== 'string' || clientId.length > 100) {
+      return badRequest(res, { message: 'Invalid clientId' });
+    }
+    if (email && (typeof email !== 'string' || email.length > 255)) {
+      return badRequest(res, { message: 'Invalid email' });
+    }
+
+    const supabase = getSupabaseClient();
+    const stripe = getStripeClient();
+    const webAppUrl = env.WEB_APP_URL;
+
+    try {
+      // SECURITY: Verify the client exists in our database
+      const { data: clientProfile } = await supabase
+        .from('user_profiles')
+        .select('id, email, name')
+        .eq('id', clientId)
+        .maybeSingle();
+
+      if (!clientProfile) {
+        logger.warn({ clientId }, 'Public checkout attempted with non-existent client ID');
+        return badRequest(res, { message: 'Invalid client' });
+      }
+
+      // Look up coach by code
+      let coachId: string | null = null;
+      let codeRow: { coach_id: string; onboarding_id?: string } | null = null;
+
+      const { data: codeData } = await supabase
+        .from('coach_unique_codes')
+        .select('coach_id, onboarding_id')
+        .eq('code', coachCode)
+        .maybeSingle();
+
+      if (codeData) {
+        coachId = codeData.coach_id;
+        codeRow = codeData;
+      } else {
+        // Fallback: try coach_profiles_full view
+        const { data: profileMatch } = await supabase
+          .from('coach_profiles_full')
+          .select('id')
+          .eq('unique_code', coachCode.toUpperCase())
+          .maybeSingle();
+
+        if (profileMatch) {
+          coachId = profileMatch.id;
+        }
+      }
+
+      if (!coachId) {
+        return notFound(res, { message: 'Coach not found' });
+      }
+
+      // Get coach's Stripe account
+      const { data: stripeAccount } = await supabase
+        .from('coach_stripe_accounts')
+        .select('stripe_account_id, onboarding_complete, charges_enabled')
+        .eq('coach_id', coachId)
+        .maybeSingle();
+
+      if (!stripeAccount?.stripe_account_id || !stripeAccount.charges_enabled) {
+        return badRequest(res, { message: 'Coach has not set up payments' });
+      }
+
+      // Get the package
+      const { data: pkg } = await supabase
+        .from('coach_packages')
+        .select('*')
+        .eq('id', packageId)
+        .eq('coach_id', coachId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!pkg) {
+        return notFound(res, { message: 'Package not found or not available' });
+      }
+
+      if (!pkg.stripe_price_id) {
+        return badRequest(res, { message: 'Package not synced to Stripe' });
+      }
+
+      // Check if user already has an active assignment for this package
+      const { data: existingAssignment } = await supabase
+        .from('client_package_assignments')
+        .select('id, is_active')
+        .eq('coach_id', coachId)
+        .eq('client_id', clientId)
+        .eq('package_id', packageId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (existingAssignment) {
+        return badRequest(res, { message: 'You already have access to this package' });
+      }
+
+      // Build line items
+      const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+        {
+          price: pkg.stripe_price_id,
+          quantity: 1,
+        },
+      ];
+
+      // Add initial fee as a separate line item if applicable
+      if ((pkg.initial_fee_cents ?? 0) > 0) {
+        const initialFeePrice = await stripe.prices.create(
+          {
+            unit_amount: pkg.initial_fee_cents,
+            currency: pkg.currency,
+            product_data: {
+              name: `${pkg.name} - Initial Fee`,
+            },
+          },
+          { stripeAccount: stripeAccount.stripe_account_id }
+        );
+
+        lineItems.push({
+          price: initialFeePrice.id,
+          quantity: 1,
+        });
+      }
+
+      // Determine checkout mode
+      const mode: Stripe.Checkout.SessionCreateParams.Mode =
+        pkg.interval === 'one_time' ? 'payment' : 'subscription';
+
+      // Use provided email or client's email from profile
+      const customerEmail = email || clientProfile.email;
+
+      // Build session params
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
+        mode,
+        line_items: lineItems,
+        success_url: `${webAppUrl}/auth/checkout/${coachCode}/${packageId}/complete?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${webAppUrl}/auth/checkout/${coachCode}/${packageId}`,
+        customer_email: customerEmail,
+        metadata: {
+          coach_id: coachId,
+          client_id: clientId,
+          package_id: packageId,
+          coach_code: coachCode,
+          onboarding_id: codeRow?.onboarding_id || '',
+        },
+        allow_promotion_codes: true,
+      };
+
+      // Add free trial if applicable (only for subscriptions)
+      if (mode === 'subscription' && (pkg.free_trial_days ?? 0) > 0) {
+        sessionParams.subscription_data = {
+          trial_period_days: pkg.free_trial_days,
+          metadata: {
+            coach_id: coachId,
+            client_id: clientId,
+            package_id: packageId,
+          },
+        };
+      }
+
+      // Create checkout session on the connected account
+      const session = await stripe.checkout.sessions.create(
+        sessionParams,
+        { stripeAccount: stripeAccount.stripe_account_id }
+      );
+
+      // Create a pending payment record
+      await supabase
+        .from('payments')
+        .insert({
+          coach_id: coachId,
+          client_id: clientId,
+          package_id: packageId,
+          stripe_checkout_session_id: session.id,
+          amount_cents: pkg.amount_cents + (pkg.initial_fee_cents || 0),
+          currency: pkg.currency,
+          status: 'pending',
+        });
+
+      logger.info({ coachId, clientId, packageId }, 'Public checkout session created');
+
+      success(res, {
+        message: 'Checkout session created',
+        data: { url: session.url },
+      });
+    } catch (error: any) {
+      logger.error({ err: error.message, stack: error.stack }, 'Failed to create public checkout session');
+      return internalError(res, { message: 'Failed to create checkout session' });
+    }
+  },
+
   // ─── Webhook ────────────────────────────────────────────
 
   webhook: async (req: Request, res: Response) => {
@@ -1732,6 +2089,60 @@ export const paymentsController = {
     res.status(200).json({ received: true });
   },
 };
+
+// ─── Billing Activity Logging ────────────────────────────────
+
+interface BillingActivityLog {
+  coach_id: string;
+  client_id?: string | null;
+  package_id?: string | null;
+  subscription_id?: string | null;
+  event_type: string;
+  description: string;
+  amount_cents?: number | null;
+  currency?: string;
+  metadata?: Record<string, any>;
+  stripe_event_id?: string | null;
+}
+
+async function logBillingActivity(supabase: any, activity: BillingActivityLog) {
+  try {
+    await supabase.from('billing_activity').insert({
+      coach_id: activity.coach_id,
+      client_id: activity.client_id || null,
+      package_id: activity.package_id || null,
+      subscription_id: activity.subscription_id || null,
+      event_type: activity.event_type,
+      description: activity.description,
+      amount_cents: activity.amount_cents || null,
+      currency: activity.currency || 'usd',
+      metadata: activity.metadata || {},
+      stripe_event_id: activity.stripe_event_id || null,
+    });
+  } catch (err: any) {
+    logger.warn({ err: err.message, activity }, 'Failed to log billing activity');
+  }
+}
+
+// Helper to get client name for activity descriptions
+async function getClientName(supabase: any, clientId: string): Promise<string> {
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('name')
+    .eq('id', clientId)
+    .maybeSingle();
+  return data?.name || 'A client';
+}
+
+// Helper to get package name for activity descriptions
+async function getPackageName(supabase: any, packageId: string): Promise<string> {
+  const { data } = await supabase
+    .from('coach_packages')
+    .select('name')
+    .eq('id', packageId)
+    .maybeSingle();
+  return data?.name || 'a package';
+}
 
 // ─── Webhook Event Handlers ────────────────────────────────
 
@@ -1845,6 +2256,8 @@ async function handleCheckoutCompleted(event: Stripe.Event, supabase: any) {
   const session = event.data.object as Stripe.Checkout.Session;
   const metadata = session.metadata || {};
 
+  logger.info({ sessionId: session.id, mode: session.mode, metadata }, 'handleCheckoutCompleted called');
+
   if (session.mode === 'payment') {
     // One-time payment
     await supabase
@@ -1856,6 +2269,22 @@ async function handleCheckoutCompleted(event: Stripe.Event, supabase: any) {
       })
       .eq('stripe_checkout_session_id', session.id);
 
+    // Log billing activity for one-time payment
+    if (metadata.coach_id && metadata.client_id) {
+      const clientName = await getClientName(supabase, metadata.client_id);
+      const packageName = metadata.package_id ? await getPackageName(supabase, metadata.package_id) : 'a package';
+      await logBillingActivity(supabase, {
+        coach_id: metadata.coach_id,
+        client_id: metadata.client_id,
+        package_id: metadata.package_id || null,
+        event_type: 'payment_succeeded',
+        description: `${clientName} purchased ${packageName}`,
+        amount_cents: session.amount_total || 0,
+        currency: session.currency || 'usd',
+        stripe_event_id: event.id,
+      });
+    }
+
     logger.info({ sessionId: session.id }, 'Payment succeeded via checkout');
   } else if (session.mode === 'subscription') {
     // Subscription created
@@ -1863,7 +2292,7 @@ async function handleCheckoutCompleted(event: Stripe.Event, supabase: any) {
     const customerId = typeof session.customer === 'string' ? session.customer : null;
 
     if (subscriptionId && metadata.coach_id && metadata.client_id) {
-      await supabase
+      const { data: insertedSub } = await supabase
         .from('client_subscriptions')
         .insert({
           coach_id: metadata.coach_id,
@@ -1872,7 +2301,24 @@ async function handleCheckoutCompleted(event: Stripe.Event, supabase: any) {
           stripe_subscription_id: subscriptionId,
           stripe_customer_id: customerId || '',
           status: 'active',
-        });
+        })
+        .select('id')
+        .single();
+
+      // Log billing activity for subscription created
+      const clientName = await getClientName(supabase, metadata.client_id);
+      const packageName = metadata.package_id ? await getPackageName(supabase, metadata.package_id) : 'a package';
+      await logBillingActivity(supabase, {
+        coach_id: metadata.coach_id,
+        client_id: metadata.client_id,
+        package_id: metadata.package_id || null,
+        subscription_id: insertedSub?.id || null,
+        event_type: 'subscription_created',
+        description: `${clientName} subscribed to ${packageName}`,
+        amount_cents: session.amount_total || 0,
+        currency: session.currency || 'usd',
+        stripe_event_id: event.id,
+      });
 
       // Also mark the payment as succeeded
       if (metadata.payment_id) {
@@ -1887,6 +2333,123 @@ async function handleCheckoutCompleted(event: Stripe.Event, supabase: any) {
 
       logger.info({ sessionId: session.id, subscriptionId }, 'Subscription created via checkout');
     }
+  }
+
+  // Create coach-client assignment if needed
+  logger.info({ metadata }, 'Processing checkout completion - checking for assignment creation');
+
+  if (metadata.coach_id && metadata.client_id) {
+    // 0. Ensure client_profiles entry exists (required by FK on coach_client_assignments)
+    const { data: existingClientProfile } = await supabase
+      .from('client_profiles')
+      .select('client_id')
+      .eq('client_id', metadata.client_id)
+      .maybeSingle();
+
+    if (!existingClientProfile) {
+      const { error: clientProfileError } = await supabase
+        .from('client_profiles')
+        .insert({
+          client_id: metadata.client_id,
+          unit_system: 'metric',
+        });
+
+      if (clientProfileError && clientProfileError.code !== '23505') {
+        logger.error({ err: clientProfileError.message, clientId: metadata.client_id }, 'Failed to create client_profiles entry');
+      } else {
+        logger.info({ clientId: metadata.client_id }, 'Client profile created via checkout');
+      }
+    }
+
+    // 1. Coach-client relationship
+    const { data: existingAssignment, error: checkError } = await supabase
+      .from('coach_client_assignments')
+      .select('coach_id')
+      .eq('coach_id', metadata.coach_id)
+      .eq('client_id', metadata.client_id)
+      .maybeSingle();
+
+    if (checkError) {
+      logger.error({ err: checkError.message, coachId: metadata.coach_id, clientId: metadata.client_id }, 'Error checking existing coach-client assignment');
+    }
+
+    if (!existingAssignment) {
+      const { error: insertError } = await supabase
+        .from('coach_client_assignments')
+        .insert({
+          coach_id: metadata.coach_id,
+          client_id: metadata.client_id,
+          status: 'accepted',
+          category: 'online',
+          is_active: true,
+          connected_at: new Date().toISOString(),
+        });
+
+      if (insertError) {
+        logger.error({ err: insertError.message, coachId: metadata.coach_id, clientId: metadata.client_id }, 'Failed to create coach-client assignment');
+      } else {
+        logger.info({ coachId: metadata.coach_id, clientId: metadata.client_id }, 'Coach-client assignment created via checkout');
+      }
+    } else {
+      logger.info({ coachId: metadata.coach_id, clientId: metadata.client_id }, 'Coach-client assignment already exists');
+    }
+
+    // 2. Client-package assignment (if package_id exists)
+    if (metadata.package_id) {
+      const { data: existingPkgAssignment, error: pkgCheckError } = await supabase
+        .from('client_package_assignments')
+        .select('id')
+        .eq('coach_id', metadata.coach_id)
+        .eq('client_id', metadata.client_id)
+        .eq('package_id', metadata.package_id)
+        .maybeSingle();
+
+      if (pkgCheckError) {
+        logger.error({ err: pkgCheckError.message, coachId: metadata.coach_id, clientId: metadata.client_id, packageId: metadata.package_id }, 'Error checking existing package assignment');
+      }
+
+      if (!existingPkgAssignment) {
+        const { error: pkgInsertError } = await supabase
+          .from('client_package_assignments')
+          .insert({
+            coach_id: metadata.coach_id,
+            client_id: metadata.client_id,
+            package_id: metadata.package_id,
+            is_active: true,
+          });
+
+        if (pkgInsertError) {
+          logger.error({ err: pkgInsertError.message, coachId: metadata.coach_id, clientId: metadata.client_id, packageId: metadata.package_id }, 'Failed to create client-package assignment');
+        } else {
+          logger.info({ coachId: metadata.coach_id, clientId: metadata.client_id, packageId: metadata.package_id }, 'Client-package assignment created via checkout');
+        }
+      } else {
+        logger.info({ coachId: metadata.coach_id, clientId: metadata.client_id, packageId: metadata.package_id }, 'Client-package assignment already exists');
+      }
+
+      // 3. Execute package sequence if one is assigned
+      const { data: pkg } = await supabase
+        .from('coach_packages')
+        .select('sequence_id')
+        .eq('id', metadata.package_id)
+        .single();
+
+      if (pkg?.sequence_id) {
+        logger.info({ coachId: metadata.coach_id, clientId: metadata.client_id, packageId: metadata.package_id, sequenceId: pkg.sequence_id }, 'Executing package sequence');
+
+        // Fire-and-forget sequence execution
+        sequenceExecutor.execute({
+          coachId: metadata.coach_id,
+          clientId: metadata.client_id,
+          packageId: metadata.package_id,
+          sequenceId: pkg.sequence_id,
+        }).catch(err => {
+          logger.error({ err: err.message, coachId: metadata.coach_id, clientId: metadata.client_id, packageId: metadata.package_id, sequenceId: pkg.sequence_id }, 'Sequence execution failed');
+        });
+      }
+    }
+  } else {
+    logger.warn({ metadata }, 'Missing coach_id or client_id in checkout metadata - cannot create assignments');
   }
 }
 
@@ -1922,10 +2485,35 @@ async function handleChargeRefunded(event: Stripe.Event, supabase: any) {
   const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : null;
 
   if (paymentIntentId) {
+    // Get payment data for activity logging
+    const { data: payment } = await supabase
+      .from('payments')
+      .select('coach_id, client_id, package_id, amount_cents, currency')
+      .eq('stripe_payment_intent_id', paymentIntentId)
+      .maybeSingle();
+
     await supabase
       .from('payments')
       .update({ status: 'refunded' })
       .eq('stripe_payment_intent_id', paymentIntentId);
+
+    // Log billing activity
+    if (payment) {
+      const clientName = await getClientName(supabase, payment.client_id);
+      const packageName = payment.package_id ? await getPackageName(supabase, payment.package_id) : 'a purchase';
+      const refundAmount = charge.amount_refunded || payment.amount_cents;
+
+      await logBillingActivity(supabase, {
+        coach_id: payment.coach_id,
+        client_id: payment.client_id,
+        package_id: payment.package_id,
+        event_type: 'refund_issued',
+        description: `Refund issued to ${clientName} for ${packageName}`,
+        amount_cents: refundAmount,
+        currency: payment.currency || 'usd',
+        stripe_event_id: event.id,
+      });
+    }
 
     logger.info({ paymentIntentId }, 'Payment refunded');
   }
@@ -1936,10 +2524,35 @@ async function handleDisputeCreated(event: Stripe.Event, supabase: any) {
   const paymentIntentId = typeof dispute.payment_intent === 'string' ? dispute.payment_intent : null;
 
   if (paymentIntentId) {
+    // Get payment data for activity logging
+    const { data: payment } = await supabase
+      .from('payments')
+      .select('coach_id, client_id, package_id, amount_cents, currency')
+      .eq('stripe_payment_intent_id', paymentIntentId)
+      .maybeSingle();
+
     await supabase
       .from('payments')
       .update({ status: 'disputed' })
       .eq('stripe_payment_intent_id', paymentIntentId);
+
+    // Log billing activity
+    if (payment) {
+      const clientName = await getClientName(supabase, payment.client_id);
+      const packageName = payment.package_id ? await getPackageName(supabase, payment.package_id) : 'a purchase';
+
+      await logBillingActivity(supabase, {
+        coach_id: payment.coach_id,
+        client_id: payment.client_id,
+        package_id: payment.package_id,
+        event_type: 'dispute_created',
+        description: `${clientName} disputed payment for ${packageName}`,
+        amount_cents: dispute.amount || payment.amount_cents,
+        currency: payment.currency || 'usd',
+        metadata: { reason: dispute.reason },
+        stripe_event_id: event.id,
+      });
+    }
 
     logger.info({ paymentIntentId }, 'Payment disputed');
   }
@@ -1954,7 +2567,7 @@ async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
   // Find the subscription to get coach/client/package IDs
   const { data: sub } = await supabase
     .from('client_subscriptions')
-    .select('coach_id, client_id, package_id')
+    .select('id, coach_id, client_id, package_id')
     .eq('stripe_subscription_id', subscriptionId)
     .maybeSingle();
 
@@ -1972,7 +2585,29 @@ async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
         paid_at: new Date().toISOString(),
       });
 
-    logger.info({ subscriptionId, invoiceId: invoice.id }, 'Subscription invoice paid');
+    // Log billing activity for subscription renewal
+    // billing_reason: 'subscription_cycle' = renewal, 'subscription_create' = first payment
+    const billingReason = (invoice as any).billing_reason;
+    const isRenewal = billingReason === 'subscription_cycle' || billingReason === 'subscription_update';
+
+    const clientName = await getClientName(supabase, sub.client_id);
+    const packageName = sub.package_id ? await getPackageName(supabase, sub.package_id) : 'their subscription';
+
+    await logBillingActivity(supabase, {
+      coach_id: sub.coach_id,
+      client_id: sub.client_id,
+      package_id: sub.package_id,
+      subscription_id: sub.id,
+      event_type: isRenewal ? 'subscription_renewed' : 'payment_succeeded',
+      description: isRenewal
+        ? `${clientName} renewed ${packageName}`
+        : `${clientName} paid for ${packageName}`,
+      amount_cents: invoice.amount_paid || 0,
+      currency: invoice.currency || 'usd',
+      stripe_event_id: event.id,
+    });
+
+    logger.info({ subscriptionId, invoiceId: invoice.id, billingReason }, 'Subscription invoice paid');
   }
 }
 
@@ -1981,10 +2616,37 @@ async function handleInvoicePaymentFailed(event: Stripe.Event, supabase: any) {
   const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : null;
 
   if (subscriptionId) {
+    // Get subscription data for activity logging
+    const { data: sub } = await supabase
+      .from('client_subscriptions')
+      .select('id, coach_id, client_id, package_id')
+      .eq('stripe_subscription_id', subscriptionId)
+      .maybeSingle();
+
     await supabase
       .from('client_subscriptions')
       .update({ status: 'past_due' })
       .eq('stripe_subscription_id', subscriptionId);
+
+    // Log billing activity
+    if (sub) {
+      const clientName = await getClientName(supabase, sub.client_id);
+      const packageName = sub.package_id ? await getPackageName(supabase, sub.package_id) : 'their subscription';
+      const failureMessage = (invoice as any).last_finalization_error?.message || 'Payment declined';
+
+      await logBillingActivity(supabase, {
+        coach_id: sub.coach_id,
+        client_id: sub.client_id,
+        package_id: sub.package_id,
+        subscription_id: sub.id,
+        event_type: 'payment_failed',
+        description: `${clientName}'s payment for ${packageName} failed`,
+        amount_cents: invoice.amount_due || 0,
+        currency: invoice.currency || 'usd',
+        metadata: { reason: failureMessage },
+        stripe_event_id: event.id,
+      });
+    }
 
     logger.info({ subscriptionId, invoiceId: invoice.id }, 'Subscription invoice payment failed');
   }
@@ -1992,6 +2654,7 @@ async function handleInvoicePaymentFailed(event: Stripe.Event, supabase: any) {
 
 async function handleSubscriptionUpdated(event: Stripe.Event, supabase: any) {
   const subscription = event.data.object as Stripe.Subscription;
+  const previousAttributes = (event.data as any).previous_attributes || {};
 
   const statusMap: Record<string, string> = {
     active: 'active',
@@ -2006,6 +2669,18 @@ async function handleSubscriptionUpdated(event: Stripe.Event, supabase: any) {
 
   const status = statusMap[subscription.status] || 'active';
 
+  // Handle cancel_at - when the subscription is scheduled to be cancelled
+  const cancelAt = subscription.cancel_at
+    ? new Date(subscription.cancel_at * 1000).toISOString()
+    : null;
+
+  // Get existing subscription data for activity logging
+  const { data: existingSub } = await supabase
+    .from('client_subscriptions')
+    .select('id, coach_id, client_id, package_id, cancel_at')
+    .eq('stripe_subscription_id', subscription.id)
+    .maybeSingle();
+
   await supabase
     .from('client_subscriptions')
     .update({
@@ -2017,17 +2692,73 @@ async function handleSubscriptionUpdated(event: Stripe.Event, supabase: any) {
         ? new Date(subscription.current_period_end * 1000).toISOString()
         : null,
       cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+      cancel_at: cancelAt,
       cancelled_at: subscription.canceled_at
         ? new Date(subscription.canceled_at * 1000).toISOString()
         : null,
     })
     .eq('stripe_subscription_id', subscription.id);
 
-  logger.info({ subscriptionId: subscription.id, status }, 'Subscription updated');
+  // Log billing activity based on what changed
+  if (existingSub) {
+    const clientName = await getClientName(supabase, existingSub.client_id);
+    const packageName = existingSub.package_id ? await getPackageName(supabase, existingSub.package_id) : 'their subscription';
+    const cancellationReason = (subscription as any).cancellation_details?.reason;
+
+    // Detect cancellation scheduled (cancel_at newly set)
+    if (cancelAt && previousAttributes.cancel_at === null) {
+      const cancelDate = new Date(subscription.cancel_at! * 1000).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric'
+      });
+      await logBillingActivity(supabase, {
+        coach_id: existingSub.coach_id,
+        client_id: existingSub.client_id,
+        package_id: existingSub.package_id,
+        subscription_id: existingSub.id,
+        event_type: 'subscription_cancelling',
+        description: `${clientName} scheduled cancellation for ${packageName} on ${cancelDate}`,
+        metadata: { cancel_at: cancelAt, reason: cancellationReason },
+        stripe_event_id: event.id,
+      });
+    }
+    // Detect reactivation (cancel_at was set but now null)
+    else if (!cancelAt && previousAttributes.cancel_at !== undefined && previousAttributes.cancel_at !== null) {
+      await logBillingActivity(supabase, {
+        coach_id: existingSub.coach_id,
+        client_id: existingSub.client_id,
+        package_id: existingSub.package_id,
+        subscription_id: existingSub.id,
+        event_type: 'subscription_reactivated',
+        description: `${clientName} reactivated ${packageName}`,
+        stripe_event_id: event.id,
+      });
+    }
+    // Detect status change to past_due
+    else if (status === 'past_due' && previousAttributes.status && previousAttributes.status !== 'past_due') {
+      await logBillingActivity(supabase, {
+        coach_id: existingSub.coach_id,
+        client_id: existingSub.client_id,
+        package_id: existingSub.package_id,
+        subscription_id: existingSub.id,
+        event_type: 'subscription_past_due',
+        description: `${clientName}'s subscription for ${packageName} is past due`,
+        stripe_event_id: event.id,
+      });
+    }
+  }
+
+  logger.info({ subscriptionId: subscription.id, status, cancelAt }, 'Subscription updated');
 }
 
 async function handleSubscriptionDeleted(event: Stripe.Event, supabase: any) {
   const subscription = event.data.object as Stripe.Subscription;
+
+  // Get subscription data before updating for activity logging
+  const { data: existingSub } = await supabase
+    .from('client_subscriptions')
+    .select('id, coach_id, client_id, package_id')
+    .eq('stripe_subscription_id', subscription.id)
+    .maybeSingle();
 
   await supabase
     .from('client_subscriptions')
@@ -2036,6 +2767,24 @@ async function handleSubscriptionDeleted(event: Stripe.Event, supabase: any) {
       cancelled_at: new Date().toISOString(),
     })
     .eq('stripe_subscription_id', subscription.id);
+
+  // Log billing activity
+  if (existingSub) {
+    const clientName = await getClientName(supabase, existingSub.client_id);
+    const packageName = existingSub.package_id ? await getPackageName(supabase, existingSub.package_id) : 'their subscription';
+    const cancellationReason = (subscription as any).cancellation_details?.reason;
+
+    await logBillingActivity(supabase, {
+      coach_id: existingSub.coach_id,
+      client_id: existingSub.client_id,
+      package_id: existingSub.package_id,
+      subscription_id: existingSub.id,
+      event_type: 'subscription_cancelled',
+      description: `${clientName}'s subscription to ${packageName} has ended`,
+      metadata: { reason: cancellationReason },
+      stripe_event_id: event.id,
+    });
+  }
 
   logger.info({ subscriptionId: subscription.id }, 'Subscription deleted/cancelled');
 }
@@ -2081,6 +2830,7 @@ async function handleProductOrPriceChange(event: Stripe.Event, supabase: any, st
         features,
         free_trial_days: 0,
         initial_fee_cents: 0,
+        image_url: product.images?.[0] || null,
       }));
 
       if (rows.length > 0) {
@@ -2110,6 +2860,7 @@ async function handleProductOrPriceChange(event: Stripe.Event, supabase: any, st
           description: product.description || null,
           is_active: product.active,
           features,
+          image_url: product.images?.[0] || null,
         })
         .eq('coach_id', coachId)
         .eq('stripe_product_id', product.id)
@@ -2133,6 +2884,7 @@ async function handleProductOrPriceChange(event: Stripe.Event, supabase: any, st
           features,
           free_trial_days: 0,
           initial_fee_cents: 0,
+          image_url: product.images?.[0] || null,
         }));
 
         if (rows.length > 0) {
@@ -2176,11 +2928,13 @@ async function handleProductOrPriceChange(event: Stripe.Event, supabase: any, st
       let productName = '';
       let productDescription: string | null = null;
       let features: string[] = [];
+      let imageUrl: string | null = null;
       try {
         const product = await stripe.products.retrieve(productId, opts);
         productName = product.name;
         productDescription = product.description || null;
         features = (product.marketing_features || []).map((f: any) => f.name);
+        imageUrl = product.images?.[0] || null;
       } catch { /* product may not be accessible */ }
 
       const { error: upsertErr } = await supabase
@@ -2200,6 +2954,7 @@ async function handleProductOrPriceChange(event: Stripe.Event, supabase: any, st
           features,
           free_trial_days: 0,
           initial_fee_cents: 0,
+          image_url: imageUrl,
         }, { onConflict: 'coach_id,stripe_product_id,stripe_price_id' });
 
       if (upsertErr) {

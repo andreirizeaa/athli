@@ -135,13 +135,25 @@ export default function PublicPackagesPage() {
 
   return (
     <div className="relative min-h-screen bg-background">
-      <div className="absolute left-6 top-6 z-20">
+      <style jsx global>{`
+        @keyframes packageFloatUp {
+          from {
+            opacity: 0;
+            transform: translateY(12px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+      <div className="fixed left-6 top-6 z-20">
         <AthliLogo />
       </div>
 
       {/* Grid Background - Light mode */}
       <div
-        className="absolute inset-0 opacity-40 dark:hidden"
+        className="fixed inset-0 opacity-40 dark:hidden pointer-events-none"
         style={{
           backgroundImage:
             'linear-gradient(to right, rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.06) 1px, transparent 1px)',
@@ -150,7 +162,7 @@ export default function PublicPackagesPage() {
       />
       {/* Grid Background - Dark mode */}
       <div
-        className="absolute inset-0 hidden opacity-40 dark:block"
+        className="fixed inset-0 hidden opacity-40 dark:block pointer-events-none"
         style={{
           backgroundImage:
             'linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)',
@@ -159,7 +171,7 @@ export default function PublicPackagesPage() {
       />
 
       {/* Hero Section */}
-      <section className="relative z-10 pt-24 pb-8 md:pt-36 md:pb-12">
+      <section className="relative z-10 pt-20 pb-6 md:pt-24 md:pb-8">
         <div className="mx-auto max-w-7xl px-6">
           <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0">
             <TextEffect
@@ -198,13 +210,17 @@ export default function PublicPackagesPage() {
                 <div
                   key={pkg.id}
                   className={`flex flex-col rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md overflow-hidden w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-[380px]${!pkg.is_active ? ' opacity-60' : ''}`}
+                  style={{
+                    animation: 'packageFloatUp 0.7s cubic-bezier(0.25, 0.1, 0.25, 1) 0.75s forwards',
+                    opacity: 0,
+                  }}
                 >
                   {/* Image — edge-to-edge, top corners rounded via card overflow-hidden */}
-                  <div className="w-full aspect-[3/2] bg-muted">
+                  <div className="w-full aspect-[3/2] bg-muted relative">
                     <img
                       src={pkg.image_url || DEFAULT_PACKAGE_IMAGE}
                       alt=""
-                      className="w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-contain"
                     />
                   </div>
 

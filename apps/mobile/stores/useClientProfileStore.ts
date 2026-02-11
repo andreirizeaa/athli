@@ -4,6 +4,10 @@ import {
   fetchClientProfile,
   updateClientProfile,
 } from '@/services/client/client-profile-service';
+import {
+  getMyPackages,
+  type ClientPackage,
+} from '@/services/client/client-billing-service';
 import { Storage } from '@/lib/storage';
 
 const CLIENT_PROFILE_KEY = '@athli:client_profile';
@@ -11,12 +15,15 @@ const CLIENT_PROFILE_KEY = '@athli:client_profile';
 type ClientProfileStore = {
   // State
   profile: ClientProfile | null;
+  packages: ClientPackage[];
   isLoading: boolean;
+  isLoadingPackages: boolean;
   error: string | null;
 
   // Actions
   setProfile: (profile: ClientProfile | null) => void;
   loadProfile: (clientId: string) => Promise<void>;
+  loadPackages: () => Promise<void>;
   updateProfile: (
     updates: Partial<
       Omit<ClientProfile, 'client_id' | 'coach_id' | 'created_at' | 'updated_at'>
@@ -29,7 +36,9 @@ type ClientProfileStore = {
 export const useClientProfileStore = create<ClientProfileStore>((set, get) => ({
   // Initial state
   profile: null,
+  packages: [],
   isLoading: false,
+  isLoadingPackages: false,
   error: null,
 
   // Initialize from storage
@@ -40,6 +49,8 @@ export const useClientProfileStore = create<ClientProfileStore>((set, get) => ({
         const profile = JSON.parse(savedProfile) as ClientProfile;
         set({ profile, error: null });
         console.log('[ClientProfileStore] Profile restored from storage');
+        // Load packages in background after restoring profile
+        get().loadPackages();
       }
     } catch (error) {
       console.error('[ClientProfileStore] Failed to restore profile from storage:', error);
@@ -54,6 +65,8 @@ export const useClientProfileStore = create<ClientProfileStore>((set, get) => ({
     // Persist to storage
     if (profile) {
       Storage.setItem(CLIENT_PROFILE_KEY, JSON.stringify(profile));
+      // Load packages in background after setting profile
+      get().loadPackages();
     } else {
       Storage.removeItem(CLIENT_PROFILE_KEY);
     }
@@ -65,12 +78,28 @@ export const useClientProfileStore = create<ClientProfileStore>((set, get) => ({
     try {
       const profile = await fetchClientProfile(clientId);
       set({ profile, isLoading: false });
+
+      // Also load packages in the background
+      get().loadPackages();
     } catch (error: any) {
       console.error('Error loading client profile:', error);
       set({
         error: error.message || 'Failed to load client profile',
         isLoading: false,
       });
+    }
+  },
+
+  // Load packages for the client
+  loadPackages: async () => {
+    set({ isLoadingPackages: true });
+    try {
+      const packages = await getMyPackages();
+      set({ packages, isLoadingPackages: false });
+      console.log('[ClientProfileStore] Packages loaded:', packages.length);
+    } catch (error: any) {
+      console.error('Error loading client packages:', error);
+      set({ isLoadingPackages: false });
     }
   },
 
@@ -101,7 +130,7 @@ export const useClientProfileStore = create<ClientProfileStore>((set, get) => ({
 
   // Clear profile (on logout)
   clearProfile: () => {
-    set({ profile: null, error: null, isLoading: false });
+    set({ profile: null, packages: [], error: null, isLoading: false, isLoadingPackages: false });
     // Remove from storage
     Storage.removeItem(CLIENT_PROFILE_KEY);
   },

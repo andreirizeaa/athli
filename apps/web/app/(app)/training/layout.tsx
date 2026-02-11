@@ -53,7 +53,7 @@ const LibraryLayout = ({ children }: LibraryLayoutProps) => {
       <div className="h-full w-full flex flex-col">
         {shouldShowHeader && (
           <div className="w-full px-4">
-            <div className="flex items-center justify-between mb-2 mt-2">
+            <div className="flex items-center justify-between h-[38px] mt-2">
               <h1 className="text-[22px] font-semibold">{t('library.title')}</h1>
             </div>
             <PageTabs

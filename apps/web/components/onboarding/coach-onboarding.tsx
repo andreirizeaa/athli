@@ -106,7 +106,7 @@ export function CoachOnboarding() {
     if (isMobile) {
       setShowMobileOverlay(true);
     } else {
-      router.push('/home');
+      router.push('/get-started');
     }
   }, [data, saveInBackground, router, isMobile]);
 
@@ -136,7 +136,7 @@ export function CoachOnboarding() {
           if (isMobile) {
             setShowMobileOverlay(true);
           } else {
-            router.push('/home');
+            router.push('/get-started');
           }
         }} />;
       default:

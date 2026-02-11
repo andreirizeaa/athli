@@ -58,7 +58,6 @@ type AddPackageSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (data: PackageFormData) => Promise<void>;
-  onDelete?: (id: string) => Promise<void>;
   package?: CoachPackage | null;
 };
 
@@ -80,7 +79,6 @@ export const AddPackageSidePanel = ({
   open,
   onOpenChange,
   onSave,
-  onDelete,
   package: pkg,
 }: AddPackageSidePanelProps) => {
   const t = useTranslations();
@@ -101,7 +99,6 @@ export const AddPackageSidePanel = ({
   const [priceDisplay, setPriceDisplay] = useState('');
   const [sequenceId, setSequenceId] = useState<string>('none');
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   // Image state
   const [imageUrl, setImageUrl] = useState('');
@@ -146,7 +143,6 @@ export const AddPackageSidePanel = ({
         setImageUrl('');
       }
       setIsSaving(false);
-      setIsDeleting(false);
       setIsUploadingImage(false);
     }
   }, [open, pkg]);
@@ -224,19 +220,6 @@ export const AddPackageSidePanel = ({
     }
   };
 
-  const handleDelete = async () => {
-    if (!pkg || !onDelete) return;
-    setIsDeleting(true);
-    try {
-      await onDelete(pkg.id);
-      onOpenChange(false);
-    } catch {
-      // error handled by parent
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   const amountCents = Math.round(parseFloat(priceDisplay || '0') * 100);
   const initialFeeCents = isRecurring && hasInitialFee
     ? Math.round(parseFloat(initialFeeDisplay || '0') * 100)
@@ -283,8 +266,6 @@ export const AddPackageSidePanel = ({
         onSave={handleSave}
         isSaving={isSaving}
         isSaveDisabled={!canSave}
-        onDelete={isEditing && onDelete ? handleDelete : undefined}
-        isDeleting={isDeleting}
         footerLeft={payoutLabel ? (
           <p className="text-sm text-muted-foreground truncate">
             Payout: <span className="font-medium text-foreground">{payoutLabel}</span>
@@ -300,11 +281,11 @@ export const AddPackageSidePanel = ({
               <div className="rounded-xl border bg-card shadow-sm overflow-hidden max-w-[248px]">
                 {imageUrl ? (
                   <div className="relative group">
-                    <div className="w-full aspect-[3/2] bg-muted">
+                    <div className="w-full aspect-[3/2] bg-muted relative">
                       <img
                         src={imageUrl}
                         alt=""
-                        className="w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-contain"
                       />
                     </div>
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -508,11 +489,11 @@ function PackagePreviewCard({
   return (
     <div className="flex flex-col rounded-xl border bg-card shadow-sm overflow-hidden">
       {/* Image — edge-to-edge, top corners rounded via card overflow-hidden */}
-      <div className="w-full aspect-[3/2] bg-muted">
+      <div className="w-full aspect-[3/2] bg-muted relative">
         {imageUrl ? (
-          <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+          <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-contain" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-muted-foreground">
               <ImageIcon className="size-6 mx-auto mb-1" />
               <p className="text-[10px]">Package image</p>

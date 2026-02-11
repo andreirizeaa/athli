@@ -147,7 +147,7 @@ export function AIAssistantPanel({ isOpen }: AIAssistantPanelProps) {
         {/* Header */}
         <div className="flex flex-col gap-2 p-2 border-b border-sidebar-border flex-shrink-0">
           <div className="flex items-center justify-between gap-2 px-2 py-0.5">
-            <h2 className="text-sm font-semibold">{t('sidebar.search.aiAssistant')}</h2>
+            <h2 className="text-sm font-semibold">Lyra</h2>
             <div className="flex items-center gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -155,7 +155,7 @@ export function AIAssistantPanel({ isOpen }: AIAssistantPanelProps) {
                     variant="ghost"
                     size="icon"
                     asChild
-                    aria-label="Expand AI Assistant"
+                    aria-label="Expand Lyra"
                     onClick={() => setIsOpen(false)}
                   >
                     <Link href="/assistant">
@@ -171,7 +171,7 @@ export function AIAssistantPanel({ isOpen }: AIAssistantPanelProps) {
                     variant="ghost"
                     size="icon"
                     onClick={() => setIsOpen(false)}
-                    aria-label="Close AI Assistant"
+                    aria-label="Close Lyra"
                   >
                     <X className="size-4" />
                   </Button>
@@ -203,9 +203,9 @@ export function AIAssistantPanel({ isOpen }: AIAssistantPanelProps) {
               )}
             </div>
             <h3 className="text-center text-base font-medium mb-6">
-              How Can I{' '}
+              Ask{' '}
               <span className="bg-gradient-to-r from-purple-400 to-indigo-300 bg-clip-text text-transparent">
-                Assist You?
+                Lyra
               </span>
             </h3>
             <div className="w-full">

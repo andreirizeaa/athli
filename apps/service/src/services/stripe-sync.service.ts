@@ -30,6 +30,7 @@ export async function syncPackageToStripe(pkg: {
   free_trial_days: number;
   initial_fee_cents: number;
   features?: string[];
+  image_url?: string | null;
 }): Promise<{ stripe_product_id: string; stripe_price_id: string } | null> {
   try {
     const stripeAccountId = await getCoachStripeAccountId(pkg.coach_id);
@@ -43,6 +44,7 @@ export async function syncPackageToStripe(pkg: {
       description: pkg.description || undefined,
       metadata: { athli_package_id: pkg.id },
       marketing_features: (pkg.features || []).map(name => ({ name })),
+      images: pkg.image_url ? [pkg.image_url] : undefined,
     }, opts);
 
     const priceData: any = {
@@ -70,8 +72,8 @@ export async function syncPackageToStripe(pkg: {
 }
 
 export async function updatePackageInStripe(
-  oldPkg: { stripe_product_id: string; stripe_price_id: string; amount_cents: number; currency: string; interval: string; interval_count: number | null; features?: string[] },
-  newPkg: { id: string; coach_id: string; name: string; description: string | null; amount_cents: number; currency: string; interval: string; interval_count: number | null; features?: string[] },
+  oldPkg: { stripe_product_id: string; stripe_price_id: string; amount_cents: number; currency: string; interval: string; interval_count: number | null; features?: string[]; image_url?: string | null },
+  newPkg: { id: string; coach_id: string; name: string; description: string | null; amount_cents: number; currency: string; interval: string; interval_count: number | null; features?: string[]; image_url?: string | null },
 ): Promise<{ stripe_price_id: string } | null> {
   try {
     const stripeAccountId = await getCoachStripeAccountId(newPkg.coach_id);
@@ -80,11 +82,12 @@ export async function updatePackageInStripe(
     const stripe = getStripeClient();
     const opts = { stripeAccount: stripeAccountId };
 
-    // Update product name/description/features
+    // Update product name/description/features/images
     await stripe.products.update(oldPkg.stripe_product_id, {
       name: newPkg.name,
       description: newPkg.description || '',
       marketing_features: (newPkg.features || []).map(name => ({ name })),
+      images: newPkg.image_url ? [newPkg.image_url] : [],
     }, opts);
 
     // If price changed, archive old and create new
@@ -193,6 +196,7 @@ export async function syncProductsFromStripe(coachId: string): Promise<{ synced:
         features,
         free_trial_days: 0,
         initial_fee_cents: 0,
+        image_url: product.images?.[0] || null,
       });
     }
   }

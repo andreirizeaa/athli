@@ -2909,6 +2909,8 @@ export const enMessages = {
         amount: 'Amount',
         type: 'Type',
         status: 'Status',
+        event: 'Event',
+        description: 'Description',
       },
       type: {
         one_time: 'One-time',
@@ -2922,10 +2924,12 @@ export const enMessages = {
         disputed: 'Disputed',
         cancelled: 'Cancelled',
       },
-      noPayments: 'No payments yet',
-      noPaymentsSubtitle: 'Payments will appear here once clients start paying',
+      noPayments: 'No activity yet',
+      noPaymentsSubtitle: 'Billing activity will appear here as clients subscribe, pay, and make changes',
       noStripe: 'Connect Stripe to start accepting payments',
       noStripeSubtitle: 'Set up your Stripe account to enable payment processing',
+      allDates: 'All Dates',
+      today: 'Today',
     },
     packages: {
       addPackage: 'Add Package',

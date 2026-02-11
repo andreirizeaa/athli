@@ -296,10 +296,16 @@ interface CreateCheckoutSessionResponse {
   data: { url: string };
 }
 
-export async function createCheckoutSession(packageId: string, coachCode: string): Promise<string> {
-  const response = await apiFetch<CreateCheckoutSessionResponse>('/payments/checkout/session', {
+export async function createCheckoutSession(
+  packageId: string,
+  coachCode: string,
+  clientId: string,
+  email?: string
+): Promise<string> {
+  const response = await apiFetch<CreateCheckoutSessionResponse>('/payments/public/checkout/session', {
     method: 'POST',
-    body: { packageId, coachCode },
+    body: { packageId, coachCode, clientId, email },
+    authenticated: false,
   });
   return response.data.url;
 }

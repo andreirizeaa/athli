@@ -223,7 +223,7 @@ const isFuzzyMatch = (text: string, query: string): boolean => {
   return queryIndex === normalizedQuery.length;
 };
 
-const CellTextWithTooltip = ({ text }: { text: string }) => {
+export const CellTextWithTooltip = ({ text }: { text: string }) => {
   const [isTruncated, setIsTruncated] = useState(false);
   const textRef = useRef<HTMLSpanElement>(null);
 
@@ -333,7 +333,8 @@ const SortableTableRow = <T extends Record<string, any>>({
       onKeyDown={onRowKeyDown ? (e) => onRowKeyDown(row, e) : undefined}
       className={cn(
         isSelected && '!bg-muted',
-        (onRowClick || selectOnRowClick || hasPinnedColumn) && 'cursor-pointer group',
+        'group',
+        (onRowClick || selectOnRowClick || hasPinnedColumn) && 'cursor-pointer',
         '[&:hover_td]:bg-muted',
         '!transition-none',
         customClassName
@@ -1844,7 +1845,8 @@ export function DataGrid<T extends Record<string, any>>({
                                         }}
                                         className={cn(
                                           isSelected && '!bg-muted',
-                                          (onRowClick || selectOnRowClick || hasPinned) && 'cursor-pointer group',
+                                          'group',
+                                          (onRowClick || selectOnRowClick || hasPinned) && 'cursor-pointer',
                                           '[&:hover_td]:bg-muted',
                                           '!transition-none'
                                         )}
@@ -1936,7 +1938,8 @@ export function DataGrid<T extends Record<string, any>>({
                                       onKeyDown={onRowKeyDown ? (e) => onRowKeyDown(row, e) : undefined}
                                       className={cn(
                                         isSelected && '!bg-muted',
-                                        (onRowClick || hasPinned || selectOnRowClick) && 'cursor-pointer group',
+                                        'group',
+                                        (onRowClick || hasPinned || selectOnRowClick) && 'cursor-pointer',
                                         '[&:hover_td]:bg-muted',
                                         '!transition-none',
                                         getRowClassName?.(row)
@@ -2316,7 +2319,8 @@ export function DataGrid<T extends Record<string, any>>({
                               onKeyDown={onRowKeyDown ? (e) => onRowKeyDown(row, e) : undefined}
                               className={cn(
                                 isSelected && '!bg-muted',
-                                (onRowClick || selectOnRowClick || hasPinned) && 'cursor-pointer group',
+                                'group',
+                                (onRowClick || selectOnRowClick || hasPinned) && 'cursor-pointer',
                                 '[&:hover_td]:bg-muted',
                                 '!transition-none',
                                 getRowClassName?.(row)
