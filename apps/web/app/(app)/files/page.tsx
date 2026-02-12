@@ -5,9 +5,18 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Plus, Loader2, Check, X, FolderPlus, Move, Folder } from 'lucide-react';
+import { useFeatureAccess } from '@/lib/permissions';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { PageHeader } from '@/components/app/page-header';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
@@ -43,6 +52,7 @@ const FilesPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { hasAccess: hasFileStorageAccess } = useFeatureAccess('file_storage');
   const { files, isLoading, uploadFile, updateFile, deleteFile: deleteFileMutation, isUploading } = useCoachFiles();
   const {
     folders,
@@ -115,6 +125,9 @@ const FilesPage = () => {
   const [fileToDelete, setFileToDelete] = useState<CoachFile | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
 
+  // Upgrade dialog state
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState<boolean>(false);
+
   useEffect(() => {
     if (searchParams.get('create') === 'true') {
       handleOpenAddFile();
@@ -123,6 +136,10 @@ const FilesPage = () => {
   }, [searchParams]);
 
   const handleOpenAddFile = () => {
+    if (!hasFileStorageAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
     setIsAddFileOpen(true);
   };
 
@@ -444,15 +461,21 @@ const FilesPage = () => {
 
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-auto">
-      <PageHeader
-        title={t('files.title')}
-        action={
+        <PageHeader
+          title={t('files.title')}
+          action={
           <ButtonGroup>
             <FolderSearchButton
               value={folderSearch}
               onChange={setFolderSearch}
             />
-            <Button variant="ghost" onClick={() => setIsCreateFolderOpen(true)} className="gap-2 border border-primary">
+            <Button variant="ghost" onClick={() => {
+              if (!hasFileStorageAccess) {
+                setIsUpgradeDialogOpen(true);
+                return;
+              }
+              setIsCreateFolderOpen(true);
+            }} className="gap-2 border border-primary">
               <FolderPlus className="size-4" />
               <span>Create Folder</span>
             </Button>
@@ -598,6 +621,26 @@ const FilesPage = () => {
           ) : <div className="text-sm text-muted-foreground py-4 text-center">{t('forms.noFormsSelected')}</div>
         }
       />
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogDescription>
+              Upload and share files with your clients - training plans, nutrition guides, and resources.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+              Maybe Later
+            </Button>
+            <Button onClick={() => router.push('/settings/billing')}>
+              View Plans
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

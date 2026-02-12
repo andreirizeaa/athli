@@ -1,7 +1,7 @@
 'use client';
 
 import GlobalDataProvider from '@/providers/global-data-provider';
-import { AccessProvider, AppAccessGate } from '@/lib/permissions';
+import { AccessProvider, AppAccessGate, EntitlementsProvider } from '@/lib/permissions';
 import { AppShell } from '@/components/app/app-shell';
 import { MobileDownloadOverlay } from '@/components/app/mobile-download-overlay';
 import { useIsMobileWithLoading } from '@/hooks/use-mobile';
@@ -22,9 +22,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <GlobalDataProvider>
       <AccessProvider>
-        <AppAccessGate>
-          <AppShell>{children}</AppShell>
-        </AppAccessGate>
+        <EntitlementsProvider>
+          <AppAccessGate>
+            <AppShell>{children}</AppShell>
+          </AppAccessGate>
+        </EntitlementsProvider>
       </AccessProvider>
     </GlobalDataProvider>
   );

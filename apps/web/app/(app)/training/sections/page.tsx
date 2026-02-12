@@ -5,6 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useFeatureAccess } from '@/lib/permissions/feature-gate';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,10 +77,12 @@ const SectionsPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const { sections, isLoadingSections, setSections, refreshSections } = useTrainingData();
+  const { hasAccess: hasCustomSectionsAccess } = useFeatureAccess('custom_sections');
   const [selectedSections, setSelectedSections] = useState<Set<string>>(new Set());
   const [starredSections, setStarredSections] = useState<Set<string>>(new Set());
   const [filteredCount, setFilteredCount] = useState<number>(0);
   const [isCreateSectionOpen, setIsCreateSectionOpen] = useState<boolean>(false);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState<boolean>(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
   const [sectionToDelete, setSectionToDelete] = useState<string | null>(null);
   const [isSectionBuilderOpen, setIsSectionBuilderOpen] = useState<boolean>(false);
@@ -537,24 +548,30 @@ const SectionsPage = () => {
   }, [t]);
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <div className="w-full relative">
-        <div className="px-4 flex items-center justify-between mb-2 mt-2">
-          <div className="flex flex-col">
-            <p className="text-sm text-foreground">
-              {`${filteredCount} ${filteredCount === 1 ? t('library.sections.section') : t('library.sections.title')}`}
-            </p>
-          </div>
-          <div>
-            <ButtonGroup>
-              <Button onClick={() => setIsCreateSectionOpen(true)} className="gap-2" aria-label="Create section">
-                <Plus className="size-4" />
-                <span>{t('library.sections.actions.newSection')}</span>
-              </Button>
-            </ButtonGroup>
+      <div className="h-full w-full flex flex-col">
+        <div className="w-full relative">
+          <div className="px-4 flex items-center justify-between mb-2 mt-2">
+            <div className="flex flex-col">
+              <p className="text-sm text-foreground">
+                {`${filteredCount} ${filteredCount === 1 ? t('library.sections.section') : t('library.sections.title')}`}
+              </p>
+            </div>
+            <div>
+              <ButtonGroup>
+                <Button onClick={() => {
+                  if (!hasCustomSectionsAccess) {
+                    setIsUpgradeDialogOpen(true);
+                    return;
+                  }
+                  setIsCreateSectionOpen(true);
+                }} className="gap-2" aria-label="Create section">
+                  <Plus className="size-4" />
+                  <span>{t('library.sections.actions.newSection')}</span>
+                </Button>
+              </ButtonGroup>
+            </div>
           </div>
         </div>
-      </div>
       <DataGrid
         data={sections}
         columns={columns}
@@ -663,7 +680,13 @@ const SectionsPage = () => {
             title={t('library.sections.emptyState.title')}
             subtitle={t('library.sections.emptyState.subtitle')}
             action={
-              <Button onClick={() => setIsCreateSectionOpen(true)}>
+              <Button onClick={() => {
+                if (!hasCustomSectionsAccess) {
+                  setIsUpgradeDialogOpen(true);
+                  return;
+                }
+                setIsCreateSectionOpen(true);
+              }}>
                 {t('library.sections.emptyState.action')}
               </Button>
             }
@@ -740,6 +763,26 @@ const SectionsPage = () => {
           }}
         />
       )}
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogDescription>
+              Create custom sections to organize your workout routines with specialized formats like AMRAP, EMOM, Tabata, and more.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+              Maybe Later
+            </Button>
+            <Button onClick={() => router.push('/settings/billing')}>
+              View Plans
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowRight } from 'lucide-react';
 import { useAccess } from '@/lib/permissions';
 import { useCoachClients } from '@/hooks/use-coach-clients';
+import { InvoicesCard } from './invoices-card';
 
 const BillingPage = () => {
   const t = useTranslations();
@@ -141,6 +142,9 @@ const BillingPage = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Invoices Card */}
+          <InvoicesCard />
         </div>
       </div>
     </>

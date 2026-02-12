@@ -11,57 +11,18 @@ import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import Lottie from 'lottie-react'
+import {
+    type Plan,
+    type BillingInterval,
+    type AddonConfig,
+    PRO_PRICING,
+    MAX_PRICING,
+    PRO_CLIENT_OPTIONS,
+    MAX_CLIENT_OPTIONS,
+    ADDONS,
+} from '@athli/shared-types/pricing-constants'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
-
-type Plan = 'free' | 'pro' | 'max'
-type BillingInterval = 'monthly' | 'annual'
-
-interface AddonConfig {
-    key: string
-    monthlyPrice: number
-    annualPrice: number
-    icon: 'automations' | 'ai' | 'payments'
-}
-
-// Pro plan pricing tiers - lower base price, higher per-client at scale
-const PRO_PRICING: Record<number, [number, number]> = {
-    5: [15, 12],      // $3.00/client
-    10: [25, 21],     // $2.50/client
-    20: [42, 35],     // $2.10/client
-    50: [85, 71],     // $1.70/client
-    75: [115, 96],    // $1.53/client
-    100: [140, 117],  // $1.40/client
-    125: [165, 137],  // $1.32/client
-    150: [185, 154],  // $1.23/client
-    200: [215, 179],  // $1.08/client
-    250: [240, 200],  // $0.96/client
-    300: [260, 217],  // $0.87/client
-}
-
-// Max plan pricing tiers - higher base price (more features), but better per-client at scale
-const MAX_PRICING: Record<number, [number, number]> = {
-    50: [95, 79],     // $1.90/client
-    75: [135, 112],   // $1.80/client
-    100: [170, 142],  // $1.70/client
-    150: [220, 183],  // $1.47/client
-    200: [265, 221],  // $1.33/client
-    250: [305, 254],  // $1.22/client
-    300: [340, 283],  // $1.13/client
-    350: [370, 308],  // $1.06/client
-    400: [395, 329],  // $0.99/client
-    450: [415, 346],  // $0.92/client
-    500: [430, 358],  // $0.86/client
-}
-
-const PRO_CLIENT_OPTIONS = [5, 10, 20, 50, 75, 100, 125, 150, 200, 250, 300]
-const MAX_CLIENT_OPTIONS = [50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500]
-
-const ADDONS: AddonConfig[] = [
-    { key: 'automations', monthlyPrice: 35, annualPrice: 29, icon: 'automations' },
-    { key: 'aiAssistant', monthlyPrice: 20, annualPrice: 17, icon: 'ai' },
-    { key: 'payments', monthlyPrice: 10, annualPrice: 8, icon: 'payments' },
-]
 
 function AddonIcon({ type, animationData }: { type: AddonConfig['icon']; animationData?: object }) {
     const iconClass = "w-8 h-8 text-muted-foreground"
@@ -168,18 +129,18 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
             .catch(() => {})
     }, [])
 
-    const freeFeatures = t.raw('free.features') as string[]
+    const starterFeatures = t.raw('starter.features') as string[]
     const proNewFeatures = t.raw('pro.newFeatures') as string[]
     const maxNewFeatures = t.raw('max.newFeatures') as string[]
 
     // Get all features for a plan with indication of which are new
     const getAllFeaturesForPlan = (plan: Plan): { text: string; isNew: boolean }[] => {
-        if (plan === 'free') {
-            return freeFeatures.map(f => ({ text: f, isNew: false }))
+        if (plan === 'starter') {
+            return starterFeatures.map(f => ({ text: f, isNew: false }))
         }
         if (plan === 'pro') {
             return [
-                ...freeFeatures.map(f => ({ text: f, isNew: false })),
+                ...starterFeatures.map(f => ({ text: f, isNew: false })),
                 ...proNewFeatures.map(f => ({ text: f, isNew: true })),
             ]
         }
@@ -188,7 +149,7 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
             !f.toLowerCase().includes('storage') && !f.toLowerCase().includes('almacenamiento')
         )
         return [
-            ...freeFeatures.map(f => ({ text: f, isNew: false })),
+            ...starterFeatures.map(f => ({ text: f, isNew: false })),
             ...proFeaturesForMax.map(f => ({ text: f, isNew: false })),
             ...maxNewFeatures.map(f => ({ text: f, isNew: true })),
         ]
@@ -257,7 +218,7 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
 
                 {/* Plan Cards */}
                 <div className="mt-8 grid gap-6 md:grid-cols-3">
-                    {/* Free Plan */}
+                    {/* Starter Plan */}
                     <motion.div
                         initial={{ opacity: 0, y: 12 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -266,11 +227,11 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
                     >
                         <Card className="relative flex flex-col h-full p-6">
                             <div>
-                                <h3 className="text-xl font-semibold">{t('free.name')}</h3>
-                                <p className="text-sm text-muted-foreground mt-2">{t('free.description')}</p>
+                                <h3 className="text-xl font-semibold">{t('starter.name')}</h3>
+                                <p className="text-sm text-muted-foreground mt-2">{t('starter.description')}</p>
 
                                 <div className="mt-4">
-                                    <span className="text-4xl font-bold">{t('free.name')}</span>
+                                    <span className="text-4xl font-bold">{t('starter.name')}</span>
                                 </div>
 
                                 <div className="flex items-center h-10 mt-6">
@@ -291,7 +252,7 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
                             </div>
 
                             <ul className="mt-4 space-y-3 flex-1">
-                                {getAllFeaturesForPlan('free').map((feature, idx) => (
+                                {getAllFeaturesForPlan('starter').map((feature, idx) => (
                                     <li key={idx} className="flex items-center gap-2 text-sm">
                                         <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500"><Check className="size-3 text-white" /></span>
                                         <span className={feature.isNew ? 'font-bold text-foreground' : 'text-muted-foreground'}>

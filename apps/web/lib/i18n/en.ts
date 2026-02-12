@@ -2707,6 +2707,7 @@ export const enMessages = {
       description: 'Description',
       stepCount: 'Steps',
       status: 'Status',
+      active: 'Active',
     },
     status: {
       published: 'Published',
@@ -2716,6 +2717,8 @@ export const enMessages = {
     unpublish: 'Unpublish',
     publishing: 'Publishing...',
     unpublishing: 'Unpublishing...',
+    activated: '{name} is now active',
+    deactivated: '{name} has been deactivated',
     form: {
       name: 'Onboarding name',
       namePlaceholder: 'Enter onboarding name...',
@@ -3085,6 +3088,7 @@ export const enMessages = {
         redemptions: 'Redemptions',
         expires: 'Expires',
         active: 'Active',
+        status: 'Status',
         actions: 'Actions',
       },
       form: {
@@ -3178,8 +3182,8 @@ export const enMessages = {
       subtitle: 'On {plan}, {clients} clients',
       growBusiness: 'Grow your business up to {limit} clients',
     },
-    free: {
-      name: 'Free',
+    starter: {
+      name: 'Starter',
       priceShort: '$0/mo',
       description: 'Perfect for getting started with up to 5 clients',
       features: [

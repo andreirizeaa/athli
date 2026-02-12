@@ -4,6 +4,9 @@ import { createContext, useContext, useMemo, ReactNode } from 'react';
 import { useFreeTrial } from '@/hooks/use-free-trial';
 import { useGlobalData } from '@/providers/global-data-provider';
 
+// DEV ONLY: Force simulate starter plan (must match entitlements-provider.tsx)
+const FORCE_SIMULATE_STARTER = true;
+
 export type AccessStatus = 'active' | 'trial' | 'expired' | 'loading';
 
 export type AccessReason =
@@ -61,6 +64,17 @@ export function AccessProvider({ children }: AccessProviderProps) {
         hasAccess: true,
         status: 'active',
         reason: 'subscription', // Clients don't pay, their coach does
+        trialDaysRemaining: 0,
+        isLoading: false,
+      };
+    }
+
+    // DEV: Force simulate starter plan - treat as active subscription
+    if (FORCE_SIMULATE_STARTER) {
+      return {
+        hasAccess: true,
+        status: 'active',
+        reason: 'subscription',
         trialDaysRemaining: 0,
         isLoading: false,
       };

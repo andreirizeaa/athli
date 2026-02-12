@@ -1,10 +1,19 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { motion } from 'motion/react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Plus, FileText, X, Trash2, MoreHorizontal, Pause, Play, Edit } from 'lucide-react';
@@ -23,6 +32,86 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useFeatureAccess } from '@/lib/permissions/feature-gate';
+
+// Screenshot preview component for upgrade dialog
+function ScreenshotPreview() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setDims({ w: el.offsetWidth, h: el.offsetHeight });
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { w, h } = dims;
+  const r = 8;
+
+  return (
+    <div ref={containerRef} className="relative">
+      {w > 0 && h > 0 && (
+        <svg
+          className="pointer-events-none absolute top-0 left-0 z-10"
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          fill="none"
+        >
+          <defs>
+            <linearGradient id="border-grad-checkin" x1="0.5" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="rgb(192,132,252)" />
+              <stop offset="100%" stopColor="rgb(165,180,252)" />
+            </linearGradient>
+          </defs>
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-checkin)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [0, -1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-checkin)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [-0.5, -1.5] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+        </svg>
+      )}
+      <img
+        src="/app-screenshots/client/check-ins/light.png"
+        alt="Check-in feature preview"
+        className="block w-full h-auto rounded-lg border dark:hidden"
+      />
+      <img
+        src="/app-screenshots/client/check-ins/dark.png"
+        alt="Check-in feature preview"
+        className="hidden w-full h-auto rounded-lg border dark:block"
+      />
+    </div>
+  );
+}
 
 const ClientCheckInPage = () => {
   const t = useTranslations();
@@ -35,6 +124,7 @@ const ClientCheckInPage = () => {
   const { user } = useUserProfile();
   const { client } = useClientProfile(clientId);
   const { checkIns, refetch } = useClientCheckIns(clientId);
+  const { hasAccess: hasQuestionnairesAccess } = useFeatureAccess('questionnaires');
   const itemsPerPage = 25;
   const [selectedCheckIns, setSelectedCheckIns] = useState<Set<string>>(new Set());
   const [isAddCheckInOpen, setIsAddCheckInOpen] = useState<boolean>(false);
@@ -42,6 +132,7 @@ const ClientCheckInPage = () => {
   const [checkInToDelete, setCheckInToDelete] = useState<ClientCheckIn | null>(null);
   const [isEditCheckInOpen, setIsEditCheckInOpen] = useState<boolean>(false);
   const [editingCheckIn, setEditingCheckIn] = useState<ClientCheckInDetail | null>(null);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState<boolean>(false);
 
   // Format schedule text
   const formatSchedule = (schedule: string): string => {
@@ -100,6 +191,10 @@ const ClientCheckInPage = () => {
   };
 
   const handleAddCheckIn = () => {
+    if (!hasQuestionnairesAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
     setIsAddCheckInOpen(true);
   };
 
@@ -521,12 +616,13 @@ const ClientCheckInPage = () => {
         searchPlaceholder={t('athletes.profile.checkIns.searchPlaceholder')}
         searchFields={['name', 'description', 'schedule']}
         filterBarActions={
-          <div className="flex items-center gap-2">
-            <Button onClick={handleAddCheckIn} className="gap-2">
-              <Plus className="size-4" />
-              <span>{t('general.assign')} Check-in</span>
-            </Button>
-          </div>
+          <Button
+            onClick={handleAddCheckIn}
+            className="gap-2"
+          >
+            <Plus className="size-4" />
+            <span>{t('general.assign')} Check-in</span>
+          </Button>
         }
         enableEditColumns={false}
         enableExport={false}
@@ -540,9 +636,9 @@ const ClientCheckInPage = () => {
         emptyState={
           <EmptyGridState
             title="No check-ins assigned"
-            subtitle="This client has no check-ins assigned yet"
+            subtitle={hasQuestionnairesAccess ? "This client has no check-ins assigned yet" : "Upgrade to Pro to assign forms to clients"}
             action={
-              <Button onClick={() => setIsAddCheckInOpen(true)} className="gap-2">
+              <Button onClick={handleAddCheckIn} className="gap-2">
                 <Plus className="size-4" />
                 <span>{t('general.assign')} Check-in</span>
               </Button>
@@ -615,6 +711,29 @@ const ClientCheckInPage = () => {
         itemType="check-in"
         variant="default"
       />
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogDescription>
+              Assign check-in forms to track client progress with regular updates and insights.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <ScreenshotPreview />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+              Maybe Later
+            </Button>
+            <Button onClick={() => router.push('/settings/billing')}>
+              View Plans
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

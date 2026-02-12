@@ -15,6 +15,8 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/general/utils';
 import { useAIPanel } from '@/lib/providers/ai-panel-provider';
+import { useAiUsage } from '@/hooks/use-ai-usage';
+import { toast } from 'sonner';
 
 type AIAssistantPanelProps = {
   isOpen: boolean;
@@ -29,6 +31,7 @@ export function AIAssistantPanel({ isOpen }: AIAssistantPanelProps) {
   const [hasMessages, setHasMessages] = useState(false);
   const [animationData, setAnimationData] = useState<object | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  const { checkBeforePrompt, remaining, isLimited, hasReachedLimit } = useAiUsage();
 
   useEffect(() => {
     fetch('/animations/ai-sphere-animation.json')
@@ -51,8 +54,17 @@ export function AIAssistantPanel({ isOpen }: AIAssistantPanelProps) {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (prompt.trim() || files.length > 0) {
+      // Check AI usage limit during trial
+      if (isLimited) {
+        const { allowed, message } = await checkBeforePrompt();
+        if (!allowed) {
+          toast.error(message || "Daily AI prompt limit reached. Upgrade for unlimited access.");
+          return;
+        }
+      }
+
       // TODO: Handle submit
       setHasMessages(true);
       setPrompt('');
@@ -113,7 +125,18 @@ export function AIAssistantPanel({ isOpen }: AIAssistantPanelProps) {
             </PromptInputAction>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {/* Trial prompt limit indicator */}
+            {isLimited && (
+              <span className={cn(
+                "text-xs px-2 py-1 rounded-full",
+                hasReachedLimit
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-muted text-muted-foreground"
+              )}>
+                {remaining} left
+              </span>
+            )}
             <PromptInputAction tooltip="Voice input">
               <Button variant="outline" size="icon" className="size-8 rounded-full">
                 <MicIcon size={16} />
@@ -125,7 +148,7 @@ export function AIAssistantPanel({ isOpen }: AIAssistantPanelProps) {
                 size="icon"
                 className="size-8 rounded-full"
                 onClick={handleSubmit}
-                disabled={!prompt.trim() && files.length === 0}
+                disabled={(!prompt.trim() && files.length === 0) || hasReachedLimit}
               >
                 {isStreaming ? <SquareIcon className="size-4" /> : <ArrowUpIcon className="size-4" />}
               </Button>

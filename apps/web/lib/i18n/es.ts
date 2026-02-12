@@ -2453,6 +2453,7 @@ export const esMessages = {
         redemptions: 'Canjes',
         expires: 'Expira',
         active: 'Activo',
+        status: 'Estado',
         actions: 'Acciones',
       },
       form: {
@@ -2546,8 +2547,8 @@ export const esMessages = {
       subtitle: 'En {plan}, {clients} clientes',
       growBusiness: 'Haz crecer tu negocio hasta {limit} clientes',
     },
-    free: {
-      name: 'Gratis',
+    starter: {
+      name: 'Starter',
       priceShort: '$0/mes',
       description: 'Perfecto para empezar con hasta 5 clientes',
       features: [

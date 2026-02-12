@@ -5,6 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useFeatureAccess } from '@/lib/permissions/feature-gate';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,6 +88,7 @@ const ExercisesPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { exercises: contextExercises, isLoadingExercises, refreshExercises } = useTrainingData();
+  const { hasAccess: hasCustomExercisesAccess } = useFeatureAccess('custom_exercises');
   const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
   const [starredExercises, setStarredExercises] = useState<Set<string>>(new Set());
   const [exercises, setExercises] = useState<Program[]>([]);
@@ -87,6 +97,7 @@ const ExercisesPage = () => {
   const [filteredCount, setFilteredCount] = useState<number>(0);
   const itemsPerPage = 25;
   const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState<boolean>(false);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState<boolean>(false);
   const [isEditExerciseOpen, setIsEditExerciseOpen] = useState<boolean>(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [isAssignExerciseOpen, setIsAssignExerciseOpen] = useState<boolean>(false);
@@ -792,26 +803,32 @@ const ExercisesPage = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <div className="w-full relative">
-        <div className="px-4 flex items-center justify-between mb-2 mt-2">
-          <div className="flex flex-col">
-            <p className="text-sm text-foreground">
-              {`${filteredCount} ${filteredCount === 1 ? t('exercises.exercise') : t('exercises.exercisePlural')}`}
-            </p>
-          </div>
-          <div>
-            <ButtonGroup>
-              <Button
-                variant="ghost"
-                onClick={() => setIsAssignExerciseOpen(true)}
-                className="gap-2 border border-primary"
-                aria-label="Assign Exercise"
-              >
-                <UserPlus className="size-4" />
+      <div className="h-full w-full flex flex-col">
+        <div className="w-full relative">
+          <div className="px-4 flex items-center justify-between mb-2 mt-2">
+            <div className="flex flex-col">
+              <p className="text-sm text-foreground">
+                {`${filteredCount} ${filteredCount === 1 ? t('exercises.exercise') : t('exercises.exercisePlural')}`}
+              </p>
+            </div>
+            <div>
+              <ButtonGroup>
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsAssignExerciseOpen(true)}
+                  className="gap-2 border border-primary"
+                  aria-label="Assign Exercise"
+                >
+                  <UserPlus className="size-4" />
                 <span>{t('general.assign')}</span>
               </Button>
-              <Button onClick={handleOpenCreateExercise} className="gap-2" aria-label={t('exercises.actions.createExercise')}>
+              <Button onClick={() => {
+                if (!hasCustomExercisesAccess) {
+                  setIsUpgradeDialogOpen(true);
+                  return;
+                }
+                handleOpenCreateExercise();
+              }} className="gap-2" aria-label={t('exercises.actions.createExercise')}>
                 <Plus className="size-4" />
                 <span>{t('exercises.actions.createExercise')}</span>
               </Button>
@@ -965,7 +982,13 @@ const ExercisesPage = () => {
             subtitle={t('exercises.emptyState.subtitle')}
             action={
               <Button
-                onClick={handleStartCreating}
+                onClick={() => {
+                  if (!hasCustomExercisesAccess) {
+                    setIsUpgradeDialogOpen(true);
+                    return;
+                  }
+                  handleStartCreating();
+                }}
                 aria-label={t('exercises.emptyState.startCreatingAria')}
               >
                 {t('exercises.emptyState.startCreating')}
@@ -1050,7 +1073,27 @@ const ExercisesPage = () => {
           name: selectedExerciseForAssignment.program
         } : null}
       />
-    </div>
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogDescription>
+              Create custom exercises with video demonstrations, muscle groups, and difficulty levels to build your personal exercise library.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+              Maybe Later
+            </Button>
+            <Button onClick={() => router.push('/settings/billing')}>
+              View Plans
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      </div>
   );
 };
 

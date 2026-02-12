@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, Check, Crown, Sparkles, Workflow, Users } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { TextEffect } from '@/components/ui/text-effect';
 import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
@@ -10,40 +10,15 @@ interface FreeTrialStepProps {
 }
 
 const features = [
-  {
-    icon: Crown,
-    title: 'Max plan access',
-    description: 'Full access to all premium features',
-  },
-  {
-    icon: Workflow,
-    title: 'Automations included',
-    description: 'Automate client onboarding and workflows',
-  },
-  {
-    icon: Sparkles,
-    title: 'Limited AI assistant',
-    description: 'Try Lyra, your AI coaching assistant',
-  },
-  {
-    icon: Users,
-    title: 'Up to 50 clients',
-    description: 'Train and manage up to 50 clients',
-  },
+  'Full access to all premium features',
+  'Automate client onboarding and workflows',
+  'Try Lyra, your AI coaching assistant',
+  'Train and manage up to 50 clients',
 ];
 
 export function FreeTrialStep({ onContinue }: FreeTrialStepProps) {
   return (
     <div className="flex flex-col items-center justify-center text-center">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4 }}
-        className="mb-6 flex items-center justify-center size-16 rounded-2xl bg-primary/10"
-      >
-        <Crown className="size-8 text-primary" />
-      </motion.div>
-
       <TextEffect
         as="h1"
         preset="fade-in-blur"
@@ -63,28 +38,29 @@ export function FreeTrialStep({ onContinue }: FreeTrialStepProps) {
         We&apos;ve given you full access to explore everything Athli has to offer.
       </motion.p>
 
-      {/* Features grid */}
+      {/* Features list */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4, duration: 0.4 }}
-        className="grid grid-cols-2 gap-4 mb-8 w-full max-w-md"
+        className="rounded-xl border bg-background p-6 mb-8 w-full max-w-md"
       >
-        {features.map((feature, index) => (
-          <motion.div
-            key={feature.title}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 + index * 0.1, duration: 0.3 }}
-            className="flex flex-col items-center p-4 rounded-xl bg-muted/50 border"
-          >
-            <div className="flex items-center justify-center size-10 rounded-full bg-emerald-500/10 mb-3">
-              <feature.icon className="size-5 text-emerald-500" />
-            </div>
-            <p className="font-medium text-sm">{feature.title}</p>
-            <p className="text-xs text-muted-foreground mt-1">{feature.description}</p>
-          </motion.div>
-        ))}
+        <ul className="space-y-4">
+          {features.map((feature, index) => (
+            <motion.li
+              key={feature}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 + index * 0.1, duration: 0.3 }}
+              className="flex items-center gap-3 text-left"
+            >
+              <div className="flex items-center justify-center size-6 rounded-full bg-emerald-500/10 shrink-0">
+                <Check className="size-4 text-emerald-500" />
+              </div>
+              <span className="text-sm text-foreground">{feature}</span>
+            </motion.li>
+          ))}
+        </ul>
       </motion.div>
 
       <motion.div

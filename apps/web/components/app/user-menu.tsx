@@ -285,7 +285,7 @@ export function UserMenu({
           <span>{t('sidebar.profile.helpArticles')}</span>
         </DropdownMenuItem>
         <DropdownMenuItem className="cursor-pointer px-3 py-2" asChild>
-          <Link href="/settings/account/billing">
+          <Link href="/settings/billing">
             <CreditCard className="mr-2 size-4" />
             <span>{t('sidebar.profile.billing') || 'Billing'}</span>
           </Link>

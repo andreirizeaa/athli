@@ -4,10 +4,10 @@ import React from 'react'
 import { Check, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
-type Tier = 'free' | 'pro' | 'max'
+type Tier = 'starter' | 'pro' | 'max'
 
 const tiers: { key: Tier; highlighted?: boolean }[] = [
-    { key: 'free' },
+    { key: 'starter' },
     { key: 'pro' },
     { key: 'max' },
 ]
@@ -17,7 +17,7 @@ const tiers: { key: Tier; highlighted?: boolean }[] = [
 type FeatureValue = boolean | string
 
 const availability: Record<Tier, FeatureValue[]> = {
-    free: [
+    starter: [
         // Mobile Apps
         true, true,  // Coach App, Client App
         // Core Features
