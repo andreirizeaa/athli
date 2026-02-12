@@ -32,6 +32,32 @@ export interface Metric {
   created_at: string;
   updated_at: string;
   client_id?: string;
+  folder_id?: string | null;
+}
+
+// =============================================================================
+// Folder Types
+// =============================================================================
+
+export interface MetricFolder {
+  id: string;
+  coach_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateMetricFolderInput {
+  name: string;
+}
+
+export interface UpdateMetricFolderInput {
+  name?: string;
+}
+
+export interface MoveMetricInput {
+  metricId: string;
+  folderId: string | null;
 }
 
 export interface MetricLog {

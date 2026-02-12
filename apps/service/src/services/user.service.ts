@@ -20,6 +20,9 @@ interface UserProfile {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  // Coach-specific fields
+  freeTrialCompleted?: boolean;
+  coachCreatedAt?: string; // When coach profile was created (for trial calculation)
 }
 
 class UserService {
@@ -64,6 +67,23 @@ class UserService {
     // Prioritize coach profile if multiple exist
     const profile = profiles.find(p => p.user_type === 'coach') || profiles[0];
 
+    // Fetch coach-specific data if user is a coach
+    let freeTrialCompleted: boolean | undefined;
+    let coachCreatedAt: string | undefined;
+
+    if (profile.user_type === 'coach') {
+      const { data: coachProfile } = await supabase
+        .from('coach_profiles')
+        .select('free_trial_completed, created_at')
+        .eq('id', userId)
+        .single();
+
+      if (coachProfile) {
+        freeTrialCompleted = coachProfile.free_trial_completed;
+        coachCreatedAt = coachProfile.created_at;
+      }
+    }
+
     return {
       id: authUser.user.id,
       email: profile.email,
@@ -75,6 +95,8 @@ class UserService {
       isActive: profile.is_active,
       createdAt: authUser.user.created_at,
       updatedAt: profile.updated_at,
+      freeTrialCompleted,
+      coachCreatedAt,
     };
   }
 

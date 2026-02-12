@@ -40,7 +40,6 @@ export interface CoachPackage {
   is_visible: boolean;
   features: string[];
   free_trial_days: number;
-  initial_fee_cents: number;
   onboarding_id: string | null;
   sequence_id: string | null;
   image_url: string | null;
@@ -166,7 +165,16 @@ export type BillingEventType =
   | 'subscription_reactivated'
   | 'subscription_past_due'
   | 'refund_issued'
-  | 'dispute_created';
+  | 'dispute_created'
+  // Trial events
+  | 'trial_started'
+  | 'trial_ending'
+  | 'trial_converted'
+  // Customer portal events
+  | 'customer_updated'
+  | 'payment_method_added'
+  | 'payment_method_updated'
+  | 'payment_method_removed';
 
 export interface PaymentActivityRow {
   id: string;

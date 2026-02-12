@@ -1,13 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, FileText, Trash2, X, UserPlus, Copy } from 'lucide-react';
+import { Plus, FileText, Trash2, X, UserPlus, Copy, FolderPlus, MoreHorizontal, Move, Folder } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
@@ -15,16 +23,107 @@ import { PageHeader } from '@/components/app/page-header';
 import { AddMetricSidePanel } from '@/components/metrics/add-metric-side-panel';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { useCoachMetrics } from '@/hooks/use-coach-metrics';
+import { useCoachMetricFolders } from '@/hooks/use-coach-metric-folders';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { Metric } from '@/api/coach/coach-metric-service';
 import { AssignToClientsSidePanel } from '@/components/app/assign-to-clients-side-panel';
 import { assignMetricsToClients } from '@/api/client/client-metric-service';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { FolderCard } from '@/components/app/folder-card';
+import { CreateFolderDialog } from '@/components/app/create-folder-dialog';
+import { MoveToFolderDialog } from '@/components/app/move-to-folder-dialog';
+import { FolderSearchButton } from '@/components/app/folder-search-button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ButtonGroup } from '@/components/ui/button-group';
+import { useFeatureAccess } from '@/lib/permissions/feature-gate';
 
-/* Metric type is imported from service */
+// Screenshot preview component for upgrade dialog
+function ScreenshotPreview() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setDims({ w: el.offsetWidth, h: el.offsetHeight });
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { w, h } = dims;
+  const r = 8;
+
+  return (
+    <div ref={containerRef} className="relative">
+      {w > 0 && h > 0 && (
+        <svg
+          className="pointer-events-none absolute top-0 left-0 z-10"
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          fill="none"
+        >
+          <defs>
+            <linearGradient id="border-grad-metrics-page" x1="0.5" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="rgb(192,132,252)" />
+              <stop offset="100%" stopColor="rgb(165,180,252)" />
+            </linearGradient>
+          </defs>
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-metrics-page)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [0, -1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-metrics-page)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [-0.5, -1.5] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+        </svg>
+      )}
+      <img
+        src="/app-screenshots/client/metrics/light.png"
+        alt="Metrics feature preview"
+        className="block w-full h-auto rounded-lg border dark:hidden"
+      />
+      <img
+        src="/app-screenshots/client/metrics/dark.png"
+        alt="Metrics feature preview"
+        className="hidden w-full h-auto rounded-lg border dark:block"
+      />
+    </div>
+  );
+}
 
 const MetricsPage = () => {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const t = useTranslations();
   const searchParams = useSearchParams();
   const {
@@ -35,29 +134,74 @@ const MetricsPage = () => {
     deleteMetric,
     duplicateMetric
   } = useCoachMetrics();
+  const {
+    folders,
+    createFolder,
+    updateFolder,
+    deleteFolder,
+    moveMetric,
+    isCreating: isCreatingFolder,
+  } = useCoachMetricFolders();
   const { clients } = useCoachClients();
   const { user } = useUserProfile();
+  const { hasAccess: hasHabitsMetricsAccess } = useFeatureAccess('habits_metrics');
 
   const [isAddMetricOpen, setIsAddMetricOpen] = useState<boolean>(false);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState<boolean>(false);
   const [isEditMetricOpen, setIsEditMetricOpen] = useState<boolean>(false);
   const [editingMetric, setEditingMetric] = useState<Metric | null>(null);
   const [selectedMetrics, setSelectedMetrics] = useState<Set<string>>(new Set());
   const [isAssignToClientsOpen, setIsAssignToClientsOpen] = useState<boolean>(false);
   const [metricsToAssign, setMetricsToAssign] = useState<Metric[]>([]);
+  const [folderToAssign, setFolderToAssign] = useState<{ id: string; name: string } | null>(null);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
   const [metricToDelete, setMetricToDelete] = useState<string | null>(null);
+
+  // Folder state
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState<boolean>(false);
+  const [editingFolder, setEditingFolder] = useState<{ id: string; name: string } | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
+  const [metricToMove, setMetricToMove] = useState<Metric | null>(null);
+  const [isBulkMoveOpen, setIsBulkMoveOpen] = useState<boolean>(false);
+  const [folderSearch, setFolderSearch] = useState<string>('');
+
+  // Filter metrics to show only unfiled ones on the main page
+  const unfiledMetrics = useMemo(() => {
+    return metrics.filter(m => !m.folder_id);
+  }, [metrics]);
+
+  // Get item counts for each folder
+  const folderItemCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    metrics.forEach(m => {
+      if (m.folder_id) {
+        counts[m.folder_id] = (counts[m.folder_id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [metrics]);
+
+  // Filter folders based on search (folder names and contents)
+  const filteredFolders = useMemo(() => {
+    if (!folderSearch.trim()) return folders;
+    const searchLower = folderSearch.toLowerCase();
+    return folders.filter(f => {
+      // Match folder name
+      if (f.name.toLowerCase().includes(searchLower)) return true;
+      // Match any metric inside the folder
+      const folderMetrics = metrics.filter(m => m.folder_id === f.id);
+      return folderMetrics.some(m => m.name.toLowerCase().includes(searchLower));
+    });
+  }, [folders, folderSearch, metrics]);
 
   // Auto-open add metric panel if ?create=true
   useEffect(() => {
     if (searchParams.get('create') === 'true') {
       handleOpenAddMetric();
-      // Clear the query param
       window.history.replaceState({}, '', '/metrics');
     }
   }, [searchParams]);
-
-
 
   const columns: ColumnDefinition<Metric>[] = [
     {
@@ -137,18 +281,41 @@ const MetricsPage = () => {
       width: { class: 'w-[100px]', pixel: '100px' },
       renderCell: (row) => (
         <div className="flex items-center justify-end w-full" data-no-row-link="true">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              setMetricToDelete(row.id);
-            }}
-            className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
-            aria-label={t('metrics.actions.deleteAria', { name: row.name })}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {folders.length > 0 && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMetricToMove(row);
+                  }}
+                >
+                  <Move className="size-4 mr-2" />
+                  <span>Move to folder</span>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMetricToDelete(row.id);
+                }}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="size-4 mr-2 text-destructive" />
+                <span>{t('general.delete')}</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
     },
@@ -162,11 +329,9 @@ const MetricsPage = () => {
     }
 
     if (schedule.frequency === 'daily') {
-      // If all 7 days are selected, just say "Daily"
       if (schedule.selectedDays && schedule.selectedDays.length === 7) {
         return t('metrics.schedule.frequency.daily');
       }
-      // Otherwise show the specific days
       if (schedule.selectedDays && schedule.selectedDays.length > 0) {
         const dayNames = schedule.selectedDays.map(day => t(`habits.form.${day}`)).join(', ');
         return t('metrics.schedule.frequency.daily') + ` (${dayNames})`;
@@ -227,7 +392,6 @@ const MetricsPage = () => {
   ) => {
     try {
       if (editingMetric) {
-        // Update existing metric
         await updateMetric({
           id: editingMetric.id,
           updates: {
@@ -240,12 +404,11 @@ const MetricsPage = () => {
         });
         handleCloseEditMetric();
       } else {
-        // Add new metric
         await createMetric({
           name,
           unit,
           description,
-          value_kind: 'number', // Default
+          value_kind: 'number',
           schedule_config: scheduleConfig,
           cron_expression: cronExpression
         });
@@ -254,11 +417,6 @@ const MetricsPage = () => {
     } catch (error) {
       console.error('Failed to save metric:', error);
     }
-  };
-
-  const handleDeleteMetric = async (metricId: string, e: React.MouseEvent | React.KeyboardEvent) => {
-    e.stopPropagation();
-    setMetricToDelete(metricId);
   };
 
   const handleBulkDelete = async () => {
@@ -322,6 +480,11 @@ const MetricsPage = () => {
   };
 
   const handleAssignToClients = () => {
+    if (!hasHabitsMetricsAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
+
     const selectedMetricItems = metrics.filter((metric) => selectedMetrics.has(metric.id));
     if (selectedMetricItems.length === 0) {
       return;
@@ -355,16 +518,14 @@ const MetricsPage = () => {
       });
 
       setIsAssignToClientsOpen(false);
+      setFolderToAssign(null);
       const metricCount = metricsToAssign.length;
       const clientCount = clientIds.length;
 
-      // Remove queries to force hard refresh and loading state
       clientIds.forEach(clientId => {
         queryClient.removeQueries({ queryKey: ['client-metrics', clientId] });
       });
 
-
-      // Determine toast message
       if (metricCount === 1 && clientCount === 1) {
         const metricName = metricsToAssign[0].name;
         const clientName = clients.find(c => c.id === clientIds[0])?.name || 'Client';
@@ -379,7 +540,6 @@ const MetricsPage = () => {
         toast.success(`Successfully assigned ${metricCount} metrics to ${clientCount} clients`);
       }
 
-      // Clear selection
       setMetricsToAssign([]);
       setSelectedMetrics(new Set());
     } catch (error) {
@@ -387,22 +547,116 @@ const MetricsPage = () => {
     }
   };
 
+  // Folder handlers
+  const handleCreateFolder = async (name: string) => {
+    await createFolder({ name });
+  };
 
+  const handleUpdateFolder = async (name: string) => {
+    if (!editingFolder) return;
+    await updateFolder({ id: editingFolder.id, data: { name } });
+    setEditingFolder(null);
+  };
+
+  const handleDeleteFolder = async () => {
+    if (!folderToDelete) return;
+    try {
+      await deleteFolder(folderToDelete);
+      setFolderToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete folder:', error);
+      toast.error(t('general.deleteError'));
+    }
+  };
+
+  const handleMoveMetric = async (folderId: string | null) => {
+    if (!metricToMove) return;
+    await moveMetric({ metricId: metricToMove.id, folderId });
+    setMetricToMove(null);
+  };
+
+  const handleBulkMove = async (folderId: string | null) => {
+    const idsToMove = Array.from(selectedMetrics);
+    await Promise.all(idsToMove.map((id) => moveMetric({ metricId: id, folderId })));
+    setSelectedMetrics(new Set());
+    setIsBulkMoveOpen(false);
+  };
+
+  const handleFolderClick = (folderId: string) => {
+    router.push(`/metrics/folder/${folderId}`);
+  };
+
+  const handleAssignFolder = async (folderId: string) => {
+    if (!hasHabitsMetricsAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
+
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return;
+
+    // Get all metrics in this folder
+    const folderMetrics = metrics.filter(m => m.folder_id === folderId);
+    if (folderMetrics.length === 0) {
+      toast.error('This folder is empty');
+      return;
+    }
+    setFolderToAssign({ id: folder.id, name: folder.name });
+    setMetricsToAssign(folderMetrics);
+    setIsAssignToClientsOpen(true);
+  };
 
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-auto">
       <PageHeader
         title={t('metrics.title')}
         action={
-          <Button onClick={handleOpenAddMetric} className="gap-2">
-            <Plus className="size-4" />
-            <span>{t('metrics.addMetric')}</span>
-          </Button>
+          <ButtonGroup>
+            <FolderSearchButton
+              value={folderSearch}
+              onChange={setFolderSearch}
+            />
+            <Button
+              variant="ghost"
+              onClick={() => setIsCreateFolderOpen(true)}
+              className="gap-2 border border-primary"
+            >
+              <FolderPlus className="size-4" />
+              <span>Create Folder</span>
+            </Button>
+            <Button onClick={handleOpenAddMetric} className="gap-2">
+              <Plus className="size-4" />
+              <span>{t('metrics.addMetric')}</span>
+            </Button>
+          </ButtonGroup>
         }
       />
 
+      {/* Folders Section */}
+      {folders.length > 0 && (
+        <div className="px-4 pt-3 pb-1 overflow-x-auto flex-shrink-0">
+          <div className="flex gap-3 min-h-[72px] items-center">
+            {filteredFolders.length > 0 ? (
+              filteredFolders.map((folder) => (
+                <FolderCard
+                  key={folder.id}
+                  name={folder.name}
+                  itemCount={folderItemCounts[folder.id] || 0}
+                  onClick={() => handleFolderClick(folder.id)}
+                  onEdit={() => setEditingFolder({ id: folder.id, name: folder.name })}
+                  onDelete={() => setFolderToDelete(folder.id)}
+                  onAssign={() => handleAssignFolder(folder.id)}
+                />
+              ))
+            ) : (
+              <span className="text-sm text-muted-foreground">No folders match your search</span>
+            )}
+          </div>
+        </div>
+      )}
+
       <DataGrid
-        data={metrics}
+        data={unfiledMetrics}
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="metrics"
@@ -414,7 +668,6 @@ const MetricsPage = () => {
         enableRowSelection={true}
         selectedRowIds={selectedMetrics}
         onSelectionChange={setSelectedMetrics}
-
         showPagination={true}
         gridPadding={true}
         compactPagination={true}
@@ -465,6 +718,16 @@ const MetricsPage = () => {
                 <UserPlus className="size-4" />
                 <span>{t('metrics.actions.assignToClients')}</span>
               </Button>
+              {folders.length > 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsBulkMoveOpen(true)}
+                  className="gap-2"
+                >
+                  <Move className="size-4" />
+                  <span>Move</span>
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 onClick={() => setIsBulkDeleteOpen(true)}
@@ -535,10 +798,54 @@ const MetricsPage = () => {
         itemType="metric"
       />
 
+      {/* Folder dialogs */}
+      <CreateFolderDialog
+        open={isCreateFolderOpen}
+        onOpenChange={setIsCreateFolderOpen}
+        onSave={handleCreateFolder}
+        title="Create Folder"
+      />
+
+      <CreateFolderDialog
+        open={editingFolder !== null}
+        onOpenChange={(open) => !open && setEditingFolder(null)}
+        onSave={handleUpdateFolder}
+        title="Edit Folder"
+        initialName={editingFolder?.name || ''}
+        isEdit={true}
+      />
+
+      <ConfirmDeleteDialog
+        open={folderToDelete !== null}
+        onOpenChange={(open) => !open && setFolderToDelete(null)}
+        onConfirm={handleDeleteFolder}
+        itemName={folders.find(f => f.id === folderToDelete)?.name}
+        itemType="folder"
+      />
+
+      <MoveToFolderDialog
+        open={metricToMove !== null}
+        onOpenChange={(open) => !open && setMetricToMove(null)}
+        folders={folders}
+        currentFolderId={metricToMove?.folder_id}
+        onMove={handleMoveMetric}
+        itemName={metricToMove?.name}
+      />
+
+      <MoveToFolderDialog
+        open={isBulkMoveOpen}
+        onOpenChange={setIsBulkMoveOpen}
+        folders={folders}
+        onMove={handleBulkMove}
+      />
+
       {/* Assign to Clients Side Panel */}
       <AssignToClientsSidePanel
         open={isAssignToClientsOpen}
-        onOpenChange={setIsAssignToClientsOpen}
+        onOpenChange={(open) => {
+          setIsAssignToClientsOpen(open);
+          if (!open) setFolderToAssign(null);
+        }}
         title={t('metrics.assignToClientsTitle')}
         assignButtonLabel={(count) =>
           count === 1
@@ -547,7 +854,19 @@ const MetricsPage = () => {
         }
         onAssign={handleAssignMetricsToClients}
         previewComponent={
-          metricsToAssign.length > 0 ? (
+          folderToAssign ? (
+            <div className="border rounded-lg px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-muted rounded-lg">
+                  <Folder className="size-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium">{folderToAssign.name}</span>
+                  <p className="text-xs text-muted-foreground">{metricsToAssign.length} {metricsToAssign.length === 1 ? 'metric' : 'metrics'}</p>
+                </div>
+              </div>
+            </div>
+          ) : metricsToAssign.length > 0 ? (
             <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
               {metricsToAssign.map((metric) => (
                 <div
@@ -575,6 +894,29 @@ const MetricsPage = () => {
           )
         }
       />
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogDescription>
+              Assign metrics to track and measure your clients' performance and progress over time.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <ScreenshotPreview />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+              Maybe Later
+            </Button>
+            <Button onClick={() => router.push('/settings/billing')}>
+              View Plans
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

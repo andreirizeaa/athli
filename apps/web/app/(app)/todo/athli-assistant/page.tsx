@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
+import { FeatureGate } from '@/lib/permissions';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import {
   Select,
@@ -123,12 +124,13 @@ const AthliAssistantPage = () => {
   ];
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <DataGrid
-        data={filteredAthliAssistantTasks}
-        columns={athliAssistantColumns}
-        getRowId={(row) => row.id}
-        gridKey="todo-athli-assistant"
+    <FeatureGate feature="ai_todo_list">
+      <div className="h-full w-full flex flex-col">
+        <DataGrid
+          data={filteredAthliAssistantTasks}
+          columns={athliAssistantColumns}
+          getRowId={(row) => row.id}
+          gridKey="todo-athli-assistant"
         itemsPerPage={25}
         enableSearch={true}
         searchPlaceholder={t('general.search')}
@@ -161,7 +163,8 @@ const AthliAssistantPage = () => {
           />
         }
       />
-    </div>
+      </div>
+    </FeatureGate>
   );
 };
 

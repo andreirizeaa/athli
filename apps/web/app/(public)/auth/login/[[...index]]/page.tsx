@@ -139,7 +139,7 @@ export default function SignInPage() {
             )}
             <Button
               variant="outline"
-              className="w-full h-12 rounded-xl transition-all"
+              className="w-full h-12 rounded-xl transition-all bg-background"
               onClick={handleGoogleSignIn}
               disabled={isSigningIn || isGoogleLoading || isAppleLoading}
             >
@@ -167,7 +167,7 @@ export default function SignInPage() {
             )}
             <Button
               variant="outline"
-              className="w-full h-12 rounded-xl transition-all"
+              className="w-full h-12 rounded-xl transition-all bg-background"
               onClick={handleAppleSignIn}
               disabled={isSigningIn || isGoogleLoading || isAppleLoading}
             >

@@ -13,6 +13,20 @@ const upload = multer({
 
 export const coachFileRouter = Router();
 
+// =============================================================================
+// Folder Routes (must come before :id routes)
+// =============================================================================
+
+coachFileRouter.get('/folders', supabaseAuthenticate, coachFilesController.getFolders);
+coachFileRouter.post('/folders', supabaseAuthenticate, coachFilesController.createFolder);
+coachFileRouter.patch('/folders/:id', supabaseAuthenticate, coachFilesController.updateFolder);
+coachFileRouter.delete('/folders/:id', supabaseAuthenticate, coachFilesController.deleteFolder);
+coachFileRouter.get('/folders/:id/files', supabaseAuthenticate, coachFilesController.getFilesInFolder);
+
+// =============================================================================
+// File Routes
+// =============================================================================
+
 /**
  * @swagger
  * /api/v1/coach/files:
@@ -126,6 +140,40 @@ coachFileRouter.post('/link', supabaseAuthenticate, coachFilesController.createL
 
 /**
  * @swagger
+ * /api/v1/coach/files/{id}/url:
+ *   get:
+ *     summary: Get signed URL for file access
+ *     tags: [Coach Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Signed URL generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         url:
+ *                           type: string
+ */
+coachFileRouter.get('/:id/url', supabaseAuthenticate, coachFilesController.getFileUrl);
+
+coachFileRouter.patch('/:id/move', supabaseAuthenticate, coachFilesController.moveFile);
+
+/**
+ * @swagger
  * /api/v1/coach/files/{id}:
  *   patch:
  *     summary: Update file metadata
@@ -186,35 +234,3 @@ coachFileRouter.patch('/:id', supabaseAuthenticate, coachFilesController.updateF
  *         description: File deleted successfully
  */
 coachFileRouter.delete('/:id', supabaseAuthenticate, coachFilesController.deleteFile);
-
-/**
- * @swagger
- * /api/v1/coach/files/{id}/url:
- *   get:
- *     summary: Get signed URL for file access
- *     tags: [Coach Files]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Signed URL generated successfully
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: object
- *                       properties:
- *                         url:
- *                           type: string
- */
-coachFileRouter.get('/:id/url', supabaseAuthenticate, coachFilesController.getFileUrl);

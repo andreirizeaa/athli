@@ -6,5 +6,5 @@ export const metadata: Metadata = {
 };
 
 export default function BusinessPage() {
-  redirect('/business/summary');
+  redirect('/business/activity');
 }

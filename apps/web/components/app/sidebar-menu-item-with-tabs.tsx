@@ -28,6 +28,7 @@ type SidebarMenuItemWithTabsProps = {
   icon: LucideIcon;
   basePath: string;
   tabs: Tab[];
+  tooltipAlign?: 'start' | 'center' | 'end';
 };
 
 export function SidebarMenuItemWithTabs({
@@ -36,6 +37,7 @@ export function SidebarMenuItemWithTabs({
   icon: Icon,
   basePath,
   tabs,
+  tooltipAlign = 'start',
 }: SidebarMenuItemWithTabsProps) {
   const t = useTranslations();
   const pathname = usePathname();
@@ -74,7 +76,7 @@ export function SidebarMenuItemWithTabs({
         <TooltipTrigger asChild>{menuButton}</TooltipTrigger>
         <TooltipContent
           side="right"
-          align="start"
+          align={tooltipAlign}
           sideOffset={isCollapsed ? 0 : -2}
           className="flex flex-col px-0 py-1.5 min-w-[160px]"
         >
@@ -87,7 +89,18 @@ export function SidebarMenuItemWithTabs({
           <div className="h-px w-full bg-background/20 mb-1" />
           {tabs.map((tab) => {
             const tabHref = `${basePath}/${tab.value}`;
-            const isTabActive = normalizedPathname === tabHref || normalizedPathname.startsWith(`${tabHref}/`);
+            // Check if this is the most specific matching tab
+            // Only mark as active if exact match, or if it starts with tabHref/ and no other tab is more specific
+            const isExactMatch = normalizedPathname === tabHref;
+            const isChildPath = normalizedPathname.startsWith(`${tabHref}/`);
+            // Check if any other tab is a more specific match (longer path that also matches)
+            const hasMoreSpecificMatch = tabs.some((otherTab) => {
+              if (otherTab.value === tab.value) return false;
+              const otherHref = `${basePath}/${otherTab.value}`;
+              return otherHref.length > tabHref.length &&
+                (normalizedPathname === otherHref || normalizedPathname.startsWith(`${otherHref}/`));
+            });
+            const isTabActive = (isExactMatch || isChildPath) && !hasMoreSpecificMatch;
             const tabLabel = t(tab.labelKey);
 
             return (

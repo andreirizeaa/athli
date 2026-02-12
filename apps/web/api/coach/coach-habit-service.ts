@@ -7,6 +7,10 @@ export type {
   DeleteHabitData,
   Habit,
   DBHabit,
+  HabitFolder,
+  CreateHabitFolderInput,
+  UpdateHabitFolderInput,
+  MoveHabitInput,
 } from '@athli/shared-types';
 
 import type {
@@ -15,6 +19,9 @@ import type {
   DeleteHabitData,
   Habit,
   DBHabit,
+  HabitFolder,
+  CreateHabitFolderInput,
+  UpdateHabitFolderInput,
 } from '@athli/shared-types';
 
 const mapDBHabitToHabit = (dbHabit: DBHabit): Habit => {
@@ -30,6 +37,7 @@ const mapDBHabitToHabit = (dbHabit: DBHabit): Habit => {
     reminderMessage: dbHabit.schedule_config?.reminder_message,
     createdAt: new Date(dbHabit.created_at).getTime(),
     clientId: dbHabit.client_id ?? undefined,
+    folderId: dbHabit.folder_id ?? undefined,
   };
 };
 
@@ -113,5 +121,67 @@ export const duplicateHabit = async (habitId: string): Promise<Habit> => {
  */
 export const getAllHabits = async (): Promise<Habit[]> => {
   const response = await apiFetch<{ data: { habits: DBHabit[] } }>('/coach/habits');
+  return response.data.habits.map(mapDBHabitToHabit);
+};
+
+// =============================================================================
+// Folder Operations
+// =============================================================================
+
+/**
+ * Get all habit folders for the current coach
+ */
+export const getAllHabitFolders = async (): Promise<HabitFolder[]> => {
+  const response = await apiFetch<{ data: { folders: HabitFolder[] } }>('/coach/habits/folders');
+  return response.data.folders;
+};
+
+/**
+ * Create a new habit folder
+ */
+export const createHabitFolder = async (data: CreateHabitFolderInput): Promise<HabitFolder> => {
+  const response = await apiFetch<{ data: { folder: HabitFolder } }>('/coach/habits/folders', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return response.data.folder;
+};
+
+/**
+ * Update a habit folder
+ */
+export const updateHabitFolder = async (id: string, data: UpdateHabitFolderInput): Promise<HabitFolder> => {
+  const response = await apiFetch<{ data: { folder: HabitFolder } }>(`/coach/habits/folders/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  return response.data.folder;
+};
+
+/**
+ * Delete a habit folder (items inside become unfiled)
+ */
+export const deleteHabitFolder = async (id: string): Promise<void> => {
+  await apiFetch(`/coach/habits/folders/${id}`, {
+    method: 'DELETE',
+  });
+};
+
+/**
+ * Move a habit to a folder (or out of folder if folderId is null)
+ */
+export const moveHabit = async (habitId: string, folderId: string | null): Promise<Habit> => {
+  const response = await apiFetch<{ data: { habit: DBHabit } }>(`/coach/habits/${habitId}/move`, {
+    method: 'PATCH',
+    body: JSON.stringify({ folder_id: folderId }),
+  });
+  return mapDBHabitToHabit(response.data.habit);
+};
+
+/**
+ * Get habits in a specific folder
+ */
+export const getHabitsInFolder = async (folderId: string): Promise<Habit[]> => {
+  const response = await apiFetch<{ data: { habits: DBHabit[] } }>(`/coach/habits/folders/${folderId}/habits`);
   return response.data.habits.map(mapDBHabitToHabit);
 };

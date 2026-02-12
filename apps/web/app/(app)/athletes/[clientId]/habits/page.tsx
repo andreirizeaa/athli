@@ -1,13 +1,22 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { motion } from 'motion/react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, Flame, Loader2, LayoutGrid, ChevronRight } from 'lucide-react';
 import {
   Select,
@@ -42,8 +51,86 @@ import { useClientProfileContext } from '../client-profile-context';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { toast } from 'sonner';
+import { useFeatureAccess } from '@/lib/permissions/feature-gate';
 
-// Mock habits removed
+// Screenshot preview component for upgrade dialog
+function ScreenshotPreview() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setDims({ w: el.offsetWidth, h: el.offsetHeight });
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { w, h } = dims;
+  const r = 8;
+
+  return (
+    <div ref={containerRef} className="relative">
+      {w > 0 && h > 0 && (
+        <svg
+          className="pointer-events-none absolute top-0 left-0 z-10"
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          fill="none"
+        >
+          <defs>
+            <linearGradient id="border-grad-habits" x1="0.5" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="rgb(192,132,252)" />
+              <stop offset="100%" stopColor="rgb(165,180,252)" />
+            </linearGradient>
+          </defs>
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-habits)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [0, -1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-habits)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [-0.5, -1.5] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+        </svg>
+      )}
+      <img
+        src="/app-screenshots/client/habits/light.png"
+        alt="Habits feature preview"
+        className="block w-full h-auto rounded-lg border dark:hidden"
+      />
+      <img
+        src="/app-screenshots/client/habits/dark.png"
+        alt="Habits feature preview"
+        className="hidden w-full h-auto rounded-lg border dark:block"
+      />
+    </div>
+  );
+}
 
 type HabitLog = {
   id: string;
@@ -54,6 +141,7 @@ type HabitLog = {
 
 const ClientHabitsPage = () => {
   const t = useTranslations();
+  const router = useRouter();
   const params = useParams<{ clientId: string; contactId: string }>();
   // Support both clientId (athletes context) and contactId (inbox context)
   const clientIdFromParams = params.clientId || params.contactId;
@@ -61,6 +149,7 @@ const ClientHabitsPage = () => {
   const isInbox = !!params.contactId;
 
   const { user } = useUserProfile();
+  const { hasAccess: hasHabitsMetricsAccess } = useFeatureAccess('habits_metrics');
   const { habits: habitsFromContext, isLoading: isLoadingContext, refreshData } = useClientProfileContext();
   const { habits: habitsFromHook, isLoading: isLoadingHook, refetch } = useClientHabits(clientId);
 
@@ -78,6 +167,7 @@ const ClientHabitsPage = () => {
   const [editingLogValue, setEditingLogValue] = useState<string>('');
   const [timeFilter, setTimeFilter] = useState<string>('all-time');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState<boolean>(false);
   const [streaks, setStreaks] = useState<HabitStreaks | null>(null);
   const [isLoadingStreaks, setIsLoadingStreaks] = useState<boolean>(false);
   const [isViewAll, setIsViewAll] = useState<boolean>(true);
@@ -443,6 +533,10 @@ const ClientHabitsPage = () => {
   };
 
   const handleOpenAddHabit = () => {
+    if (!hasHabitsMetricsAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
     setIsAddHabitOpen(true);
   };
 
@@ -451,6 +545,10 @@ const ClientHabitsPage = () => {
   };
 
   const handleOpenLogHabit = () => {
+    if (!hasHabitsMetricsAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
     setSelectedHabitIdForLog(null);
     setIsLogHabitOpen(true);
   };
@@ -461,6 +559,10 @@ const ClientHabitsPage = () => {
   };
 
   const handleOpenEditHabit = () => {
+    if (!hasHabitsMetricsAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
     if (selectedHabit) {
       setIsEditHabitOpen(true);
     }
@@ -595,7 +697,7 @@ const ClientHabitsPage = () => {
       <div className="h-full w-full flex flex-col items-center justify-center p-8">
         <EmptyGridState
           title="No habits assigned"
-          subtitle="This client hasn't been assigned any habits yet."
+          subtitle={hasHabitsMetricsAccess ? "This client hasn't been assigned any habits yet." : "Upgrade to Pro to assign habits to clients"}
           action={
             <Button onClick={handleOpenAddHabit} className="gap-2">
               <Plus className="size-4" />
@@ -610,6 +712,28 @@ const ClientHabitsPage = () => {
           clientId={clientId}
           clientName={clientName}
         />
+        {/* Upgrade Dialog */}
+        <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Upgrade to Pro</DialogTitle>
+              <DialogDescription>
+                Track client habits and metrics with detailed analytics and progress tracking.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <ScreenshotPreview />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+                Maybe Later
+              </Button>
+              <Button onClick={() => router.push('/settings/billing')}>
+                View Plans
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -718,7 +842,10 @@ const ClientHabitsPage = () => {
                   <FileText className="size-4" />
                   <span>Log a Habit</span>
                 </Button>
-                <Button onClick={handleOpenAddHabit} className="gap-2 rounded-l-none">
+                <Button
+                  onClick={handleOpenAddHabit}
+                  className="gap-2 rounded-l-none"
+                >
                   <Plus className="size-4" />
                   <span>Assign Habit</span>
                 </Button>
@@ -883,6 +1010,10 @@ const ClientHabitsPage = () => {
                   </div>
                   <ButtonGroup>
                     <Button onClick={() => {
+                      if (!hasHabitsMetricsAccess) {
+                        setIsUpgradeDialogOpen(true);
+                        return;
+                      }
                       setSelectedHabitIdForLog(selectedHabitId);
                       setIsLogHabitOpen(true);
                     }} className="gap-2" variant="outline">
@@ -1167,6 +1298,29 @@ const ClientHabitsPage = () => {
         itemType="habit"
         variant="default"
       />
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogDescription>
+              Track client habits and metrics with detailed analytics and progress tracking.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <ScreenshotPreview />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+              Maybe Later
+            </Button>
+            <Button onClick={() => router.push('/settings/billing')}>
+              View Plans
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -101,7 +101,6 @@ export interface CreatePackageData {
   interval_count?: number;
   features?: string[];
   free_trial_days?: number;
-  initial_fee_cents?: number;
   onboarding_id?: string | null;
   sequence_id?: string | null;
   image_url?: string | null;

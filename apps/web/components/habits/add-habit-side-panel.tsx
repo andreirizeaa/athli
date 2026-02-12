@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Search, Target } from 'lucide-react';
+import { Search, Target, Folder, Check } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import { Info } from 'lucide-react';
 import Link from 'next/link';
 import { defaultHabits, type DefaultHabit } from '@/constants/habits';
 import { HabitFormManual } from './habit-form-manual';
-import { getAllHabits, type Habit } from '@/api/coach/coach-habit-service';
+import { getAllHabits, getAllHabitFolders, type Habit, type HabitFolder } from '@/api/coach/coach-habit-service';
 import { assignHabit } from '@/api/client/client-habit-service';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 
@@ -57,10 +57,12 @@ export const AddHabitSidePanel = ({
   const [librarySearchQuery, setLibrarySearchQuery] = useState<string>('');
   const [yourLibrarySearchQuery, setYourLibrarySearchQuery] = useState<string>('');
   const [coachHabits, setCoachHabits] = useState<Habit[]>([]);
+  const [coachFolders, setCoachFolders] = useState<HabitFolder[]>([]);
   const [isLoadingHabits, setIsLoadingHabits] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [selectedLibraryHabits, setSelectedLibraryHabits] = useState<Set<string>>(new Set());
+  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
   const [enableDuration, setEnableDuration] = useState<boolean>(false);
   const [enableReminder, setEnableReminder] = useState<boolean>(false);
 
@@ -130,8 +132,12 @@ export const AddHabitSidePanel = ({
   const fetchCoachHabits = async () => {
     setIsLoadingHabits(true);
     try {
-      const habits = await getAllHabits();
+      const [habits, folders] = await Promise.all([
+        getAllHabits(),
+        getAllHabitFolders(),
+      ]);
       setCoachHabits(habits);
+      setCoachFolders(folders);
     } catch (error) {
       console.error('Failed to fetch coach habits:', error);
     } finally {
@@ -147,6 +153,7 @@ export const AddHabitSidePanel = ({
     setLibrarySearchQuery('');
     setYourLibrarySearchQuery('');
     setSelectedLibraryHabits(new Set());
+    setSelectedFolders(new Set());
     onOpenChange(false);
   };
 
@@ -174,6 +181,34 @@ export const AddHabitSidePanel = ({
         setIsSaving(false);
       }
     }
+  };
+
+  const handleFolderToggle = (folderId: string) => {
+    const habitsInFolder = coachHabits.filter(h => h.folderId === folderId);
+    const habitIdsInFolder = new Set(habitsInFolder.map(h => h.id));
+    const isCurrentlySelected = selectedFolders.has(folderId);
+
+    setSelectedFolders(prev => {
+      const newSet = new Set(prev);
+      if (isCurrentlySelected) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+
+    setSelectedLibraryHabits(prev => {
+      const newSet = new Set(prev);
+      if (isCurrentlySelected) {
+        // Deselect all habits in folder
+        habitIdsInFolder.forEach(id => newSet.delete(id));
+      } else {
+        // Select all habits in folder
+        habitIdsInFolder.forEach(id => newSet.add(id));
+      }
+      return newSet;
+    });
   };
 
   const handleSave = async (values: HabitFormValues) => {
@@ -483,9 +518,41 @@ export const AddHabitSidePanel = ({
                 </AlertDescription>
               </Alert>
             ) : (
-              <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
-                <DataGrid
-                  data={coachHabits}
+              <div className="flex flex-col gap-4 flex-1 min-h-0">
+                {/* Folders Row */}
+                {coachFolders.length > 0 && (
+                  <div className="flex-shrink-0 overflow-x-auto pb-2 -mx-1 px-1">
+                    <div className="flex gap-2">
+                      {coachFolders.map((folder) => {
+                        const isSelected = selectedFolders.has(folder.id);
+                        const habitsCount = coachHabits.filter(h => h.folderId === folder.id).length;
+                        return (
+                          <button
+                            key={folder.id}
+                            onClick={() => handleFolderToggle(folder.id)}
+                            className={cn(
+                              'flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors flex-shrink-0',
+                              isSelected
+                                ? 'bg-primary/10 border-primary text-primary'
+                                : 'bg-background border-border hover:bg-accent/50'
+                            )}
+                          >
+                            {isSelected ? (
+                              <Check className="size-4" />
+                            ) : (
+                              <Folder className="size-4 text-muted-foreground" />
+                            )}
+                            <span className="text-sm font-medium whitespace-nowrap">{folder.name}</span>
+                            <span className="text-xs text-muted-foreground">({habitsCount})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
+                  <DataGrid
+                  data={coachHabits.filter(h => !h.folderId)}
                   columns={columns}
                   getRowId={(row) => row.id}
                   gridKey="add-habit-library"
@@ -504,6 +571,7 @@ export const AddHabitSidePanel = ({
                   showPagination={false}
                   gridPadding={false}
                 />
+                </div>
               </div>
             )}
           </TabsContent>

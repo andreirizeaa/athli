@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/general/utils';
-import { User, Building2, Search, Settings, ChevronDown, ChevronUp, LogOut } from 'lucide-react';
+import { User, Building2, Search, Settings, ChevronDown, ChevronUp, LogOut, CreditCard } from 'lucide-react';
 import { UnsavedChangesProvider, useUnsavedChanges } from './context/unsaved-changes-context';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 import { useLogout } from '@/lib/providers/logout-provider';
@@ -19,7 +19,7 @@ interface SectionConfig {
 }
 
 interface GroupConfig {
-  id: 'personal' | 'appSettings' | 'business';
+  id: 'personal' | 'billing' | 'appSettings' | 'business';
   icon: React.ComponentType<{ className?: string }>;
   sections: SectionConfig[];
 }
@@ -70,13 +70,19 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
           href: '/settings/account/profile',
           subSections: [
             { id: 'accountProfile', href: '/settings/account/profile' },
-            { id: 'billing', href: '/settings/account/billing' },
             { id: 'accountSecurity', href: '/settings/account/security' },
             { id: 'accountInformation', href: '/settings/account/information' },
             { id: 'accountDanger', href: '/settings/account/danger' },
           ],
         },
         { id: 'notifications', href: '/settings/profile/notifications' },
+      ],
+    },
+    {
+      id: 'billing',
+      icon: CreditCard,
+      sections: [
+        { id: 'billing', href: '/settings/billing' },
       ],
     },
     {
@@ -177,6 +183,19 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
     return pathname === href || pathname.startsWith(href + '/');
   };
 
+  // Check if a sub-section path is active (more precise - checks against siblings)
+  const isSubSectionActive = (href: string, allSubSections: SectionConfig[]) => {
+    if (pathname === href) return true;
+    if (!pathname.startsWith(href + '/')) return false;
+    // Check if any sibling sub-section is a more specific match
+    const hasMoreSpecificMatch = allSubSections.some((sibling) => {
+      if (sibling.href === href) return false;
+      return sibling.href.length > href.length &&
+        (pathname === sibling.href || pathname.startsWith(sibling.href + '/'));
+    });
+    return !hasMoreSpecificMatch;
+  };
+
   // Check if company section should be expanded based on pathname
   const isCompanyPath = pathname.startsWith('/settings/business/company');
   // Check if account section should be expanded based on pathname
@@ -257,8 +276,8 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
                       const isActive = section.subSections
                         ? section.subSections.some((sub) => isPathActive(sub.href))
                         : isPathActive(section.href);
-                      const isExpanded = section.id === 'company' 
-                        ? shouldExpandCompany 
+                      const isExpanded = section.id === 'company'
+                        ? shouldExpandCompany
                         : section.id === 'account'
                         ? shouldExpandAccount
                         : effectiveExpandedSections.has(section.id);
@@ -291,7 +310,7 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
                               <div className="flex flex-col gap-0.5 pl-4 relative mt-1">
                                 <div className="absolute left-2 top-0 bottom-0 w-px bg-border" />
                                 {section.subSections?.map((subSection) => {
-                                  const isSubActive = isPathActive(subSection.href);
+                                  const isSubActive = isSubSectionActive(subSection.href, section.subSections || []);
                                   return (
                                     <Link
                                       key={subSection.id}
