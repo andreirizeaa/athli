@@ -5,11 +5,11 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { PressableScale } from 'pressto';
 import { SymbolView } from 'expo-symbols';
 import { Pencil } from 'lucide-react-native';
-import { Image } from 'expo-image';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { haptics } from '@/utils/haptics';
+import { Avatar } from '@/components/ui/avatar';
 
 type DetailRowProps = {
   label: string;
@@ -39,11 +39,11 @@ export function DetailRow({
   const renderAvatar = () => {
     if (avatarUrl) {
       return (
-        <Image
-          source={{ uri: avatarUrl }}
-          style={styles.avatar}
-          contentFit="cover"
-          transition={200}
+        <Avatar
+          uri={avatarUrl}
+          size={40}
+          borderRadius={20}
+          fallback={avatarFallback ? <View style={[styles.avatarFallback, { backgroundColor: themeColors.primarySoft }]}>{avatarFallback}</View> : undefined}
         />
       );
     }

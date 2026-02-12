@@ -10,8 +10,9 @@ import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useCoachProfileStore } from '@/stores';
+import { useThemePreference, useCoachProfileStore, useEntitlements } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useTerminology } from '@/hooks/useTerminology';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
@@ -20,16 +21,25 @@ import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dro
 import { getAllHabits, deleteHabit, duplicateHabit } from '@/services/coach/coach-habit-service';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Dialog } from '@/components/ui/dialog';
+import { UpgradeDialog } from '@/components/permissions/upgrade-dialog';
 import { HABIT_UNIT_OPTIONS, HABIT_PERIOD_OPTIONS } from '@athli/shared-types';
 
 export const HabitsTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
+
+  // Feature access
+  const { hasFeature } = useEntitlements();
+  const hasHabitsAccess = hasFeature('habits_metrics');
+
+  // Upgrade dialog state
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   // Dialog state
   const [showErrorDialog, setShowErrorDialog] = useState(false);
@@ -39,9 +49,7 @@ export const HabitsTab = () => {
   const { data: habits = [], refetch } = useQuery({
     queryKey: ['habits'],
     queryFn: async () => {
-      console.log('[HabitsTab] Fetching habits...');
       const data = await getAllHabits();
-      console.log('[HabitsTab] Received habits:', data.length, 'items');
       return data;
     },
     enabled: isAuthenticated,
@@ -65,13 +73,6 @@ export const HabitsTab = () => {
       habit.period?.toLowerCase().includes(lowerQuery)
     );
   }, [habits, searchQuery]);
-
-  console.log('[HabitsTab] Render:', {
-    isAuthenticated,
-    totalHabits: habits.length,
-    filteredHabits: filteredHabits.length,
-    searchQuery
-  });
 
   // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
@@ -154,19 +155,22 @@ export const HabitsTab = () => {
       return;
     }
 
+    // Feature gate: show upgrade dialog if no access
+    if (!hasHabitsAccess) {
+      setShowUpgradeDialog(true);
+      return;
+    }
+
     router.push(`/modals/shared/assign-to-clients-modal?type=habit&itemIds=${item.id}`);
   };
 
   // Prefetch clients when long press happens to make modal open instantly
   const handleLongPress = useCallback(() => {
-    console.log('[HabitsTab] 🎯 Long press detected, prefetching clients...');
     queryClient.prefetchQuery({
       queryKey: ['clients'],
       queryFn: async () => {
-        console.log('[HabitsTab] 📡 Executing prefetch queryFn...');
         const { getClients } = await import('@/services/coach/coach-client-service');
         const data = await getClients();
-        console.log('[HabitsTab] ✅ Prefetch complete:', data.length, 'clients');
         return data;
       },
     });
@@ -195,7 +199,7 @@ export const HabitsTab = () => {
 
     const dropdownOptions: DropdownMenuOption[] = [
       {
-        label: t('general.assign'),
+        label: terminology.assignToPlural,
         icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
         onPress: () => handleAssign(item),
       },
@@ -291,6 +295,13 @@ export const HabitsTab = () => {
         message={errorMessage}
         showCloseIcon={false}
         buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+
+      <UpgradeDialog
+        visible={showUpgradeDialog}
+        onClose={() => setShowUpgradeDialog(false)}
+        feature={t('library.tabs.habits')}
+        featureKey="habits"
       />
     </>
   );

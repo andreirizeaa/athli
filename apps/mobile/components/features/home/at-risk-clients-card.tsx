@@ -4,18 +4,20 @@ import { useRouter } from 'expo-router';
 import { PressableScale, PressableOpacity } from 'pressto';
 import { ChevronRight, User, Info, TriangleAlert } from 'lucide-react-native';
 import { SymbolView } from 'expo-symbols';
-import { Image } from 'expo-image';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useTerminology } from '@/hooks/useTerminology';
 import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
+import { Avatar } from '@/components/ui/avatar';
 import { useAtRiskClients, type AtRiskClient } from '@/hooks/useAtRiskClients';
 
 export const AtRiskClientsCard = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const [showInfoDialog, setShowInfoDialog] = useState(false);
 
@@ -97,16 +99,12 @@ export const AtRiskClientsCard = () => {
               >
                 {/* Avatar */}
                 <View style={[styles.avatarContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
-                  {client.avatarUrl ? (
-                    <Image
-                      source={{ uri: client.avatarUrl }}
-                      style={styles.avatar}
-                      contentFit="cover"
-                      transition={200}
-                    />
-                  ) : (
-                    <User {...({ size: 16, color: themeColors.mutedText } as any)} />
-                  )}
+                  <Avatar
+                    uri={client.avatarUrl}
+                    size={32}
+                    borderRadius={16}
+                    fallback={<User {...({ size: 16, color: themeColors.mutedText } as any)} />}
+                  />
                 </View>
 
                 {/* Info */}
@@ -131,8 +129,8 @@ export const AtRiskClientsCard = () => {
       <Dialog
         visible={showInfoDialog}
         onClose={handleCloseDialog}
-        title={t('home.atRiskClients.infoDialog.title' as any) || 'At Risk Clients'}
-        message={t('home.atRiskClients.infoDialog.message' as any) || 'Clients shown here have not logged any training activity in the last 5 days. Regular check-ins can help keep them engaged and on track with their fitness goals.'}
+        title={t('home.atRiskClients.infoDialog.title' as any) || terminology.atRiskTitle}
+        message={t('home.atRiskClients.infoDialog.message' as any) || terminology.atRiskMessage}
         buttons={[
           {
             label: t('general.ok' as any) || 'OK',

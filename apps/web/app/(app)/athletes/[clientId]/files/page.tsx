@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Plus, FileText, X, Tag as TagIcon, MoreHorizontal, Edit, Trash2 as Trash2Icon } from 'lucide-react';
+import { Plus, FileText, X, Tag as TagIcon, MoreHorizontal, Edit, Trash2 as Trash2Icon, HardDrive } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
@@ -26,6 +26,56 @@ import { useClientFiles } from '@/hooks/use-client-files';
 import { useClientProfileContext } from '../client-profile-context';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
+import { useCoachFiles } from '@/hooks/use-coach-files';
+import { useFeatureAccess, useEntitlements } from '@/lib/permissions';
+import { cn } from '@/lib/general/utils';
+import { useRouter } from 'next/navigation';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+const BYTES_PER_KB = 1024;
+const BYTES_PER_MB = 1024 * 1024;
+const BYTES_PER_GB = 1024 * 1024 * 1024;
+
+function formatStorageUsed(bytes: number): string {
+  if (bytes === 0) return '0 KB';
+
+  const gb = bytes / BYTES_PER_GB;
+  if (gb >= 1) {
+    // Show GB with 1 decimal place
+    return `${Math.round(gb * 10) / 10} GB`;
+  }
+
+  const mb = bytes / BYTES_PER_MB;
+  if (mb >= 1) {
+    // Show MB as whole number
+    return `${Math.round(mb)} MB`;
+  }
+
+  const kb = bytes / BYTES_PER_KB;
+  // Show KB as whole number
+  return `${Math.round(kb)} KB`;
+}
+
+function getStorageColorClass(usedBytes: number, limitGb: number): string {
+  const usedGb = usedBytes / BYTES_PER_GB;
+  const percentage = (usedGb / limitGb) * 100;
+
+  if (percentage >= 100) {
+    return 'text-destructive'; // Red - at limit
+  }
+  if (percentage >= 50) {
+    return 'text-amber-600 dark:text-amber-500'; // Amber - halfway
+  }
+  return 'text-muted-foreground'; // Default - under 50%
+}
 
 type FileType = 'pdf' | 'image' | 'video' | 'document' | 'spreadsheet' | 'other';
 
@@ -45,6 +95,7 @@ type FileItem = {
 
 const ClientFilesPage = () => {
   const t = useTranslations();
+  const router = useRouter();
   const params = useParams<{ clientId: string; contactId: string }>();
   // Support both clientId (athletes context) and contactId (inbox context)
   const clientIdFromParams = params.clientId || params.contactId;
@@ -53,6 +104,26 @@ const ClientFilesPage = () => {
   const { user } = useUserProfile();
   const { files: filesFromContext, isLoading: isLoadingContext, refreshData } = useClientProfileContext();
   const { files: filesFromHook, isLoading: isLoadingHook, refetch } = useClientFiles(clientId);
+  const { files: coachFiles } = useCoachFiles();
+  const { storageLimit, hasUnlimitedStorage } = useEntitlements();
+  const { hasAccess: hasFileStorageAccess } = useFeatureAccess('file_storage');
+
+  // Calculate total storage used from coach files (for storage display)
+  const { totalStorageBytes, isAtStorageLimit } = useMemo(() => {
+    const totalBytes = coachFiles.reduce((sum, file) => {
+      // Skip external links - they don't count toward storage
+      if (isExternalLink(file.file_path)) return sum;
+      return sum + (file.size || 0);
+    }, 0);
+
+    const limitBytes = storageLimit * BYTES_PER_GB;
+    const isAtLimit = !hasUnlimitedStorage && totalBytes >= limitBytes;
+
+    return {
+      totalStorageBytes: totalBytes,
+      isAtStorageLimit: isAtLimit,
+    };
+  }, [coachFiles, storageLimit, hasUnlimitedStorage]);
 
   const rawFiles = filesFromContext.length > 0 ? filesFromContext : filesFromHook;
   const isLoading = isLoadingContext || isLoadingHook;
@@ -62,6 +133,7 @@ const ClientFilesPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [fileToDelete, setFileToDelete] = useState<FileItem | null>(null);
   const [isBulkDelete, setIsBulkDelete] = useState<boolean>(false);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState<boolean>(false);
 
   // Edit file state
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
@@ -106,11 +178,30 @@ const ClientFilesPage = () => {
   const clientName = '';
 
   const handleOpenAddFile = () => {
+    if (!hasFileStorageAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
+    if (isAtStorageLimit) {
+      toast.error(`Storage limit reached. Your plan includes ${storageLimit} GB of storage.`);
+      return;
+    }
     setIsAddFileOpen(true);
   };
 
   const handleSaveFile = async (file: File, fileName: string, tags: string[]) => {
     if (!clientId || !user?.id) return;
+
+    // Check if adding this file would exceed storage limit (with 0.5 GB buffer)
+    if (!hasUnlimitedStorage && storageLimit > 0) {
+      const maxAllowedBytes = (storageLimit + 0.5) * BYTES_PER_GB;
+      const projectedTotal = totalStorageBytes + file.size;
+      if (projectedTotal > maxAllowedBytes) {
+        toast.error(`This file would exceed your ${storageLimit} GB storage limit.`);
+        return;
+      }
+    }
+
     try {
       // Direct upload for client
       await uploadClientFile({
@@ -467,8 +558,26 @@ const ClientFilesPage = () => {
         searchFields={[(row) => row.fileName]}
         filters={filters}
         showLastColumnDivider={false}
+        filterBarPrefix={
+          hasFileStorageAccess && storageLimit > 0 && !hasUnlimitedStorage ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={cn(
+                  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background h-9 px-4 py-2 cursor-default",
+                  getStorageColorClass(totalStorageBytes, storageLimit)
+                )}>
+                  <HardDrive className="size-4" />
+                  <span>{formatStorageUsed(totalStorageBytes)} / {storageLimit} GB</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {formatStorageUsed(totalStorageBytes)} used out of the available {storageLimit} GB
+              </TooltipContent>
+            </Tooltip>
+          ) : null
+        }
         filterBarActions={
-          <Button onClick={handleOpenAddFile} className="gap-2">
+          <Button onClick={handleOpenAddFile} className="gap-2" disabled={hasFileStorageAccess && isAtStorageLimit}>
             <Plus className="size-4" />
             <span>{t('files.addFile')}</span>
           </Button>
@@ -506,7 +615,7 @@ const ClientFilesPage = () => {
             title={t('files.emptyState.title')}
             subtitle={t('files.emptyState.subtitle')}
             action={
-              <Button onClick={handleOpenAddFile} className="gap-2">
+              <Button onClick={handleOpenAddFile} className="gap-2" disabled={hasFileStorageAccess && isAtStorageLimit}>
                 <Plus className="size-4" />
                 <span>{t('files.addFile')}</span>
               </Button>
@@ -586,6 +695,26 @@ const ClientFilesPage = () => {
         itemType="file"
         variant="default"
       />
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogDescription>
+              Upload and share files with your clients - training plans, nutrition guides, and resources.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+              Maybe Later
+            </Button>
+            <Button onClick={() => router.push('/settings/billing')}>
+              View Plans
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

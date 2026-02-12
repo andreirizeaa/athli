@@ -22,6 +22,7 @@ type TargetLineChartProps = {
     unit?: string;
     name?: string;
     streak?: number;
+    renderHeaderRight?: () => React.ReactNode;
     renderFooter?: () => React.ReactNode;
 };
 
@@ -40,7 +41,7 @@ const formatShortDate = (dateStr: string): string => {
     return `${day} ${month}`;
 };
 
-export const TargetLineChart = ({ data, targetValue, unit = '', name, streak, renderFooter }: TargetLineChartProps) => {
+export const TargetLineChart = ({ data, targetValue, unit = '', name, streak, renderHeaderRight, renderFooter }: TargetLineChartProps) => {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const font = useFont(require('../../assets/fonts/SpaceMono-Regular.ttf'), 12);
@@ -105,19 +106,22 @@ export const TargetLineChart = ({ data, targetValue, unit = '', name, streak, re
                             {name}
                         </Text>
                     )}
-                    {streak !== undefined && (
-                        <View style={[styles.streakPill, { backgroundColor: hexToRgba(streakColor, 0.15) }]}>
-                            <PlatformIcon
-                                sf="flame.fill"
-                                IconComponent={Flame}
-                                size={14}
-                                color={streakColor}
-                            />
-                            <Text style={[styles.streakText, { color: streakColor }]}>
-                                {streak}
-                            </Text>
-                        </View>
-                    )}
+                    <View style={styles.headerRightContainer}>
+                        {streak !== undefined && (
+                            <View style={[styles.streakPill, { backgroundColor: hexToRgba(streakColor, 0.15) }]}>
+                                <PlatformIcon
+                                    sf="flame.fill"
+                                    IconComponent={Flame}
+                                    size={14}
+                                    color={streakColor}
+                                />
+                                <Text style={[styles.streakText, { color: streakColor }]}>
+                                    {streak}
+                                </Text>
+                            </View>
+                        )}
+                        {renderHeaderRight?.()}
+                    </View>
                 </View>
                 <View style={styles.emptyState}>
                     <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
@@ -138,19 +142,22 @@ export const TargetLineChart = ({ data, targetValue, unit = '', name, streak, re
                         {name}
                     </Text>
                 )}
-                {streak !== undefined && (
-                    <View style={[styles.streakPill, { backgroundColor: hexToRgba(streakColor, 0.15) }]}>
-                        <PlatformIcon
-                            sf="flame.fill"
-                            IconComponent={Flame}
-                            size={14}
-                            color={streakColor}
-                        />
-                        <Text style={[styles.streakText, { color: streakColor }]}>
-                            {streak}
-                        </Text>
-                    </View>
-                )}
+                <View style={styles.headerRightContainer}>
+                    {streak !== undefined && (
+                        <View style={[styles.streakPill, { backgroundColor: hexToRgba(streakColor, 0.15) }]}>
+                            <PlatformIcon
+                                sf="flame.fill"
+                                IconComponent={Flame}
+                                size={14}
+                                color={streakColor}
+                            />
+                            <Text style={[styles.streakText, { color: streakColor }]}>
+                                {streak}
+                            </Text>
+                        </View>
+                    )}
+                    {renderHeaderRight?.()}
+                </View>
             </View>
 
             <View style={[styles.chartWrapper, { width: chartWidth, height: chartHeight }]}>
@@ -271,6 +278,11 @@ const styles = StyleSheet.create({
     nameText: {
         ...typography.h5,
         flex: 1,
+    },
+    headerRightContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
     },
     chartWrapper: {},
     streakPill: {

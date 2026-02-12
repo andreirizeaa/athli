@@ -1,14 +1,23 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/general/utils';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { format } from 'date-fns';
@@ -20,6 +29,86 @@ import { addClientPhotos, deleteClientPhoto, deleteClientPhotoAngle, type AddCli
 
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useFeatureAccess } from '@/lib/permissions/feature-gate';
+
+// Screenshot preview component for upgrade dialog
+function ScreenshotPreview() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setDims({ w: el.offsetWidth, h: el.offsetHeight });
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { w, h } = dims;
+  const r = 8;
+
+  return (
+    <div ref={containerRef} className="relative">
+      {w > 0 && h > 0 && (
+        <svg
+          className="pointer-events-none absolute top-0 left-0 z-10"
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          fill="none"
+        >
+          <defs>
+            <linearGradient id="border-grad-photos" x1="0.5" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="rgb(192,132,252)" />
+              <stop offset="100%" stopColor="rgb(165,180,252)" />
+            </linearGradient>
+          </defs>
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-photos)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [0, -1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-photos)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [-0.5, -1.5] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+        </svg>
+      )}
+      <img
+        src="/app-screenshots/client/photos/light.png"
+        alt="Photo tracking feature preview"
+        className="block w-full h-auto rounded-lg border dark:hidden"
+      />
+      <img
+        src="/app-screenshots/client/photos/dark.png"
+        alt="Photo tracking feature preview"
+        className="hidden w-full h-auto rounded-lg border dark:block"
+      />
+    </div>
+  );
+}
 
 type PhotoView = 'all' | 'front' | 'back' | 'side';
 
@@ -34,6 +123,7 @@ const ClientPhotosPage = () => {
   const queryClient = useQueryClient();
   const { user } = useUserProfile();
   const coachId = user?.id;
+  const { hasAccess: hasPhotoTrackingAccess } = useFeatureAccess('photo_tracking');
 
   // Use React Query hook instead of local state to prevent flickering
   const { photos, isLoading, refetch } = useClientPhotos(clientId);
@@ -45,6 +135,7 @@ const ClientPhotosPage = () => {
   const [deleteAngle, setDeleteAngle] = useState<'front' | 'back' | 'side' | null>(null);
   const [uploadingAngle, setUploadingAngle] = useState<{ angle: 'front' | 'back' | 'side'; date: string } | null>(null);
   const [dragOverAngle, setDragOverAngle] = useState<{ angle: 'front' | 'back' | 'side'; date: string } | null>(null);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState<boolean>(false);
 
   // Set initial selected photo when photos load
   React.useEffect(() => {
@@ -147,6 +238,10 @@ const ClientPhotosPage = () => {
     file: File,
     date: Date
   ) => {
+    if (!hasPhotoTrackingAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
     if (!clientId) return;
     const dateKey = format(date, 'yyyy-MM-dd');
     setUploadingAngle({ angle, date: dateKey });
@@ -175,7 +270,13 @@ const ClientPhotosPage = () => {
           title={t('photos.emptyState.title', { defaultMessage: 'No photos yet' })}
           subtitle={t('photos.emptyState.subtitle', { defaultMessage: 'Add progress photos to track changes over time' })}
           action={
-            <Button onClick={() => setIsAddPhotoOpen(true)} className="gap-2">
+            <Button onClick={() => {
+              if (!hasPhotoTrackingAccess) {
+                setIsUpgradeDialogOpen(true);
+                return;
+              }
+              setIsAddPhotoOpen(true);
+            }} className="gap-2">
               <Plus className="size-4" />
               <span>{t('photos.addPhoto', { defaultMessage: 'Add photo' })}</span>
             </Button>
@@ -189,6 +290,26 @@ const ClientPhotosPage = () => {
           clientId={clientId || ''}
           coachId={coachId || ''}
         />
+        {/* Upgrade Dialog */}
+        <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Upgrade to Pro</DialogTitle>
+              <DialogDescription>
+                Track client progress with photos - compare progress over time and visualize transformations.
+              </DialogDescription>
+            </DialogHeader>
+            <ScreenshotPreview />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+                Maybe Later
+              </Button>
+              <Button onClick={() => router.push('/settings/billing')}>
+                View Plans
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -332,6 +453,10 @@ const ClientPhotosPage = () => {
                 <Button
                   variant="outline"
                   onClick={() => {
+                    if (!hasPhotoTrackingAccess) {
+                      setIsUpgradeDialogOpen(true);
+                      return;
+                    }
                     router.push(`/athletes/${clientId}/photos/compare`);
                   }}
                   className="gap-2 rounded-r-none border-r-0"
@@ -341,7 +466,13 @@ const ClientPhotosPage = () => {
                   <span>{t('photos.compare')}</span>
                 </Button>
                 <Button
-                  onClick={() => setIsAddPhotoOpen(true)}
+                  onClick={() => {
+                    if (!hasPhotoTrackingAccess) {
+                      setIsUpgradeDialogOpen(true);
+                      return;
+                    }
+                    setIsAddPhotoOpen(true);
+                  }}
                   className="gap-2 rounded-l-none"
                 >
                   <Plus className="size-4" />
@@ -762,6 +893,27 @@ const ClientPhotosPage = () => {
         }
         itemType="photo"
       />
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogDescription>
+              Track client progress with photos - compare progress over time and visualize transformations.
+            </DialogDescription>
+          </DialogHeader>
+          <ScreenshotPreview />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+              Maybe Later
+            </Button>
+            <Button onClick={() => router.push('/settings/billing')}>
+              View Plans
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div >
   );
 };

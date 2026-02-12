@@ -222,10 +222,11 @@ export const esMessages = {
         color: {
           label: 'Tema de Color',
         },
-        units: {
-          label: 'Unidades',
-          imperial: 'Imperial',
-          metric: 'Métrico',
+        terminology: {
+          label: 'Terminología',
+          athlete: 'Atleta',
+          client: 'Cliente',
+          member: 'Miembro',
         },
       },
     },
@@ -2688,7 +2689,7 @@ export const esMessages = {
       },
       {
         title: 'Gestión de Clientes',
-        features: ['Cuestionarios', 'Check-ins', 'Seguimiento de Hábitos', 'Seguimiento de Métricas'],
+        features: ['Cuestionarios', 'Check-ins', 'Seguimiento de Hábitos', 'Seguimiento de Métricas', 'Seguimiento de Fotos', 'Historial de Ejercicios'],
       },
       {
         title: 'Almacenamiento y Soporte',

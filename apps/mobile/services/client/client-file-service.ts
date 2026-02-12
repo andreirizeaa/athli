@@ -50,17 +50,11 @@ export type FileWithUrl = FileReference;
  * Add files to a client (from library)
  */
 export const addFilesToClient = async (data: AddFilesToClientData): Promise<void> => {
-  console.log('[addFilesToClient] Request:', {
-    fileIds: data.fileIds,
-    clientId: data.clientId,
-    coachId: data.coachId,
-  });
-  const response = await apiFetch('/client/files', {
+  await apiFetch('/client/files', {
     method: 'POST',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({ fileIds: data.fileIds }),
   });
-  console.log('[addFilesToClient] Response:', response);
 };
 
 /**
@@ -104,13 +98,6 @@ export const updateClientFile = async (data: UpdateClientFileData): Promise<Clie
  * Upload a file directly for a client
  */
 export const uploadClientFile = async (data: UploadClientFileData): Promise<ClientFile> => {
-  console.log('[uploadClientFile] Request:', {
-    fileName: data.fileName,
-    mimeType: data.mimeType,
-    clientId: data.clientId,
-    coachId: data.coachId,
-  });
-
   const formData = new FormData();
 
   const file = {
@@ -137,7 +124,6 @@ export const uploadClientFile = async (data: UploadClientFileData): Promise<Clie
     }
   );
 
-  console.log('[uploadClientFile] Response:', response);
   return response.data.file;
 };
 
@@ -228,14 +214,12 @@ export const getMyFiles = async (clientId: string, coachId: string): Promise<Cli
  * Get all files assigned to a client
  */
 export const getClientFiles = async (clientId: string, coachId: string): Promise<ClientFile[]> => {
-  console.log('[getClientFiles] Request:', { clientId, coachId });
   const response = await apiFetch<{ success: boolean; data: { assignments: any[]; files?: any[] } }>(
     '/client/files',
     {
       headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
     }
   );
-  console.log('[getClientFiles] Response:', response);
   // API returns 'assignments' not 'files', and uses camelCase 'fileName'
   const assignments = response.data.assignments || response.data.files || [];
   return assignments.map((f: any) => ({

@@ -31,7 +31,7 @@ const CustomisationsPage = () => {
   const { preferences, updatePreferences } = useGlobalData();
   const { setHasUnsavedChanges } = useUnsavedChanges();
 
-  const [units, setUnits] = useState('metric');
+  const [clientTerminology, setClientTerminology] = useState('athlete');
   const [isMounted, setIsMounted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -45,31 +45,31 @@ const CustomisationsPage = () => {
   // Sync from global preferences on load
   useEffect(() => {
     if (preferences) {
-      const savedUnits = preferences.units || 'metric';
-      setUnits(savedUnits);
+      const savedTerminology = preferences.client_terminology || 'athlete';
+      setClientTerminology(savedTerminology);
     }
   }, [preferences]);
 
   const persistPreferences = async (overrides: {
     theme?: string;
     language?: string;
-    units?: string;
     colorPreset?: string;
+    clientTerminology?: string;
   }) => {
     setIsSaving(true);
 
     // Calculate new values merging current state with overrides
     const newTheme = overrides.theme || theme || 'system';
     const newLanguage = overrides.language || locale;
-    const newUnits = overrides.units || units;
     const newColorPreset = overrides.colorPreset || themeConfig.preset;
+    const newClientTerminology = overrides.clientTerminology || clientTerminology;
 
     try {
       await updatePreferences({
         theme: newTheme as 'light' | 'dark' | 'system',
         language: newLanguage,
-        units: newUnits as 'metric' | 'imperial',
-        color_preset: newColorPreset
+        color_preset: newColorPreset,
+        client_terminology: newClientTerminology as 'athlete' | 'client' | 'member'
       });
       // toast.success(t('settings.customisations.savedSuccessfully')); // Optional: might be too noisy
     } catch (error) {
@@ -95,9 +95,9 @@ const CustomisationsPage = () => {
     persistPreferences({ colorPreset: value });
   };
 
-  const handleUnitsChange = (value: string) => {
-    setUnits(value);
-    persistPreferences({ units: value });
+  const handleTerminologyChange = (value: string) => {
+    setClientTerminology(value);
+    persistPreferences({ clientTerminology: value });
   };
 
   return (
@@ -311,23 +311,28 @@ const CustomisationsPage = () => {
                 </Select>
               </div>
               <div className="grid grid-cols-[1fr_auto] gap-4 pt-2 px-4 items-center">
-                <label htmlFor="units" className="text-sm">
-                  {t('settings.customisations.preferences.units.label')}
+                <label htmlFor="terminology" className="text-sm">
+                  {t('settings.customisations.preferences.terminology.label')}
                 </label>
-                <Select value={units} onValueChange={handleUnitsChange}>
-                  <SelectTrigger id="units" className="w-[180px]">
+                <Select value={clientTerminology} onValueChange={handleTerminologyChange}>
+                  <SelectTrigger id="terminology" className="w-[180px]">
                     <SelectValue>
-                      {units === 'metric'
-                        ? t('settings.customisations.preferences.units.metric')
-                        : t('settings.customisations.preferences.units.imperial')}
+                      {clientTerminology === 'athlete'
+                        ? t('settings.customisations.preferences.terminology.athlete')
+                        : clientTerminology === 'client'
+                        ? t('settings.customisations.preferences.terminology.client')
+                        : t('settings.customisations.preferences.terminology.member')}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="metric">
-                      {t('settings.customisations.preferences.units.metric')}
+                    <SelectItem value="athlete">
+                      {t('settings.customisations.preferences.terminology.athlete')}
                     </SelectItem>
-                    <SelectItem value="imperial">
-                      {t('settings.customisations.preferences.units.imperial')}
+                    <SelectItem value="client">
+                      {t('settings.customisations.preferences.terminology.client')}
+                    </SelectItem>
+                    <SelectItem value="member">
+                      {t('settings.customisations.preferences.terminology.member')}
                     </SelectItem>
                   </SelectContent>
                 </Select>

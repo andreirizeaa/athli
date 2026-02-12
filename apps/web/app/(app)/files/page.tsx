@@ -4,20 +4,16 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { useTerminology } from '@/hooks/use-terminology';
 import { Plus, Loader2, Check, X, FolderPlus, Move, Folder } from 'lucide-react';
-import { useFeatureAccess } from '@/lib/permissions';
+import { useFeatureAccess, useEntitlements } from '@/lib/permissions';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { UpgradeDialog } from '@/components/app/upgrade-dialog';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
+import { cn } from '@/lib/general/utils';
 import { PageHeader } from '@/components/app/page-header';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import {
@@ -46,13 +42,53 @@ import { FolderCard } from '@/components/app/folder-card';
 import { CreateFolderDialog } from '@/components/app/create-folder-dialog';
 import { MoveToFolderDialog } from '@/components/app/move-to-folder-dialog';
 import { FolderSearchButton } from '@/components/app/folder-search-button';
+import { HardDrive } from 'lucide-react';
 import React from 'react';
+
+const BYTES_PER_KB = 1024;
+const BYTES_PER_MB = 1024 * 1024;
+const BYTES_PER_GB = 1024 * 1024 * 1024;
+
+function formatStorageUsed(bytes: number): string {
+  if (bytes === 0) return '0 KB';
+
+  const gb = bytes / BYTES_PER_GB;
+  if (gb >= 1) {
+    // Show GB with 1 decimal place
+    return `${Math.round(gb * 10) / 10} GB`;
+  }
+
+  const mb = bytes / BYTES_PER_MB;
+  if (mb >= 1) {
+    // Show MB as whole number
+    return `${Math.round(mb)} MB`;
+  }
+
+  const kb = bytes / BYTES_PER_KB;
+  // Show KB as whole number
+  return `${Math.round(kb)} KB`;
+}
+
+function getStorageColorClass(usedBytes: number, limitGb: number): string {
+  const usedGb = usedBytes / BYTES_PER_GB;
+  const percentage = (usedGb / limitGb) * 100;
+
+  if (percentage >= 100) {
+    return 'text-destructive'; // Red - at limit
+  }
+  if (percentage >= 50) {
+    return 'text-amber-600 dark:text-amber-500'; // Amber - halfway
+  }
+  return 'text-muted-foreground'; // Default - under 50%
+}
 
 const FilesPage = () => {
   const t = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { hasAccess: hasFileStorageAccess } = useFeatureAccess('file_storage');
+  const { storageLimit, hasUnlimitedStorage, plan } = useEntitlements();
   const { files, isLoading, uploadFile, updateFile, deleteFile: deleteFileMutation, isUploading } = useCoachFiles();
   const {
     folders,
@@ -97,6 +133,25 @@ const FilesPage = () => {
     });
   }, [folders, folderSearch, files]);
 
+  // Calculate total storage used (only from actual files, not links)
+  const { totalStorageBytes, isAtStorageLimit, canAddFiles } = useMemo(() => {
+    const totalBytes = files.reduce((sum, file) => {
+      // Skip external links - they don't count toward storage
+      if (isExternalLink(file.file_path)) return sum;
+      return sum + (file.size || 0);
+    }, 0);
+
+    const limitBytes = storageLimit * BYTES_PER_GB;
+    const isAtLimit = !hasUnlimitedStorage && totalBytes >= limitBytes;
+    const canAdd = hasUnlimitedStorage || totalBytes < limitBytes;
+
+    return {
+      totalStorageBytes: totalBytes,
+      isAtStorageLimit: isAtLimit,
+      canAddFiles: canAdd,
+    };
+  }, [files, storageLimit, hasUnlimitedStorage]);
+
   // Folder state
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState<boolean>(false);
   const [editingFolder, setEditingFolder] = useState<{ id: string; name: string } | null>(null);
@@ -140,6 +195,10 @@ const FilesPage = () => {
       setIsUpgradeDialogOpen(true);
       return;
     }
+    if (isAtStorageLimit) {
+      toast.error(`Storage limit reached. ${plan === 'pro' ? 'Pro' : 'Your'} plan includes ${storageLimit} GB of storage.`);
+      return;
+    }
     setIsAddFileOpen(true);
   };
 
@@ -148,6 +207,15 @@ const FilesPage = () => {
   };
 
   const handleFileUpload = async (file: File, fileName: string) => {
+    // Check if adding this file would exceed storage limit (with 0.5 GB buffer)
+    if (!hasUnlimitedStorage && storageLimit > 0) {
+      const maxAllowedBytes = (storageLimit + 0.5) * BYTES_PER_GB;
+      const projectedTotal = totalStorageBytes + file.size;
+      if (projectedTotal > maxAllowedBytes) {
+        toast.error(`This file would exceed your ${storageLimit} GB storage limit.`);
+        return;
+      }
+    }
     uploadFile({ file, fileName });
     handleCloseAddFile();
   };
@@ -479,7 +547,11 @@ const FilesPage = () => {
               <FolderPlus className="size-4" />
               <span>Create Folder</span>
             </Button>
-            <Button onClick={handleOpenAddFile} className="gap-2">
+            <Button
+              onClick={handleOpenAddFile}
+              className="gap-2"
+              disabled={hasFileStorageAccess && isAtStorageLimit}
+            >
               <Plus className="size-4" />
               <span>{t('files.addFile')}</span>
             </Button>
@@ -521,6 +593,24 @@ const FilesPage = () => {
         filters={filters}
         enableEditColumns={false}
         enableExport={false}
+        filterBarPrefix={
+          hasFileStorageAccess && storageLimit > 0 && !hasUnlimitedStorage ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={cn(
+                  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background h-9 px-4 py-2 cursor-default",
+                  getStorageColorClass(totalStorageBytes, storageLimit)
+                )}>
+                  <HardDrive className="size-4" />
+                  <span>{formatStorageUsed(totalStorageBytes)} / {storageLimit} GB</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {formatStorageUsed(totalStorageBytes)} used out of the available {storageLimit} GB
+              </TooltipContent>
+            </Tooltip>
+          ) : null
+        }
         enableRowSelection={true}
         selectedRowIds={selectedFiles}
         onSelectionChange={setSelectedFiles}
@@ -545,14 +635,14 @@ const FilesPage = () => {
           <EmptyGridState
             title={t('files.emptyState.title')}
             subtitle="Upload and organize files to share with your clients - training plans, nutrition guides, and resources"
-            action={<Button onClick={handleOpenAddFile} className="gap-2"><Plus className="size-4" /><span>{t('files.addFile')}</span></Button>}
+            action={<Button onClick={handleOpenAddFile} className="gap-2" disabled={hasFileStorageAccess && isAtStorageLimit}><Plus className="size-4" /><span>{t('files.addFile')}</span></Button>}
           />
         }
         selectionActions={
           selectedFiles.size > 0 ? (
             <div className="flex items-center gap-1">
               <Button variant="ghost" onClick={handleClearSelected} className="gap-2"><X className="size-4" /><span>{t('general.clearSelected', { count: selectedFiles.size })}</span></Button>
-              <Button variant="ghost" onClick={handleOpenAssignToClients} className="gap-2"><UserPlus className="size-4" /><span>{t('forms.assignToClients')}</span></Button>
+              <Button variant="ghost" onClick={handleOpenAssignToClients} className="gap-2"><UserPlus className="size-4" /><span>{terminology.assignToPlural}</span></Button>
               {folders.length > 0 && <Button variant="ghost" onClick={() => setIsBulkMoveOpen(true)} className="gap-2"><Move className="size-4" /><span>Move</span></Button>}
               <Button variant="ghost" onClick={() => setIsBulkDeleteOpen(true)} className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="size-4" /><span>{t('general.delete')}</span></Button>
             </div>
@@ -593,8 +683,8 @@ const FilesPage = () => {
           setIsAssignToClientsOpen(open);
           if (!open) setFolderToAssign(null);
         }}
-        title={t('forms.assignToClientsTitle')}
-        assignButtonLabel={(count) => count === 1 ? t('forms.assignToOneClient') : t('forms.assignToClientsCount', { count })}
+        title={`Assign files to ${terminology.pluralLower}`}
+        assignButtonLabel={(count) => terminology.assignToCountLabel(count)}
         onAssign={handleAssignFilesToClients}
         previewComponent={
           folderToAssign ? (
@@ -622,25 +712,11 @@ const FilesPage = () => {
         }
       />
 
-      {/* Upgrade Dialog */}
-      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
-            <DialogDescription>
-              Upload and share files with your clients - training plans, nutrition guides, and resources.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
-              Maybe Later
-            </Button>
-            <Button onClick={() => router.push('/settings/billing')}>
-              View Plans
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UpgradeDialog
+        open={isUpgradeDialogOpen}
+        onOpenChange={setIsUpgradeDialogOpen}
+        description="Upload and share files with your clients - training plans, nutrition guides, and resources."
+      />
     </div>
   );
 };

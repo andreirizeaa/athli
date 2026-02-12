@@ -2,12 +2,12 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { User, Pencil, type LucideIcon } from 'lucide-react-native';
-import { Image } from 'expo-image';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { Card } from '@/components/ui/card';
+import { Avatar } from '@/components/ui/avatar';
 
 type ProfilePictureInputProps = {
   label: string;
@@ -34,28 +34,26 @@ export const ProfilePictureInput = ({
           <Text style={[styles.label, { color: themeColors.text }]}>
             {label}
           </Text>
-          {imageUrl ? (
-            <Image
-              source={{ uri: imageUrl }}
-              style={styles.preview}
-              contentFit="cover"
-              transition={200}
-            />
-          ) : (
-            <View
-              style={[
-                styles.fallback,
-                { backgroundColor: themeColors.primarySoft },
-              ]}
-            >
-              <PlatformIcon
-                sf={fallbackIcon.sf}
-                IconComponent={fallbackIcon.IconComponent}
-                size={20}
-                color={themeColors.primary}
-              />
-            </View>
-          )}
+          <Avatar
+            uri={imageUrl}
+            size={44}
+            borderRadius={22}
+            fallback={
+              <View
+                style={[
+                  styles.fallback,
+                  { backgroundColor: themeColors.primarySoft },
+                ]}
+              >
+                <PlatformIcon
+                  sf={fallbackIcon.sf}
+                  IconComponent={fallbackIcon.IconComponent}
+                  size={20}
+                  color={themeColors.primary}
+                />
+              </View>
+            }
+          />
         </View>
         <View style={styles.editIconContainer}>
           <PlatformIcon

@@ -8,9 +8,7 @@ export type { Metric, CreateMetricInput, MetricScheduleData };
  * Service method to get all coach's metrics (library)
  */
 export const getAllMetrics = async (): Promise<Metric[]> => {
-  console.log('[CoachMetricService] 📥 getAllMetrics called');
   const response = await apiFetch('/coach/metrics');
-  console.log('[CoachMetricService] 📦 Raw response:', JSON.stringify(response, null, 2));
   return response.data.metrics;
 };
 
@@ -20,14 +18,11 @@ export const getAllMetrics = async (): Promise<Metric[]> => {
 export const createMetric = async (metric: CreateMetricInput): Promise<Metric> => {
   const { client_id, ...data } = metric;
 
-  console.log('[CoachMetricService] 📤 createMetric input:', JSON.stringify(metric, null, 2));
-
   if (client_id) {
     const response = await apiFetch(`/clients/${client_id}/metrics`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    console.log('[CoachMetricService] ✅ Client metric response:', JSON.stringify(response, null, 2));
     return response.data.metric;
   }
 
@@ -35,7 +30,6 @@ export const createMetric = async (metric: CreateMetricInput): Promise<Metric> =
     method: 'POST',
     body: JSON.stringify(metric),
   });
-  console.log('[CoachMetricService] ✅ Library metric response:', JSON.stringify(response, null, 2));
   return response.data.metric;
 };
 

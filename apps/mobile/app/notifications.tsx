@@ -189,41 +189,43 @@ export default function NotificationsScreen() {
           />
         }
       >
-        {/* Filter Buttons */}
-        <View style={styles.filterButtonsContainer}>
-          <View style={styles.filterButtonWrapper}>
-            <PressableScale
-              style={[
-                styles.filterButton,
-                {
-                  borderColor: primaryColor,
-                  opacity: unreadCount === 0 && !showUnreadOnly ? 0.4 : 1,
-                },
-              ]}
-              onPress={() => setShowUnreadOnly(!showUnreadOnly)}
-              disabled={unreadCount === 0 && !showUnreadOnly}
-            >
-              <Text style={[styles.filterButtonText, { color: primaryColor }]}>
-                {showUnreadOnly ? t('notifications.showAll') : t('notifications.showUnread')}
-              </Text>
-            </PressableScale>
-          </View>
-          <View style={styles.filterButtonWrapper}>
-            {unreadCount > 0 && (
+        {/* Filter Buttons - only show when there are notifications */}
+        {notifications.length > 0 && (
+          <View style={styles.filterButtonsContainer}>
+            <View style={styles.filterButtonWrapper}>
               <PressableScale
                 style={[
                   styles.filterButton,
-                  { borderColor: primaryColor },
+                  {
+                    borderColor: primaryColor,
+                    opacity: unreadCount === 0 && !showUnreadOnly ? 0.4 : 1,
+                  },
                 ]}
-                onPress={markAllAsRead}
+                onPress={() => setShowUnreadOnly(!showUnreadOnly)}
+                disabled={unreadCount === 0 && !showUnreadOnly}
               >
                 <Text style={[styles.filterButtonText, { color: primaryColor }]}>
-                  {t('notifications.markAllAsRead')}
+                  {showUnreadOnly ? t('notifications.showAll') : t('notifications.showUnread')}
                 </Text>
               </PressableScale>
-            )}
+            </View>
+            <View style={styles.filterButtonWrapper}>
+              {unreadCount > 0 && (
+                <PressableScale
+                  style={[
+                    styles.filterButton,
+                    { borderColor: primaryColor },
+                  ]}
+                  onPress={markAllAsRead}
+                >
+                  <Text style={[styles.filterButtonText, { color: primaryColor }]}>
+                    {t('notifications.markAllAsRead')}
+                  </Text>
+                </PressableScale>
+              )}
+            </View>
           </View>
-        </View>
+        )}
 
         {filteredNotifications.length === 0 && !isLoading ? (
           <View style={styles.emptyState}>

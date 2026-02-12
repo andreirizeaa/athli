@@ -4,22 +4,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog } from '@/components/ui/dialog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, ChevronRight, Plus, Share, File, FileText, Play, Pencil, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Plus, Share, File, Play, Pencil, Trash2 } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore } from '@/stores';
+import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore, useCoachEntitlementsStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { DropdownMenuWrapper, ContextMenuWrapper } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SearchBar } from '@/components/ui/search-bar';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
+import { StorageIndicator } from '@/components/ui/storage-indicator';
 import { deleteClientFiles, getClientFileUrl, getClientFileName, isMediaFile, type ClientFile } from '@/services/client/client-file-service';
-import { isExternalLink } from '@athli/shared-types';
+import { getAllFiles, isExternalLink } from '@/services/coach/coach-file-service';
 
 // Simple fuzzy search - checks if all characters appear in order
 const fuzzyMatch = (text: string, query: string): boolean => {
@@ -55,9 +56,32 @@ export default function ClientFilesScreen() {
 
   // Use coachProfile.id for coaches, or storeCoachId for athletes
   const coachId = coachProfile?.id || storeCoachId || '';
+  const entitlements = useCoachEntitlementsStore((state) => state.entitlements);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Fetch coach files to calculate total storage (only for coaches)
+  const { data: coachFiles = [] } = useQuery({
+    queryKey: ['files'],
+    queryFn: getAllFiles,
+    enabled: !!coachProfile?.id,
+    staleTime: 30000, // 30 seconds
+  });
+
+  // Calculate total storage used from coach files (excluding external links)
+  const totalStorageBytes = useMemo(() => {
+    return coachFiles.reduce((sum, file) => {
+      if (isExternalLink(file.file_path)) return sum;
+      return sum + (file.size || 0);
+    }, 0);
+  }, [coachFiles]);
+
+  // Get storage limit from entitlements
+  const storageLimit = entitlements?.storage_limit_gb || 0;
+  const hasUnlimitedStorage = storageLimit === -1;
+  const hasFileStorageAccess = storageLimit !== 0;
+  const showStorageIndicator = !!coachProfile?.id && hasFileStorageAccess && storageLimit > 0 && !hasUnlimitedStorage;
 
   // Dialog state
   const [showErrorDialog, setShowErrorDialog] = useState(false);
@@ -241,11 +265,24 @@ export default function ClientFilesScreen() {
 
     // Fallback icon for pdf and other types
     const isPdf = file.mime_type?.includes('pdf') || file.mime_type?.includes('document');
+
+    if (isPdf) {
+      return (
+        <View style={[styles.thumbnailContainer, styles.pdfContainer]}>
+          <Image
+            source={require('@/assets/icons/pdf.png')}
+            style={styles.pdfIcon}
+            contentFit="contain"
+          />
+        </View>
+      );
+    }
+
     return (
       <View style={[styles.fileIconContainer, { backgroundColor: `${themeColors.primary}15` }]}>
         <PlatformIcon
           sf="doc.text"
-          IconComponent={isPdf ? FileText : File}
+          IconComponent={File}
           size={24}
           color={themeColors.primary}
         />
@@ -272,6 +309,11 @@ export default function ClientFilesScreen() {
             placeholder={t('general.searchPlaceholder')}
           />
         </View>
+
+        {/* Storage indicator */}
+        {showStorageIndicator && (
+          <StorageIndicator usedBytes={totalStorageBytes} limitGb={storageLimit} />
+        )}
 
         <Pressable
           style={styles.contentContainer}
@@ -548,6 +590,13 @@ const styles = StyleSheet.create({
   thumbnailImage: {
     width: '100%',
     height: '100%',
+  },
+  pdfIcon: {
+    width: 40,
+    height: 40,
+  },
+  pdfContainer: {
+    backgroundColor: '#fff5f0',
   },
   playOverlay: {
     position: 'absolute',

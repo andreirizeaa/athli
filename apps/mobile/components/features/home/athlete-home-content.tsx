@@ -4,15 +4,15 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { ChevronRight, FileText, Dumbbell, Moon, ListChecks, CircleCheck, ClipboardList, Send, CheckCircle, Target } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
-import { Image } from 'expo-image';
 import { Separator } from '@/components/ui/separator';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference, useAuth, useAuthSessionStore, useClientDetailStore } from '@/stores';
+import { useThemePreference, useAuth, useAuthSessionStore, useClientDetailStore, useAthleteCoachEntitlements } from '@/stores';
 import { useTranslations } from '@/stores';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { Card } from '@/components/ui/card';
 import { PlatformIcon } from '@/components/ui/platform-icon';
+import { Avatar } from '@/components/ui/avatar';
 import { getMyFiles } from '@/services/client/client-file-service';
 import { useAthleteTasks, type ClientTask } from '@/hooks/useAthleteTasks';
 import { getClientCheckInDetail, getClientQuestionnaireDetail } from '@/services/client/client-form-service';
@@ -65,6 +65,7 @@ export const AthleteHomeContent = () => {
   const { colors: themeColors, primaryColor } = useThemePreference();
   const { t } = useTranslations();
   const { clientProfile } = useAuth();
+  const { isCoachOnStarter } = useAthleteCoachEntitlements();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
 
@@ -493,11 +494,12 @@ export const AthleteHomeContent = () => {
         <Card style={styles.coachMessageCard}>
           <View style={styles.coachMessageContent}>
             <View style={styles.coachAvatarContainer}>
-              {coachConversation.other_user_avatar ? (
-                <Image source={{ uri: coachConversation.other_user_avatar }} style={styles.coachAvatarImage} contentFit="cover" />
-              ) : (
-                <View style={[styles.coachAvatarPlaceholder, { backgroundColor: themeColors.border }]} />
-              )}
+              <Avatar
+                uri={coachConversation.other_user_avatar}
+                size={72}
+                borderRadius={0}
+                fallback={<View style={[styles.coachAvatarPlaceholder, { backgroundColor: themeColors.border }]} />}
+              />
             </View>
             <View style={styles.coachMessageTextContainer}>
               <View style={styles.coachMessageHeader}>
@@ -579,11 +581,15 @@ export const AthleteHomeContent = () => {
           </>
         )}
 
-        {/* Tasks card */}
-        <Text style={[styles.sectionLabel, { color: themeColors.mutedText }]}>
-          {t('tasksCard.title')}
-        </Text>
-        {tasksCard}
+        {/* Tasks card - hidden when coach is on starter plan */}
+        {!isCoachOnStarter && (
+          <>
+            <Text style={[styles.sectionLabel, { color: themeColors.mutedText }]}>
+              {t('tasksCard.title')}
+            </Text>
+            {tasksCard}
+          </>
+        )}
 
         {/* Goals & Injuries + Available Resources + Forms */}
         <Card>
@@ -605,44 +611,48 @@ export const AthleteHomeContent = () => {
               />
             </View>
           </PressableScale>
-          <Separator />
-          <PressableScale onPress={handleOpenFiles}>
-            <View style={styles.optionRow}>
-              <View style={styles.optionIconContainer}>
-                <PlatformIcon sf="doc.text" IconComponent={FileText} size={iconSize} color={iconColor} />
-              </View>
-              <View style={styles.optionTextContainer}>
-                <Text style={[styles.optionTitle, { color: themeColors.text }]}>
-                  {t('athlete.availableResources')}
-                </Text>
-              </View>
-              <PlatformIcon
-                sf="chevron.right"
-                IconComponent={ChevronRight}
-                size={iconSizes.extraSmallIcons}
-                color={themeColors.mutedText}
-              />
-            </View>
-          </PressableScale>
-          <Separator />
-          <PressableScale onPress={handleOpenForms}>
-            <View style={styles.optionRow}>
-              <View style={styles.optionIconContainer}>
-                <PlatformIcon sf="doc.on.clipboard" IconComponent={ClipboardList} size={iconSize} color={iconColor} />
-              </View>
-              <View style={styles.optionTextContainer}>
-                <Text style={[styles.optionTitle, { color: themeColors.text }]}>
-                  {t('athlete.forms.title')}
-                </Text>
-              </View>
-              <PlatformIcon
-                sf="chevron.right"
-                IconComponent={ChevronRight}
-                size={iconSizes.extraSmallIcons}
-                color={themeColors.mutedText}
-              />
-            </View>
-          </PressableScale>
+          {!isCoachOnStarter && (
+            <>
+              <Separator />
+              <PressableScale onPress={handleOpenFiles}>
+                <View style={styles.optionRow}>
+                  <View style={styles.optionIconContainer}>
+                    <PlatformIcon sf="doc.text" IconComponent={FileText} size={iconSize} color={iconColor} />
+                  </View>
+                  <View style={styles.optionTextContainer}>
+                    <Text style={[styles.optionTitle, { color: themeColors.text }]}>
+                      {t('athlete.availableResources')}
+                    </Text>
+                  </View>
+                  <PlatformIcon
+                    sf="chevron.right"
+                    IconComponent={ChevronRight}
+                    size={iconSizes.extraSmallIcons}
+                    color={themeColors.mutedText}
+                  />
+                </View>
+              </PressableScale>
+              <Separator />
+              <PressableScale onPress={handleOpenForms}>
+                <View style={styles.optionRow}>
+                  <View style={styles.optionIconContainer}>
+                    <PlatformIcon sf="doc.on.clipboard" IconComponent={ClipboardList} size={iconSize} color={iconColor} />
+                  </View>
+                  <View style={styles.optionTextContainer}>
+                    <Text style={[styles.optionTitle, { color: themeColors.text }]}>
+                      {t('athlete.forms.title')}
+                    </Text>
+                  </View>
+                  <PlatformIcon
+                    sf="chevron.right"
+                    IconComponent={ChevronRight}
+                    size={iconSizes.extraSmallIcons}
+                    color={themeColors.mutedText}
+                  />
+                </View>
+              </PressableScale>
+            </>
+          )}
         </Card>
       </View>
     </ScreenWrapper>

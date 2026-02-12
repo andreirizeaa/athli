@@ -55,6 +55,7 @@ import { useCoachClients } from "@/hooks/use-coach-clients";
 import { type Athlete } from "@/api/coach/coach-client-service";
 import { useAiUsage } from "@/hooks/use-ai-usage";
 import { useEntitlements } from "@/lib/permissions/entitlements-provider";
+import { useTerminology } from "@/hooks/use-terminology";
 import { toast } from "sonner";
 
 interface AIChatInterfaceProps {
@@ -70,6 +71,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
     const [clientSelectorOpen, setClientSelectorOpen] = useState(false);
 
     const { clients, isLoading: isLoadingClients } = useCoachClients();
+    const terminology = useTerminology();
     const { isOnTrial } = useEntitlements();
     const { checkBeforePrompt, remaining, isLimited, hasReachedLimit } = useAiUsage();
 
@@ -404,10 +406,10 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                                     </PopoverTrigger>
                                     <PopoverContent className="w-[250px] p-0" align="start">
                                         <Command>
-                                            <CommandInput placeholder="Search clients..." />
+                                            <CommandInput placeholder={terminology.searchPlural} />
                                             <CommandList>
                                                 <CommandEmpty>
-                                                    {isLoadingClients ? "Loading..." : "No clients found."}
+                                                    {isLoadingClients ? "Loading..." : terminology.noPluralFound}
                                                 </CommandEmpty>
                                                 <CommandGroup>
                                                     {clients.map((client) => (

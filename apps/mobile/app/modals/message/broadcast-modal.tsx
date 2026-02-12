@@ -28,6 +28,7 @@ import { STORAGE_BUCKET_NAME, getAttachmentPath } from '@athli/shared-types';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference, useCoachProfileStore, useChatsStore } from '@/stores';
 import { useTranslations } from '@/stores';
+import { Avatar } from '@/components/ui/avatar';
 import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { TextAreaInput } from '@/components/ui/form-inputs';
@@ -677,25 +678,24 @@ export default function BroadcastModal() {
                     style={styles.rowContent}
                 >
                     <View style={styles.thumbnailWrapper}>
-                        {item.avatarUrl ? (
-                            <Image
-                                source={{ uri: item.avatarUrl }}
-                                style={styles.avatarImage}
-                                contentFit="cover"
-                            />
-                        ) : (
-                            <View
-                                style={[
-                                    styles.avatarImage,
-                                    styles.avatarPlaceholder,
-                                    { backgroundColor: themeColors.border },
-                                ]}
-                            >
-                                <Text style={[styles.avatarInitials, { color: themeColors.mutedText }]}>
-                                    {initials}
-                                </Text>
-                            </View>
-                        )}
+                        <Avatar
+                            uri={item.avatarUrl}
+                            size={48}
+                            borderRadius={8}
+                            fallback={
+                                <View
+                                    style={[
+                                        styles.avatarImage,
+                                        styles.avatarPlaceholder,
+                                        { backgroundColor: themeColors.border },
+                                    ]}
+                                >
+                                    <Text style={[styles.avatarInitials, { color: themeColors.mutedText }]}>
+                                        {initials}
+                                    </Text>
+                                </View>
+                            }
+                        />
                     </View>
                     <View style={styles.textContent}>
                         <Text

@@ -66,6 +66,11 @@ import { ClientProfileContent } from './components/client-profile-content';
 import { SectionLoader } from '@/components/ui/section-loader';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useAttachmentUrls } from '@/hooks/use-attachment-urls';
+import { useFeatureAccess } from '@/lib/permissions/feature-gate';
+import {
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 
 type Note = {
@@ -440,6 +445,8 @@ const InboxPage = () => {
   const [isNewMessageOpen, setIsNewMessageOpen] = React.useState(false);
   const [isCreateNoteOpen, setIsCreateNoteOpen] = React.useState(false);
   const [isBroadcastOpen, setIsBroadcastOpen] = React.useState(false);
+  const [isBroadcastUpgradeOpen, setIsBroadcastUpgradeOpen] = React.useState(false);
+  const { hasAccess: hasBroadcastAccess } = useFeatureAccess('broadcast_messaging');
   const [isPowerViewOpen, setIsPowerViewOpen] = React.useState(true); // Power view (client profile panel) open by default
   const [noteTitle, setNoteTitle] = React.useState('');
   const [noteContent, setNoteContent] = React.useState('');
@@ -2070,7 +2077,13 @@ const InboxPage = () => {
               setSearchQuery={setSearchQuery}
               filteredContacts={filteredContacts}
               selectedContactId={selectedContactId}
-              onOpenBroadcast={() => setIsBroadcastOpen(true)}
+              onOpenBroadcast={() => {
+                if (!hasBroadcastAccess) {
+                  setIsBroadcastUpgradeOpen(true);
+                  return;
+                }
+                setIsBroadcastOpen(true);
+              }}
               onContactClick={handleContactClick}
             />
           </div>
@@ -2360,6 +2373,26 @@ const InboxPage = () => {
         )}
       </SidePanel>
       <BroadcastSidePanel open={isBroadcastOpen} onOpenChange={setIsBroadcastOpen} />
+
+      {/* Broadcast Upgrade Dialog */}
+      <Dialog open={isBroadcastUpgradeOpen} onOpenChange={setIsBroadcastUpgradeOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upgrade to Max</DialogTitle>
+            <DialogDescription>
+              Send broadcast messages to multiple clients at once. Keep your clients informed with announcements, updates, and important information.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBroadcastUpgradeOpen(false)}>
+              Maybe Later
+            </Button>
+            <Button onClick={() => router.push('/settings/billing')}>
+              View Plans
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { useTerminology } from '@/hooks/use-terminology';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -65,6 +66,7 @@ const HabitFolderPage = () => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const t = useTranslations();
+  const terminology = useTerminology();
   const { user } = useUserProfile();
 
   const { habits, createHabit, updateHabit, deleteHabit, duplicateHabit, isDuplicating } = useCoachHabits();
@@ -479,7 +481,7 @@ const HabitFolderPage = () => {
           <div className="flex items-center gap-1">
             <Button variant="ghost" onClick={() => setSelectedHabits(new Set())} className="gap-2"><X className="size-4" /><span>{t('general.clearSelected', { count: selectedHabits.size })}</span></Button>
             {selectedHabits.size === 1 && <Button variant="ghost" onClick={async () => { await duplicateHabit(Array.from(selectedHabits)[0]); setSelectedHabits(new Set()); }} className="gap-2" disabled={isDuplicating}>{isDuplicating ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-4" />}<span>{t('habits.actions.duplicate')}</span></Button>}
-            <Button variant="ghost" onClick={handleAssignToClients} className="gap-2"><UserPlus className="size-4" /><span>{t('habits.actions.addToClients')}</span></Button>
+            <Button variant="ghost" onClick={handleAssignToClients} className="gap-2"><UserPlus className="size-4" /><span>{terminology.assignToPlural}</span></Button>
             <Button variant="ghost" onClick={() => setIsBulkDeleteOpen(true)} className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="size-4" /><span>{t('general.delete')}</span></Button>
           </div>
         ) : undefined}
@@ -549,8 +551,8 @@ const HabitFolderPage = () => {
       <AssignToClientsSidePanel
         open={isAssignToClientsOpen}
         onOpenChange={setIsAssignToClientsOpen}
-        title={t('habits.assignToClientsTitle')}
-        assignButtonLabel={(count) => count === 1 ? t('habits.assignToOneClient') : t('habits.assignToClientsCount', { count })}
+        title={`Assign habits to ${terminology.pluralLower}`}
+        assignButtonLabel={(count) => terminology.assignToCountLabel(count)}
         onAssign={handleAssignHabitsToClients}
         previewComponent={habitsToAssign.length > 0 ? (
           <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">

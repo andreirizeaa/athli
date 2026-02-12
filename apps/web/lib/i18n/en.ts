@@ -316,10 +316,11 @@ export const enMessages = {
         color: {
           label: 'Color Theme',
         },
-        units: {
-          label: 'Units',
-          imperial: 'Imperial',
-          metric: 'Metric',
+        terminology: {
+          label: 'Terminology',
+          athlete: 'Athlete',
+          client: 'Client',
+          member: 'Member',
         },
       },
     },
@@ -1780,7 +1781,7 @@ export const enMessages = {
       downloadTemplate: 'Please download this',
       csvTemplate: 'CSV Template',
       addClientInfo: ', add your client info and then upload.',
-      reviewTitle: 'Review {count} new {count, plural, =1 {client} other {clients}}',
+      reviewTitle: 'Review {term}',
       fullName: 'Full Name',
       email: 'Email',
       category: 'Category',
@@ -3215,7 +3216,7 @@ export const enMessages = {
         'Questionnaires',
         'Check-ins',
         'Habits & Metrics Tracking',
-        '5GB File Storage',
+        '5GB On Demand Files',
       ],
     },
     max: {
@@ -3231,7 +3232,7 @@ export const enMessages = {
         'Client Messaging',
       ],
       newFeatures: [
-        'Unlimited File Storage',
+        'Unlimited On Demand Files',
         'Broadcast Messaging',
         'AI Todo List',
         'Priority Support',
@@ -3323,7 +3324,7 @@ export const enMessages = {
       },
       {
         title: 'Client Management',
-        features: ['Questionnaires', 'Check-ins', 'Habits Tracking', 'Metrics Tracking'],
+        features: ['Questionnaires', 'Check-ins', 'Habits Tracking', 'Metrics Tracking', 'Photo Tracking', 'Exercise History'],
       },
       {
         title: 'Storage & Support',

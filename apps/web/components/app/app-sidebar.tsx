@@ -26,6 +26,7 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { useCoachChecklist } from '@/hooks/use-coach-checklist';
+import { useTerminology } from '@/hooks/use-terminology';
 import {
   Sidebar,
   SidebarContent,
@@ -47,6 +48,7 @@ export function AppSidebar() {
 
   const isCollapsed = state === 'collapsed';
   const { data: checklist } = useCoachChecklist();
+  const terminology = useTerminology();
 
   const isChecklistComplete = checklist
     ? checklist.client_app_demo &&
@@ -170,8 +172,7 @@ export function AppSidebar() {
 
   const settingsTabs = [
     { value: 'account/profile', labelKey: 'settings.groups.personal' },
-    { value: 'billing', labelKey: 'settings.sections.billingCurrent' },
-    { value: 'billing/plans', labelKey: 'settings.sections.billingPlans' },
+    { value: 'billing', labelKey: 'settings.sections.billing' },
     { value: 'app/customisations', labelKey: 'settings.groups.appSettings' },
     { value: 'business/company/information', labelKey: 'settings.groups.business' },
   ];
@@ -257,7 +258,8 @@ export function AppSidebar() {
                 ) {
                   isActive = activePath === href || activePath.startsWith(`${href}/`);
                 }
-                const label = t(item.labelKey);
+                // Use terminology for athletes link, translation for others
+                const label = href === '/athletes' ? terminology.plural : t(item.labelKey);
 
                 return (
                   <SidebarMenuItem key={item.href}>

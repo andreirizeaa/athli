@@ -1,22 +1,14 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { useTerminology } from '@/hooks/use-terminology';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   Plus,
   Search,
@@ -66,6 +58,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
+import { UpgradeDialog } from '@/components/app/upgrade-dialog';
 import { Habit } from '@/api/coach/coach-habit-service';
 import { useCoachHabits } from '@/hooks/use-coach-habits';
 import { useCoachHabitFolders } from '@/hooks/use-coach-habit-folders';
@@ -86,85 +79,6 @@ import {
 import { ButtonGroup } from '@/components/ui/button-group';
 import { useFeatureAccess } from '@/lib/permissions/feature-gate';
 
-// Screenshot preview component for upgrade dialog
-function ScreenshotPreview() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dims, setDims] = useState({ w: 0, h: 0 });
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const update = () => setDims({ w: el.offsetWidth, h: el.offsetHeight });
-    const obs = new ResizeObserver(update);
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  const { w, h } = dims;
-  const r = 8;
-
-  return (
-    <div ref={containerRef} className="relative">
-      {w > 0 && h > 0 && (
-        <svg
-          className="pointer-events-none absolute top-0 left-0 z-10"
-          width={w}
-          height={h}
-          viewBox={`0 0 ${w} ${h}`}
-          fill="none"
-        >
-          <defs>
-            <linearGradient id="border-grad-habits-page" x1="0.5" y1="0" x2="0.5" y2="1">
-              <stop offset="0%" stopColor="rgb(192,132,252)" />
-              <stop offset="100%" stopColor="rgb(165,180,252)" />
-            </linearGradient>
-          </defs>
-          <motion.rect
-            x={1.5}
-            y={1.5}
-            width={w - 3}
-            height={h - 3}
-            rx={r}
-            ry={r}
-            pathLength={1}
-            stroke="url(#border-grad-habits-page)"
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeDasharray="0.15 0.85"
-            animate={{ strokeDashoffset: [0, -1] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-          />
-          <motion.rect
-            x={1.5}
-            y={1.5}
-            width={w - 3}
-            height={h - 3}
-            rx={r}
-            ry={r}
-            pathLength={1}
-            stroke="url(#border-grad-habits-page)"
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeDasharray="0.15 0.85"
-            animate={{ strokeDashoffset: [-0.5, -1.5] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-          />
-        </svg>
-      )}
-      <img
-        src="/app-screenshots/client/habits/light.png"
-        alt="Habits feature preview"
-        className="block w-full h-auto rounded-lg border dark:hidden"
-      />
-      <img
-        src="/app-screenshots/client/habits/dark.png"
-        alt="Habits feature preview"
-        className="hidden w-full h-auto rounded-lg border dark:block"
-      />
-    </div>
-  );
-}
-
 type HabitFormValues = {
   name: string;
   description?: string;
@@ -183,6 +97,7 @@ const unitOptions = [
 
 const HabitsPage = () => {
   const t = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -911,7 +826,7 @@ const HabitsPage = () => {
             <div className="flex items-center gap-1">
               <Button variant="ghost" onClick={handleClearSelected} className="gap-2"><X className="size-4" /><span>{t('general.clearSelected', { count: selectedHabits.size })}</span></Button>
               {selectedHabits.size === 1 && <Button variant="ghost" onClick={handleDuplicateSelected} className="gap-2" disabled={isDuplicating}>{isDuplicating ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-4" />}<span>{t('habits.actions.duplicate')}</span></Button>}
-              <Button variant="ghost" onClick={handleAssignToClients} className="gap-2"><UserPlus className="size-4" /><span>{t('habits.actions.addToClients')}</span></Button>
+              <Button variant="ghost" onClick={handleAssignToClients} className="gap-2"><UserPlus className="size-4" /><span>{terminology.assignToPlural}</span></Button>
               {folders.length > 0 && <Button variant="ghost" onClick={() => setIsBulkMoveOpen(true)} className="gap-2"><Move className="size-4" /><span>Move</span></Button>}
               <Button variant="ghost" onClick={() => setIsBulkDeleteOpen(true)} className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="size-4" /><span>{t('general.delete')}</span></Button>
             </div>
@@ -1002,8 +917,8 @@ const HabitsPage = () => {
           setIsAssignToClientsOpen(open);
           if (!open) setFolderToAssign(null);
         }}
-        title={t('habits.assignToClientsTitle')}
-        assignButtonLabel={(count) => count === 1 ? t('habits.assignToOneClient') : t('habits.assignToClientsCount', { count })}
+        title={`Assign habits to ${terminology.pluralLower}`}
+        assignButtonLabel={(count) => terminology.assignToCountLabel(count)}
         onAssign={handleAssignHabitsToClients}
         previewComponent={
           folderToAssign ? (
@@ -1032,27 +947,16 @@ const HabitsPage = () => {
       />
 
       {/* Upgrade Dialog */}
-      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
-            <DialogDescription>
-              Assign habits to help your clients build consistency and track their progress over time.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <ScreenshotPreview />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
-              Maybe Later
-            </Button>
-            <Button onClick={() => router.push('/settings/billing')}>
-              View Plans
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UpgradeDialog
+        open={isUpgradeDialogOpen}
+        onOpenChange={setIsUpgradeDialogOpen}
+        description="Assign habits to help your clients build consistency and track their progress over time."
+        screenshot={{
+          light: '/app-screenshots/client/habits/light.png',
+          dark: '/app-screenshots/client/habits/dark.png',
+          alt: 'Habits feature preview',
+        }}
+      />
     </div>
   );
 };

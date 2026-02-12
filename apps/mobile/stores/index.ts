@@ -15,6 +15,8 @@ export { useLibraryTabStore, type LibraryTab } from './useLibraryTabStore';
 export { useTrainingOverlayStore } from './useTrainingOverlayStore';
 export { useCoachProfileStore } from './useCoachProfileStore';
 export { useCoachCompanyStore } from './useCoachCompanyStore';
+export { useCoachEntitlementsStore } from './useCoachEntitlementsStore';
+export { useCoachPreferencesStore } from './useCoachPreferencesStore';
 export { useClientProfileStore } from './useClientProfileStore';
 export { useAuthSessionStore } from './useAuthSessionStore';
 export { useAppInitStore } from './useAppInitStore';
@@ -32,6 +34,7 @@ export { useClientDetailStore } from './useClientDetailStore';
 export { useFeatureRequestsStore } from './useFeatureRequestsStore';
 export { useAthleteDataStore } from './useAthleteDataStore';
 export { useCoachDataStore } from './useCoachDataStore';
+export { useAthleteCoachEntitlementsStore } from './useAthleteCoachEntitlementsStore';
 
 // Export auth hook
 export { useAuth } from '../hooks/useAuth';
@@ -208,5 +211,68 @@ export const useBiometric = () => {
     enableBiometric,
     disableBiometric,
     authenticateWithBiometric,
+  };
+};
+
+import { useCoachEntitlementsStore } from './useCoachEntitlementsStore';
+import { useCoachPreferencesStore } from './useCoachPreferencesStore';
+
+/**
+ * Hook to access coach entitlements (feature gating)
+ */
+export const useEntitlements = () => {
+  const entitlements = useCoachEntitlementsStore((state) => state.entitlements);
+  const isLoading = useCoachEntitlementsStore((state) => state.isLoading);
+  const isOnTrial = useCoachEntitlementsStore((state) => state.isOnTrial);
+  const hasFeature = useCoachEntitlementsStore((state) => state.hasFeature);
+  const hasAddon = useCoachEntitlementsStore((state) => state.hasAddon);
+
+  return {
+    entitlements,
+    isLoading,
+    isOnTrial,
+    hasFeature,
+    hasAddon,
+    plan: entitlements?.plan_type ?? 'starter',
+    clientLimit: entitlements?.client_limit ?? 5,
+  };
+};
+
+/**
+ * Hook to access coach preferences (terminology)
+ */
+export const useCoachPreferences = () => {
+  const preferences = useCoachPreferencesStore((state) => state.preferences);
+  const isLoading = useCoachPreferencesStore((state) => state.isLoading);
+  const loadPreferences = useCoachPreferencesStore((state) => state.loadPreferences);
+  const updateTerminology = useCoachPreferencesStore((state) => state.updateTerminology);
+
+  return {
+    preferences,
+    isLoading,
+    loadPreferences,
+    updateTerminology,
+    terminology: preferences?.client_terminology ?? 'athlete',
+  };
+};
+
+import { useAthleteCoachEntitlementsStore } from './useAthleteCoachEntitlementsStore';
+
+/**
+ * Hook for athletes to access their coach's entitlements
+ * Used for feature gating in the client/athlete app
+ */
+export const useAthleteCoachEntitlements = () => {
+  const coachEntitlements = useAthleteCoachEntitlementsStore((state) => state.coachEntitlements);
+  const isLoading = useAthleteCoachEntitlementsStore((state) => state.isLoading);
+  const isCoachOnStarter = useAthleteCoachEntitlementsStore((state) => state.isCoachOnStarter);
+  const hasFeature = useAthleteCoachEntitlementsStore((state) => state.hasFeature);
+
+  return {
+    coachEntitlements,
+    isLoading,
+    isCoachOnStarter,
+    hasFeature,
+    coachPlan: coachEntitlements?.plan_type ?? 'starter',
   };
 };

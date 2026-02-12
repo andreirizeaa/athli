@@ -81,12 +81,13 @@ export async function canAddClient(coachId: string): Promise<{ allowed: boolean;
   const supabase = getSupabaseClient();
   const entitlements = await getCoachEntitlements(coachId);
 
-  // Get current active client count
+  // Get current active client count (all non-archived clients)
   const { count, error } = await supabase
     .from('coach_client_assignments')
     .select('*', { count: 'exact', head: true })
     .eq('coach_id', coachId)
-    .eq('status', 'accepted');
+    .eq('is_active', true)
+    .eq('is_archived', false);
 
   if (error) {
     logger.error({ err: error.message, coachId }, 'Failed to get client count');

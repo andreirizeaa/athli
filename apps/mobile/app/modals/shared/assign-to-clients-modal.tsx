@@ -5,16 +5,17 @@ import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image';
 import { X, Check } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useTerminology } from '@/hooks/useTerminology';
 import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { Separator } from '@/components/ui/separator';
+import { Avatar } from '@/components/ui/avatar';
 import { hexToRgba } from '@/utils/colorUtils';
 import { fuzzyMatch } from '@/utils/searchUtils';
 import { getClients, type Athlete } from '@/services/coach/coach-client-service';
@@ -26,6 +27,7 @@ export default function AssignToClientsModal() {
     const router = useRouter();
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
+    const terminology = useTerminology();
     const insets = useSafeAreaInsets();
 
     const params = useLocalSearchParams<{
@@ -86,7 +88,7 @@ export default function AssignToClientsModal() {
             | 'clientDetail.assignModals.assignFile'
             | 'clientDetail.assignModals.assignMetric'
             | 'clientDetail.assignModals.assignProgram';
-        return t(translationKey) || 'Assign to Clients';
+        return t(translationKey) || terminology.assignToPlural;
     }, [params.type, t]);
 
     const handleClose = useCallback(() => {
@@ -177,23 +179,20 @@ export default function AssignToClientsModal() {
                             >
                                 <View style={styles.avatarContainer}>
                                     <View style={styles.avatarCircle}>
-                                        {item.avatarUrl ? (
-                                            <Image
-                                                source={{ uri: item.avatarUrl }}
-                                                style={styles.avatarImage}
-                                                contentFit="cover"
-                                                contentPosition="center"
-                                                cachePolicy="memory-disk"
-                                            />
-                                        ) : (
-                                            <View
-                                                style={[
-                                                    styles.avatarImage,
-                                                    styles.avatarPlaceholder,
-                                                    { backgroundColor: themeColors.border },
-                                                ]}
-                                            />
-                                        )}
+                                        <Avatar
+                                            uri={item.avatarUrl}
+                                            size={54}
+                                            borderRadius={8}
+                                            fallback={
+                                                <View
+                                                    style={[
+                                                        styles.avatarImage,
+                                                        styles.avatarPlaceholder,
+                                                        { backgroundColor: themeColors.border },
+                                                    ]}
+                                                />
+                                            }
+                                        />
                                     </View>
                                 </View>
                                 <View style={styles.clientInfo}>

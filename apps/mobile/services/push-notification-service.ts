@@ -21,7 +21,6 @@ Notifications.setNotificationHandler({
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   // Push notifications only work on physical devices
   if (!Device.isDevice) {
-    console.log('[PushNotifications] Must use physical device for push notifications');
     return null;
   }
 
@@ -36,7 +35,6 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   }
 
   if (finalStatus !== 'granted') {
-    console.log('[PushNotifications] Permission not granted');
     return null;
   }
 
@@ -52,7 +50,6 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       projectId,
     });
 
-    console.log('[PushNotifications] Got token:', tokenData.data);
     return tokenData.data;
   } catch (error) {
     console.error('[PushNotifications] Error getting token:', error);
@@ -95,7 +92,6 @@ export async function setupPushNotifications(deviceId?: string): Promise<string 
 
     if (token) {
       await savePushToken(token, deviceId);
-      console.log('[PushNotifications] Token saved to backend');
     }
 
     return token;
@@ -140,7 +136,6 @@ export async function setupClientPushNotifications(deviceId?: string): Promise<s
 
     if (token) {
       await saveClientPushToken(token, deviceId);
-      console.log('[PushNotifications] Client token saved to backend');
     }
 
     return token;

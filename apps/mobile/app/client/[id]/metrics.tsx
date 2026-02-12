@@ -2,7 +2,7 @@ import React, { useRef, useCallback, useState, useMemo, useEffect } from 'react'
 import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, Activity, ClipboardCheck, BarChart3, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, Plus, Activity, ClipboardCheck, BarChart3, ChevronRight, LayoutGrid } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 import SquircleView from 'react-native-fast-squircle';
 
@@ -127,6 +127,15 @@ export default function MetricsScreen() {
     router.push(`/client/${id}/metric-detail?metricId=${metricId}` as any);
   }, [closeOpenRow, router, id]);
 
+  const handleViewAllPress = useCallback(() => {
+    router.push(`/client/${id}/all-metrics` as any);
+  }, [router, id]);
+
+  // Check if there are metrics with data
+  const hasMetricsWithData = useMemo(() => {
+    return metrics.some((m) => m.logs && m.logs.length > 0);
+  }, [metrics]);
+
   const handleDeleteMetric = async (metric: typeof metrics[0]) => {
     if (!coachId) return;
     await removeMetric({
@@ -197,6 +206,37 @@ export default function MetricsScreen() {
           ) : (
             /* Metrics list */
             <View>
+              {/* All Metrics option */}
+              {hasMetricsWithData && !searchQuery.trim() && (
+                <>
+                  <PressableScale onPress={handleViewAllPress}>
+                    <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+                      <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <PlatformIcon
+                          sf="square.grid.2x2.fill"
+                          IconComponent={LayoutGrid}
+                          size={24}
+                          color={themeColors.text}
+                        />
+                      </SquircleView>
+                      <View style={styles.textContentCentered}>
+                        <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
+                          {t('clientDetail.sections.allMetrics')}
+                        </Text>
+                      </View>
+                      <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                    </View>
+                  </PressableScale>
+                  <View style={styles.separatorContainer}>
+                    <View
+                      style={[
+                        styles.separator,
+                        { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                      ]}
+                    />
+                  </View>
+                </>
+              )}
               {filteredMetrics.map((metric, index) => {
                 const isLastItem = index === filteredMetrics.length - 1;
                 return (
@@ -373,6 +413,11 @@ const styles = StyleSheet.create({
   textContent: {
     flex: 1,
     marginRight: 8,
+  },
+  textContentCentered: {
+    flex: 1,
+    marginRight: 8,
+    justifyContent: 'center',
   },
   name: {
     ...typography.p1,

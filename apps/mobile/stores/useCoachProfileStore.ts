@@ -37,7 +37,6 @@ export const useCoachProfileStore = create<CoachProfileStore>((set, get) => ({
       if (savedProfile) {
         const profile = JSON.parse(savedProfile) as CoachProfile;
         set({ profile, error: null });
-        console.log('[CoachProfileStore] Profile restored from storage');
       }
     } catch (error) {
       console.error('[CoachProfileStore] Failed to restore profile from storage:', error);

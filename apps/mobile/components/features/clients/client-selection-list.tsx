@@ -1,6 +1,5 @@
 import React, { useCallback, useState, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
 import { FlashList } from '@shopify/flash-list';
 import { Check } from 'lucide-react-native';
 import { PressableOpacity } from 'pressto';
@@ -8,6 +7,7 @@ import { PressableOpacity } from 'pressto';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { Separator } from '@/components/ui/separator';
+import { Avatar } from '@/components/ui/avatar';
 import type { Client } from '@/services/client-service';
 
 type ClientSelectionListProps = {
@@ -47,22 +47,20 @@ export const ClientSelectionList = ({
             >
                 <View style={styles.avatarContainer}>
                     <View style={styles.avatarCircle}>
-                        {item.avatarUrl ? (
-                            <Image
-                                source={{ uri: item.avatarUrl }}
-                                style={styles.avatarImage}
-                                contentFit="cover"
-                                contentPosition="center"
-                            />
-                        ) : (
-                            <View
-                                style={[
-                                    styles.avatarImage,
-                                    styles.avatarPlaceholder,
-                                    { backgroundColor: themeColors.border },
-                                ]}
-                            />
-                        )}
+                        <Avatar
+                            uri={item.avatarUrl}
+                            size={44}
+                            borderRadius={6}
+                            fallback={
+                                <View
+                                    style={[
+                                        styles.avatarImage,
+                                        styles.avatarPlaceholder,
+                                        { backgroundColor: themeColors.border },
+                                    ]}
+                                />
+                            }
+                        />
                     </View>
                 </View>
                 <Text style={[styles.clientName, { color: themeColors.text }]} numberOfLines={1}>

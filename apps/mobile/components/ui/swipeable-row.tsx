@@ -40,16 +40,12 @@ export const SwipeableRow = ({
     const handleConfirmDelete = useCallback(async () => {
         setShowDeleteDialog(false);
         swipeableRef.current?.close();
-        console.log('[SwipeableRow] Setting isDeleting to true');
         setIsDeleting(true);
         try {
-            console.log('[SwipeableRow] Calling onDelete');
             await onDelete();
-            console.log('[SwipeableRow] onDelete completed');
         } catch (error) {
             console.error('[SwipeableRow] Delete error:', error);
         } finally {
-            console.log('[SwipeableRow] Setting isDeleting to false');
             setIsDeleting(false);
         }
     }, [onDelete]);
@@ -101,8 +97,6 @@ export const SwipeableRow = ({
     if (!enabled) {
         return <>{children}</>;
     }
-
-    console.log('[SwipeableRow] Render - isDeleting:', isDeleting);
 
     return (
         <View style={styles.container}>

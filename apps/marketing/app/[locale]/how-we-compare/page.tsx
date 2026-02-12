@@ -1,9 +1,18 @@
+import type { Metadata } from 'next'
 import { setRequestLocale, getTranslations } from 'next-intl/server'
 import { HeroHeader } from '@/components/header'
 import Footer from '@/components/footer'
 import PageHero from '@/components/page-hero'
 import ComparisonTable from '@/components/comparison-table'
 import ComparePricesNav from '@/components/compare-prices-nav'
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+    const { locale } = await params
+    setRequestLocale(locale)
+    return {
+        title: 'How We Compare - Athli',
+    }
+}
 
 export default async function HowWeComparePage({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params

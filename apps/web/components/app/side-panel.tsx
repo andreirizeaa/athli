@@ -131,11 +131,9 @@ export const SidePanel = ({
         onOpenAutoFocus={onOpenAutoFocus}
         onOverlayClick={() => onOpenChange(false)}
         onInteractOutside={(e) => {
-          // Prevent closing when interacting with portaled elements like dialogs
-          const target = e.target as HTMLElement;
-          if (target?.closest('[data-slot="dialog-content"]') || target?.closest('[data-slot="dialog-overlay"]')) {
-            e.preventDefault();
-          }
+          // Always prevent onInteractOutside from closing the panel
+          // Closing is handled explicitly via onOverlayClick and the X button
+          e.preventDefault();
         }}
         style={{
           borderTopLeftRadius: '0px',

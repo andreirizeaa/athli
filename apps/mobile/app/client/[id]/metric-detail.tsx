@@ -312,7 +312,7 @@ export default function MetricDetailScreen() {
                 </View>
 
                 {/* Value Chart */}
-                <ValueLineChart data={chartData} />
+                <ValueLineChart data={chartData} hideHeader />
 
                 {/* Logs List */}
                 <LogsList

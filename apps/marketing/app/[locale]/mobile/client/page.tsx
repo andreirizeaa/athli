@@ -1,10 +1,19 @@
+import type { Metadata } from 'next'
 import { setRequestLocale, getTranslations } from 'next-intl/server'
 import { HeroHeader } from '@/components/header'
 import Footer from '@/components/footer'
 import MobileAppShowcase from '@/components/mobile-app-showcase'
 import type { Feature } from '@/components/mobile-app-showcase'
 
-const clientFeatureKeys = ['workouts', 'progress', 'exercise-history', 'habits', 'forms', 'chat'] as const
+const clientFeatureKeys = ['workouts', 'progress', 'exercise-history', 'habits', 'metrics', 'progress-photos', 'forms', 'chat'] as const
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+    const { locale } = await params
+    setRequestLocale(locale)
+    return {
+        title: 'Client Mobile App - Athli',
+    }
+}
 
 export default async function MobileClientPage({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params

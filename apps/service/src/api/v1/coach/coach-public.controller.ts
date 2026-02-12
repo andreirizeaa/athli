@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { success, notFound } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
+import { canAddClient } from '../../../services/entitlements.service';
 
 export const coachPublicController = {
     /**
@@ -84,6 +85,9 @@ export const coachPublicController = {
             .eq('coach_id', coachId)
             .maybeSingle();
 
+        // Check if coach has reached client limit
+        const { allowed: canAcceptClients } = await canAddClient(coachId);
+
         success(res, {
             message: 'Coach profile retrieved successfully',
             data: {
@@ -95,6 +99,7 @@ export const coachPublicController = {
                     companyLogoUrl: companyData?.logo_url || null,
                 },
                 onboardingId,
+                hasReachedLimit: !canAcceptClients,
             },
         });
     },

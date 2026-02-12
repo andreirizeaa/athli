@@ -3,7 +3,6 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, User } from 'lucide-react-native';
-import { Image } from 'expo-image';
 
 
 import { typography } from '@/constants/typography';
@@ -13,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { DetailRow } from '@/components/ui/detail-row';
 import { Separator } from '@/components/ui/separator';
 import { PlatformIcon } from '@/components/ui/platform-icon';
+import { Avatar } from '@/components/ui/avatar';
 import { fetchCoachPublicProfile } from '@/services/client/coach-profile-service';
 import type { CoachPublicProfile } from '@/services/client/coach-profile-service';
 import { findCountry, SPECIALITY_OPTIONS } from '@/services/coach/coach-company-service';
@@ -103,23 +103,21 @@ export default function CoachProfileScreen() {
             {/* Coach header */}
             <View style={styles.coachHeader}>
               <View style={styles.avatarContainer}>
-                {profile.profile_picture_url ? (
-                  <Image
-                    source={{ uri: profile.profile_picture_url }}
-                    style={styles.avatarImage}
-                    contentFit="cover"
-                    transition={200}
-                  />
-                ) : (
-                  <View style={styles.fallbackAvatar}>
-                    <PlatformIcon
-                      sf="person.fill"
-                      IconComponent={User}
-                      size={32}
-                      color="#ffffff"
-                    />
-                  </View>
-                )}
+                <Avatar
+                  uri={profile.profile_picture_url}
+                  size={80}
+                  borderRadius={40}
+                  fallback={
+                    <View style={styles.fallbackAvatar}>
+                      <PlatformIcon
+                        sf="person.fill"
+                        IconComponent={User}
+                        size={32}
+                        color="#ffffff"
+                      />
+                    </View>
+                  }
+                />
               </View>
               <Text style={[styles.coachName, { color: themeColors.text }]}>
                 {profile.name}
