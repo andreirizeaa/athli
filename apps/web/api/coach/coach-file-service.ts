@@ -9,6 +9,10 @@ export type {
   FileWithUrl,
   ClientFileAssignment,
   AddLinkData,
+  FileFolder,
+  CreateFileFolderInput,
+  UpdateFileFolderInput,
+  MoveFileInput,
 } from '@athli/shared-types';
 
 export { isExternalLink } from '@athli/shared-types';
@@ -21,6 +25,9 @@ import type {
   FileWithUrl,
   ClientFileAssignment,
   AddLinkData,
+  FileFolder,
+  CreateFileFolderInput,
+  UpdateFileFolderInput,
 } from '@athli/shared-types';
 
 /**
@@ -142,16 +149,22 @@ export const getClientFiles = async (clientId: string, coachId: string): Promise
   }));
 };
 
+export type CreateLinkResponse = {
+  file: CoachFile;
+  duplicate: boolean;
+  existingName?: string;
+};
+
 /**
  * Service method to create a link (external URL)
  */
-export const createLink = async (data: AddLinkData): Promise<CoachFile> => {
-  const response = await apiFetch<{ data: { file: CoachFile } }>('/coach/files/link', {
+export const createLink = async (data: AddLinkData): Promise<CreateLinkResponse> => {
+  const response = await apiFetch<{ data: CreateLinkResponse }>('/coach/files/link', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 
-  return response.data.file;
+  return response.data;
 };
 
 /**
@@ -183,4 +196,66 @@ export const getYouTubeThumbnail = (url: string): string | null => {
   const videoId = getYouTubeVideoId(url);
   if (!videoId) return null;
   return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+};
+
+// =============================================================================
+// Folder Operations
+// =============================================================================
+
+/**
+ * Get all file folders for the current coach
+ */
+export const getAllFileFolders = async (): Promise<FileFolder[]> => {
+  const response = await apiFetch<{ data: { folders: FileFolder[] } }>('/coach/files/folders');
+  return response.data.folders;
+};
+
+/**
+ * Create a new file folder
+ */
+export const createFileFolder = async (data: CreateFileFolderInput): Promise<FileFolder> => {
+  const response = await apiFetch<{ data: { folder: FileFolder } }>('/coach/files/folders', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return response.data.folder;
+};
+
+/**
+ * Update a file folder
+ */
+export const updateFileFolder = async (id: string, data: UpdateFileFolderInput): Promise<FileFolder> => {
+  const response = await apiFetch<{ data: { folder: FileFolder } }>(`/coach/files/folders/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  return response.data.folder;
+};
+
+/**
+ * Delete a file folder (items inside become unfiled)
+ */
+export const deleteFileFolder = async (id: string): Promise<void> => {
+  await apiFetch(`/coach/files/folders/${id}`, {
+    method: 'DELETE',
+  });
+};
+
+/**
+ * Move a file to a folder (or out of folder if folderId is null)
+ */
+export const moveFile = async (fileId: string, folderId: string | null): Promise<CoachFile> => {
+  const response = await apiFetch<{ data: { file: CoachFile } }>(`/coach/files/${fileId}/move`, {
+    method: 'PATCH',
+    body: JSON.stringify({ folder_id: folderId }),
+  });
+  return response.data.file;
+};
+
+/**
+ * Get files in a specific folder
+ */
+export const getFilesInFolder = async (folderId: string): Promise<CoachFile[]> => {
+  const response = await apiFetch<{ data: { files: CoachFile[] } }>(`/coach/files/folders/${folderId}/files`);
+  return response.data.files;
 };

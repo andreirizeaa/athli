@@ -19,7 +19,7 @@ import {
 import { CodeIcon } from '@radix-ui/react-icons';
 import Lottie from 'lottie-react';
 import { Button } from '@/components/ui/button';
-import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
+import { motion, useScroll, useTransform, AnimatePresence, useMotionValue, animate } from 'motion/react';
 import { TextEffect } from '@/components/ui/text-effect';
 import { AnimatedGroup } from '@/components/ui/animated-group';
 import { HeroHeader } from './header';
@@ -79,7 +79,7 @@ function IntegrationPopoverContent({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         <img
           src={`/icons/${iconId}.png`}
           alt=""
@@ -88,21 +88,29 @@ function IntegrationPopoverContent({
             (iconId === 'chatgpt' || iconId === 'notion') && 'dark:invert'
           )}
         />
-        <div>
-          <h4 className="font-semibold text-foreground leading-tight">{title}</h4>
-          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-            <X className="size-3 text-red-500" />
-            {problem}
-          </p>
-        </div>
+        <h4 className="font-semibold text-foreground leading-tight">{title}</h4>
       </div>
 
-      {/* Benefits */}
+      {/* Problem & Benefits */}
       <div className="space-y-2">
+        {/* Problem row */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={benefitVariants}
+          custom={0}
+          className="flex items-center gap-2"
+        >
+          <div className="size-5 rounded-full bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center shrink-0">
+            <X className="size-3 text-red-600 dark:text-red-400" />
+          </div>
+          <span className="text-sm text-foreground">{problem}</span>
+        </motion.div>
+        {/* Benefit rows */}
         {benefits.map((benefit, i) => (
           <motion.div
             key={benefit}
-            custom={i}
+            custom={i + 1}
             initial="hidden"
             animate="visible"
             variants={benefitVariants}
@@ -364,20 +372,119 @@ function HeroChatPreview() {
   );
 }
 
+// Icon configuration for cleaner code
+const ICON_CONFIG = {
+  chatgpt: { side: 'left', delay: 0.5 },
+  whatsapp: { side: 'right', delay: 0.6 },
+  excel: { side: 'left', delay: 0.7 },
+  zapier: { side: 'right', delay: 0.8 },
+  docs: { side: 'right', delay: 0.9 },
+  notion: { side: 'left', delay: 1.0 },
+} as const;
+
 export default function HeroSection() {
-  const [entranceDone, setEntranceDone] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
   const sectionRef = React.useRef<HTMLDivElement>(null);
   const chatRef = React.useRef<HTMLDivElement>(null);
+  const entranceDoneRef = React.useRef(false);
   const t = useTranslations('hero');
+
+  // Only render popovers after mount to avoid hydration mismatch with Radix IDs
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ['start start', 'end start'],
   });
 
-  const leftX = useTransform(scrollYProgress, [0, 0.15], [0, -120]);
-  const rightX = useTransform(scrollYProgress, [0, 0.15], [0, 120]);
-  const iconOpacity = useTransform(scrollYProgress, [0, 0.12], [1, 0]);
-  const iconScale = useTransform(scrollYProgress, [0, 0.15], [1, 0.8]);
+  // Scroll-based target transforms
+  const scrollLeftX = useTransform(scrollYProgress, [0, 0.15], [0, -120]);
+  const scrollRightX = useTransform(scrollYProgress, [0, 0.15], [0, 120]);
+  const scrollOpacity = useTransform(scrollYProgress, [0, 0.12], [1, 0]);
+  const scrollScale = useTransform(scrollYProgress, [0, 0.15], [1, 0.8]);
+
+  // Individual motion values for each icon (for staggered entrance)
+  const chatgptX = useMotionValue(-60);
+  const chatgptOpacity = useMotionValue(0);
+  const chatgptScale = useMotionValue(0.8);
+
+  const whatsappX = useMotionValue(60);
+  const whatsappOpacity = useMotionValue(0);
+  const whatsappScale = useMotionValue(0.8);
+
+  const excelX = useMotionValue(-60);
+  const excelOpacity = useMotionValue(0);
+  const excelScale = useMotionValue(0.8);
+
+  const zapierX = useMotionValue(60);
+  const zapierOpacity = useMotionValue(0);
+  const zapierScale = useMotionValue(0.8);
+
+  const docsX = useMotionValue(60);
+  const docsOpacity = useMotionValue(0);
+  const docsScale = useMotionValue(0.8);
+
+  const notionX = useMotionValue(-60);
+  const notionOpacity = useMotionValue(0);
+  const notionScale = useMotionValue(0.8);
+
+  // Group motion values by icon for easy access
+  const iconMotionValues = React.useMemo(() => ({
+    chatgpt: { x: chatgptX, opacity: chatgptOpacity, scale: chatgptScale, side: 'left' },
+    whatsapp: { x: whatsappX, opacity: whatsappOpacity, scale: whatsappScale, side: 'right' },
+    excel: { x: excelX, opacity: excelOpacity, scale: excelScale, side: 'left' },
+    zapier: { x: zapierX, opacity: zapierOpacity, scale: zapierScale, side: 'right' },
+    docs: { x: docsX, opacity: docsOpacity, scale: docsScale, side: 'right' },
+    notion: { x: notionX, opacity: notionOpacity, scale: notionScale, side: 'left' },
+  }), [chatgptX, chatgptOpacity, chatgptScale, whatsappX, whatsappOpacity, whatsappScale, excelX, excelOpacity, excelScale, zapierX, zapierOpacity, zapierScale, docsX, docsOpacity, docsScale, notionX, notionOpacity, notionScale]);
+
+  // Run entrance animation and then bind to scroll (only after mount)
+  React.useEffect(() => {
+    if (!mounted) return;
+
+    const duration = 0.7;
+    const ease = [0.25, 0.1, 0.25, 1] as const;
+
+    // Animate each icon with staggered delays
+    const animations = Object.entries(ICON_CONFIG).map(([iconId, config]) => {
+      const mv = iconMotionValues[iconId as keyof typeof iconMotionValues];
+      return [
+        animate(mv.x, 0, { duration, ease, delay: config.delay }),
+        animate(mv.opacity, 1, { duration, ease, delay: config.delay }),
+        animate(mv.scale, 1, { duration, ease, delay: config.delay }),
+      ];
+    }).flat();
+
+    // After all entrance animations complete, bind to scroll
+    const lastDelay = Math.max(...Object.values(ICON_CONFIG).map(c => c.delay));
+    const totalEntranceTime = (lastDelay + duration) * 1000;
+
+    const bindToScroll = setTimeout(() => {
+      entranceDoneRef.current = true;
+
+      // Bind each icon's x to appropriate scroll transform
+      Object.entries(iconMotionValues).forEach(([iconId, mv]) => {
+        const scrollX = mv.side === 'left' ? scrollLeftX : scrollRightX;
+
+        // Subscribe to scroll changes
+        scrollX.on('change', v => mv.x.set(v));
+        scrollOpacity.on('change', v => mv.opacity.set(v));
+        scrollScale.on('change', v => mv.scale.set(v));
+
+        // Set current scroll values
+        mv.x.set(scrollX.get());
+        mv.opacity.set(scrollOpacity.get());
+        mv.scale.set(scrollScale.get());
+      });
+    }, totalEntranceTime);
+
+    return () => {
+      clearTimeout(bindToScroll);
+      animations.forEach(a => a.stop());
+    };
+  }, [mounted, iconMotionValues, scrollLeftX, scrollRightX, scrollOpacity, scrollScale]);
 
   return (
     <>
@@ -387,7 +494,8 @@ export default function HeroSection() {
           <div className="relative pt-24 md:pt-36">
 
             <div className="relative mx-auto max-w-7xl px-6">
-              {/* Floating icon containers */}
+              {/* Floating icon containers - only render after mount to avoid Radix hydration mismatch */}
+              {mounted && (
               <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block">
                 {/* ChatGPT - top left, larger */}
                 <FloatingIconWithPopover
@@ -396,10 +504,7 @@ export default function HeroSection() {
                   className="absolute top-[12%] left-[6%] pointer-events-auto flex size-24 -rotate-12 cursor-pointer items-center justify-center rounded-[20px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)] dark:shadow-[0_0_25px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
                   iconClassName="size-[68px] object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:invert dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
                   motionProps={{
-                    initial: { opacity: 0, x: -60, scale: 0.8, filter: 'blur(8px)' },
-                    animate: { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' },
-                    transition: { type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.5 },
-                    style: entranceDone ? { x: leftX, opacity: iconOpacity, scale: iconScale } : undefined,
+                    style: { x: iconMotionValues.chatgpt.x, opacity: iconMotionValues.chatgpt.opacity, scale: iconMotionValues.chatgpt.scale },
                   }}
                   t={t}
                 />
@@ -410,10 +515,7 @@ export default function HeroSection() {
                   className="absolute top-[22%] right-[8%] pointer-events-auto flex size-20 rotate-12 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(37,211,102,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
                   iconClassName="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(37,211,102,0.35)]"
                   motionProps={{
-                    initial: { opacity: 0, x: 60, scale: 0.8, filter: 'blur(8px)' },
-                    animate: { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' },
-                    transition: { type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.65 },
-                    style: entranceDone ? { x: rightX, opacity: iconOpacity, scale: iconScale } : undefined,
+                    style: { x: iconMotionValues.whatsapp.x, opacity: iconMotionValues.whatsapp.opacity, scale: iconMotionValues.whatsapp.scale },
                   }}
                   t={t}
                 />
@@ -424,10 +526,7 @@ export default function HeroSection() {
                   className="absolute bottom-[30%] left-[5%] pointer-events-auto flex size-20 -rotate-[18deg] cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(33,185,110,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
                   iconClassName="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(33,115,70,0.35)]"
                   motionProps={{
-                    initial: { opacity: 0, x: -60, scale: 0.8, filter: 'blur(8px)' },
-                    animate: { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' },
-                    transition: { type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.8 },
-                    style: entranceDone ? { x: leftX, opacity: iconOpacity, scale: iconScale } : undefined,
+                    style: { x: iconMotionValues.excel.x, opacity: iconMotionValues.excel.opacity, scale: iconMotionValues.excel.scale },
                   }}
                   t={t}
                 />
@@ -438,10 +537,7 @@ export default function HeroSection() {
                   className="absolute bottom-[22%] right-[12%] pointer-events-auto flex size-24 rotate-6 cursor-pointer items-center justify-center rounded-[20px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(255,159,28,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
                   iconClassName="size-[68px] object-contain drop-shadow-[0_0_8px_rgba(255,159,28,0.35)]"
                   motionProps={{
-                    initial: { opacity: 0, x: 60, scale: 0.8, filter: 'blur(8px)' },
-                    animate: { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' },
-                    transition: { type: 'spring', bounce: 0.3, duration: 1.2, delay: 0.95 },
-                    style: entranceDone ? { x: rightX, opacity: iconOpacity, scale: iconScale } : undefined,
+                    style: { x: iconMotionValues.zapier.x, opacity: iconMotionValues.zapier.opacity, scale: iconMotionValues.zapier.scale },
                   }}
                   t={t}
                 />
@@ -452,12 +548,12 @@ export default function HeroSection() {
                   className="absolute top-[-6%] right-[14%] pointer-events-auto flex size-20 rotate-3 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 hover:scale-110 transition-transform"
                   iconClassName="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(66,133,244,0.3)]"
                   motionProps={{
-                    initial: { opacity: 0, x: 60, scale: 0.8, filter: 'blur(8px)' },
-                    animate: { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' },
-                    transition: { type: 'spring', bounce: 0.3, duration: 1.2, delay: 1.1 },
-                    style: entranceDone
-                      ? { x: rightX, opacity: iconOpacity, scale: iconScale, boxShadow: '-5px -5px 15px rgba(251,188,4,0.12), 5px -5px 15px rgba(234,67,53,0.1), 5px 5px 15px rgba(66,133,244,0.12), -5px 5px 15px rgba(52,168,83,0.12), inset 0 1px 0 rgba(255,255,255,0.06)' }
-                      : { boxShadow: '-5px -5px 15px rgba(251,188,4,0.12), 5px -5px 15px rgba(234,67,53,0.1), 5px 5px 15px rgba(66,133,244,0.12), -5px 5px 15px rgba(52,168,83,0.12), inset 0 1px 0 rgba(255,255,255,0.06)' },
+                    style: {
+                      x: iconMotionValues.docs.x,
+                      opacity: iconMotionValues.docs.opacity,
+                      scale: iconMotionValues.docs.scale,
+                      boxShadow: '-5px -5px 15px rgba(251,188,4,0.12), 5px -5px 15px rgba(234,67,53,0.1), 5px 5px 15px rgba(66,133,244,0.12), -5px 5px 15px rgba(52,168,83,0.12), inset 0 1px 0 rgba(255,255,255,0.06)',
+                    },
                   }}
                   t={t}
                 />
@@ -468,15 +564,12 @@ export default function HeroSection() {
                   className="absolute bottom-[6%] left-[15%] pointer-events-auto flex size-20 -rotate-3 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)] dark:shadow-[0_0_25px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
                   iconClassName="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:invert dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
                   motionProps={{
-                    initial: { opacity: 0, x: -60, scale: 0.8, filter: 'blur(8px)' },
-                    animate: { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' },
-                    transition: { type: 'spring', bounce: 0.3, duration: 1.2, delay: 1.25 },
-                    onAnimationComplete: () => setEntranceDone(true),
-                    style: entranceDone ? { x: leftX, opacity: iconOpacity, scale: iconScale } : undefined,
+                    style: { x: iconMotionValues.notion.x, opacity: iconMotionValues.notion.opacity, scale: iconMotionValues.notion.scale },
                   }}
                   t={t}
                 />
               </div>
+              )}
 
               <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0">
                 <AnimatedGroup variants={transitionVariants}>

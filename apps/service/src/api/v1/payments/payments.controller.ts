@@ -285,12 +285,12 @@ export const paymentsController = {
 
       const last_month_revenue_cents = (lastMonthData || []).reduce((sum, p) => sum + (p.amount_cents || 0), 0);
 
-      // Active subscriptions count
+      // Active subscriptions count (includes both active and trialing)
       const { count: active_subscriptions_count } = await supabase
         .from('client_subscriptions')
         .select('id', { count: 'exact', head: true })
         .eq('coach_id', userId)
-        .eq('status', 'active');
+        .in('status', ['active', 'trialing']);
 
       // Paying clients count (distinct client_id from succeeded payments)
       const { data: payingClients } = await supabase
@@ -940,7 +940,7 @@ export const paymentsController = {
       return;
     }
 
-    const { name, description, amount_cents, currency, interval, interval_count, features, free_trial_days, onboarding_id, sequence_id, initial_fee_cents, image_url } = req.body;
+    const { name, description, amount_cents, currency, interval, interval_count, features, free_trial_days, onboarding_id, sequence_id, image_url } = req.body;
 
     if (!name || amount_cents == null || !currency || !interval) {
       return badRequest(res, { message: 'name, amount_cents, currency, and interval are required' });
@@ -963,7 +963,6 @@ export const paymentsController = {
           is_visible: true,
           features: features || [],
           free_trial_days: free_trial_days || 0,
-          initial_fee_cents: initial_fee_cents || 0,
           onboarding_id: onboarding_id || null,
           sequence_id: sequence_id || null,
           image_url: image_url || null,
@@ -1618,26 +1617,6 @@ export const paymentsController = {
         },
       ];
 
-      // Add initial fee as a separate line item if applicable
-      if ((pkg.initial_fee_cents ?? 0) > 0) {
-        // Create a price for the initial fee on-the-fly
-        const initialFeePrice = await stripe.prices.create(
-          {
-            unit_amount: pkg.initial_fee_cents,
-            currency: pkg.currency,
-            product_data: {
-              name: `${pkg.name} - Initial Fee`,
-            },
-          },
-          { stripeAccount: stripeAccount.stripe_account_id }
-        );
-
-        lineItems.push({
-          price: initialFeePrice.id,
-          quantity: 1,
-        });
-      }
-
       // Determine checkout mode
       const mode: Stripe.Checkout.SessionCreateParams.Mode =
         pkg.interval === 'one_time' ? 'payment' : 'subscription';
@@ -1685,7 +1664,7 @@ export const paymentsController = {
           client_id: userId,
           package_id: packageId,
           stripe_checkout_session_id: session.id,
-          amount_cents: pkg.amount_cents + (pkg.initial_fee_cents || 0),
+          amount_cents: pkg.amount_cents,
           currency: pkg.currency,
           status: 'pending',
         });
@@ -1759,7 +1738,7 @@ export const paymentsController = {
       // Get visible packages (includes inactive ones so they can be shown as unavailable)
       const { data: packages } = await supabase
         .from('coach_packages')
-        .select('id, name, description, amount_cents, currency, interval, interval_count, is_active, features, free_trial_days, initial_fee_cents, image_url')
+        .select('id, name, description, amount_cents, currency, interval, interval_count, is_active, features, free_trial_days, image_url')
         .eq('coach_id', coachId)
         .eq('is_visible', true)
         .order('sort_order', { ascending: true })
@@ -1932,25 +1911,6 @@ export const paymentsController = {
         },
       ];
 
-      // Add initial fee as a separate line item if applicable
-      if ((pkg.initial_fee_cents ?? 0) > 0) {
-        const initialFeePrice = await stripe.prices.create(
-          {
-            unit_amount: pkg.initial_fee_cents,
-            currency: pkg.currency,
-            product_data: {
-              name: `${pkg.name} - Initial Fee`,
-            },
-          },
-          { stripeAccount: stripeAccount.stripe_account_id }
-        );
-
-        lineItems.push({
-          price: initialFeePrice.id,
-          quantity: 1,
-        });
-      }
-
       // Determine checkout mode
       const mode: Stripe.Checkout.SessionCreateParams.Mode =
         pkg.interval === 'one_time' ? 'payment' : 'subscription';
@@ -2001,7 +1961,7 @@ export const paymentsController = {
           client_id: clientId,
           package_id: packageId,
           stripe_checkout_session_id: session.id,
-          amount_cents: pkg.amount_cents + (pkg.initial_fee_cents || 0),
+          amount_cents: pkg.amount_cents,
           currency: pkg.currency,
           status: 'pending',
         });
@@ -2144,6 +2104,111 @@ async function getPackageName(supabase: any, packageId: string): Promise<string>
   return data?.name || 'a package';
 }
 
+// Helper to look up local coupon_id from Stripe coupon ID
+async function getCouponIdFromStripe(supabase: any, coachId: string, stripeCouponId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('coach_coupons')
+    .select('id')
+    .eq('coach_id', coachId)
+    .eq('stripe_coupon_id', stripeCouponId)
+    .maybeSingle();
+  return data?.id || null;
+}
+
+// Helper to update package stats (sales, revenue, cancellations, refunds)
+interface PackageStatsUpdate {
+  package_id: string;
+  sales_count?: number;           // +1 for new sale
+  active_subscriptions_count?: number;  // +1 for new, -1 for cancelled
+  cancellations_count?: number;   // +1 for cancellation
+  refunds_count?: number;         // +1 for refund
+  revenue_cents?: number;         // +amount for payment, -amount for refund
+}
+
+async function updatePackageStats(supabase: any, update: PackageStatsUpdate) {
+  if (!update.package_id) return;
+
+  try {
+    // Build the update query dynamically based on what changed
+    const updates: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (update.sales_count !== undefined) {
+      updates.push(`sales_count = sales_count + $${paramIndex}`);
+      params.push(update.sales_count);
+      paramIndex++;
+    }
+    if (update.active_subscriptions_count !== undefined) {
+      updates.push(`active_subscriptions_count = GREATEST(0, active_subscriptions_count + $${paramIndex})`);
+      params.push(update.active_subscriptions_count);
+      paramIndex++;
+    }
+    if (update.cancellations_count !== undefined) {
+      updates.push(`cancellations_count = cancellations_count + $${paramIndex}`);
+      params.push(update.cancellations_count);
+      paramIndex++;
+    }
+    if (update.refunds_count !== undefined) {
+      updates.push(`refunds_count = refunds_count + $${paramIndex}`);
+      params.push(update.refunds_count);
+      paramIndex++;
+    }
+    if (update.revenue_cents !== undefined) {
+      updates.push(`total_revenue_cents = GREATEST(0, total_revenue_cents + $${paramIndex})`);
+      params.push(update.revenue_cents);
+      paramIndex++;
+    }
+
+    if (updates.length === 0) return;
+
+    params.push(update.package_id);
+    const query = `UPDATE coach_packages SET ${updates.join(', ')}, updated_at = now() WHERE id = $${paramIndex}`;
+
+    await supabase.rpc('exec_sql', { query, params });
+  } catch (err: any) {
+    // Fallback to individual updates if RPC not available
+    logger.warn({ err: err.message, update }, 'Failed to update package stats via RPC, trying direct update');
+
+    try {
+      // Get current stats
+      const { data: pkg } = await supabase
+        .from('coach_packages')
+        .select('sales_count, active_subscriptions_count, cancellations_count, refunds_count, total_revenue_cents')
+        .eq('id', update.package_id)
+        .single();
+
+      if (!pkg) return;
+
+      const newStats: any = {};
+      if (update.sales_count !== undefined) {
+        newStats.sales_count = pkg.sales_count + update.sales_count;
+      }
+      if (update.active_subscriptions_count !== undefined) {
+        newStats.active_subscriptions_count = Math.max(0, pkg.active_subscriptions_count + update.active_subscriptions_count);
+      }
+      if (update.cancellations_count !== undefined) {
+        newStats.cancellations_count = pkg.cancellations_count + update.cancellations_count;
+      }
+      if (update.refunds_count !== undefined) {
+        newStats.refunds_count = pkg.refunds_count + update.refunds_count;
+      }
+      if (update.revenue_cents !== undefined) {
+        newStats.total_revenue_cents = Math.max(0, pkg.total_revenue_cents + update.revenue_cents);
+      }
+
+      if (Object.keys(newStats).length > 0) {
+        await supabase
+          .from('coach_packages')
+          .update(newStats)
+          .eq('id', update.package_id);
+      }
+    } catch (fallbackErr: any) {
+      logger.error({ err: fallbackErr.message, update }, 'Failed to update package stats');
+    }
+  }
+}
+
 // ─── Webhook Event Handlers ────────────────────────────────
 
 async function handleWebhookEvent(event: Stripe.Event, supabase: any, stripe: Stripe) {
@@ -2207,6 +2272,26 @@ async function handleWebhookEvent(event: Stripe.Event, supabase: any, stripe: St
       await handleCouponOrPromoCodeChange(event, supabase);
       break;
 
+    case 'customer.subscription.trial_will_end':
+      await handleTrialWillEnd(event, supabase, stripe);
+      break;
+
+    case 'customer.updated':
+      await handleCustomerUpdated(event, supabase);
+      break;
+
+    case 'payment_method.attached':
+      await handlePaymentMethodAttached(event, supabase);
+      break;
+
+    case 'payment_method.updated':
+      await handlePaymentMethodUpdated(event, supabase);
+      break;
+
+    case 'payment_method.detached':
+      await handlePaymentMethodDetached(event, supabase);
+      break;
+
     default:
       logger.info({ eventType }, 'Unhandled webhook event type');
   }
@@ -2258,6 +2343,23 @@ async function handleCheckoutCompleted(event: Stripe.Event, supabase: any) {
 
   logger.info({ sessionId: session.id, mode: session.mode, metadata }, 'handleCheckoutCompleted called');
 
+  // Extract Stripe coupon ID from session discounts
+  let stripeCouponId: string | null = null;
+  const discounts = (session.total_details as any)?.breakdown?.discounts;
+  if (discounts && discounts.length > 0) {
+    const discount = discounts[0].discount;
+    if (discount?.coupon?.id) {
+      stripeCouponId = discount.coupon.id;
+    }
+  }
+
+  // Look up our local coupon_id if a Stripe coupon was used
+  let couponId: string | null = null;
+  if (stripeCouponId && metadata.coach_id) {
+    couponId = await getCouponIdFromStripe(supabase, metadata.coach_id, stripeCouponId);
+    logger.info({ stripeCouponId, couponId }, 'Coupon used in checkout');
+  }
+
   if (session.mode === 'payment') {
     // One-time payment
     await supabase
@@ -2266,6 +2368,7 @@ async function handleCheckoutCompleted(event: Stripe.Event, supabase: any) {
         status: 'succeeded',
         paid_at: new Date().toISOString(),
         stripe_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : null,
+        coupon_id: couponId,
       })
       .eq('stripe_checkout_session_id', session.id);
 
@@ -2283,6 +2386,15 @@ async function handleCheckoutCompleted(event: Stripe.Event, supabase: any) {
         currency: session.currency || 'usd',
         stripe_event_id: event.id,
       });
+
+      // Update package stats: +1 sale, +revenue
+      if (metadata.package_id && session.amount_total) {
+        await updatePackageStats(supabase, {
+          package_id: metadata.package_id,
+          sales_count: 1,
+          revenue_cents: session.amount_total,
+        });
+      }
     }
 
     logger.info({ sessionId: session.id }, 'Payment succeeded via checkout');
@@ -2291,7 +2403,33 @@ async function handleCheckoutCompleted(event: Stripe.Event, supabase: any) {
     const subscriptionId = typeof session.subscription === 'string' ? session.subscription : null;
     const customerId = typeof session.customer === 'string' ? session.customer : null;
 
+    // Update the pending payment record with coupon_id if applicable
+    if (couponId) {
+      await supabase
+        .from('payments')
+        .update({ coupon_id: couponId })
+        .eq('stripe_checkout_session_id', session.id);
+    }
+
     if (subscriptionId && metadata.coach_id && metadata.client_id) {
+      // Fetch subscription from Stripe to get actual recurring price and trial info
+      const stripe = getStripeClient();
+      const stripeSubscription = await stripe.subscriptions.retrieve(
+        subscriptionId,
+        { stripeAccount: event.account }
+      );
+
+      // Get actual recurring amount from subscription items
+      const item = stripeSubscription.items.data[0];
+      const amount = item?.price?.unit_amount || 0;
+      const currency = item?.price?.currency || 'usd';
+
+      // Check for trial
+      const isTrialing = stripeSubscription.status === 'trialing';
+      const trialEnd = stripeSubscription.trial_end
+        ? new Date(stripeSubscription.trial_end * 1000).toISOString()
+        : null;
+
       const { data: insertedSub } = await supabase
         .from('client_subscriptions')
         .insert({
@@ -2300,25 +2438,57 @@ async function handleCheckoutCompleted(event: Stripe.Event, supabase: any) {
           package_id: metadata.package_id || null,
           stripe_subscription_id: subscriptionId,
           stripe_customer_id: customerId || '',
-          status: 'active',
+          status: isTrialing ? 'trialing' : 'active',
         })
         .select('id')
         .single();
 
-      // Log billing activity for subscription created
+      // Log billing activity - trial_started OR subscription_created (not both)
       const clientName = await getClientName(supabase, metadata.client_id);
       const packageName = metadata.package_id ? await getPackageName(supabase, metadata.package_id) : 'a package';
-      await logBillingActivity(supabase, {
-        coach_id: metadata.coach_id,
-        client_id: metadata.client_id,
-        package_id: metadata.package_id || null,
-        subscription_id: insertedSub?.id || null,
-        event_type: 'subscription_created',
-        description: `${clientName} subscribed to ${packageName}`,
-        amount_cents: session.amount_total || 0,
-        currency: session.currency || 'usd',
-        stripe_event_id: event.id,
-      });
+
+      if (isTrialing) {
+        // Log trial_started for trial subscriptions
+        const trialEndDate = stripeSubscription.trial_end
+          ? new Date(stripeSubscription.trial_end * 1000).toLocaleDateString('en-US', {
+              month: 'short', day: 'numeric', year: 'numeric'
+            })
+          : null;
+        await logBillingActivity(supabase, {
+          coach_id: metadata.coach_id,
+          client_id: metadata.client_id,
+          package_id: metadata.package_id || null,
+          subscription_id: insertedSub?.id || null,
+          event_type: 'trial_started',
+          description: `${clientName} started a trial for ${packageName}${trialEndDate ? ` (ends ${trialEndDate})` : ''}`,
+          amount_cents: amount,  // Show what they'll pay after trial
+          currency: currency,
+          metadata: { trial_end: trialEnd },
+          stripe_event_id: event.id,
+        });
+      } else {
+        // Log subscription_created for non-trial subscriptions
+        await logBillingActivity(supabase, {
+          coach_id: metadata.coach_id,
+          client_id: metadata.client_id,
+          package_id: metadata.package_id || null,
+          subscription_id: insertedSub?.id || null,
+          event_type: 'subscription_created',
+          description: `${clientName} subscribed to ${packageName}`,
+          amount_cents: amount,
+          currency: currency,
+          stripe_event_id: event.id,
+        });
+      }
+
+      // Update package stats: +1 sale, +1 active subscription
+      if (metadata.package_id) {
+        await updatePackageStats(supabase, {
+          package_id: metadata.package_id,
+          sales_count: 1,
+          active_subscriptions_count: 1,
+        });
+      }
 
       // Also mark the payment as succeeded
       if (metadata.payment_id) {
@@ -2331,7 +2501,7 @@ async function handleCheckoutCompleted(event: Stripe.Event, supabase: any) {
           .eq('id', metadata.payment_id);
       }
 
-      logger.info({ sessionId: session.id, subscriptionId }, 'Subscription created via checkout');
+      logger.info({ sessionId: session.id, subscriptionId, isTrialing, trialEnd }, 'Subscription created via checkout');
     }
   }
 
@@ -2513,6 +2683,15 @@ async function handleChargeRefunded(event: Stripe.Event, supabase: any) {
         currency: payment.currency || 'usd',
         stripe_event_id: event.id,
       });
+
+      // Update package stats: +1 refund, -revenue
+      if (payment.package_id) {
+        await updatePackageStats(supabase, {
+          package_id: payment.package_id,
+          refunds_count: 1,
+          revenue_cents: -refundAmount,
+        });
+      }
     }
 
     logger.info({ paymentIntentId }, 'Payment refunded');
@@ -2567,7 +2746,7 @@ async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
   // Find the subscription to get coach/client/package IDs
   const { data: sub } = await supabase
     .from('client_subscriptions')
-    .select('id, coach_id, client_id, package_id')
+    .select('id, coach_id, client_id, package_id, status')
     .eq('stripe_subscription_id', subscriptionId)
     .maybeSingle();
 
@@ -2590,24 +2769,63 @@ async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
     const billingReason = (invoice as any).billing_reason;
     const isRenewal = billingReason === 'subscription_cycle' || billingReason === 'subscription_update';
 
+    // Detect trial conversion: first paid invoice after trial period
+    const isTrialConversion = billingReason === 'subscription_cycle' && sub.status === 'trialing';
+
     const clientName = await getClientName(supabase, sub.client_id);
     const packageName = sub.package_id ? await getPackageName(supabase, sub.package_id) : 'their subscription';
 
-    await logBillingActivity(supabase, {
-      coach_id: sub.coach_id,
-      client_id: sub.client_id,
-      package_id: sub.package_id,
-      subscription_id: sub.id,
-      event_type: isRenewal ? 'subscription_renewed' : 'payment_succeeded',
-      description: isRenewal
-        ? `${clientName} renewed ${packageName}`
-        : `${clientName} paid for ${packageName}`,
-      amount_cents: invoice.amount_paid || 0,
-      currency: invoice.currency || 'usd',
-      stripe_event_id: event.id,
-    });
+    // Get period_end for metadata
+    const periodEnd = (invoice as any).lines?.data?.[0]?.period?.end
+      ? new Date((invoice as any).lines.data[0].period.end * 1000).toISOString()
+      : null;
 
-    logger.info({ subscriptionId, invoiceId: invoice.id, billingReason }, 'Subscription invoice paid');
+    if (isTrialConversion) {
+      // Log trial conversion event
+      await logBillingActivity(supabase, {
+        coach_id: sub.coach_id,
+        client_id: sub.client_id,
+        package_id: sub.package_id,
+        subscription_id: sub.id,
+        event_type: 'trial_converted',
+        description: `${clientName} converted from trial to paid for ${packageName}`,
+        amount_cents: invoice.amount_paid || 0,
+        currency: invoice.currency || 'usd',
+        metadata: periodEnd ? { current_period_end: periodEnd } : undefined,
+        stripe_event_id: event.id,
+      });
+
+      // Update subscription status from trialing to active
+      await supabase
+        .from('client_subscriptions')
+        .update({ status: 'active' })
+        .eq('id', sub.id);
+    } else {
+      await logBillingActivity(supabase, {
+        coach_id: sub.coach_id,
+        client_id: sub.client_id,
+        package_id: sub.package_id,
+        subscription_id: sub.id,
+        event_type: isRenewal ? 'subscription_renewed' : 'payment_succeeded',
+        description: isRenewal
+          ? `${clientName} renewed ${packageName}`
+          : `${clientName} paid for ${packageName}`,
+        amount_cents: invoice.amount_paid || 0,
+        currency: invoice.currency || 'usd',
+        metadata: periodEnd ? { current_period_end: periodEnd } : undefined,
+        stripe_event_id: event.id,
+      });
+    }
+
+    // Update package stats: add revenue
+    if (sub.package_id && invoice.amount_paid > 0) {
+      await updatePackageStats(supabase, {
+        package_id: sub.package_id,
+        revenue_cents: invoice.amount_paid,
+      });
+    }
+
+    logger.info({ subscriptionId, invoiceId: invoice.id, billingReason, isTrialConversion }, 'Subscription invoice paid');
   }
 }
 
@@ -2710,6 +2928,9 @@ async function handleSubscriptionUpdated(event: Stripe.Event, supabase: any) {
       const cancelDate = new Date(subscription.cancel_at! * 1000).toLocaleDateString('en-US', {
         month: 'short', day: 'numeric', year: 'numeric'
       });
+      const currentPeriodEnd = subscription.current_period_end
+        ? new Date(subscription.current_period_end * 1000).toISOString()
+        : null;
       await logBillingActivity(supabase, {
         coach_id: existingSub.coach_id,
         client_id: existingSub.client_id,
@@ -2717,7 +2938,7 @@ async function handleSubscriptionUpdated(event: Stripe.Event, supabase: any) {
         subscription_id: existingSub.id,
         event_type: 'subscription_cancelling',
         description: `${clientName} scheduled cancellation for ${packageName} on ${cancelDate}`,
-        metadata: { cancel_at: cancelAt, reason: cancellationReason },
+        metadata: { cancel_at: cancelAt, current_period_end: currentPeriodEnd, reason: cancellationReason },
         stripe_event_id: event.id,
       });
     }
@@ -2784,6 +3005,15 @@ async function handleSubscriptionDeleted(event: Stripe.Event, supabase: any) {
       metadata: { reason: cancellationReason },
       stripe_event_id: event.id,
     });
+
+    // Update package stats: -1 active subscription, +1 cancellation
+    if (existingSub.package_id) {
+      await updatePackageStats(supabase, {
+        package_id: existingSub.package_id,
+        active_subscriptions_count: -1,
+        cancellations_count: 1,
+      });
+    }
   }
 
   logger.info({ subscriptionId: subscription.id }, 'Subscription deleted/cancelled');
@@ -2815,6 +3045,28 @@ async function handleProductOrPriceChange(event: Stripe.Event, supabase: any, st
       const prices = await stripe.prices.list({ product: product.id, active: true, limit: 100 }, opts);
       const features = (product.marketing_features || []).map((f: any) => f.name);
 
+      // Use product image or assign default
+      const hasImage = product.images && product.images.length > 0;
+      let imageUrl = hasImage ? product.images[0] : null;
+      const defaultImageUrl = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&h=400&fit=crop';
+
+      logger.info({ productId: product.id, images: product.images, hasImage }, 'Product created - checking images');
+
+      // If no image, assign default and update Stripe product
+      if (!hasImage) {
+        imageUrl = defaultImageUrl;
+        try {
+          const updatedProduct = await stripe.products.update(
+            product.id,
+            { images: [defaultImageUrl] },
+            opts
+          );
+          logger.info({ productId: product.id, updatedImages: updatedProduct.images }, 'Assigned default image to Stripe product');
+        } catch (updateErr: any) {
+          logger.error({ err: updateErr.message, productId: product.id }, 'Failed to update Stripe product with default image');
+        }
+      }
+
       const rows = prices.data.map(price => ({
         coach_id: coachId,
         stripe_product_id: product.id,
@@ -2829,8 +3081,7 @@ async function handleProductOrPriceChange(event: Stripe.Event, supabase: any, st
         is_visible: true,
         features,
         free_trial_days: 0,
-        initial_fee_cents: 0,
-        image_url: product.images?.[0] || null,
+        image_url: imageUrl,
       }));
 
       if (rows.length > 0) {
@@ -2842,7 +3093,7 @@ async function handleProductOrPriceChange(event: Stripe.Event, supabase: any, st
         }
       }
 
-      logger.info({ productId: product.id, prices: rows.length }, 'Product created via webhook');
+      logger.info({ productId: product.id, prices: rows.length, hasDefaultImage: !product.images?.[0] }, 'Product created via webhook');
       break;
     }
 
@@ -2853,6 +3104,28 @@ async function handleProductOrPriceChange(event: Stripe.Event, supabase: any, st
       // Read features from product object
       const features = (product.marketing_features || []).map((f: any) => f.name);
 
+      // Use product image or assign default
+      const hasImage = product.images && product.images.length > 0;
+      let imageUrl = hasImage ? product.images[0] : null;
+      const defaultImageUrl = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&h=400&fit=crop';
+
+      logger.info({ productId: product.id, images: product.images, hasImage }, 'Product updated - checking images');
+
+      // If no image, assign default and update Stripe product
+      if (!hasImage) {
+        imageUrl = defaultImageUrl;
+        try {
+          const updatedProduct = await stripe.products.update(
+            product.id,
+            { images: [defaultImageUrl] },
+            opts
+          );
+          logger.info({ productId: product.id, updatedImages: updatedProduct.images }, 'Assigned default image to Stripe product on update');
+        } catch (updateErr: any) {
+          logger.error({ err: updateErr.message, productId: product.id }, 'Failed to update Stripe product with default image');
+        }
+      }
+
       const { data: updatedRows } = await supabase
         .from('coach_packages')
         .update({
@@ -2860,7 +3133,7 @@ async function handleProductOrPriceChange(event: Stripe.Event, supabase: any, st
           description: product.description || null,
           is_active: product.active,
           features,
-          image_url: product.images?.[0] || null,
+          image_url: imageUrl,
         })
         .eq('coach_id', coachId)
         .eq('stripe_product_id', product.id)
@@ -2883,8 +3156,7 @@ async function handleProductOrPriceChange(event: Stripe.Event, supabase: any, st
           is_visible: true,
           features,
           free_trial_days: 0,
-          initial_fee_cents: 0,
-          image_url: product.images?.[0] || null,
+          image_url: imageUrl,
         }));
 
         if (rows.length > 0) {
@@ -2953,7 +3225,6 @@ async function handleProductOrPriceChange(event: Stripe.Event, supabase: any, st
           is_visible: true,
           features,
           free_trial_days: 0,
-          initial_fee_cents: 0,
           image_url: imageUrl,
         }, { onConflict: 'coach_id,stripe_product_id,stripe_price_id' });
 
@@ -3140,4 +3411,231 @@ async function handleCouponOrPromoCodeChange(event: Stripe.Event, supabase: any)
       break;
     }
   }
+}
+
+// ─── Trial & Customer Portal Webhook Handlers ────────────────────
+
+async function handleTrialWillEnd(event: Stripe.Event, supabase: any, stripe: Stripe) {
+  const subscription = event.data.object as Stripe.Subscription;
+
+  // Find our subscription record
+  const { data: sub } = await supabase
+    .from('client_subscriptions')
+    .select('id, coach_id, client_id, package_id')
+    .eq('stripe_subscription_id', subscription.id)
+    .maybeSingle();
+
+  if (!sub) {
+    logger.info({ subscriptionId: subscription.id }, 'Trial will end for unknown subscription');
+    return;
+  }
+
+  const clientName = await getClientName(supabase, sub.client_id);
+  const packageName = sub.package_id ? await getPackageName(supabase, sub.package_id) : 'their subscription';
+
+  // Get trial end date and upcoming charge amount
+  const trialEnd = subscription.trial_end
+    ? new Date(subscription.trial_end * 1000).toISOString()
+    : null;
+
+  // Get the upcoming charge amount from subscription items
+  const item = subscription.items.data[0];
+  const upcomingAmount = item?.price?.unit_amount || 0;
+  const currency = item?.price?.currency || 'usd';
+
+  await logBillingActivity(supabase, {
+    coach_id: sub.coach_id,
+    client_id: sub.client_id,
+    package_id: sub.package_id,
+    subscription_id: sub.id,
+    event_type: 'trial_ending',
+    description: `${clientName}'s trial for ${packageName} ends in 3 days`,
+    amount_cents: upcomingAmount,
+    currency: currency,
+    metadata: { trial_end: trialEnd },
+    stripe_event_id: event.id,
+  });
+
+  logger.info({ subscriptionId: subscription.id, trialEnd }, 'Trial ending webhook processed');
+}
+
+async function handleCustomerUpdated(event: Stripe.Event, supabase: any) {
+  const customer = event.data.object as Stripe.Customer;
+  const previousAttributes = (event.data as any).previous_attributes || {};
+
+  // Only log if meaningful fields changed
+  const changedFields: string[] = [];
+  if (previousAttributes.email !== undefined) changedFields.push('email');
+  if (previousAttributes.name !== undefined) changedFields.push('name');
+  if (previousAttributes.address !== undefined) changedFields.push('billing address');
+
+  if (changedFields.length === 0) {
+    logger.info({ customerId: customer.id }, 'Customer updated but no tracked fields changed');
+    return;
+  }
+
+  // Find subscription(s) for this customer to get coach/client info
+  const { data: subs } = await supabase
+    .from('client_subscriptions')
+    .select('id, coach_id, client_id, package_id')
+    .eq('stripe_customer_id', customer.id)
+    .limit(1);
+
+  if (!subs || subs.length === 0) {
+    logger.info({ customerId: customer.id }, 'Customer updated but no subscription found');
+    return;
+  }
+
+  const sub = subs[0];
+  const clientName = await getClientName(supabase, sub.client_id);
+
+  await logBillingActivity(supabase, {
+    coach_id: sub.coach_id,
+    client_id: sub.client_id,
+    event_type: 'customer_updated',
+    description: `${clientName} updated their ${changedFields.join(', ')}`,
+    metadata: {
+      changed_fields: changedFields,
+      new_email: previousAttributes.email !== undefined ? customer.email : undefined,
+      new_name: previousAttributes.name !== undefined ? customer.name : undefined,
+    },
+    stripe_event_id: event.id,
+  });
+
+  logger.info({ customerId: customer.id, changedFields }, 'Customer updated webhook processed');
+}
+
+async function handlePaymentMethodAttached(event: Stripe.Event, supabase: any) {
+  const paymentMethod = event.data.object as Stripe.PaymentMethod;
+  const customerId = typeof paymentMethod.customer === 'string' ? paymentMethod.customer : null;
+
+  if (!customerId) {
+    logger.info({ paymentMethodId: paymentMethod.id }, 'Payment method attached but no customer');
+    return;
+  }
+
+  // Find subscription for this customer
+  const { data: subs } = await supabase
+    .from('client_subscriptions')
+    .select('id, coach_id, client_id, package_id')
+    .eq('stripe_customer_id', customerId)
+    .limit(1);
+
+  if (!subs || subs.length === 0) {
+    logger.info({ customerId }, 'Payment method attached but no subscription found');
+    return;
+  }
+
+  const sub = subs[0];
+  const clientName = await getClientName(supabase, sub.client_id);
+
+  // Get card details if available
+  const cardBrand = paymentMethod.card?.brand || 'card';
+  const cardLast4 = paymentMethod.card?.last4 || '****';
+
+  await logBillingActivity(supabase, {
+    coach_id: sub.coach_id,
+    client_id: sub.client_id,
+    event_type: 'payment_method_added',
+    description: `${clientName} added a ${cardBrand} ending in ${cardLast4}`,
+    metadata: {
+      card_brand: cardBrand,
+      card_last4: cardLast4,
+      payment_method_type: paymentMethod.type,
+    },
+    stripe_event_id: event.id,
+  });
+
+  logger.info({ customerId, paymentMethodId: paymentMethod.id, cardBrand, cardLast4 }, 'Payment method attached webhook processed');
+}
+
+async function handlePaymentMethodUpdated(event: Stripe.Event, supabase: any) {
+  const paymentMethod = event.data.object as Stripe.PaymentMethod;
+  const customerId = typeof paymentMethod.customer === 'string' ? paymentMethod.customer : null;
+
+  if (!customerId) {
+    logger.info({ paymentMethodId: paymentMethod.id }, 'Payment method updated but no customer');
+    return;
+  }
+
+  // Find subscription for this customer
+  const { data: subs } = await supabase
+    .from('client_subscriptions')
+    .select('id, coach_id, client_id, package_id')
+    .eq('stripe_customer_id', customerId)
+    .limit(1);
+
+  if (!subs || subs.length === 0) {
+    logger.info({ customerId }, 'Payment method updated but no subscription found');
+    return;
+  }
+
+  const sub = subs[0];
+  const clientName = await getClientName(supabase, sub.client_id);
+
+  // Get card details if available
+  const cardBrand = paymentMethod.card?.brand || 'card';
+  const cardLast4 = paymentMethod.card?.last4 || '****';
+
+  await logBillingActivity(supabase, {
+    coach_id: sub.coach_id,
+    client_id: sub.client_id,
+    event_type: 'payment_method_updated',
+    description: `${clientName} updated their ${cardBrand} ending in ${cardLast4}`,
+    metadata: {
+      card_brand: cardBrand,
+      card_last4: cardLast4,
+      payment_method_type: paymentMethod.type,
+    },
+    stripe_event_id: event.id,
+  });
+
+  logger.info({ customerId, paymentMethodId: paymentMethod.id }, 'Payment method updated webhook processed');
+}
+
+async function handlePaymentMethodDetached(event: Stripe.Event, supabase: any) {
+  const paymentMethod = event.data.object as Stripe.PaymentMethod;
+  const previousAttributes = (event.data as any).previous_attributes || {};
+
+  // When detached, customer is null - use previous_attributes to get the original customer
+  const customerId = previousAttributes.customer || null;
+
+  if (!customerId) {
+    logger.info({ paymentMethodId: paymentMethod.id }, 'Payment method detached but no previous customer');
+    return;
+  }
+
+  // Find subscription for this customer
+  const { data: subs } = await supabase
+    .from('client_subscriptions')
+    .select('id, coach_id, client_id, package_id')
+    .eq('stripe_customer_id', customerId)
+    .limit(1);
+
+  if (!subs || subs.length === 0) {
+    logger.info({ customerId }, 'Payment method detached but no subscription found');
+    return;
+  }
+
+  const sub = subs[0];
+  const clientName = await getClientName(supabase, sub.client_id);
+
+  // Get card details if available
+  const cardBrand = paymentMethod.card?.brand || 'card';
+  const cardLast4 = paymentMethod.card?.last4 || '****';
+
+  await logBillingActivity(supabase, {
+    coach_id: sub.coach_id,
+    client_id: sub.client_id,
+    event_type: 'payment_method_removed',
+    description: `${clientName} removed a ${cardBrand} ending in ${cardLast4}`,
+    metadata: {
+      card_brand: cardBrand,
+      card_last4: cardLast4,
+      payment_method_type: paymentMethod.type,
+    },
+    stripe_event_id: event.id,
+  });
+
+  logger.info({ customerId, paymentMethodId: paymentMethod.id, cardBrand, cardLast4 }, 'Payment method detached webhook processed');
 }

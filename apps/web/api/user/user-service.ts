@@ -14,6 +14,9 @@ export interface UserProfile {
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
+    // Coach-specific fields
+    freeTrialCompleted?: boolean;
+    coachCreatedAt?: string; // When coach profile was created (for trial calculation)
 }
 
 export interface UpdateProfileInput {

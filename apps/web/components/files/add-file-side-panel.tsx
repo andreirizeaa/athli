@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Upload, Check, FileText, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { Upload, Check, FileText, X, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
@@ -13,7 +14,7 @@ import { Info } from 'lucide-react';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import Link from 'next/link';
 import { cn } from '@/lib/general/utils';
-import { getAllFiles, type CoachFile, createLink } from '@/api/coach/coach-file-service';
+import { getAllFiles, getAllFileFolders, type CoachFile, type FileFolder, createLink } from '@/api/coach/coach-file-service';
 import { addFilesToClient, createClientLink } from '@/api/client/client-file-service';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -24,7 +25,7 @@ type AddFileSidePanelProps = {
   onOpenChange: (open: boolean) => void;
   onUpload: (file: File, fileName: string, tags: string[]) => Promise<void>;
   onSave?: (fileIds: string[]) => Promise<void>;
-  onLinkCreated?: () => void;
+  onLinkCreated?: (newLink: CoachFile) => void;
   isUploading?: boolean;
   clientName?: string;
   clientId?: string;
@@ -58,8 +59,10 @@ export const AddFileSidePanel = ({
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'new' | 'yourLibrary'>('yourLibrary');
   const [coachFiles, setCoachFiles] = useState<CoachFile[]>([]);
+  const [coachFolders, setCoachFolders] = useState<FileFolder[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState<boolean>(false);
   const [selectedLibraryFiles, setSelectedLibraryFiles] = useState<Set<string>>(new Set());
+  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
@@ -96,8 +99,12 @@ export const AddFileSidePanel = ({
   const fetchCoachFiles = async () => {
     setIsLoadingFiles(true);
     try {
-      const files = await getAllFiles();
+      const [files, folders] = await Promise.all([
+        getAllFiles(),
+        getAllFileFolders(),
+      ]);
       setCoachFiles(files);
+      setCoachFolders(folders);
     } catch (error) {
       console.error('Failed to fetch coach files:', error);
     } finally {
@@ -113,6 +120,7 @@ export const AddFileSidePanel = ({
     setIsDragging(false);
     setActiveTab('yourLibrary');
     setSelectedLibraryFiles(new Set());
+    setSelectedFolders(new Set());
     setLinkUrl('');
     setEditFileName('');
     setHasEditChanges(false);
@@ -157,19 +165,57 @@ export const AddFileSidePanel = ({
         if (onSave) {
           await onSave(fileIds);
         } else {
-          await addFilesToClient({
+          const result = await addFilesToClient({
             fileIds: fileIds,
             clientId: clientId,
             coachId: user?.id || '',
           });
+
+          // Show summary toast
+          if (result.skipped > 0 && result.added > 0) {
+            toast.success(`${result.added} file${result.added !== 1 ? 's' : ''} added, ${result.skipped} skipped (already assigned)`);
+          } else if (result.skipped > 0 && result.added === 0) {
+            toast.info(`All ${result.skipped} file${result.skipped !== 1 ? 's were' : ' was'} already assigned`);
+          } else if (result.added > 0) {
+            toast.success(`${result.added} file${result.added !== 1 ? 's' : ''} added`);
+          }
         }
         handleClose();
       } catch (error) {
         console.error('Failed to assign files:', error);
+        toast.error('Failed to assign files');
       } finally {
         setIsSaving(false);
       }
     }
+  };
+
+  const handleFolderToggle = (folderId: string) => {
+    const filesInFolder = coachFiles.filter(f => f.folder_id === folderId);
+    const fileIdsInFolder = new Set(filesInFolder.map(f => f.id));
+    const isCurrentlySelected = selectedFolders.has(folderId);
+
+    setSelectedFolders(prev => {
+      const newSet = new Set(prev);
+      if (isCurrentlySelected) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+
+    setSelectedLibraryFiles(prev => {
+      const newSet = new Set(prev);
+      if (isCurrentlySelected) {
+        // Deselect all files in folder
+        fileIdsInFolder.forEach(id => newSet.delete(id));
+      } else {
+        // Select all files in folder
+        fileIdsInFolder.forEach(id => newSet.add(id));
+      }
+      return newSet;
+    });
   };
 
   // Determine if we're in link mode (link URL entered) or file mode
@@ -193,13 +239,20 @@ export const AddFileSidePanel = ({
             clientId: clientId,
             coachId: user.id,
           });
+          onLinkCreated?.({} as CoachFile); // Client context doesn't need the link object
         } else {
-          await createLink({ filename: fileName.trim(), url: linkUrl.trim() });
+          const result = await createLink({ filename: fileName.trim(), url: linkUrl.trim() });
+          if (result.duplicate) {
+            toast.info(`This link already exists as "${result.existingName}"`);
+          } else {
+            onLinkCreated?.(result.file);
+            toast.success('Link added');
+          }
         }
-        onLinkCreated?.();
         handleClose();
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to create link:', error);
+        toast.error(error.message || 'Failed to create link');
       } finally {
         setIsSaving(false);
       }
@@ -212,8 +265,9 @@ export const AddFileSidePanel = ({
     try {
       await onUpload(selectedFile, fileName.trim(), selectedTags);
       handleClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to upload file:', error);
+      // Error toast is handled by the mutation in use-coach-files hook
     } finally {
       setIsSaving(false);
     }
@@ -538,9 +592,41 @@ export const AddFileSidePanel = ({
                 </AlertDescription>
               </Alert>
             ) : (
-              <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
-                <DataGrid
-                  data={coachFiles}
+              <div className="flex flex-col gap-4 flex-1 min-h-0">
+                {/* Folders Row */}
+                {coachFolders.length > 0 && (
+                  <div className="flex-shrink-0 overflow-x-auto pb-2 -mx-1 px-1">
+                    <div className="flex gap-2">
+                      {coachFolders.map((folder) => {
+                        const isSelected = selectedFolders.has(folder.id);
+                        const filesCount = coachFiles.filter(f => f.folder_id === folder.id).length;
+                        return (
+                          <button
+                            key={folder.id}
+                            onClick={() => handleFolderToggle(folder.id)}
+                            className={cn(
+                              'flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors flex-shrink-0',
+                              isSelected
+                                ? 'bg-primary/10 border-primary text-primary'
+                                : 'bg-background border-border hover:bg-accent/50'
+                            )}
+                          >
+                            {isSelected ? (
+                              <Check className="size-4" />
+                            ) : (
+                              <Folder className="size-4 text-muted-foreground" />
+                            )}
+                            <span className="text-sm font-medium whitespace-nowrap">{folder.name}</span>
+                            <span className="text-xs text-muted-foreground">({filesCount})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
+                  <DataGrid
+                  data={coachFiles.filter(f => !f.folder_id)}
                   columns={columns}
                   getRowId={(row) => row.id}
                   gridKey="add-file-library"
@@ -563,6 +649,7 @@ export const AddFileSidePanel = ({
                   showPagination={false}
                   gridPadding={false}
                 />
+                </div>
               </div>
             )}
           </TabsContent>

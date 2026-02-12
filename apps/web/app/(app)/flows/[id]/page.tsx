@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
@@ -24,6 +25,7 @@ import { ConfirmPublishDialog } from '@/components/app/confirm-publish-dialog';
 
 const FlowDetailPage = () => {
   const t = useTranslations();
+  const queryClient = useQueryClient();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const flowId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -62,6 +64,8 @@ const FlowDetailPage = () => {
 
     // Update local state
     setFlow(prev => prev ? { ...prev, name: data.name, description: data.description || '' } : prev);
+    // Invalidate cache
+    await queryClient.invalidateQueries({ queryKey: ['coach-flows'] });
   };
 
   const handleTogglePublish = async () => {
@@ -70,6 +74,8 @@ const FlowDetailPage = () => {
       await updateFlowStatus(flowId, isActive);
       setFlow(prev => prev ? { ...prev, is_active: isActive } : prev);
       toast.success(isActive ? 'Flow published' : 'Flow unpublished');
+      // Invalidate cache
+      await queryClient.invalidateQueries({ queryKey: ['coach-flows'] });
     } catch (error) {
       console.error('Failed to update flow status:', error);
       toast.error('Failed to update flow status');

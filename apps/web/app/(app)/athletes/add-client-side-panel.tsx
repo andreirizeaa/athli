@@ -64,7 +64,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
       onboardingId: '',
     },
   });
-  const { onboardings } = useCoachOnboardings();
+  const { activeOnboardings } = useCoachOnboardings();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -218,7 +218,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
               </FormItem>
             )}
           />
-          {onboardings.length > 0 && (
+          {activeOnboardings.length > 0 && (
             <FormField
               control={form.control}
               name="onboardingId"
@@ -236,7 +236,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
                         <SelectValue placeholder={t('general.none')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {onboardings.map((onboarding) => (
+                        {activeOnboardings.map((onboarding) => (
                           <SelectItem key={onboarding.id} value={onboarding.id} description={onboarding.description}>
                             {onboarding.name || 'Untitled'}
                           </SelectItem>

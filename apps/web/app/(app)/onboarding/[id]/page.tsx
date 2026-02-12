@@ -151,6 +151,8 @@ const OnboardingDetailPage = () => {
       nodes: data.nodes,
       edges: data.edges,
     });
+    // Invalidate cache to update step count in the list view
+    await queryClient.invalidateQueries({ queryKey: ['coach-onboardings'] });
   };
 
   if (isLoading) {

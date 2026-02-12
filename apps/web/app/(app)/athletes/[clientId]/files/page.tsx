@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { Plus, FileText, X, Tag as TagIcon, MoreHorizontal, Edit, Trash2 as Trash2Icon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { uploadFile, updateFile, deleteFile, getFileTypeFromMime, isExternalLink } from '@/api/coach/coach-file-service';
-import { deleteClientFiles, addFilesToClient, uploadClientFile, getClientFileUrl, downloadClientFile, isPreviewable } from '@/api/client/client-file-service';
+import { deleteClientFiles, addFilesToClient, uploadClientFile, getClientFileUrl, downloadClientFile, isPreviewable, type AddFilesResponse } from '@/api/client/client-file-service';
 import { getClientFiles } from '@/api/coach/coach-client-service';
 import { AddFileSidePanel } from '@/components/files/add-file-side-panel';
 import { FilePreviewDialog } from '@/components/files/file-preview-dialog';
@@ -135,7 +136,7 @@ const ClientFilesPage = () => {
     if (!clientId || !user?.id) return;
 
     try {
-      await addFilesToClient({
+      const result = await addFilesToClient({
         fileIds,
         clientId,
         coachId: user.id,
@@ -143,10 +144,18 @@ const ClientFilesPage = () => {
 
       refetch();
       refreshData?.();
-      // TODO: Show success toast
+
+      // Show summary toast
+      if (result.skipped > 0 && result.added > 0) {
+        toast.success(`${result.added} file${result.added !== 1 ? 's' : ''} added, ${result.skipped} skipped (already assigned)`);
+      } else if (result.skipped > 0 && result.added === 0) {
+        toast.info(`All ${result.skipped} file${result.skipped !== 1 ? 's were' : ' was'} already assigned`);
+      } else if (result.added > 0) {
+        toast.success(`${result.added} file${result.added !== 1 ? 's' : ''} added`);
+      }
     } catch (error) {
       console.error('Failed to assign files:', error);
-      // TODO: Show error toast
+      toast.error('Failed to assign files');
     }
   };
 

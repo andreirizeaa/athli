@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
+import { useFeatureAccess } from '@/lib/permissions';
+import { UpgradePrompt } from '@/components/app/upgrade-prompt';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
@@ -40,6 +42,7 @@ type BroadcastStep = 1 | 2 | 3 | 4;
 
 export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelProps) => {
   const t = useTranslations();
+  const { hasAccess: hasBroadcastAccess } = useFeatureAccess('broadcast_messaging');
   const { clients, isLoading: isLoadingClients } = useCoachClients();
   const [step, setStep] = useState<BroadcastStep>(1);
   const [message, setMessage] = useState<string>('');
@@ -409,6 +412,20 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
     }
     return null;
   };
+
+  // Show upgrade prompt if user doesn't have access
+  if (!hasBroadcastAccess) {
+    return (
+      <SidePanel open={open} onOpenChange={onOpenChange} title={t('messages.broadcastPanel.title')}>
+        <UpgradePrompt
+          feature="Broadcast Messaging"
+          description="Send messages to multiple clients at once. Available on the Max plan."
+          variant="card"
+          className="mt-8"
+        />
+      </SidePanel>
+    );
+  }
 
   return (
     <SidePanel open={open} onOpenChange={handleOpenChange} title={getTitle()} footer={renderFooter()}>

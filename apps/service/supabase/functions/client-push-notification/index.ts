@@ -32,14 +32,14 @@ interface TaskRow {
 }
 
 interface TrainingRow {
-  id: string
   client_id: string
   date: string
+  coach_id: string
   training_data: Record<string, any>
 }
 
 interface TrainingHistoryRow {
-  training_id: string
+  workout_id: string
   status: string
 }
 
@@ -112,7 +112,11 @@ Deno.serve(async (req) => {
         const now = new Date()
         const localTime = new Date(now.toLocaleString('en-US', { timeZone: timezone }))
         const localHour = localTime.getHours()
-        const localToday = localTime.toISOString().split('T')[0]
+        // Format local date correctly (toISOString would convert back to UTC)
+        const year = localTime.getFullYear()
+        const month = String(localTime.getMonth() + 1).padStart(2, '0')
+        const day = String(localTime.getDate()).padStart(2, '0')
+        const localToday = `${year}-${month}-${day}`
 
         if (localHour === 5 || localHour === 18) {
           clients.push({
@@ -303,33 +307,53 @@ async function buildWorkoutNotification(
   localToday: string,
   isMorning: boolean
 ): Promise<{ title: string; body: string } | null> {
+  // Query client_training using its actual columns (no 'id' column exists)
   const { data: trainings, error } = await supabase
     .from('client_training')
-    .select('id, training_data')
+    .select('client_id, date, coach_id, training_data')
     .eq('client_id', clientId)
     .eq('date', localToday)
 
   if (error || !trainings || trainings.length === 0) return null
 
-  let workouts = trainings
+  // Extract all workout keys from training_data JSONB
+  // training_data is an object like { workout_1: {...}, workout_2: {...} }
+  const allWorkouts: Array<{ workoutId: string; name: string; trainingData: Record<string, any> }> = []
+  for (const training of trainings as TrainingRow[]) {
+    if (training.training_data && typeof training.training_data === 'object') {
+      for (const [workoutId, workoutData] of Object.entries(training.training_data)) {
+        allWorkouts.push({
+          workoutId,
+          name: (workoutData as any)?.name || 'workout',
+          trainingData: training.training_data,
+        })
+      }
+    }
+  }
+
+  if (allWorkouts.length === 0) return null
+
+  let workoutsToNotify = allWorkouts
 
   // For evening, filter out completed workouts
   if (!isMorning) {
-    const trainingIds = trainings.map((t: TrainingRow) => t.id)
+    const workoutIds = allWorkouts.map(w => w.workoutId)
     const { data: history } = await supabase
       .from('client_training_history')
-      .select('training_id, status')
-      .in('training_id', trainingIds)
+      .select('workout_id, status')
+      .eq('client_id', clientId)
+      .eq('date', localToday)
+      .in('workout_id', workoutIds)
       .eq('status', 'completed')
 
-    const completedIds = new Set((history || []).map((h: TrainingHistoryRow) => h.training_id))
-    workouts = trainings.filter((t: TrainingRow) => !completedIds.has(t.id))
+    const completedWorkoutIds = new Set((history || []).map((h: TrainingHistoryRow) => h.workout_id))
+    workoutsToNotify = allWorkouts.filter(w => !completedWorkoutIds.has(w.workoutId))
 
-    if (workouts.length === 0) return null
+    if (workoutsToNotify.length === 0) return null
   }
 
-  const count = workouts.length
-  const firstName = extractWorkoutName(workouts[0].training_data)
+  const count = workoutsToNotify.length
+  const firstName = workoutsToNotify[0].name
 
   if (isMorning) {
     if (count === 1) {

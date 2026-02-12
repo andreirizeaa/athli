@@ -30,7 +30,11 @@ export const useCoachFiles = (options?: { enabled?: boolean }) => {
             toast.success('File uploaded successfully');
         },
         onError: (error: Error) => {
-            toast.error(error.message || 'Failed to upload file');
+            if (error.message?.includes('duplicate key value violates unique constraint')) {
+                toast.error('This file already exists');
+            } else {
+                toast.error(error.message || 'Failed to upload file');
+            }
         }
     });
 
@@ -64,6 +68,7 @@ export const useCoachFiles = (options?: { enabled?: boolean }) => {
         files,
         isLoading,
         uploadFile: uploadMutation.mutate,
+        uploadFileAsync: uploadMutation.mutateAsync,
         updateFile: updateMutation.mutate,
         deleteFile: deleteMutation.mutate,
         isUploading: uploadMutation.isPending,

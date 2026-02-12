@@ -8,3 +8,4 @@ export * from './training-constants';
 export * from './messaging-constants';
 export * from './timezone-constants';
 export * from './notification-constants';
+export * from './pricing-constants';

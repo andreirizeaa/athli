@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import { updateFlow, updateFlowStatus, type Flow } from '@/api/coach/coach-flow-service';
 import { useCoachFiles } from '@/hooks/use-coach-files';
 import { useCoachQuestionnaires } from '@/hooks/use-coach-questionnaires';
@@ -364,6 +365,7 @@ type ActionNodeData = {
 export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, isOnboardingMode = false, onSaveFlow, forcedTriggerId, hideWaitActions: hideWaitActionsProp }: FlowEditorProps) => {
   const [panelType, setPanelType] = useState<PanelType>(null);
   const t = useTranslations();
+  const queryClient = useQueryClient();
   const { files: coachFiles, isLoading: isLoadingFiles } = useCoachFiles();
   const { questionnaires: coachQuestionnaires, isLoading: isLoadingQuestionnaires } = useCoachQuestionnaires();
   const { checkIns: coachCheckIns, isLoading: isLoadingCheckIns } = useCoachCheckIns();
@@ -1201,6 +1203,8 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
           setIsSaving(true);
           if (onSaveFlow) {
             await onSaveFlow({ nodes: layoutedNodes, edges: layoutedEdges });
+            // Invalidate and refetch onboardings cache when saving in onboarding mode
+            await queryClient.invalidateQueries({ queryKey: ['coach-onboardings'] });
           } else {
             await updateFlow({
               id: flow.id,
@@ -1208,6 +1212,8 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
               edges: layoutedEdges,
               automationSchema: automationSchema,
             });
+            // Invalidate and refetch flows cache after saving
+            await queryClient.invalidateQueries({ queryKey: ['coach-flows'] });
           }
           onFlowChange?.(layoutedNodes, layoutedEdges);
         } catch (error) {
@@ -1232,7 +1238,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
     return () => {
       isMounted = false;
     };
-  }, [buildLogicalGraph, setNodes, setEdges, pendingSave, flow, isOnboardingMode, onSaveFlow, onFlowChange]);
+  }, [buildLogicalGraph, setNodes, setEdges, pendingSave, flow, isOnboardingMode, onSaveFlow, onFlowChange, queryClient, automationSchema]);
 
 
   const onConnect = useCallback(

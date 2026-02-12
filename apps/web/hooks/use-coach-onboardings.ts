@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getOnboardings, deleteOnboarding, type Onboarding } from '@/api/coach/coach-onboarding-service';
 import { toast } from 'sonner';
@@ -31,8 +32,14 @@ export function useCoachOnboardings(options?: { enabled?: boolean }) {
         }
     });
 
+    // Filter to only active onboardings for use in client selection
+    const activeOnboardings = useMemo(() => {
+        return (onboardings || []).filter(o => o.is_active === true);
+    }, [onboardings]);
+
     return {
         onboardings: onboardings || [],
+        activeOnboardings,
         isLoading,
         error: error as Error | null,
         refetch,

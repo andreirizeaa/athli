@@ -4,58 +4,54 @@ import React from 'react'
 import { Check, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
-type Tier = 'free' | 'pro' | 'startup'
+type Tier = 'starter' | 'pro' | 'max'
 
 const tiers: { key: Tier; highlighted?: boolean }[] = [
-    { key: 'free' },
-    { key: 'pro', highlighted: true },
-    { key: 'startup' },
+    { key: 'starter' },
+    { key: 'pro' },
+    { key: 'max' },
 ]
 
-// true = included, false = not included
-// Order matches pricingComparison.sections[*].features
-const availability: Record<Tier, boolean[]> = {
-    free: [
-        // AI & Automation
-        false, false, false,
-        // Training & Programming
-        true, true, false, true,
+// Feature values: true = included, false = not included, string = custom text (e.g., "5GB")
+// Order must match pricingComparison.sections[*].features
+type FeatureValue = boolean | string
+
+const availability: Record<Tier, FeatureValue[]> = {
+    starter: [
+        // Mobile Apps
+        true, true,  // Coach App, Client App
+        // Core Features
+        true, true, true, true,  // Training, Calendar, Exercise Library, Messaging
+        // Advanced Features
+        false, false, false,  // AI Workout Builder, Custom Exercises, Custom Sections
         // Client Management
-        true, true, false, false,
-        // Accountability & Data
-        true, false, false,
-        // Communication
-        true, false,
-        // Platform
-        false, false, false,
+        false, false, false, false,  // Questionnaires, Check-ins, Habits, Metrics
+        // Storage & Support
+        false, false, false, false,  // Files, AI Todo, Broadcast, Priority Support
     ],
     pro: [
-        // AI & Automation
-        true, true, true,
-        // Training & Programming
-        true, true, true, true,
+        // Mobile Apps
+        true, true,  // Coach App, Client App
+        // Core Features
+        true, true, true, true,  // Training, Calendar, Exercise Library, Messaging
+        // Advanced Features
+        true, true, true,  // AI Workout Builder, Custom Exercises, Custom Sections
         // Client Management
-        true, true, true, true,
-        // Accountability & Data
-        true, true, true,
-        // Communication
-        true, true,
-        // Platform
-        true, true, false,
+        true, true, true, true,  // Questionnaires, Check-ins, Habits, Metrics
+        // Storage & Support
+        '5GB', false, false, false,  // Files (5GB), AI Todo, Broadcast, Priority Support
     ],
-    startup: [
-        // AI & Automation
-        true, true, true,
-        // Training & Programming
-        true, true, true, true,
+    max: [
+        // Mobile Apps
+        true, true,  // Coach App, Client App
+        // Core Features
+        true, true, true, true,  // Training, Calendar, Exercise Library, Messaging
+        // Advanced Features
+        true, true, true,  // AI Workout Builder, Custom Exercises, Custom Sections
         // Client Management
-        true, true, true, true,
-        // Accountability & Data
-        true, true, true,
-        // Communication
-        true, true,
-        // Platform
-        true, true, true,
+        true, true, true, true,  // Questionnaires, Check-ins, Habits, Metrics
+        // Storage & Support
+        true, true, true, true,  // Files (Unlimited), AI Todo, Broadcast, Priority Support
     ],
 }
 
@@ -101,6 +97,19 @@ function CrossMark() {
     )
 }
 
+function TextValue({ value }: { value: string }) {
+    return (
+        <span className="text-sm font-medium">{value}</span>
+    )
+}
+
+function FeatureCell({ value }: { value: FeatureValue }) {
+    if (typeof value === 'string') {
+        return <TextValue value={value} />
+    }
+    return value ? <CheckMark /> : <CrossMark />
+}
+
 export default function PricingComparison() {
     const t = useTranslations('pricingComparison')
     const pt = useTranslations('pricing')
@@ -131,13 +140,31 @@ export default function PricingComparison() {
                                     >
                                         <div className="flex flex-col items-center gap-1">
                                             <span className="text-sm font-semibold">{pt(`${tier.key}.name`)}</span>
-                                            <span className="text-xs text-muted-foreground">{pt(`${tier.key}.price`)}</span>
+                                            <span className="text-xs text-muted-foreground">{pt(`${tier.key}.priceShort`)}</span>
                                         </div>
                                     </th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
+                            {/* Client Limits Row */}
+                            <tr>
+                                <td className="sticky left-0 z-10 border-b bg-background p-4 text-sm font-medium">
+                                    {t('clientsIncluded')}
+                                </td>
+                                <td className="border-b p-4 text-center">
+                                    <span className="text-sm font-semibold">5</span>
+                                </td>
+                                <td className="border-b p-4 text-center">
+                                    <span className="text-sm font-semibold">5-300</span>
+                                    <span className="block text-xs text-muted-foreground">Dynamic pricing</span>
+                                </td>
+                                <td className="border-b p-4 text-center">
+                                    <span className="text-sm font-semibold">50-500</span>
+                                    <span className="block text-xs text-muted-foreground">Dynamic pricing</span>
+                                </td>
+                            </tr>
+
                             {sections.map((section) => (
                                 <React.Fragment key={section.title}>
                                     <tr>
@@ -166,7 +193,7 @@ export default function PricingComparison() {
                                                         className="border-b p-4 text-center"
                                                         style={tier.highlighted ? (isLast ? proColumnBottomStyle : proColumnStyle) : undefined}
                                                     >
-                                                        {availability[tier.key][idx] ? <CheckMark /> : <CrossMark />}
+                                                        <FeatureCell value={availability[tier.key][idx]} />
                                                     </td>
                                                 ))}
                                             </tr>

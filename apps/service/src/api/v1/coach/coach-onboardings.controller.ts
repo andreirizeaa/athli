@@ -142,7 +142,7 @@ export const coachOnboardingController = {
     updateOnboarding: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const { id } = req.params;
-        const { is_active, ...updates } = req.body;
+        const updates = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });

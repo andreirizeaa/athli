@@ -53,6 +53,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCoachClients } from "@/hooks/use-coach-clients";
 import { type Athlete } from "@/api/coach/coach-client-service";
+import { useAiUsage } from "@/hooks/use-ai-usage";
+import { useEntitlements } from "@/lib/permissions/entitlements-provider";
+import { toast } from "sonner";
 
 interface AIChatInterfaceProps {
     chatId?: string;
@@ -67,6 +70,8 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
     const [clientSelectorOpen, setClientSelectorOpen] = useState(false);
 
     const { clients, isLoading: isLoadingClients } = useCoachClients();
+    const { isOnTrial } = useEntitlements();
+    const { checkBeforePrompt, remaining, isLimited, hasReachedLimit } = useAiUsage();
 
     const [isFirstResponse, setIsFirstResponse] = useState(!!chatId);
     const [animationData, setAnimationData] = useState<object | null>(null);
@@ -116,6 +121,15 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
         if (isStreaming) return;
 
         if (prompt.trim() || files.length > 0) {
+            // Check AI usage limit during trial
+            if (isLimited) {
+                const { allowed, message } = await checkBeforePrompt();
+                if (!allowed) {
+                    toast.error(message || "Daily AI prompt limit reached. Upgrade for unlimited access.");
+                    return;
+                }
+            }
+
             setIsFirstResponse(true);
             setIsStreaming(true);
 
@@ -423,7 +437,18 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                             )}
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2">
+                            {/* Trial prompt limit indicator */}
+                            {isLimited && (
+                                <span className={cn(
+                                    "text-xs px-2 py-1 rounded-full",
+                                    hasReachedLimit
+                                        ? "bg-destructive/10 text-destructive"
+                                        : "bg-muted text-muted-foreground"
+                                )}>
+                                    {remaining} prompts left today
+                                </span>
+                            )}
                             <PromptInputAction tooltip="Voice input">
                                 <Button variant="outline" size="icon" className="size-9 rounded-full">
                                     <MicIcon size={18} />
@@ -435,7 +460,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                                     size="icon"
                                     className="size-8 rounded-full"
                                     onClick={streamResponse}
-                                    disabled={!prompt.trim()}>
+                                    disabled={!prompt.trim() || hasReachedLimit}>
                                     {isStreaming ? <SquareIcon /> : <ArrowUpIcon />}
                                 </Button>
                             </PromptInputAction>
