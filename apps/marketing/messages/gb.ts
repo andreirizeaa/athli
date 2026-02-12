@@ -252,8 +252,8 @@ const messages = {
       subtitle: 'On {plan}, {clients} clients',
       growBusiness: 'Grow your business up to {limit} clients',
     },
-    free: {
-      name: 'Free',
+    starter: {
+      name: 'Starter',
       priceShort: '$0/mo',
       description: 'Perfect for getting started with up to 5 clients',
       features: [

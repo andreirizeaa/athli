@@ -13,6 +13,7 @@ import searchRouter from '../search';
 import { featureRequestsRouter } from '../feature-requests/feature-requests.routes';
 import { notificationsRouter } from '../notifications/notifications.routes';
 import { paymentsRouter } from '../payments/payments.routes';
+import { billingRouter } from '../billing/billing.routes';
 
 export const v1Router = Router();
 
@@ -32,3 +33,4 @@ v1Router.use('/search', searchRouter);
 v1Router.use('/feature-requests', featureRequestsRouter);
 v1Router.use('/notifications', notificationsRouter);
 v1Router.use('/payments', paymentsRouter);
+v1Router.use('/billing', billingRouter);

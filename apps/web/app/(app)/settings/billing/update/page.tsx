@@ -8,10 +8,15 @@ import { Button } from '@/components/ui/button';
 import { AthliLogo } from '@/components/athli-logo';
 import PricingPlans from '@/components/pricing-plans';
 import PricingComparison from '@/components/pricing-comparison';
+import { useCoachClients } from '@/hooks/use-coach-clients';
 
 export default function UpdatePlanPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const { clients } = useCoachClients();
+
+  // Get the count of active clients (non-archived)
+  const activeClientCount = clients.length;
 
   useEffect(() => {
     setMounted(true);
@@ -70,7 +75,7 @@ export default function UpdatePlanPage() {
 
       {/* Content */}
       <div className="relative z-10">
-        <PricingPlans hideHeader isUpdateMode />
+        <PricingPlans hideHeader isUpdateMode minClientCount={activeClientCount} />
         <PricingComparison />
       </div>
     </div>,

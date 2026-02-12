@@ -26,6 +26,88 @@ import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group'
 import { Spinner } from '@/components/ui/spinner';
 import { useStripeConnection, useCoachPackages } from '@/hooks/use-coach-packages';
 import { useGlobalData } from '@/providers/global-data-provider';
+import { useAddonAccess } from '@/lib/permissions/feature-gate';
+import { motion } from 'motion/react';
+
+function ScreenshotPreview() {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [dims, setDims] = React.useState({ w: 0, h: 0 });
+
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      setDims({ w: el.offsetWidth, h: el.offsetHeight });
+    };
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { w, h } = dims;
+  const r = 8;
+
+  return (
+    <div ref={containerRef} className="relative">
+      {w > 0 && h > 0 && (
+        <svg
+          className="pointer-events-none absolute top-0 left-0 z-10"
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          fill="none"
+        >
+          <defs>
+            <linearGradient id="border-grad-dialog" x1="0.5" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="rgb(192,132,252)" />
+              <stop offset="100%" stopColor="rgb(165,180,252)" />
+            </linearGradient>
+          </defs>
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-dialog)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [0, -1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-dialog)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [-0.5, -1.5] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+        </svg>
+      )}
+      <img
+        src="/app-screenshots/packages/light.png"
+        alt="Packages preview"
+        className="block w-full h-auto rounded-lg border dark:hidden"
+      />
+      <img
+        src="/app-screenshots/packages/dark.png"
+        alt="Packages preview"
+        className="w-full h-auto rounded-lg border hidden dark:block"
+      />
+    </div>
+  );
+}
 
 type BusinessLayoutProps = {
   children: React.ReactNode;
@@ -46,10 +128,12 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
     isDisconnecting,
   } = useCoachPackages();
   const { uniqueCode } = useGlobalData();
+  const { hasAccess: hasPaymentsAddon } = useAddonAccess('payments');
 
   const isConnected = stripeAccount?.onboarding_complete && stripeAccount?.charges_enabled;
 
   const [isDisconnectOpen, setIsDisconnectOpen] = useState(false);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
 
   const tabs = [
     {
@@ -125,6 +209,7 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
     router.push(`/business/${value}`);
   };
 
+  // Show Stripe connect button - disabled if no payments addon
   const headerActions = isConnected ? (
     <DropdownMenu>
       <ButtonGroup>
@@ -168,7 +253,13 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
     </DropdownMenu>
   ) : (
     <button
-      onClick={handleConnectStripe}
+      onClick={() => {
+        if (!hasPaymentsAddon) {
+          setIsUpgradeDialogOpen(true);
+        } else {
+          handleConnectStripe();
+        }
+      }}
       disabled={isOnboarding}
       className="flex items-center justify-center gap-2 rounded-md border border-[#635BFF] px-3 h-9 text-sm font-medium text-[#635BFF] hover:bg-[#635BFF]/5 transition-colors disabled:opacity-50"
     >
@@ -235,6 +326,36 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
                   <Spinner className="size-4" />
                 </div>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Payments Add-on Required</DialogTitle>
+            <DialogDescription>
+              To connect Stripe and accept payments from your clients, you need to add the Payments add-on to your plan.
+            </DialogDescription>
+          </DialogHeader>
+          {/* Screenshot preview with animated border */}
+          <ScreenshotPreview />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsUpgradeDialogOpen(false)}
+            >
+              {t('general.cancel')}
+            </Button>
+            <Button
+              onClick={() => {
+                setIsUpgradeDialogOpen(false);
+                router.push('/settings/billing/update');
+              }}
+            >
+              Upgrade Plan
             </Button>
           </DialogFooter>
         </DialogContent>

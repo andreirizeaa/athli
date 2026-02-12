@@ -1,23 +1,107 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { DollarSign, TrendingUp, CreditCard, Users, Loader2, CalendarIcon, RotateCcw, ChevronDown, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { motion } from 'motion/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { useStripeConnection, useSummaryAnalytics, useSummaryActivity, useCoachPackages } from '@/hooks/use-coach-packages';
+import { useAddonAccess } from '@/lib/permissions/feature-gate';
 import type { PaymentActivityRow } from '@athli/shared-types';
 import type { DateRange } from 'react-day-picker';
+
+function ScreenshotPreview() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      setDims({ w: el.offsetWidth, h: el.offsetHeight });
+    };
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { w, h } = dims;
+  const r = 8;
+
+  return (
+    <div ref={containerRef} className="relative">
+      {w > 0 && h > 0 && (
+        <svg
+          className="pointer-events-none absolute top-0 left-0 z-10"
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          fill="none"
+        >
+          <defs>
+            <linearGradient id="border-grad-activity" x1="0.5" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="rgb(192,132,252)" />
+              <stop offset="100%" stopColor="rgb(165,180,252)" />
+            </linearGradient>
+          </defs>
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-activity)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [0, -1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-activity)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [-0.5, -1.5] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+        </svg>
+      )}
+      <img
+        src="/app-screenshots/packages/light.png"
+        alt="Packages preview"
+        className="block w-full h-auto rounded-lg border dark:hidden"
+      />
+      <img
+        src="/app-screenshots/packages/dark.png"
+        alt="Packages preview"
+        className="w-full h-auto rounded-lg border hidden dark:block"
+      />
+    </div>
+  );
+}
 
 function formatCurrency(cents: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -84,14 +168,17 @@ const eventTypeConfig: Record<string, { color: string; label: string }> = {
 
 const ActivityPage = () => {
   const t = useTranslations();
+  const router = useRouter();
   const { data: stripeAccount } = useStripeConnection();
   const { startOnboarding, isOnboarding } = useCoachPackages();
   const { data: analytics, isLoading: isAnalyticsLoading } = useSummaryAnalytics();
   const { data: activity, isLoading: isActivityLoading } = useSummaryActivity();
+  const { hasAccess: hasPaymentsAddon } = useAddonAccess('payments');
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
 
   const isConnected = stripeAccount?.onboarding_complete && stripeAccount?.charges_enabled;
 
@@ -298,7 +385,13 @@ const ActivityPage = () => {
       subtitle={t('business.activity.noStripeSubtitle')}
       action={
         <button
-          onClick={handleConnectStripe}
+          onClick={() => {
+            if (!hasPaymentsAddon) {
+              setIsUpgradeDialogOpen(true);
+            } else {
+              handleConnectStripe();
+            }
+          }}
           disabled={isOnboarding}
           className="flex items-center justify-center gap-2 rounded-md border border-[#635BFF] px-3 h-9 text-sm font-medium text-[#635BFF] hover:bg-[#635BFF]/5 transition-colors disabled:opacity-50"
         >
@@ -460,6 +553,36 @@ const ActivityPage = () => {
           }
         />
       </div>
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Payments Add-on Required</DialogTitle>
+            <DialogDescription>
+              To connect Stripe and accept payments from your clients, you need to add the Payments add-on to your plan.
+            </DialogDescription>
+          </DialogHeader>
+          {/* Screenshot preview with animated border */}
+          <ScreenshotPreview />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsUpgradeDialogOpen(false)}
+            >
+              {t('general.cancel')}
+            </Button>
+            <Button
+              onClick={() => {
+                setIsUpgradeDialogOpen(false);
+                router.push('/settings/billing/update');
+              }}
+            >
+              Upgrade Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

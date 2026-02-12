@@ -1,10 +1,19 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, FileText, Trash2, X, UserPlus, Copy, FolderPlus, MoreHorizontal, Move, Folder } from 'lucide-react';
 import { toast } from 'sonner';
@@ -31,6 +40,86 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ButtonGroup } from '@/components/ui/button-group';
+import { useFeatureAccess } from '@/lib/permissions/feature-gate';
+
+// Screenshot preview component for upgrade dialog
+function ScreenshotPreview() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setDims({ w: el.offsetWidth, h: el.offsetHeight });
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { w, h } = dims;
+  const r = 8;
+
+  return (
+    <div ref={containerRef} className="relative">
+      {w > 0 && h > 0 && (
+        <svg
+          className="pointer-events-none absolute top-0 left-0 z-10"
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          fill="none"
+        >
+          <defs>
+            <linearGradient id="border-grad-metrics-page" x1="0.5" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="rgb(192,132,252)" />
+              <stop offset="100%" stopColor="rgb(165,180,252)" />
+            </linearGradient>
+          </defs>
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-metrics-page)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [0, -1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-metrics-page)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [-0.5, -1.5] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+        </svg>
+      )}
+      <img
+        src="/app-screenshots/client/metrics/light.png"
+        alt="Metrics feature preview"
+        className="block w-full h-auto rounded-lg border dark:hidden"
+      />
+      <img
+        src="/app-screenshots/client/metrics/dark.png"
+        alt="Metrics feature preview"
+        className="hidden w-full h-auto rounded-lg border dark:block"
+      />
+    </div>
+  );
+}
 
 const MetricsPage = () => {
   const queryClient = useQueryClient();
@@ -55,8 +144,10 @@ const MetricsPage = () => {
   } = useCoachMetricFolders();
   const { clients } = useCoachClients();
   const { user } = useUserProfile();
+  const { hasAccess: hasHabitsMetricsAccess } = useFeatureAccess('habits_metrics');
 
   const [isAddMetricOpen, setIsAddMetricOpen] = useState<boolean>(false);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState<boolean>(false);
   const [isEditMetricOpen, setIsEditMetricOpen] = useState<boolean>(false);
   const [editingMetric, setEditingMetric] = useState<Metric | null>(null);
   const [selectedMetrics, setSelectedMetrics] = useState<Set<string>>(new Set());
@@ -389,6 +480,11 @@ const MetricsPage = () => {
   };
 
   const handleAssignToClients = () => {
+    if (!hasHabitsMetricsAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
+
     const selectedMetricItems = metrics.filter((metric) => selectedMetrics.has(metric.id));
     if (selectedMetricItems.length === 0) {
       return;
@@ -491,6 +587,11 @@ const MetricsPage = () => {
   };
 
   const handleAssignFolder = async (folderId: string) => {
+    if (!hasHabitsMetricsAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
+
     const folder = folders.find(f => f.id === folderId);
     if (!folder) return;
 
@@ -793,6 +894,29 @@ const MetricsPage = () => {
           )
         }
       />
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogDescription>
+              Assign metrics to track and measure your clients' performance and progress over time.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <ScreenshotPreview />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+              Maybe Later
+            </Button>
+            <Button onClick={() => router.push('/settings/billing')}>
+              View Plans
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

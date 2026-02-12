@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, X, Loader2, FileText, MoreHorizontal, Share2, Archive, ArchiveRestore } from 'lucide-react';
+import { motion } from 'motion/react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,96 @@ import { PackageRedemptionsDialog } from '@/components/business/package-redempti
 import { useStripeConnection, useCoachPackages, useAllPackageStats } from '@/hooks/use-coach-packages';
 import { DEFAULT_PACKAGE_IMAGE } from '@/lib/constants/package-presets';
 import type { CoachPackage } from '@athli/shared-types';
+import { useAddonAccess } from '@/lib/permissions/feature-gate';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useRouter } from 'next/navigation';
+
+function ScreenshotPreview() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      setDims({ w: el.offsetWidth, h: el.offsetHeight });
+    };
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { w, h } = dims;
+  const r = 8;
+
+  return (
+    <div ref={containerRef} className="relative">
+      {w > 0 && h > 0 && (
+        <svg
+          className="pointer-events-none absolute top-0 left-0 z-10"
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          fill="none"
+        >
+          <defs>
+            <linearGradient id="border-grad-packages" x1="0.5" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="rgb(192,132,252)" />
+              <stop offset="100%" stopColor="rgb(165,180,252)" />
+            </linearGradient>
+          </defs>
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-packages)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [0, -1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-packages)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [-0.5, -1.5] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+        </svg>
+      )}
+      <img
+        src="/app-screenshots/packages/light.png"
+        alt="Packages preview"
+        className="block w-full h-auto rounded-lg border dark:hidden"
+      />
+      <img
+        src="/app-screenshots/packages/dark.png"
+        alt="Packages preview"
+        className="w-full h-auto rounded-lg border hidden dark:block"
+      />
+    </div>
+  );
+}
 
 function formatAmount(amountCents: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -32,6 +123,7 @@ function formatAmount(amountCents: number, currency: string): string {
 
 const PackagesPage = () => {
   const t = useTranslations();
+  const router = useRouter();
   const { data: stripeAccount } = useStripeConnection();
   const {
     packages,
@@ -44,8 +136,11 @@ const PackagesPage = () => {
   } = useCoachPackages();
 
   const { data: packageStats } = useAllPackageStats();
+  const { hasAccess: hasPaymentsAddon } = useAddonAccess('payments');
 
   const isConnected = stripeAccount?.onboarding_complete && stripeAccount?.charges_enabled;
+  // Can only activate packages (sync to Stripe) when user has payments addon AND Stripe is connected
+  const canActivatePackages = hasPaymentsAddon && isConnected;
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -53,6 +148,7 @@ const PackagesPage = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false);
   const [redemptionsPackage, setRedemptionsPackage] = useState<CoachPackage | null>(null);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
 
   const filteredPackages = packages.filter((p) => showArchived ? !p.is_active : p.is_active);
 
@@ -86,25 +182,40 @@ const PackagesPage = () => {
   };
 
   const handleArchiveToggle = async (pkg: CoachPackage) => {
+    const newIsActive = !pkg.is_active;
+
+    // Show upgrade dialog if user doesn't have access
+    if (newIsActive && !canActivatePackages) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
+
     try {
-      await togglePackage({ id: pkg.id, field: 'is_active', value: !pkg.is_active });
-      toast.success(pkg.is_active ? 'Package archived' : 'Package unarchived');
+      await togglePackage({ id: pkg.id, field: 'is_active', value: newIsActive });
+      toast.success(pkg.is_active ? 'Package deactivated' : 'Package activated');
     } catch {
       toast.error('Failed to update package');
     }
   };
 
   const handleBulkArchiveToggle = async () => {
+    const newIsActive = showArchived; // archived → make active, active → make inactive
+
+    // Show upgrade dialog if user doesn't have access
+    if (newIsActive && !canActivatePackages) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
+
     try {
-      const newIsActive = showArchived; // archived → make active, active → make inactive
       await Promise.all(
         Array.from(selectedIds).map((id) =>
           togglePackage({ id, field: 'is_active', value: newIsActive })
         )
       );
       toast.success(showArchived
-        ? `${selectedIds.size} package${selectedIds.size > 1 ? 's' : ''} unarchived`
-        : `${selectedIds.size} package${selectedIds.size > 1 ? 's' : ''} archived`
+        ? `${selectedIds.size} package${selectedIds.size > 1 ? 's' : ''} activated`
+        : `${selectedIds.size} package${selectedIds.size > 1 ? 's' : ''} deactivated`
       );
       setSelectedIds(new Set());
     } catch {
@@ -252,27 +363,21 @@ const PackagesPage = () => {
         );
       },
     },
-    {
+    // Only show toggle column when viewing inactive/archived items
+    ...(showArchived ? [{
       id: 'toggle',
-      label: showArchived ? t('business.packages.columns.archived') : t('business.packages.columns.visible'),
+      label: 'Activate',
       sortable: false,
       width: { class: 'w-[100px]', pixel: '100px' },
-      renderCell: (row) => (
+      renderCell: (row: CoachPackage) => (
         <div data-no-row-link="true">
-          {row.is_active ? (
-            <Switch
-              checked={row.is_visible}
-              onCheckedChange={(checked) => handleToggle(row, 'is_visible', checked)}
-            />
-          ) : (
-            <Switch
-              checked={true}
-              onCheckedChange={() => handleArchiveToggle(row)}
-            />
-          )}
+          <Switch
+            checked={false}
+            onCheckedChange={() => handleArchiveToggle(row)}
+          />
         </div>
       ),
-    },
+    } as ColumnDefinition<CoachPackage>] : []),
     {
       id: 'actions',
       label: '',
@@ -291,14 +396,16 @@ const PackagesPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-              >
-                <Share2 className="h-4 w-4 mr-2" />
-                {t('business.packages.actions.shareLink')}
-              </DropdownMenuItem>
+              {isConnected && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  {t('business.packages.actions.shareLink')}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
@@ -329,29 +436,12 @@ const PackagesPage = () => {
       title={t('business.packages.noArchivedPackages')}
       subtitle={t('business.packages.noArchivedPackagesSubtitle')}
     />
-  ) : !isConnected ? (
-    <EmptyGridState
-      title={t('business.stripe.connectMessage')}
-      subtitle={t('business.packages.noPackagesSubtitle')}
-      action={
-        <button
-          onClick={handleConnectStripe}
-          disabled={isOnboarding}
-          className="flex items-center justify-center gap-2 rounded-md border border-[#635BFF] px-3 h-9 text-sm font-medium text-[#635BFF] hover:bg-[#635BFF]/5 transition-colors disabled:opacity-50"
-        >
-          {isOnboarding ? (
-            <Loader2 className="size-4 animate-spin text-[#635BFF]" />
-          ) : (
-            <img src="/icons/stripe-icon.png" alt="" className="size-5" />
-          )}
-          {stripeAccount ? t('business.packages.stripe.continueSetup') : t('business.packages.stripe.connect')}
-        </button>
-      }
-    />
   ) : (
     <EmptyGridState
       title={t('business.packages.noPackages')}
-      subtitle={t('business.packages.noPackagesSubtitle')}
+      subtitle={canActivatePackages
+        ? t('business.packages.noPackagesSubtitle')
+        : 'Create packages now. Connect Stripe later to start accepting payments.'}
       action={
         <Button onClick={() => setIsAddOpen(true)} className="gap-2">
           <Plus className="size-4" />
@@ -376,7 +466,7 @@ const PackagesPage = () => {
         enableRowSelection={true}
         selectedRowIds={selectedIds}
         onSelectionChange={setSelectedIds}
-        showPagination={!!isConnected}
+        showPagination={true}
         gridPadding={true}
         compactPagination={true}
         emptyState={emptyState}
@@ -399,7 +489,7 @@ const PackagesPage = () => {
           </Tabs>
         )}
         filterBarActions={(
-          <Button onClick={() => setIsAddOpen(true)} className="gap-2" disabled={!isConnected}>
+          <Button onClick={() => setIsAddOpen(true)} className="gap-2">
             <Plus className="size-4" />
             <span>{t('business.packages.addPackage')}</span>
           </Button>
@@ -411,9 +501,13 @@ const PackagesPage = () => {
                 <X className="size-4" />
                 <span>{t('general.clearSelected', { count: selectedIds.size })}</span>
               </Button>
-              <Button variant="ghost" onClick={handleBulkArchiveToggle} className="gap-2">
+              <Button
+                variant="ghost"
+                onClick={handleBulkArchiveToggle}
+                className="gap-2"
+              >
                 {showArchived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
-                <span>{showArchived ? t('business.packages.actions.unarchive') : t('business.packages.actions.archive')}</span>
+                <span>{showArchived ? 'Activate' : 'Deactivate'}</span>
               </Button>
             </div>
           ) : undefined
@@ -458,6 +552,40 @@ const PackagesPage = () => {
         onOpenChange={(open) => !open && setRedemptionsPackage(null)}
         package={redemptionsPackage}
       />
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {!hasPaymentsAddon ? 'Payments Add-on Required' : 'Connect Stripe First'}
+            </DialogTitle>
+            <DialogDescription>
+              {!hasPaymentsAddon
+                ? 'To activate packages and accept payments from your clients, you need to add the Payments add-on to your plan.'
+                : 'To activate packages, you need to connect your Stripe account first.'}
+            </DialogDescription>
+          </DialogHeader>
+          {/* Screenshot preview - only show for payments addon upsell */}
+          {!hasPaymentsAddon && <ScreenshotPreview />}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsUpgradeDialogOpen(false)}
+            >
+              {t('general.cancel')}
+            </Button>
+            <Button
+              onClick={() => {
+                setIsUpgradeDialogOpen(false);
+                router.push(hasPaymentsAddon ? '/business/packages' : '/settings/billing/update');
+              }}
+            >
+              {hasPaymentsAddon ? 'Connect Stripe' : 'Upgrade Plan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

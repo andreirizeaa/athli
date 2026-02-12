@@ -40,8 +40,8 @@ import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
 export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: UploadClientsSidePanelProps) => {
   const t = useTranslations();
   const queryClient = useQueryClient();
-  const { onboardings } = useCoachOnboardings();
-  const hasOnboardings = onboardings.length > 0;
+  const { activeOnboardings } = useCoachOnboardings();
+  const hasOnboardings = activeOnboardings.length > 0;
   const [uploadStep, setUploadStep] = useState<number>(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -398,7 +398,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
                 <SelectValue placeholder={t('general.none')} />
               </SelectTrigger>
               <SelectContent>
-                {onboardings.map((onboarding) => (
+                {activeOnboardings.map((onboarding) => (
                   <SelectItem key={onboarding.id} value={onboarding.id} description={onboarding.description}>
                     {onboarding.name || 'Untitled'}
                   </SelectItem>

@@ -166,13 +166,15 @@ export function CoachOnboarding() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-background">
+    <div className="fixed inset-0 z-50 bg-background overflow-auto">
       {/* Confetti */}
       <Confetti trigger={showConfetti} />
 
-      {/* Logo */}
-      <div className="absolute left-6 top-6 z-20">
-        <AthliLogo />
+      {/* Header with centered logo */}
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm border-b">
+        <div className="flex items-center justify-center px-6 py-4">
+          <AthliLogo />
+        </div>
       </div>
 
       {/* Grid Background - Light mode */}
@@ -205,7 +207,7 @@ export function CoachOnboarding() {
       )}
 
       {/* Content */}
-      <div className={`relative z-10 min-h-screen flex flex-col px-4 pb-8 ${currentStep === 0 || currentStep === TOTAL_STEPS - 1 ? 'justify-center' : 'pt-24'}`}>
+      <div className={`relative z-10 flex flex-col px-4 pb-8 ${currentStep === 0 || currentStep === TOTAL_STEPS - 1 ? 'min-h-[calc(100vh-65px)] justify-center' : 'pt-12'}`}>
         <div className="w-full max-w-lg mx-auto">
           {/* Step Content */}
           <div className="w-full">

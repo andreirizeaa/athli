@@ -1,14 +1,22 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { motion } from 'motion/react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, LayoutGrid, ChevronRight } from 'lucide-react';
 import {
   Select,
@@ -39,6 +47,86 @@ import { useClientMetrics } from '@/hooks/use-client-metrics';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { toast } from 'sonner';
+import { useFeatureAccess } from '@/lib/permissions/feature-gate';
+
+// Screenshot preview component for upgrade dialog
+function ScreenshotPreview() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setDims({ w: el.offsetWidth, h: el.offsetHeight });
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { w, h } = dims;
+  const r = 8;
+
+  return (
+    <div ref={containerRef} className="relative">
+      {w > 0 && h > 0 && (
+        <svg
+          className="pointer-events-none absolute top-0 left-0 z-10"
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          fill="none"
+        >
+          <defs>
+            <linearGradient id="border-grad-metrics" x1="0.5" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="rgb(192,132,252)" />
+              <stop offset="100%" stopColor="rgb(165,180,252)" />
+            </linearGradient>
+          </defs>
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-metrics)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [0, -1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-metrics)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [-0.5, -1.5] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+        </svg>
+      )}
+      <img
+        src="/app-screenshots/client/metrics/light.png"
+        alt="Metrics feature preview"
+        className="block w-full h-auto rounded-lg border dark:hidden"
+      />
+      <img
+        src="/app-screenshots/client/metrics/dark.png"
+        alt="Metrics feature preview"
+        className="hidden w-full h-auto rounded-lg border dark:block"
+      />
+    </div>
+  );
+}
 
 type Metric = {
   id: string;
@@ -58,6 +146,7 @@ type MetricLog = {
 
 const ClientMetricsPage = () => {
   const t = useTranslations();
+  const router = useRouter();
   const params = useParams<{ clientId: string; contactId: string }>();
   // Support both clientId (athletes context) and contactId (inbox context)
   const clientIdFromParams = params.clientId || params.contactId;
@@ -65,6 +154,7 @@ const ClientMetricsPage = () => {
   const isInbox = !!params.contactId;
 
   const { user } = useUserProfile();
+  const { hasAccess: hasHabitsMetricsAccess } = useFeatureAccess('habits_metrics');
   const { metrics: rawMetrics, isLoading: isLoadingContext, refreshData } = useClientProfileContext();
   const { metrics: metricsFromHook, isLoading: isLoadingHook, refetch } = useClientMetrics(clientId);
 
@@ -81,6 +171,7 @@ const ClientMetricsPage = () => {
   const [editingLogValue, setEditingLogValue] = useState<string>('');
   const [timeFilter, setTimeFilter] = useState<string>('all-time');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState<boolean>(false);
   const [isViewAll, setIsViewAll] = useState<boolean>(true);
 
   const metrics = useMemo(() => {
@@ -344,6 +435,10 @@ const ClientMetricsPage = () => {
   };
 
   const handleOpenAddMetric = () => {
+    if (!hasHabitsMetricsAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
     setIsAddMetricOpen(true);
   };
 
@@ -352,6 +447,10 @@ const ClientMetricsPage = () => {
   };
 
   const handleOpenLogMetric = () => {
+    if (!hasHabitsMetricsAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
     setSelectedMetricIdForLog(null);
     setIsLogMetricOpen(true);
   };
@@ -362,6 +461,10 @@ const ClientMetricsPage = () => {
   };
 
   const handleOpenEditMetric = () => {
+    if (!hasHabitsMetricsAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
     if (selectedMetric) {
       setIsEditMetricOpen(true);
     }
@@ -496,7 +599,7 @@ const ClientMetricsPage = () => {
       <div className="h-full w-full flex flex-col items-center justify-center p-8">
         <EmptyGridState
           title="No metrics assigned"
-          subtitle="This client hasn't been assigned any metrics yet."
+          subtitle={hasHabitsMetricsAccess ? "This client hasn't been assigned any metrics yet." : "Upgrade to Pro to assign metrics to clients"}
           action={
             <Button onClick={handleOpenAddMetric} className="gap-2">
               <Plus className="size-4" />
@@ -511,6 +614,28 @@ const ClientMetricsPage = () => {
           clientName={clientName}
           clientId={clientId}
         />
+        {/* Upgrade Dialog */}
+        <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Upgrade to Pro</DialogTitle>
+              <DialogDescription>
+                Track client metrics with detailed analytics and progress tracking.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <ScreenshotPreview />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+                Maybe Later
+              </Button>
+              <Button onClick={() => router.push('/settings/billing')}>
+                View Plans
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -621,7 +746,10 @@ const ClientMetricsPage = () => {
                   <FileText className="size-4" />
                   <span>Log a Metric</span>
                 </Button>
-                <Button onClick={handleOpenAddMetric} className="gap-2 rounded-l-none">
+                <Button
+                  onClick={handleOpenAddMetric}
+                  className="gap-2 rounded-l-none"
+                >
                   <Plus className="size-4" />
                   <span>Assign Metric</span>
                 </Button>
@@ -785,6 +913,10 @@ const ClientMetricsPage = () => {
                   </div>
                   <ButtonGroup>
                     <Button onClick={() => {
+                      if (!hasHabitsMetricsAccess) {
+                        setIsUpgradeDialogOpen(true);
+                        return;
+                      }
                       setSelectedMetricIdForLog(selectedMetricId);
                       setIsLogMetricOpen(true);
                     }} className="gap-2" variant="outline">
@@ -1041,6 +1173,29 @@ const ClientMetricsPage = () => {
         itemType="metric"
         variant="default"
       />
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogDescription>
+              Track client metrics with detailed analytics and progress tracking.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <ScreenshotPreview />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
+              Maybe Later
+            </Button>
+            <Button onClick={() => router.push('/settings/billing')}>
+              View Plans
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,18 +1,109 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus, Trash2, X, Loader2, FileText, Copy, Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, Trash2, X, FileText, Copy, Check } from 'lucide-react';
+import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { AddCouponSidePanel, type CouponFormData } from '@/components/business/add-coupon-side-panel';
-import { useStripeConnection, useCoachPackages, useCoupons } from '@/hooks/use-coach-packages';
+import { useStripeConnection, useCoupons } from '@/hooks/use-coach-packages';
 import type { Coupon } from '@athli/shared-types';
+import { useAddonAccess } from '@/lib/permissions/feature-gate';
+
+function ScreenshotPreview() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      setDims({ w: el.offsetWidth, h: el.offsetHeight });
+    };
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { w, h } = dims;
+  const r = 8;
+
+  return (
+    <div ref={containerRef} className="relative">
+      {w > 0 && h > 0 && (
+        <svg
+          className="pointer-events-none absolute top-0 left-0 z-10"
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          fill="none"
+        >
+          <defs>
+            <linearGradient id="border-grad-coupons" x1="0.5" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="rgb(192,132,252)" />
+              <stop offset="100%" stopColor="rgb(165,180,252)" />
+            </linearGradient>
+          </defs>
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-coupons)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [0, -1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-coupons)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [-0.5, -1.5] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+        </svg>
+      )}
+      <img
+        src="/app-screenshots/packages/light.png"
+        alt="Packages preview"
+        className="block w-full h-auto rounded-lg border dark:hidden"
+      />
+      <img
+        src="/app-screenshots/packages/dark.png"
+        alt="Packages preview"
+        className="w-full h-auto rounded-lg border hidden dark:block"
+      />
+    </div>
+  );
+}
 
 function formatDiscount(coupon: Coupon): string {
   if (coupon.discount_type === 'percentage') {
@@ -38,8 +129,8 @@ function formatDate(dateStr: string | null): string {
 
 const CouponsPage = () => {
   const t = useTranslations();
+  const router = useRouter();
   const { data: stripeAccount } = useStripeConnection();
-  const { startOnboarding, isOnboarding } = useCoachPackages();
   const {
     coupons,
     isLoading,
@@ -50,6 +141,9 @@ const CouponsPage = () => {
   } = useCoupons();
 
   const isConnected = stripeAccount?.onboarding_complete && stripeAccount?.charges_enabled;
+  const { hasAccess: hasPaymentsAddon } = useAddonAccess('payments');
+  // Can only activate coupons (sync to Stripe) when user has payments addon AND Stripe is connected
+  const canActivateCoupons = hasPaymentsAddon && isConnected;
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -58,20 +152,12 @@ const CouponsPage = () => {
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [couponToDelete, setCouponToDelete] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
 
   const handleCopyCode = (code: string, id: string) => {
     navigator.clipboard.writeText(code);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const handleConnectStripe = async () => {
-    try {
-      const url = await startOnboarding();
-      window.open(url, '_blank');
-    } catch {
-      toast.error('Failed to start Stripe connection');
-    }
   };
 
   const handleSaveCoupon = async (data: CouponFormData) => {
@@ -89,11 +175,34 @@ const CouponsPage = () => {
     toast.success(t('business.coupons.toast.deleted'));
   };
 
-  const handleToggleActive = async (coupon: Coupon, value: boolean) => {
+  const handleToggleActive = async (coupon: Coupon) => {
+    const newIsActive = !coupon.is_active;
+
+    // Show upgrade dialog if user doesn't have access
+    if (newIsActive && !canActivateCoupons) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
+
     try {
-      await toggleCoupon({ id: coupon.id, value });
+      await toggleCoupon({ id: coupon.id, value: newIsActive });
+      toast.success(coupon.is_active ? 'Coupon deactivated' : 'Coupon activated');
     } catch {
       toast.error('Failed to update coupon');
+    }
+  };
+
+  const handleBulkDeactivate = async () => {
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          toggleCoupon({ id, value: false })
+        )
+      );
+      toast.success(`${selectedIds.size} coupon${selectedIds.size > 1 ? 's' : ''} deactivated`);
+      setSelectedIds(new Set());
+    } catch {
+      toast.error('Failed to update coupons');
     }
   };
 
@@ -236,15 +345,16 @@ const CouponsPage = () => {
       ),
     },
     {
-      id: 'active',
+      id: 'status',
       label: t('business.coupons.columns.active'),
-      sortable: false,
-      width: { class: 'w-[80px]', pixel: '80px' },
+      sortable: true,
+      width: { class: 'w-[100px]', pixel: '100px' },
+      getSortValue: (row) => (row.is_active ? 1 : 0),
       renderCell: (row) => (
         <div data-no-row-link="true">
           <Switch
             checked={row.is_active}
-            onCheckedChange={(checked) => handleToggleActive(row, checked)}
+            onCheckedChange={() => handleToggleActive(row)}
           />
         </div>
       ),
@@ -272,29 +382,12 @@ const CouponsPage = () => {
     },
   ];
 
-  const emptyState = !isConnected ? (
-    <EmptyGridState
-      title={t('business.stripe.connectMessage')}
-      subtitle={t('business.coupons.noCouponsSubtitle')}
-      action={
-        <button
-          onClick={handleConnectStripe}
-          disabled={isOnboarding}
-          className="flex items-center justify-center gap-2 rounded-md border border-[#635BFF] px-3 h-9 text-sm font-medium text-[#635BFF] hover:bg-[#635BFF]/5 transition-colors disabled:opacity-50"
-        >
-          {isOnboarding ? (
-            <Loader2 className="size-4 animate-spin text-[#635BFF]" />
-          ) : (
-            <img src="/icons/stripe-icon.png" alt="" className="size-5" />
-          )}
-          {stripeAccount ? t('business.packages.stripe.continueSetup') : t('business.packages.stripe.connect')}
-        </button>
-      }
-    />
-  ) : (
+  const emptyState = (
     <EmptyGridState
       title={t('business.coupons.noCoupons')}
-      subtitle={t('business.coupons.noCouponsSubtitle')}
+      subtitle={canActivateCoupons
+        ? t('business.coupons.noCouponsSubtitle')
+        : 'Create coupons now. Connect Stripe later to start using them.'}
       action={
         <Button onClick={() => setIsAddOpen(true)} className="gap-2">
           <Plus className="size-4" />
@@ -319,12 +412,12 @@ const CouponsPage = () => {
         enableRowSelection={true}
         selectedRowIds={selectedIds}
         onSelectionChange={setSelectedIds}
-        showPagination={!!isConnected}
+        showPagination={true}
         gridPadding={true}
         compactPagination={true}
         emptyState={emptyState}
         filterBarActions={(
-          <Button onClick={() => setIsAddOpen(true)} className="gap-2" disabled={!isConnected}>
+          <Button onClick={() => setIsAddOpen(true)} className="gap-2">
             <Plus className="size-4" />
             <span>{t('business.coupons.addCoupon')}</span>
           </Button>
@@ -335,6 +428,13 @@ const CouponsPage = () => {
               <Button variant="ghost" onClick={() => setSelectedIds(new Set())} className="gap-2">
                 <X className="size-4" />
                 <span>{t('general.clearSelected', { count: selectedIds.size })}</span>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={handleBulkDeactivate}
+                className="gap-2"
+              >
+                <span>Deactivate</span>
               </Button>
               <Button
                 variant="ghost"
@@ -398,6 +498,40 @@ const CouponsPage = () => {
         itemName={coupons.find((c) => c.id === couponToDelete)?.name}
         itemType="coupon"
       />
+
+      {/* Upgrade Dialog */}
+      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {!hasPaymentsAddon ? 'Payments Add-on Required' : 'Connect Stripe First'}
+            </DialogTitle>
+            <DialogDescription>
+              {!hasPaymentsAddon
+                ? 'To activate coupons and accept payments from your clients, you need to add the Payments add-on to your plan.'
+                : 'To activate coupons, you need to connect your Stripe account first.'}
+            </DialogDescription>
+          </DialogHeader>
+          {/* Screenshot preview - only show for payments addon upsell */}
+          {!hasPaymentsAddon && <ScreenshotPreview />}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsUpgradeDialogOpen(false)}
+            >
+              {t('general.cancel')}
+            </Button>
+            <Button
+              onClick={() => {
+                setIsUpgradeDialogOpen(false);
+                router.push(hasPaymentsAddon ? '/business/coupons' : '/settings/billing/update');
+              }}
+            >
+              {hasPaymentsAddon ? 'Connect Stripe' : 'Upgrade Plan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

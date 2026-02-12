@@ -2,9 +2,10 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Check, ChevronDown, ChevronUp, Workflow, Radio, Sparkles, Wallet } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Workflow, Radio, Sparkles, Wallet, Loader2 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/general/utils'
@@ -12,71 +13,20 @@ import { Slider } from '@/components/ui/slider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import Lottie from 'lottie-react'
-
-type Plan = 'free' | 'pro' | 'max'
-type BillingInterval = 'monthly' | 'annual'
-
-interface PlanConfig {
-    monthlyPrice: number
-    annualPrice: number
-    baseClients: number
-    extraClientPrice: number
-    maxClients: number
-}
-
-interface AddonConfig {
-    key: string
-    monthlyPrice: number
-    annualPrice: number
-    icon: 'automations' | 'broadcast' | 'ai' | 'payments'
-}
-
-const PLANS: Record<Plan, PlanConfig> = {
-    free: { monthlyPrice: 0, annualPrice: 0, baseClients: 5, extraClientPrice: 0, maxClients: 5 },
-    pro: { monthlyPrice: 15, annualPrice: 12, baseClients: 5, extraClientPrice: 2, maxClients: 300 },
-    max: { monthlyPrice: 79, annualPrice: 66, baseClients: 50, extraClientPrice: 1, maxClients: 500 },
-}
-
-// Pro plan pricing tiers - price decreases per client as volume increases
-// Format: { clients: [monthlyPrice, annualPrice] }
-const PRO_PRICING: Record<number, [number, number]> = {
-    5: [15, 12],      // $3.00/client
-    10: [25, 21],     // $2.50/client
-    20: [42, 35],     // $2.10/client
-    50: [85, 71],     // $1.70/client
-    75: [115, 96],    // $1.53/client
-    100: [140, 117],  // $1.40/client
-    125: [165, 137],  // $1.32/client
-    150: [185, 154],  // $1.23/client
-    200: [215, 179],  // $1.08/client
-    250: [240, 200],  // $0.96/client
-    300: [260, 217],  // $0.87/client
-}
-
-// Max plan pricing tiers - higher base price (more features), but better per-client at scale
-// Format: { clients: [monthlyPrice, annualPrice] }
-const MAX_PRICING: Record<number, [number, number]> = {
-    50: [95, 79],     // $1.90/client
-    75: [135, 112],   // $1.80/client
-    100: [170, 142],  // $1.70/client
-    150: [220, 183],  // $1.47/client
-    200: [265, 221],  // $1.33/client
-    250: [305, 254],  // $1.22/client
-    300: [340, 283],  // $1.13/client
-    350: [370, 308],  // $1.06/client
-    400: [395, 329],  // $0.99/client
-    450: [415, 346],  // $0.92/client
-    500: [430, 358],  // $0.86/client
-}
-
-const PRO_CLIENT_OPTIONS = [5, 10, 20, 50, 75, 100, 125, 150, 200, 250, 300]
-const MAX_CLIENT_OPTIONS = [50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500]
-
-const ADDONS: AddonConfig[] = [
-    { key: 'automations', monthlyPrice: 35, annualPrice: 29, icon: 'automations' },
-    { key: 'aiAssistant', monthlyPrice: 20, annualPrice: 17, icon: 'ai' },
-    { key: 'payments', monthlyPrice: 10, annualPrice: 8, icon: 'payments' },
-]
+import { toast } from 'sonner'
+import {
+    type Plan,
+    type BillingInterval,
+    type PlanConfig,
+    type AddonConfig,
+    PLANS,
+    PRO_PRICING,
+    MAX_PRICING,
+    PRO_CLIENT_OPTIONS,
+    MAX_CLIENT_OPTIONS,
+    ADDONS,
+} from '@athli/shared-types/pricing-constants'
+import { createCheckoutSession, type AddonType } from '@/api/billing/billing-service'
 
 function AddonIcon({ type, animationData }: { type: AddonConfig['icon']; animationData?: object }) {
     const iconClass = "w-8 h-8 text-muted-foreground"
@@ -98,15 +48,31 @@ function AddonIcon({ type, animationData }: { type: AddonConfig['icon']; animati
     }
 }
 
-export default function PricingPlans({ hideHeader = false, isUpdateMode = false }: { hideHeader?: boolean; isUpdateMode?: boolean }) {
+interface PricingPlansProps {
+    hideHeader?: boolean;
+    isUpdateMode?: boolean;
+    /** Minimum number of clients required (based on active client count) */
+    minClientCount?: number;
+}
+
+export default function PricingPlans({ hideHeader = false, isUpdateMode = false, minClientCount = 0 }: PricingPlansProps) {
     const t = useTranslations('pricing')
+    const router = useRouter()
 
     const [billingInterval, setBillingInterval] = useState<BillingInterval>('annual')
     const [selectedPlan, setSelectedPlan] = useState<Plan>('pro')
-    const [totalClients, setTotalClients] = useState(50)
+    // Initialize with min client count rounded up to nearest tier, or default to 50
+    const getInitialClientCount = () => {
+        if (minClientCount <= 0) return 50
+        // Find the first tier >= minClientCount
+        const proOption = PRO_CLIENT_OPTIONS.find(num => num >= minClientCount)
+        return proOption ?? PRO_CLIENT_OPTIONS[PRO_CLIENT_OPTIONS.length - 1]
+    }
+    const [totalClients, setTotalClients] = useState(getInitialClientCount)
     const [selectedAddons, setSelectedAddons] = useState<string[]>([])
     const [featuresExpanded, setFeaturesExpanded] = useState(false)
     const [aiAnimationData, setAiAnimationData] = useState<object | null>(null)
+    const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
 
     useEffect(() => {
         fetch('/animations/ai-sphere-animation.json')
@@ -115,7 +81,19 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
             .catch(() => {})
     }, [])
 
-    const freeFeatures = t.raw('free.features') as string[]
+    // Adjust totalClients when minClientCount changes (e.g., after clients load)
+    useEffect(() => {
+        if (selectedPlan === 'starter' || minClientCount <= 0) return
+
+        const planOptions = selectedPlan === 'pro' ? PRO_CLIENT_OPTIONS : MAX_CLIENT_OPTIONS
+        const minForPlan = planOptions.find(num => num >= minClientCount) ?? planOptions[planOptions.length - 1]
+
+        if (totalClients < minForPlan) {
+            setTotalClients(minForPlan)
+        }
+    }, [minClientCount, selectedPlan])
+
+    const starterFeatures = t.raw('starter.features') as string[]
     const proFeatures = t.raw('pro.features') as string[]
     const maxFeatures = t.raw('max.features') as string[]
 
@@ -169,7 +147,7 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
     }
 
     const toggleAddon = (addonKey: string) => {
-        if (selectedPlan === 'free') return
+        if (selectedPlan === 'starter') return
         setSelectedAddons(prev =>
             prev.includes(addonKey)
                 ? prev.filter(k => k !== addonKey)
@@ -178,13 +156,13 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
     }
 
     const extraClients = useMemo(() => {
-        if (selectedPlan === 'free') return 0
+        if (selectedPlan === 'starter') return 0
         const base = PLANS[selectedPlan].baseClients
         return Math.max(0, totalClients - base)
     }, [selectedPlan, totalClients])
 
     const priceBreakdown = useMemo(() => {
-        if (selectedPlan === 'free') {
+        if (selectedPlan === 'starter') {
             return { planCost: 0, extraClientsCost: 0, addonsCost: 0, total: 0 }
         }
 
@@ -215,21 +193,32 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
     }, [selectedPlan, billingInterval, selectedAddons, totalClients])
 
     const handlePlanSelect = (plan: Plan) => {
+        // Prevent selecting Starter if they have more than 5 active clients
+        if (plan === 'starter' && minClientCount > PLANS.starter.baseClients) {
+            toast.error(`You have ${minClientCount} active clients. Archive some clients to downgrade to Starter.`)
+            return
+        }
+
         setSelectedPlan(plan)
-        if (plan === 'free') {
+        if (plan === 'starter') {
             setTotalClients(5)
             setSelectedAddons([])
         } else {
-            const base = PLANS[plan].baseClients
-            if (totalClients < base) {
-                setTotalClients(base)
+            // Get the minimum valid client count for this plan
+            const planOptions = plan === 'pro' ? PRO_CLIENT_OPTIONS : MAX_CLIENT_OPTIONS
+            const minForPlan = minClientCount > 0
+                ? planOptions.find(num => num >= minClientCount) ?? planOptions[planOptions.length - 1]
+                : PLANS[plan].baseClients
+
+            if (totalClients < minForPlan) {
+                setTotalClients(minForPlan)
             }
         }
     }
 
     const handleClientChange = (value: number) => {
         setTotalClients(value)
-        if (value > 5 && selectedPlan === 'free') {
+        if (value > 5 && selectedPlan === 'starter') {
             setSelectedPlan('pro')
         }
         if (value > PLANS.pro.maxClients && selectedPlan === 'pro') {
@@ -237,7 +226,21 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
         }
     }
 
-    const availableClientOptions = selectedPlan === 'pro' ? PRO_CLIENT_OPTIONS : MAX_CLIENT_OPTIONS
+    // Filter client options based on minimum required (active client count)
+    // Only show options >= minClientCount
+    const baseClientOptions = selectedPlan === 'pro' ? PRO_CLIENT_OPTIONS : MAX_CLIENT_OPTIONS
+    const availableClientOptions = useMemo(() => {
+        if (minClientCount <= 0) return baseClientOptions
+        return baseClientOptions.filter(num => num >= minClientCount)
+    }, [baseClientOptions, minClientCount])
+
+    // Get the minimum valid client count for current plan
+    const minValidClientCount = useMemo(() => {
+        if (minClientCount <= 0) return baseClientOptions[0]
+        // Find the first option that's >= minClientCount
+        const minOption = baseClientOptions.find(num => num >= minClientCount)
+        return minOption ?? baseClientOptions[baseClientOptions.length - 1]
+    }, [baseClientOptions, minClientCount])
 
     const toggleFeaturesExpanded = () => {
         setFeaturesExpanded(prev => !prev)
@@ -245,12 +248,12 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
 
     // Get all features for a plan with indication of which are new
     const getAllFeaturesForPlan = (plan: Plan): { text: string; isNew: boolean }[] => {
-        if (plan === 'free') {
-            return freeFeatures.map(f => ({ text: f, isNew: false }))
+        if (plan === 'starter') {
+            return starterFeatures.map(f => ({ text: f, isNew: false }))
         }
         if (plan === 'pro') {
             return [
-                ...freeFeatures.map(f => ({ text: f, isNew: false })),
+                ...starterFeatures.map(f => ({ text: f, isNew: false })),
                 ...proNewFeatures.map(f => ({ text: f, isNew: true })),
             ]
         }
@@ -259,10 +262,52 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
             !f.toLowerCase().includes('storage') && !f.toLowerCase().includes('almacenamiento')
         )
         return [
-            ...freeFeatures.map(f => ({ text: f, isNew: false })),
+            ...starterFeatures.map(f => ({ text: f, isNew: false })),
             ...proFeaturesForMax.map(f => ({ text: f, isNew: false })),
             ...maxNewFeatures.map(f => ({ text: f, isNew: true })),
         ]
+    }
+
+    // Handle checkout - create Stripe checkout session
+    const handleCheckout = async () => {
+        if (selectedPlan === 'starter') {
+            // Starter plan - no checkout needed, just redirect
+            router.push('/settings/billing')
+            return
+        }
+
+        setIsCheckoutLoading(true)
+
+        try {
+            // Map addon keys to AddonType (aiAssistant -> ai_assistant)
+            const addonMap: Record<string, AddonType> = {
+                automations: 'automations',
+                aiAssistant: 'ai_assistant',
+                payments: 'payments',
+            }
+
+            const mappedAddons = selectedAddons
+                .map(key => addonMap[key])
+                .filter(Boolean) as AddonType[]
+
+            const { url } = await createCheckoutSession({
+                plan: selectedPlan,
+                clientLimit: totalClients,
+                interval: billingInterval === 'annual' ? 'year' : 'month',
+                addons: mappedAddons.length > 0 ? mappedAddons : undefined,
+                successUrl: `${window.location.origin}/settings/billing?success=true`,
+                cancelUrl: `${window.location.origin}/settings/billing/update`,
+            })
+
+            // Redirect to Stripe checkout
+            if (url) {
+                window.location.href = url
+            }
+        } catch (error: any) {
+            console.error('Checkout error:', error)
+            toast.error('Failed to start checkout. Please try again.')
+            setIsCheckoutLoading(false)
+        }
     }
 
     return (
@@ -306,35 +351,42 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
                     <div className="flex-1 space-y-6">
                         {/* Plan Cards */}
                         <div className="grid gap-4 md:grid-cols-3">
-                            {/* Free Plan */}
+                            {/* Starter Plan */}
                             <motion.div
                                 initial={{ opacity: 0, y: 12 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
                                 transition={{ duration: 0.4, delay: 0 }}
                             >
+                                {/* Starter is unavailable if they have more than 5 active clients */}
+                                {(() => {
+                                    const starterUnavailable = minClientCount > PLANS.starter.baseClients
+                                    return (
                                 <Card
                                     className={cn(
-                                        'relative flex flex-col h-full min-h-[280px] p-6 cursor-pointer transition-all hover:shadow-md',
-                                        selectedPlan === 'free' ? 'ring-2 ring-primary' : 'border'
+                                        'relative flex flex-col h-full min-h-[280px] p-6 transition-all',
+                                        starterUnavailable
+                                            ? 'opacity-50 cursor-not-allowed'
+                                            : 'cursor-pointer hover:shadow-md',
+                                        selectedPlan === 'starter' ? 'ring-2 ring-primary' : 'border'
                                     )}
-                                    onClick={() => handlePlanSelect('free')}
+                                    onClick={() => !starterUnavailable && handlePlanSelect('starter')}
                                 >
                                     {/* Radio indicator */}
                                     <div className="absolute top-4 right-4">
                                         <div className={cn(
                                             'h-5 w-5 rounded-full border-2 flex items-center justify-center',
-                                            selectedPlan === 'free' ? 'border-primary' : 'border-muted-foreground/30'
+                                            selectedPlan === 'starter' ? 'border-primary' : 'border-muted-foreground/30'
                                         )}>
-                                            {selectedPlan === 'free' && (
+                                            {selectedPlan === 'starter' && (
                                                 <div className="h-2.5 w-2.5 rounded-full bg-primary" />
                                             )}
                                         </div>
                                     </div>
 
                                     <div className="flex-1">
-                                        <h3 className="text-xl font-semibold">{t('free.name')}</h3>
-                                        <p className="text-sm text-muted-foreground mt-2 pr-6">{t('free.description')}</p>
+                                        <h3 className="text-xl font-semibold">{t('starter.name')}</h3>
+                                        <p className="text-sm text-muted-foreground mt-2 pr-6">{t('starter.description')}</p>
 
                                         {/* Expandable features */}
                                         {!featuresExpanded ? (
@@ -354,7 +406,7 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
                                                     exit={{ opacity: 0, height: 0 }}
                                                     className="mt-3 space-y-3"
                                                 >
-                                                    {getAllFeaturesForPlan('free').map((feature, idx) => (
+                                                    {getAllFeaturesForPlan('starter').map((feature, idx) => (
                                                         <li key={idx} className="flex items-center gap-2 text-sm">
                                                             <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500"><Check className="size-3 text-white" /></span>
                                                             <span className={feature.isNew ? 'font-bold text-foreground' : 'text-muted-foreground'}>
@@ -380,13 +432,20 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
 
                                     <div className="mt-auto pt-6">
                                         <div className="text-4xl font-bold">
-                                            {t('free.name')}
+                                            {t('starter.name')}
                                         </div>
                                         <p className="text-sm text-muted-foreground mt-1">
-                                            {t('upTo')} <span className="font-semibold">{PLANS.free.baseClients} {t('clients')}</span>
+                                            {t('upTo')} <span className="font-semibold">{PLANS.starter.baseClients} {t('clients')}</span>
                                         </p>
+                                        {starterUnavailable && (
+                                            <p className="text-xs text-destructive mt-2">
+                                                You have {minClientCount} clients
+                                            </p>
+                                        )}
                                     </div>
                                 </Card>
+                                    )
+                                })()}
                             </motion.div>
 
                             {/* Pro Plan */}
@@ -566,7 +625,7 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
                         </div>
 
                         {/* Client Selection Card - Only show for paid plans */}
-                        {selectedPlan !== 'free' && (
+                        {selectedPlan !== 'starter' && (
                             <motion.div
                                 initial={{ opacity: 0, y: 12 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -599,7 +658,7 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
                                         {/* Slider - snaps to specific values */}
                                         <div className="pt-4 pb-2">
                                             <Slider
-                                                value={[availableClientOptions.indexOf(totalClients)]}
+                                                value={[Math.max(0, availableClientOptions.indexOf(totalClients))]}
                                                 onValueChange={([index]) => handleClientChange(availableClientOptions[index])}
                                                 min={0}
                                                 max={availableClientOptions.length - 1}
@@ -627,7 +686,7 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
                         )}
 
                         {/* Add-ons - Full Width Cards - Only show for paid plans */}
-                        {selectedPlan !== 'free' && (
+                        {selectedPlan !== 'starter' && (
                             <div className="space-y-4">
                                 {ADDONS.map((addon, index) => {
                                     const isSelected = selectedAddons.includes(addon.key)
@@ -788,8 +847,19 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false 
                                         )}
 
                                         {/* CTA Button */}
-                                        <Button asChild className="w-full">
-                                            <Link href="">{isUpdateMode ? 'Update plan' : t('summary.cta')}</Link>
+                                        <Button
+                                            className="w-full"
+                                            onClick={handleCheckout}
+                                            disabled={isCheckoutLoading || selectedPlan === 'starter'}
+                                        >
+                                            {isCheckoutLoading ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Loading...
+                                                </>
+                                            ) : (
+                                                isUpdateMode ? 'Update plan' : t('summary.cta')
+                                            )}
                                         </Button>
 
                                         {/* USD Note */}
