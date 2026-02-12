@@ -57,7 +57,6 @@ export const getExercises = async (): Promise<Exercise[]> => {
     ...e,
     isFavourite: e.is_favourite || false,
   }));
-  console.log('[coach-exercise-service] getExercises returned:', exercises.length, 'exercises');
   return exercises;
 };
 
@@ -159,7 +158,6 @@ export const editExercise = async (
  */
 export const getExerciseById = async (exerciseId: string): Promise<Exercise> => {
   const response = await apiFetch<ApiResponse<{ exercise: Exercise }>>(`/coach/training/exercises/${exerciseId}`);
-  console.log('[coach-exercise-service] getExerciseById raw response:', JSON.stringify(response, null, 2));
   if (!response.data) throw new Error('No exercise returned');
   return response.data.exercise;
 };

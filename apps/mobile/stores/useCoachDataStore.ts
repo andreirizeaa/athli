@@ -29,16 +29,14 @@ export const useCoachDataStore = create<CoachDataStore>((set, get) => ({
 
   // Load all essential coach data
   loadCoachData: async () => {
-    const { isInitialLoadComplete } = get();
+    const { isInitialLoadComplete, isLoading } = get();
 
-    // Skip if already loaded
-    if (isInitialLoadComplete) {
-      console.log('[CoachDataStore] Initial load already complete, skipping');
+    // Skip if already loaded or currently loading (prevents race condition)
+    if (isInitialLoadComplete || isLoading) {
       return;
     }
 
     set({ isLoading: true, error: null });
-    console.log('[CoachDataStore] Loading coach data...');
 
     try {
       // Fetch all data in parallel
@@ -60,8 +58,6 @@ export const useCoachDataStore = create<CoachDataStore>((set, get) => ({
         isInitialLoadComplete: true,
         error: null,
       });
-
-      console.log('[CoachDataStore] Coach data loaded successfully');
     } catch (error: any) {
       console.error('[CoachDataStore] Error loading coach data:', error);
       set({

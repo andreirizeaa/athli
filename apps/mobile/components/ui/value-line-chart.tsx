@@ -25,6 +25,8 @@ type ValueLineChartProps = {
     delta?: { value: number; isUp: boolean };
     renderFooter?: () => React.ReactNode;
     renderHeaderRight?: () => React.ReactNode;
+    hideHeader?: boolean;
+    noCard?: boolean;
 };
 
 type ChartDataPoint = {
@@ -42,7 +44,7 @@ const formatDate = (dateStr: string): string => {
     return `${day} ${month}, ${year}`;
 };
 
-export const ValueLineChart = ({ data, name, delta, renderFooter, renderHeaderRight }: ValueLineChartProps) => {
+export const ValueLineChart = ({ data, name, delta, renderFooter, renderHeaderRight, hideHeader, noCard }: ValueLineChartProps) => {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const font = useFont(require('../../assets/fonts/SpaceMono-Regular.ttf'), 12);
@@ -94,9 +96,48 @@ export const ValueLineChart = ({ data, name, delta, renderFooter, renderHeaderRi
 
     const deltaColor = delta?.isUp ? '#22c55e' : '#ef4444';
 
+    const Wrapper = noCard ? View : Card;
+    const wrapperProps = noCard ? {} : { variant: 'chart' as const };
+
     if (chartData.length < 2) {
         return (
-            <Card variant="chart">
+            <Wrapper {...wrapperProps}>
+                {!hideHeader && (
+                    <View style={styles.headerRow}>
+                        {name && (
+                            <Text style={[styles.nameText, { color: themeColors.text }]} numberOfLines={1}>
+                                {name}
+                            </Text>
+                        )}
+                        {delta && (
+                            <View style={[styles.deltaPill, { backgroundColor: hexToRgba(deltaColor, 0.15) }]}>
+                                <PlatformIcon
+                                    sf={delta.isUp ? 'arrow.up.right' : 'arrow.down.right'}
+                                    IconComponent={delta.isUp ? TrendingUp : TrendingDown}
+                                    size={14}
+                                    color={deltaColor}
+                                />
+                                <Text style={[styles.deltaText, { color: deltaColor }]}>
+                                    {delta.value.toFixed(1)}%
+                                </Text>
+                            </View>
+                        )}
+                        {renderHeaderRight?.()}
+                    </View>
+                )}
+                <View style={styles.emptyState}>
+                    <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+                        {t('clientDetail.chart.notEnoughData')}
+                    </Text>
+                </View>
+                {renderFooter?.()}
+            </Wrapper>
+        );
+    }
+
+    return (
+        <Wrapper {...wrapperProps}>
+            {!hideHeader && (
                 <View style={styles.headerRow}>
                     {name && (
                         <Text style={[styles.nameText, { color: themeColors.text }]} numberOfLines={1}>
@@ -118,39 +159,7 @@ export const ValueLineChart = ({ data, name, delta, renderFooter, renderHeaderRi
                     )}
                     {renderHeaderRight?.()}
                 </View>
-                <View style={styles.emptyState}>
-                    <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-                        {t('clientDetail.chart.notEnoughData')}
-                    </Text>
-                </View>
-                {renderFooter?.()}
-            </Card>
-        );
-    }
-
-    return (
-        <Card variant="chart">
-            <View style={styles.headerRow}>
-                {name && (
-                    <Text style={[styles.nameText, { color: themeColors.text }]} numberOfLines={1}>
-                        {name}
-                    </Text>
-                )}
-                {delta && (
-                    <View style={[styles.deltaPill, { backgroundColor: hexToRgba(deltaColor, 0.15) }]}>
-                        <PlatformIcon
-                            sf={delta.isUp ? 'arrow.up.right' : 'arrow.down.right'}
-                            IconComponent={delta.isUp ? TrendingUp : TrendingDown}
-                            size={14}
-                            color={deltaColor}
-                        />
-                        <Text style={[styles.deltaText, { color: deltaColor }]}>
-                            {delta.value.toFixed(1)}%
-                        </Text>
-                    </View>
-                )}
-                {renderHeaderRight?.()}
-            </View>
+            )}
             <View style={[styles.chartWrapper, { width: chartWidth, height: chartHeight }]}>
                 <CartesianChart
                     data={chartData}
@@ -210,7 +219,7 @@ export const ValueLineChart = ({ data, name, delta, renderFooter, renderHeaderRi
                 </Text>
             </View>
             {renderFooter?.()}
-        </Card>
+        </Wrapper>
     );
 };
 
@@ -237,11 +246,14 @@ const styles = StyleSheet.create({
         ...typography.p3,
         fontWeight: '600',
     },
-    chartWrapper: {},
+    chartWrapper: {
+        alignSelf: 'center',
+    },
     dateLabels: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginTop: -12,
+        alignSelf: 'center',
     },
     dateLabel: {
         fontFamily: 'SpaceMono',

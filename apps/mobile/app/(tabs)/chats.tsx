@@ -85,11 +85,9 @@ export default function ChatsScreen() {
           other_user_name: existingChat.other_user_name,
           other_user_avatar: existingChat.other_user_avatar,
         };
-        console.log('[Chats Realtime] Merged update:', mergedChat.id, 'name:', mergedChat.other_user_name, 'preview:', mergedChat.last_message_preview);
         updateChat(mergedChat);
       } else {
         // New conversation - add as-is (next refresh will fill in missing data)
-        console.log('[Chats Realtime] New conversation:', realtimeConversation.id);
         updateChat(realtimeConversation);
       }
 
@@ -98,7 +96,6 @@ export default function ChatsScreen() {
         clearTimeout(conversationDebounceRef.current);
       }
       conversationDebounceRef.current = setTimeout(() => {
-        console.log('[Chats Realtime] Reloading chats after debounce');
         loadChats();
         conversationDebounceRef.current = null;
       }, 1000);
@@ -121,13 +118,11 @@ export default function ChatsScreen() {
     userId: userId || '',
     conversationIds,
     onReadReceiptUpdated: (receipt) => {
-      console.log('[Chats] Read receipt updated, debouncing reload');
       // Debounce: wait 1 second before reloading to batch multiple updates
       if (readReceiptDebounceRef.current) {
         clearTimeout(readReceiptDebounceRef.current);
       }
       readReceiptDebounceRef.current = setTimeout(() => {
-        console.log('[Chats] Reloading chats after debounce');
         loadChats();
         readReceiptDebounceRef.current = null;
       }, 1000);

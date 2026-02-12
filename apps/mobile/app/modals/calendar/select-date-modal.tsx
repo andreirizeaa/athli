@@ -570,7 +570,7 @@ export default function SelectDateModal() {
 
     const endYear = allowFuture ? END_YEAR : currentYear;
 
-    for (let year = START_YEAR; year <= endYear; year++) {
+    for (let year = endYear; year >= START_YEAR; year--) {
       years.push({
         label: String(year),
         onPress: () => {

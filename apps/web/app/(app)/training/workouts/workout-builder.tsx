@@ -3784,7 +3784,7 @@ Focus on proper form and progressive overload.`;
       />
       {/* Upgrade Dialog for AI Workout Builder */}
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Upgrade to Pro</DialogTitle>
             <DialogDescription>

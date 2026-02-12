@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
     const t = await getTranslations('competitorPricing')
     return {
-        title: `${t(`competitors.${key}.pageTitle`)} ${t('pricingComparison')} | Athli`,
+        title: `${t(`competitors.${key}.pageTitle`)} ${t('pricingComparison')} - Athli`,
         description: t(`competitors.${key}.pageSubtitle`),
     }
 }

@@ -1,8 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
 import { Archive, MailCheck, Send, CheckCircle, User } from 'lucide-react-native';
-import SquircleView from 'react-native-fast-squircle';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference, useAuthSessionStore } from '@/stores';
@@ -10,6 +8,7 @@ import { useTranslations } from '@/stores';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
+import { Avatar } from '@/components/ui/avatar';
 import { PressableScale } from 'pressto';
 import { type Chat } from '@/services/chats-service';
 
@@ -208,18 +207,21 @@ export const ChatListItem = ({
                 </View>
               )}
               <View style={styles.avatarContainer}>
-                <SquircleView cornerSmoothing={1} style={styles.avatar}>
-                  {chat.other_user_avatar ? (
-                    <Image source={{ uri: chat.other_user_avatar }} style={styles.avatarImage} />
-                  ) : (
-                    <View
-                      style={[
-                        styles.avatarPlaceholder,
-                        { backgroundColor: themeColors.border },
-                      ]}
-                    />
-                  )}
-                </SquircleView>
+                <View style={styles.avatar}>
+                  <Avatar
+                    uri={chat.other_user_avatar}
+                    size={54}
+                    borderRadius={27}
+                    fallback={
+                      <View
+                        style={[
+                          styles.avatarPlaceholder,
+                          { backgroundColor: themeColors.border },
+                        ]}
+                      />
+                    }
+                  />
+                </View>
               </View>
               <View style={styles.messageContainer}>
                 <View style={styles.messageHeader}>
@@ -365,7 +367,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 54,
     height: 54,
-    borderRadius: 8,
+    borderRadius: 27,
     overflow: 'hidden',
   },
   avatarImage: {
@@ -375,6 +377,7 @@ const styles = StyleSheet.create({
   avatarPlaceholder: {
     width: 54,
     height: 54,
+    borderRadius: 27,
     backgroundColor: '#e0e0e0',
   },
   messageContainer: {

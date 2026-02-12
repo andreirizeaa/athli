@@ -8,7 +8,7 @@ export interface PublicCoachProfile {
     companyLogoUrl: string | null;
 }
 
-export async function getCoachByCode(code: string): Promise<ApiResponse<{ coach: PublicCoachProfile; onboardingId: string | null }>> {
+export async function getCoachByCode(code: string): Promise<ApiResponse<{ coach: PublicCoachProfile; onboardingId: string | null; hasReachedLimit: boolean }>> {
     return apiFetch(`/coach/by-code/${code}`, { authenticated: false });
 }
 

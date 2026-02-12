@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, Linking } from 'react-native';
-import { FileText, File, Play, UserPlus, Trash2, Pencil, Link as LinkIcon } from 'lucide-react-native';
+import { File, Play, UserPlus, Trash2, Pencil, Link as LinkIcon } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
@@ -11,8 +11,9 @@ import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useCoachProfileStore } from '@/stores';
+import { useThemePreference, useCoachProfileStore, useCoachEntitlementsStore } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useTerminology } from '@/hooks/useTerminology';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
@@ -21,15 +22,18 @@ import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dro
 import { getAllFiles, getFileTypeFromMime, getFileUrl, deleteFile, isExternalLink, isYouTubeUrl, isVimeoUrl, getYouTubeThumbnail } from '@/services/coach/coach-file-service';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Dialog } from '@/components/ui/dialog';
+import { StorageIndicator } from '@/components/ui/storage-indicator';
 
 export const FilesTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
+  const entitlements = useCoachEntitlementsStore((state) => state.entitlements);
 
   // Dialog state
   const [showErrorDialog, setShowErrorDialog] = useState(false);
@@ -42,9 +46,7 @@ export const FilesTab = () => {
   const { data: files = [], refetch } = useQuery({
     queryKey: ['files'],
     queryFn: async () => {
-      console.log('[FilesTab] Fetching files...');
       const data = await getAllFiles();
-      console.log('[FilesTab] Received files:', data.length, 'items');
       return data;
     },
     enabled: isAuthenticated,
@@ -53,10 +55,34 @@ export const FilesTab = () => {
     refetchOnWindowFocus: false,
   });
 
-  const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
+  const { ListHeaderComponent: BaseListHeader, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
     searchPlaceholderKey: 'library.searchPlaceholders.files',
     refetch,
   });
+
+  // Calculate total storage used (excluding external links)
+  const totalStorageBytes = useMemo(() => {
+    return files.reduce((sum, file) => {
+      // Skip external links - they don't count toward storage
+      if (isExternalLink(file.file_path)) return sum;
+      return sum + (file.size || 0);
+    }, 0);
+  }, [files]);
+
+  // Get storage limit from entitlements
+  const storageLimit = entitlements?.storage_limit_gb || 0;
+  const hasUnlimitedStorage = storageLimit === -1;
+  const hasFileStorageAccess = storageLimit !== 0;
+
+  // Custom ListHeaderComponent with storage indicator
+  const ListHeaderComponent = useMemo(() => (
+    <View>
+      {BaseListHeader}
+      {hasFileStorageAccess && storageLimit > 0 && !hasUnlimitedStorage && (
+        <StorageIndicator usedBytes={totalStorageBytes} limitGb={storageLimit} />
+      )}
+    </View>
+  ), [BaseListHeader, hasFileStorageAccess, storageLimit, hasUnlimitedStorage, totalStorageBytes]);
 
   // Filter files based on search query
   const filteredFiles = useMemo(() => {
@@ -68,13 +94,6 @@ export const FilesTab = () => {
       getFileTypeFromMime(file.mime_type).toLowerCase().includes(lowerQuery)
     );
   }, [files, searchQuery]);
-
-  console.log('[FilesTab] Render:', {
-    isAuthenticated,
-    totalFiles: files.length,
-    filteredFiles: filteredFiles.length,
-    searchQuery
-  });
 
   // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
@@ -329,11 +348,24 @@ export const FilesTab = () => {
 
     // Fallback icon for pdf and other types - match client files styling
     const isPdf = fileType === 'pdf';
+
+    if (isPdf) {
+      return (
+        <View style={[styles.thumbnailContainer, styles.pdfContainer]}>
+          <Image
+            source={require('@/assets/icons/pdf.png')}
+            style={styles.pdfIcon}
+            contentFit="contain"
+          />
+        </View>
+      );
+    }
+
     return (
       <SquircleView cornerSmoothing={1} style={[styles.fileIconContainer, { backgroundColor: `${themeColors.primary}15` }]}>
         <PlatformIcon
           sf="doc.text"
-          IconComponent={isPdf ? FileText : File}
+          IconComponent={File}
           size={24}
           color={themeColors.primary}
         />
@@ -350,7 +382,7 @@ export const FilesTab = () => {
         onPress: () => handleEditFilename(item),
       },
       {
-        label: t('general.assign'),
+        label: terminology.assignToPlural,
         icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
         onPress: () => handleAssign(item),
       },
@@ -470,6 +502,13 @@ const styles = StyleSheet.create({
   thumbnailImage: {
     width: '100%',
     height: '100%',
+  },
+  pdfIcon: {
+    width: 40,
+    height: 40,
+  },
+  pdfContainer: {
+    backgroundColor: '#fff5f0',
   },
   playOverlay: {
     position: 'absolute',

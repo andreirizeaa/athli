@@ -2,13 +2,13 @@ import React from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Image } from 'expo-image';
 import { X } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations } from '@/stores';
 import { removeReaction } from '@/services/chats-service';
 import { IconButton } from '@/components/ui/icon-button';
+import { Avatar } from '@/components/ui/avatar';
 
 interface ReactionData {
   id: string;
@@ -115,17 +115,16 @@ export default function ReactionsModal() {
                   { backgroundColor: themeColors.backgroundTertiary },
                 ]}
               >
-                {reactionUser.avatarUrl ? (
-                  <Image
-                    source={{ uri: reactionUser.avatarUrl }}
-                    style={styles.avatarImage}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <Text style={[styles.avatarText, { color: themeColors.text }]}>
-                    {getInitials(reactionUser.name)}
-                  </Text>
-                )}
+                <Avatar
+                  uri={reactionUser.avatarUrl}
+                  size={44}
+                  borderRadius={22}
+                  fallback={
+                    <Text style={[styles.avatarText, { color: themeColors.text }]}>
+                      {getInitials(reactionUser.name)}
+                    </Text>
+                  }
+                />
               </View>
 
               {/* Name and tap to remove */}

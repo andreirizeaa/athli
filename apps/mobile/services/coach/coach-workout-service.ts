@@ -22,7 +22,6 @@ export const getWorkouts = async (): Promise<Workout[]> => {
     // Note: workout_data intentionally excluded to reduce payload size
     // Use getWorkoutById() to fetch full workout data when editing
   }));
-  console.log('[coach-workout-service] getWorkouts returned:', workouts.length, 'workouts');
   return workouts;
 };
 

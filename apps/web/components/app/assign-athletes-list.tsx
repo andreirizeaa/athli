@@ -6,6 +6,7 @@ import { Mail, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { mockAthletes } from '@/components/app/app-shell';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
+import { useTerminology } from '@/hooks/use-terminology';
 import { cn } from '@/lib/general/utils';
 
 type AssignAthletesListProps = {
@@ -34,6 +35,7 @@ export const AssignAthletesList = ({
   programName,
 }: AssignAthletesListProps) => {
   const router = useRouter();
+  const terminology = useTerminology();
 
   const handleNavigateToTrainingCalendar = (athlete: (typeof mockAthletes)[0]) => {
     const targetId = athlete.id;
@@ -69,7 +71,7 @@ export const AssignAthletesList = ({
   const columns: ColumnDefinition<(typeof mockAthletes)[0]>[] = [
     {
       id: 'name',
-      label: 'Athlete',
+      label: terminology.singular,
       icon: <User className="size-3" />,
       width: { class: 'min-w-[240px]', pixel: '240px' },
       getSortValue: (row) => row.name.toLowerCase(),
@@ -103,14 +105,14 @@ export const AssignAthletesList = ({
       columns={columns}
       getRowId={(row) => row.id}
       gridKey="assign-athletes"
-      searchPlaceholder="Search athletes..."
+      searchPlaceholder={terminology.searchPlural}
       enableSearch={true}
       enableEditColumns={false}
       enableExport={false}
       enableRowSelection={false}
       onRowClick={handleNavigateToTrainingCalendar}
       onRowKeyDown={handleRowKeyDown}
-      emptyMessage="No athletes found."
+      emptyMessage={terminology.noPluralFound}
       rowHeight="54px"
       compactMode={true}
       showPagination={true}

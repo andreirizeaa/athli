@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Linking, InteractionManager } from 'react-native';
+import { StyleSheet, Text, View, Linking, InteractionManager, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeftRight,
   BookOpen,
@@ -23,7 +24,7 @@ import { Image } from 'expo-image';
 import { PressableScale } from 'pressto';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference, useClientProfileStore, useCoachProfileStore, useAppView, useTranslations } from '@/stores';
+import { useThemePreference, useClientProfileStore, useCoachProfileStore, useAppView, useTranslations, useAthleteCoachEntitlements } from '@/stores';
 import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { SettingsOption } from '@/components/ui/settings-option';
@@ -33,9 +34,13 @@ import { ScreenWrapper } from '@/components/ui/screen-wrapper';
 import { signOut } from '@/services/auth/supabase-auth';
 import { apiFetch } from '@/lib/api-client';
 import { haptics } from '@/utils/haptics';
+import { Storage } from '@/lib/storage';
+
+const LAST_SYNC_KEY = 'athli:last-sync-time-athlete';
 
 export default function ProfileTabScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { colors: themeColors } = useThemePreference();
   const { appView, setAppView } = useAppView();
   const { t } = useTranslations();
@@ -45,6 +50,7 @@ export default function ProfileTabScreen() {
   const isAthleteView = appView === 'athlete';
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const clientProfile = useClientProfileStore((state) => state.profile);
+  const { coachEntitlements } = useAthleteCoachEntitlements();
 
   const currentProfile = isAthleteView ? clientProfile : coachProfile;
   const profileName = currentProfile?.name || t('profile.enterYourName');
@@ -56,6 +62,51 @@ export default function ProfileTabScreen() {
   const [showDeletionSuccessDialog, setShowDeletionSuccessDialog] = useState(false);
   const [showDeletionErrorDialog, setShowDeletionErrorDialog] = useState(false);
   const [showDeletionAlreadySentDialog, setShowDeletionAlreadySentDialog] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Load last sync time on mount
+  useEffect(() => {
+    const storedTime = Storage.getItem(LAST_SYNC_KEY);
+    if (storedTime) {
+      setLastSyncTime(storedTime);
+    }
+  }, []);
+
+  const formatLastSyncTime = useCallback((isoTime: string): string => {
+    const date = new Date(isoTime);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) {
+      return 'Just now';
+    } else if (diffMins < 60) {
+      return `${diffMins}m ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours}h ago`;
+    } else if (diffDays < 7) {
+      return `${diffDays}d ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  }, []);
+
+  const handleSyncData = useCallback(async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await queryClient.invalidateQueries();
+      const now = new Date().toISOString();
+      Storage.setItem(LAST_SYNC_KEY, now);
+      setLastSyncTime(now);
+      haptics.success();
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [queryClient, isSyncing]);
 
   const handleOpenPreferences = () => {
     router.push({ pathname: '/settings/preferences' });
@@ -236,8 +287,8 @@ export default function ProfileTabScreen() {
               />
             </View>
           </PressableScale>
-          {/* Billing - only show for athlete view (not coach's demo client view) */}
-          {isAthleteView && clientProfile?.coach_id !== clientProfile?.client_id && (
+          {/* Billing - only show for athlete view when coach has payments enabled */}
+          {isAthleteView && clientProfile?.coach_id !== clientProfile?.client_id && coachEntitlements?.has_payments && (
             <>
               <Separator />
               <PressableScale onPress={handleOpenBilling}>
@@ -385,8 +436,10 @@ export default function ProfileTabScreen() {
           <SettingsOption
             icon={<PlatformIcon sf="arrow.clockwise" IconComponent={RefreshCw} size={iconSize} color={iconColor} />}
             title={t('profile.syncData')}
-            subtitle={`${t('profile.lastSynced')} ${t('profile.never')}`}
+            subtitle={lastSyncTime ? `${t('profile.lastSynced')} ${formatLastSyncTime(lastSyncTime)}` : `${t('profile.lastSynced')} ${t('profile.never')}`}
             subtitleRight
+            onPress={handleSyncData}
+            rightElement={isSyncing ? <ActivityIndicator size="small" color={themeColors.mutedText} /> : undefined}
           />
         </Card>
 

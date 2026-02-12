@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
 import { useCoachFlows } from '@/hooks/use-coach-flows';
 import { useCoachChecklist } from '@/hooks/use-coach-checklist';
+import { useTerminology } from '@/hooks/use-terminology';
 
 interface AccordionCardProps {
   number: number;

@@ -18,7 +18,7 @@ import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 
 import { typography } from '@/constants/typography';
-import { useThemePreference } from '@/stores';
+import { useThemePreference, useEntitlements } from '@/stores';
 import { useTranslations } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
@@ -117,6 +117,10 @@ export default function TodosScreen() {
   const underlinePosition = useSharedValue(0);
   const underlineWidth = useSharedValue(0);
   const tabLayoutsRef = useRef<{ [key: string]: { x: number; width: number } }>({});
+
+  // Feature access check
+  const { hasFeature } = useEntitlements();
+  const hasAiTodoAccess = hasFeature('ai_todo_list');
 
   // Fetch data for both tabs
   const { ownTodos, isLoading: isLoadingOwn, deleteOwnTodo } = useCoachOwnTodos();
@@ -376,6 +380,18 @@ export default function TodosScreen() {
     );
   }, [completingIds, handleCompleteAutoTodo, handleAutoTodoAnimationEnd, primaryColor, themeColors]);
 
+  // Upgrade required state for AI Assistant tab (requires Max plan)
+  const renderUpgradeRequired = () => (
+    <View style={styles.upgradeContainer}>
+      <Text style={[styles.upgradeTitle, { color: themeColors.text }]}>
+        Upgrade to Max
+      </Text>
+      <Text style={[styles.upgradeSubtitle, { color: themeColors.mutedText }]}>
+        Get AI-powered task suggestions and automated reminders to help you stay on top of your coaching.
+      </Text>
+    </View>
+  );
+
   const renderEmptyState = (isAiTab: boolean) => (
     <View style={styles.emptyState}>
       <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
@@ -454,6 +470,12 @@ export default function TodosScreen() {
           showsVerticalScrollIndicator={false}
           extraData={completingIds}
         />
+      ) : !hasAiTodoAccess ? (
+        // Show upgrade required for AI Assistant tab when feature not available
+        <View style={[styles.upgradeWrapper, { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 32 }]}>
+          <ListHeader />
+          {renderUpgradeRequired()}
+        </View>
       ) : (
         <FlashList<AthliAssistantTask>
           data={autoTodos}
@@ -626,5 +648,24 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     ...typography.p2,
     textAlign: 'center',
+  },
+  upgradeWrapper: {
+    flex: 1,
+  },
+  upgradeContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  upgradeTitle: {
+    ...typography.h4,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  upgradeSubtitle: {
+    ...typography.p2,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });

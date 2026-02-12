@@ -1,19 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, FileText, Trash2, X, UserPlus, Copy, FolderPlus, MoreHorizontal, Move, Folder } from 'lucide-react';
 import { toast } from 'sonner';
@@ -22,6 +13,7 @@ import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { PageHeader } from '@/components/app/page-header';
 import { AddMetricSidePanel } from '@/components/metrics/add-metric-side-panel';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
+import { UpgradeDialog } from '@/components/app/upgrade-dialog';
 import { useCoachMetrics } from '@/hooks/use-coach-metrics';
 import { useCoachMetricFolders } from '@/hooks/use-coach-metric-folders';
 import { useCoachClients } from '@/hooks/use-coach-clients';
@@ -41,90 +33,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { useFeatureAccess } from '@/lib/permissions/feature-gate';
-
-// Screenshot preview component for upgrade dialog
-function ScreenshotPreview() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dims, setDims] = useState({ w: 0, h: 0 });
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const update = () => setDims({ w: el.offsetWidth, h: el.offsetHeight });
-    const obs = new ResizeObserver(update);
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  const { w, h } = dims;
-  const r = 8;
-
-  return (
-    <div ref={containerRef} className="relative">
-      {w > 0 && h > 0 && (
-        <svg
-          className="pointer-events-none absolute top-0 left-0 z-10"
-          width={w}
-          height={h}
-          viewBox={`0 0 ${w} ${h}`}
-          fill="none"
-        >
-          <defs>
-            <linearGradient id="border-grad-metrics-page" x1="0.5" y1="0" x2="0.5" y2="1">
-              <stop offset="0%" stopColor="rgb(192,132,252)" />
-              <stop offset="100%" stopColor="rgb(165,180,252)" />
-            </linearGradient>
-          </defs>
-          <motion.rect
-            x={1.5}
-            y={1.5}
-            width={w - 3}
-            height={h - 3}
-            rx={r}
-            ry={r}
-            pathLength={1}
-            stroke="url(#border-grad-metrics-page)"
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeDasharray="0.15 0.85"
-            animate={{ strokeDashoffset: [0, -1] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-          />
-          <motion.rect
-            x={1.5}
-            y={1.5}
-            width={w - 3}
-            height={h - 3}
-            rx={r}
-            ry={r}
-            pathLength={1}
-            stroke="url(#border-grad-metrics-page)"
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeDasharray="0.15 0.85"
-            animate={{ strokeDashoffset: [-0.5, -1.5] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-          />
-        </svg>
-      )}
-      <img
-        src="/app-screenshots/client/metrics/light.png"
-        alt="Metrics feature preview"
-        className="block w-full h-auto rounded-lg border dark:hidden"
-      />
-      <img
-        src="/app-screenshots/client/metrics/dark.png"
-        alt="Metrics feature preview"
-        className="hidden w-full h-auto rounded-lg border dark:block"
-      />
-    </div>
-  );
-}
+import { useTerminology } from '@/hooks/use-terminology';
 
 const MetricsPage = () => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const t = useTranslations();
+  const terminology = useTerminology();
   const searchParams = useSearchParams();
   const {
     metrics,
@@ -713,10 +628,10 @@ const MetricsPage = () => {
                 variant="ghost"
                 onClick={handleAssignToClients}
                 className="gap-2"
-                aria-label={t('metrics.actions.assignToClients')}
+                aria-label={terminology.assignToPlural}
               >
                 <UserPlus className="size-4" />
-                <span>{t('metrics.actions.assignToClients')}</span>
+                <span>{terminology.assignToPlural}</span>
               </Button>
               {folders.length > 0 && (
                 <Button
@@ -846,12 +761,8 @@ const MetricsPage = () => {
           setIsAssignToClientsOpen(open);
           if (!open) setFolderToAssign(null);
         }}
-        title={t('metrics.assignToClientsTitle')}
-        assignButtonLabel={(count) =>
-          count === 1
-            ? t('metrics.assignToOneClient')
-            : t('metrics.assignToClientsCount', { count })
-        }
+        title={`Assign metrics to ${terminology.pluralLower}`}
+        assignButtonLabel={(count) => terminology.assignToCountLabel(count)}
         onAssign={handleAssignMetricsToClients}
         previewComponent={
           folderToAssign ? (
@@ -895,28 +806,16 @@ const MetricsPage = () => {
         }
       />
 
-      {/* Upgrade Dialog */}
-      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
-            <DialogDescription>
-              Assign metrics to track and measure your clients' performance and progress over time.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <ScreenshotPreview />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
-              Maybe Later
-            </Button>
-            <Button onClick={() => router.push('/settings/billing')}>
-              View Plans
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UpgradeDialog
+        open={isUpgradeDialogOpen}
+        onOpenChange={setIsUpgradeDialogOpen}
+        description="Assign metrics to track and measure your clients' performance and progress over time."
+        screenshot={{
+          light: '/app-screenshots/client/metrics/light.png',
+          dark: '/app-screenshots/client/metrics/dark.png',
+          alt: 'Metrics feature preview',
+        }}
+      />
     </div>
   );
 };

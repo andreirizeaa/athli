@@ -21,6 +21,7 @@ import {
   Palette,
   ScanFace,
   Sun,
+  Users,
   Vibrate,
 } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
@@ -30,9 +31,12 @@ import {
   type ColorSchemePreference,
   useCoachProfileStore,
   useClientProfileStore,
+  useCoachPreferences,
+  useAppView,
 } from '@/stores';
 import { useTranslations, useHaptics, useBiometric } from '@/stores';
 import { useAuth } from '@/hooks/useAuth';
+import { TERMINOLOGY_OPTIONS, type ClientTerminology } from '@/services/coach/coach-preferences-service';
 
 import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/icon-button';
@@ -73,8 +77,12 @@ export default function PreferencesScreen() {
     enableBiometric,
     disableBiometric,
   } = useBiometric();
-  const { userId } = useAuth();
+  const { userId, userType } = useAuth();
+  const { terminology, updateTerminology, loadPreferences } = useCoachPreferences();
+  const { appView } = useAppView();
   const insets = useSafeAreaInsets();
+  const isCoach = userType === 'coach';
+  const isCoachView = appView === 'coach';
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
   const clearCoachProfile = useCoachProfileStore((state) => state.clearProfile);
@@ -84,16 +92,12 @@ export default function PreferencesScreen() {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showLogoutErrorDialog, setShowLogoutErrorDialog] = useState(false);
 
-  // Debug logging for biometric state
+  // Load coach preferences when component mounts (for coach view only)
   useEffect(() => {
-    console.log('[Preferences] Biometric state:', {
-      biometricEnabled,
-      biometricAvailable,
-      biometricType,
-      isEnrolled,
-      userId,
-    });
-  }, [biometricEnabled, biometricAvailable, biometricType, isEnrolled, userId]);
+    if (isCoachView) {
+      loadPreferences();
+    }
+  }, [isCoachView, loadPreferences]);
 
   const handleGoBack = () => {
     router.back();
@@ -120,17 +124,13 @@ export default function PreferencesScreen() {
   };
 
   const handleBiometricToggle = async (value: boolean) => {
-    console.log('[Preferences] handleBiometricToggle called:', { value, userId });
     if (value) {
       if (!userId) {
-        console.log('[Preferences] No userId available, cannot enable biometric');
         return;
       }
-      const success = await enableBiometric(userId);
-      console.log('[Preferences] enableBiometric result:', success);
+      await enableBiometric(userId);
     } else {
       await disableBiometric();
-      console.log('[Preferences] Biometric disabled');
     }
   };
 
@@ -213,6 +213,27 @@ export default function PreferencesScreen() {
     },
   ];
 
+  // Terminology dropdown options (for coaches only)
+  const terminologyOptions: DropdownMenuOption[] = TERMINOLOGY_OPTIONS.map((opt) => ({
+    label: opt.label,
+    icon: { sf: 'person.2', IconComponent: Users },
+    onPress: () => handleTerminologyChange(opt.value),
+  }));
+
+  const handleTerminologyChange = async (value: ClientTerminology) => {
+    try {
+      await updateTerminology(value);
+    } catch (error) {
+      console.error('Failed to update terminology:', error);
+    }
+  };
+
+  // Get the display label for current terminology
+  const getTerminologyLabel = (): string => {
+    const option = TERMINOLOGY_OPTIONS.find((opt) => opt.value === terminology);
+    return option?.label ?? 'Athlete';
+  };
+
   return (
     <View
       style={[
@@ -280,6 +301,24 @@ export default function PreferencesScreen() {
             chevronSize={14}
             onPress={handleOpenLanguageModal}
           />
+          {/* Terminology row - only for coach view */}
+          {isCoachView && (
+            <>
+              <Separator />
+              <DropdownMenuWrapper options={terminologyOptions}>
+                <SettingsOption
+                  icon={<PlatformIcon sf="person.2" IconComponent={Users} size={iconSize} color={iconColor} />}
+                  title={t('preferences.terminology')}
+                  subtitle={getTerminologyLabel()}
+                  subtitleRight
+                  showChevron
+                  chevronSize={14}
+                  chevronIcon={{ sf: 'chevron.down', IconComponent: ChevronDown }}
+                  onPress={() => {}}
+                />
+              </DropdownMenuWrapper>
+            </>
+          )}
           <Separator />
           {/* Haptics toggle row */}
           <View style={styles.switchRow}>

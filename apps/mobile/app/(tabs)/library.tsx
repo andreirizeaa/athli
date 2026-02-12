@@ -56,14 +56,11 @@ export default function LibraryScreen() {
   // This ensures the "Assign to Clients" modal opens instantly
   useFocusEffect(
     React.useCallback(() => {
-      console.log('[LibraryScreen] 🚀 Prefetching clients on focus...');
       queryClient.prefetchQuery({
         queryKey: ['clients'],
         queryFn: async () => {
-          console.log('[LibraryScreen] 📡 Executing prefetch queryFn...');
           const { getClients } = await import('@/services/coach/coach-client-service');
           const data = await getClients();
-          console.log('[LibraryScreen] ✅ Prefetch complete:', data.length, 'clients cached');
           return data;
         },
       });

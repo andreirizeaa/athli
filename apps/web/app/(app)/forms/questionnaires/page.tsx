@@ -1,18 +1,9 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check, X, Trash2, UserPlus, Copy, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -28,6 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddQuestionnaireFormSidePanel } from '@/components/forms/add-questionnaire-form-side-panel';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
+import { UpgradeDialog } from '@/components/app/upgrade-dialog';
 import { AssignToClientsSidePanel } from '@/components/app/assign-to-clients-side-panel';
 import { duplicateQuestionnaire, deleteQuestionnaire, type Questionnaire as Form } from '@/api/coach/coach-questionnaire-service';
 import { assignForm, assignFormsToClients, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
@@ -39,90 +31,13 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFeatureAccess } from '@/lib/permissions/feature-gate';
-
-// Screenshot preview component for upgrade dialog
-function ScreenshotPreview() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dims, setDims] = useState({ w: 0, h: 0 });
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const update = () => setDims({ w: el.offsetWidth, h: el.offsetHeight });
-    const obs = new ResizeObserver(update);
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  const { w, h } = dims;
-  const r = 8;
-
-  return (
-    <div ref={containerRef} className="relative">
-      {w > 0 && h > 0 && (
-        <svg
-          className="pointer-events-none absolute top-0 left-0 z-10"
-          width={w}
-          height={h}
-          viewBox={`0 0 ${w} ${h}`}
-          fill="none"
-        >
-          <defs>
-            <linearGradient id="border-grad-questionnaires-page" x1="0.5" y1="0" x2="0.5" y2="1">
-              <stop offset="0%" stopColor="rgb(192,132,252)" />
-              <stop offset="100%" stopColor="rgb(165,180,252)" />
-            </linearGradient>
-          </defs>
-          <motion.rect
-            x={1.5}
-            y={1.5}
-            width={w - 3}
-            height={h - 3}
-            rx={r}
-            ry={r}
-            pathLength={1}
-            stroke="url(#border-grad-questionnaires-page)"
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeDasharray="0.15 0.85"
-            animate={{ strokeDashoffset: [0, -1] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-          />
-          <motion.rect
-            x={1.5}
-            y={1.5}
-            width={w - 3}
-            height={h - 3}
-            rx={r}
-            ry={r}
-            pathLength={1}
-            stroke="url(#border-grad-questionnaires-page)"
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeDasharray="0.15 0.85"
-            animate={{ strokeDashoffset: [-0.5, -1.5] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-          />
-        </svg>
-      )}
-      <img
-        src="/app-screenshots/client/questionnaires/light.png"
-        alt="Questionnaires feature preview"
-        className="block w-full h-auto rounded-lg border dark:hidden"
-      />
-      <img
-        src="/app-screenshots/client/questionnaires/dark.png"
-        alt="Questionnaires feature preview"
-        className="hidden w-full h-auto rounded-lg border dark:block"
-      />
-    </div>
-  );
-}
+import { useTerminology } from '@/hooks/use-terminology';
 
 // Removed mock forms as we fetch from the API
 
 const QuestionnairesPage = () => {
   const t = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const { questionnaires: forms, isLoading } = useCoachQuestionnaires();
   const { clients } = useCoachClients();
@@ -518,10 +433,10 @@ const QuestionnairesPage = () => {
                 variant="ghost"
                 onClick={handleAssignToClients}
                 className="gap-2"
-                aria-label={t('forms.assignToClients')}
+                aria-label={terminology.assignToPlural}
               >
                 <UserPlus className="size-4" />
-                <span>{t('forms.assignToClients')}</span>
+                <span>{terminology.assignToPlural}</span>
               </Button>
               <Button
                 variant="ghost"
@@ -579,7 +494,7 @@ const QuestionnairesPage = () => {
       <AssignToClientsSidePanel
         open={isAssignToClientsOpen}
         onOpenChange={setIsAssignToClientsOpen}
-        title={t('forms.assignToClientsTitle')}
+        title={`Assign forms to ${terminology.pluralLower}`}
         onAssign={async (clientIds) => {
           setSelectedClientIds(new Set(clientIds));
           // We call the handler immediately, but we need to ensure selectedClientIds state is updated
@@ -668,32 +583,20 @@ const QuestionnairesPage = () => {
             )}
           </div>
         }
-        assignButtonLabel={(count) => count <= 1 ? t('forms.assignToOneClient') : t('forms.assignToClientsCount', { count })}
+        assignButtonLabel={(count) => terminology.assignToCountLabel(count)}
         alertMessage={t('forms.questionnaires.assignAlert')}
       />
 
-      {/* Upgrade Dialog */}
-      <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
-            <DialogDescription>
-              Assign questionnaires to gather detailed information from your clients about their goals and preferences.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <ScreenshotPreview />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUpgradeDialogOpen(false)}>
-              Maybe Later
-            </Button>
-            <Button onClick={() => router.push('/settings/billing')}>
-              View Plans
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UpgradeDialog
+        open={isUpgradeDialogOpen}
+        onOpenChange={setIsUpgradeDialogOpen}
+        description="Assign questionnaires to gather detailed information from your clients about their goals and preferences."
+        screenshot={{
+          light: '/app-screenshots/client/questionnaires/light.png',
+          dark: '/app-screenshots/client/questionnaires/dark.png',
+          alt: 'Questionnaires feature preview',
+        }}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
@@ -12,11 +12,15 @@ import { MaterialIcons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { ComponentType } from 'react';
 
-import { useThemePreference, useColorScheme, useAuth } from '@/stores';
+import { useThemePreference, useColorScheme, useAuth, useEntitlements } from '@/stores';
 import { useAppView } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useLibraryTab, type LibraryTab } from '@/stores';
-import { useAthleteDataStore, useCoachDataStore } from '@/stores';
+import { useAthleteDataStore, useCoachDataStore, useCoachEntitlementsStore, useAthleteCoachEntitlementsStore } from '@/stores';
+import { useTerminology } from '@/hooks/useTerminology';
+import { UpgradeDialog } from '@/components/permissions/upgrade-dialog';
+
+type UpgradeTargetPlan = 'pro' | 'max' | 'increase' | null;
 
 const darkBackground = require('@/assets/backgrounds/dark.png');
 const lightBackground = require('@/assets/backgrounds/light.png');
@@ -46,10 +50,11 @@ const hasLiquidGlass = isLiquidGlassAvailable();
 
 type NativeTabsCoachViewProps = {
   primaryColor: string;
+  clientsLabel: string;
 };
 
 // Pure layout component for coach view
-const NativeTabsCoachView = ({ primaryColor }: NativeTabsCoachViewProps) => {
+const NativeTabsCoachView = ({ primaryColor, clientsLabel }: NativeTabsCoachViewProps) => {
   return (
     <NativeTabs tintColor={primaryColor}>
       <NativeTabs.Trigger name="home">
@@ -59,7 +64,7 @@ const NativeTabsCoachView = ({ primaryColor }: NativeTabsCoachViewProps) => {
 
       <NativeTabs.Trigger name="clients">
         <Icon sf="person.2.fill" />
-        <Label>Clients</Label>
+        <Label>{clientsLabel}</Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="chats">
@@ -80,8 +85,13 @@ const NativeTabsCoachView = ({ primaryColor }: NativeTabsCoachViewProps) => {
   );
 };
 
+type NativeTabsAthleteViewProps = {
+  primaryColor: string;
+  hideProgressTab?: boolean;
+};
+
 // Pure layout component for athlete view
-const NativeTabsAthleteView = ({ primaryColor }: NativeTabsCoachViewProps) => {
+const NativeTabsAthleteView = ({ primaryColor, hideProgressTab }: NativeTabsAthleteViewProps) => {
   return (
     <NativeTabs tintColor={primaryColor}>
       <NativeTabs.Trigger name="home">
@@ -94,10 +104,12 @@ const NativeTabsAthleteView = ({ primaryColor }: NativeTabsCoachViewProps) => {
         <Label>Training</Label>
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="progress">
-        <Icon sf="chart.bar.fill" />
-        <Label>Progress</Label>
-      </NativeTabs.Trigger>
+      {!hideProgressTab && (
+        <NativeTabs.Trigger name="progress">
+          <Icon sf="chart.bar.fill" />
+          <Label>Progress</Label>
+        </NativeTabs.Trigger>
+      )}
 
       <NativeTabs.Trigger name="profile">
         <Icon sf="person.fill" />
@@ -111,6 +123,7 @@ export default function TabLayout() {
   const { primaryColor, colors: themeColors } = useThemePreference();
   const { appView } = useAppView();
   const { t } = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const pathname = usePathname();
   const previousAppView = useRef(appView);
@@ -130,12 +143,24 @@ export default function TabLayout() {
   const isCoachDataInitialLoadComplete = useCoachDataStore((state) => state.isInitialLoadComplete);
   const loadCoachData = useCoachDataStore((state) => state.loadCoachData);
 
+  // Athlete's coach entitlements store
+  const isCoachOnStarter = useAthleteCoachEntitlementsStore((state) => state.isCoachOnStarter);
+  const loadCoachEntitlements = useAthleteCoachEntitlementsStore((state) => state.loadCoachEntitlements);
+  const coachEntitlements = useAthleteCoachEntitlementsStore((state) => state.coachEntitlements);
+
   // Load athlete data when in athlete view
   useEffect(() => {
     if (appView === 'athlete' && clientProfile && !isAthleteDataInitialLoadComplete) {
       loadAthleteData(clientProfile.client_id, clientProfile.coach_id);
     }
   }, [appView, clientProfile, isAthleteDataInitialLoadComplete, loadAthleteData]);
+
+  // Load coach entitlements when in athlete view
+  useEffect(() => {
+    if (appView === 'athlete' && clientProfile && !coachEntitlements) {
+      loadCoachEntitlements(clientProfile.coach_id);
+    }
+  }, [appView, clientProfile, coachEntitlements, loadCoachEntitlements]);
 
   // Load coach data when in coach view
   useEffect(() => {
@@ -205,17 +230,62 @@ export default function TabLayout() {
   }, [appView, router]);
 
   const insets = useSafeAreaInsets();
+  const { hasFeature } = useEntitlements();
+  const { entitlements } = useCoachEntitlementsStore();
+  const { clients } = useCoachDataStore();
+
+  // Upgrade dialog state
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState<string | undefined>(undefined);
+  const [upgradeTargetPlan, setUpgradeTargetPlan] = useState<UpgradeTargetPlan>('pro');
 
   const handleFabPress = () => {
     // Check for library first, then clients/chats
     if (pathname.includes('/library')) {
+      // Feature gate for files tab
+      if (currentLibraryTab === 'files' && !hasFeature('file_storage')) {
+        setUpgradeFeature(t('library.tabs.files') || 'Files');
+        setUpgradeTargetPlan('pro');
+        setShowUpgradeDialog(true);
+        return;
+      }
       router.push(getLibraryModalRoute() as any);
     } else if (pathname.includes('/clients')) {
+      // Check client limit
+      const clientLimit = entitlements?.client_limit || 5;
+      const currentClientCount = clients.length;
+      const planType = entitlements?.plan_type || 'starter';
+
+      if (currentClientCount >= clientLimit) {
+        // Determine which upgrade to show based on current plan
+        if (planType === 'starter') {
+          // Starter at 5/5 -> Upgrade to Pro
+          setUpgradeTargetPlan('pro');
+          setUpgradeFeature(`You've reached your limit of ${clientLimit} ${terminology.pluralLower}. Upgrade to add more.`);
+        } else if (planType === 'pro' && clientLimit >= 300) {
+          // Pro at max (300) -> Upgrade to Max
+          setUpgradeTargetPlan('max');
+          setUpgradeFeature(`You've reached the Pro plan limit of ${clientLimit} ${terminology.pluralLower}. Upgrade to Max for more.`);
+        } else {
+          // Pro but not at 300 -> Increase allowance
+          setUpgradeTargetPlan('increase');
+          setUpgradeFeature(`You've reached your limit of ${clientLimit} ${terminology.pluralLower}. Increase your allowance to add more.`);
+        }
+        setShowUpgradeDialog(true);
+        return;
+      }
       router.push({
         pathname: '/add-modal-content',
         params: { route: 'clients' },
       });
     } else if (pathname.includes('/chats')) {
+      // Feature gate for broadcast messaging (Max plan only)
+      if (!hasFeature('broadcast_messaging')) {
+        setUpgradeFeature('Broadcast Messaging');
+        setUpgradeTargetPlan('max');
+        setShowUpgradeDialog(true);
+        return;
+      }
       router.push('/modals/message/broadcast-modal');
     }
   };
@@ -251,7 +321,7 @@ export default function TabLayout() {
     if (appView === 'coach') {
       return (
         <View style={{ flex: 1 }}>
-          <NativeTabsCoachView primaryColor={primaryColor} />
+          <NativeTabsCoachView primaryColor={primaryColor} clientsLabel={terminology.plural} />
           {showFab && (
             <FAB
               onPress={handleFabPress}
@@ -259,12 +329,18 @@ export default function TabLayout() {
               bottom={insets.bottom + 70}
             />
           )}
+          <UpgradeDialog
+            visible={showUpgradeDialog}
+            onClose={() => setShowUpgradeDialog(false)}
+            feature={upgradeFeature}
+            targetPlan={upgradeTargetPlan}
+          />
         </View>
       );
     }
 
     // Athlete view (default)
-    return <NativeTabsAthleteView primaryColor={primaryColor} />;
+    return <NativeTabsAthleteView primaryColor={primaryColor} hideProgressTab={isCoachOnStarter} />;
   }
 
   return (
@@ -278,7 +354,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="clients"
           options={{
-            title: t('clients.title'),
+            title: terminology.plural,
             href: appView === 'coach' ? '/clients' : null,
           }}
         />
@@ -321,7 +397,7 @@ export default function TabLayout() {
           name="progress"
           options={{
             title: t('progress.title'),
-            href: appView === 'athlete' ? '/progress' : null,
+            href: appView === 'athlete' && !isCoachOnStarter ? '/progress' : null,
           }}
         />
         <Tabs.Screen
@@ -341,6 +417,12 @@ export default function TabLayout() {
           bottom={Platform.OS === 'android' ? 100 : insets.bottom + 66}
         />
       )}
+      <UpgradeDialog
+        visible={showUpgradeDialog}
+        onClose={() => setShowUpgradeDialog(false)}
+        feature={upgradeFeature}
+        targetPlan={upgradeTargetPlan}
+      />
     </View>
   );
 }
@@ -354,6 +436,8 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   const colorScheme = useColorScheme();
   const { appView } = useAppView();
   const { t } = useTranslations();
+  const terminology = useTerminology();
+  const isCoachOnStarter = useAthleteCoachEntitlementsStore((state) => state.isCoachOnStarter);
 
   const tabBarBackground =
     colorScheme === 'dark' ? '#0A0A0A' : themeColors.backgroundSecondary;
@@ -402,7 +486,7 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
     },
     {
       name: 'clients',
-      label: t('clients.title'),
+      label: terminology.plural,
       sf: 'person.2.fill',
       mdi: 'people',
       IconComponent: Users,
@@ -461,7 +545,11 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
     },
   ];
 
-  const tabs = appView === 'coach' ? coachTabs : athleteTabs;
+  // Filter out progress tab if coach is on Starter plan
+  const filteredAthleteTabs = isCoachOnStarter
+    ? athleteTabs.filter(tab => tab.name !== 'progress')
+    : athleteTabs;
+  const tabs = appView === 'coach' ? coachTabs : filteredAthleteTabs;
 
   return (
     <View style={[styles.container, { backgroundColor: tabBarBackground }]}>

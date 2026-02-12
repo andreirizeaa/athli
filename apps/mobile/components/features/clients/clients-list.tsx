@@ -1,12 +1,12 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
 import { FlashList } from '@shopify/flash-list';
 import { ChevronRight } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
 import { useTranslations } from '@/stores';
+import { Avatar } from '@/components/ui/avatar';
 
 import type { Client } from '@/services/client-service';
 
@@ -72,23 +72,20 @@ export const ClientsList = forwardRef<ClientsListRef, ClientsListProps>(
             <View style={styles.rowContent}>
               <View style={styles.avatarContainer}>
                 <View style={styles.avatarCircle}>
-                  {item.avatarUrl ? (
-                    <Image
-                      source={{ uri: item.avatarUrl }}
-                      style={styles.avatarImage}
-                      contentFit="cover"
-                      contentPosition="center"
-                      cachePolicy="memory-disk"
-                    />
-                  ) : (
-                    <View
-                      style={[
-                        styles.avatarImage,
-                        styles.avatarPlaceholder,
-                        { backgroundColor: themeColors.border },
-                      ]}
-                    />
-                  )}
+                  <Avatar
+                    uri={item.avatarUrl}
+                    size={54}
+                    borderRadius={27}
+                    fallback={
+                      <View
+                        style={[
+                          styles.avatarImage,
+                          styles.avatarPlaceholder,
+                          { backgroundColor: themeColors.border },
+                        ]}
+                      />
+                    }
+                  />
                 </View>
               </View>
               <View style={styles.clientInfo}>

@@ -27,7 +27,9 @@
     "./notification-constants": "./src/constants/notification-constants.ts",
     "./src/constants/notification-constants": "./src/constants/notification-constants.ts",
     "./pricing-constants": "./src/constants/pricing-constants.ts",
-    "./src/constants/pricing-constants": "./src/constants/pricing-constants.ts"
+    "./src/constants/pricing-constants": "./src/constants/pricing-constants.ts",
+    "./entitlements-schema": "./src/schemas/entitlements-schema.ts",
+    "./src/schemas/entitlements-schema": "./src/schemas/entitlements-schema.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit"

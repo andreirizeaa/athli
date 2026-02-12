@@ -36,9 +36,11 @@ interface UploadClientsSidePanelProps {
 import { addClients } from '@/api/coach/coach-client-service';
 import { toast } from 'sonner';
 import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
+import { useTerminology } from '@/hooks/use-terminology';
 
 export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: UploadClientsSidePanelProps) => {
   const t = useTranslations();
+  const terminology = useTerminology();
   const queryClient = useQueryClient();
   const { activeOnboardings } = useCoachOnboardings();
   const hasOnboardings = activeOnboardings.length > 0;
@@ -121,7 +123,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
     <SidePanel
       open={open}
       onOpenChange={handleOpenChange}
-      title={t('athletes.uploadClients.title')}
+      title={terminology.uploadPlural}
       contentClassName="sm:w-[600px] sm:max-w-[600px]"
       footer={
         <div className="flex w-full justify-end gap-2">
@@ -333,7 +335,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
         {uploadStep === 2 && (
           <div className="flex flex-col gap-6">
             <h3 className="text-lg font-semibold text-center">
-              {t('athletes.uploadClients.reviewTitle', { count: parsedClients.length })}
+              {t('athletes.uploadClients.reviewTitle', { count: parsedClients.length, term: terminology.countLabel(parsedClients.length) })}
             </h3>
             <div className="border rounded-lg overflow-hidden">
               <Table>
@@ -349,7 +351,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
                   {parsedClients.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground">
-                        {t('athletes.uploadClients.noClientsFound')}
+                        {terminology.noPluralFound}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -367,9 +369,54 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
-                        <TableCell>{client.fullName}</TableCell>
-                        <TableCell className="w-[200px]">{client.email}</TableCell>
-                        <TableCell>{client.category}</TableCell>
+                        <TableCell>
+                          <Input
+                            value={client.fullName}
+                            onChange={(e) => {
+                              setParsedClients((prev) =>
+                                prev.map((c, i) =>
+                                  i === index ? { ...c, fullName: e.target.value } : c
+                                )
+                              );
+                            }}
+                            className="h-8"
+                          />
+                        </TableCell>
+                        <TableCell className="w-[200px]">
+                          <Input
+                            type="email"
+                            value={client.email}
+                            onChange={(e) => {
+                              setParsedClients((prev) =>
+                                prev.map((c, i) =>
+                                  i === index ? { ...c, email: e.target.value } : c
+                                )
+                              );
+                            }}
+                            className="h-8"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={client.category}
+                            onValueChange={(value) => {
+                              setParsedClients((prev) =>
+                                prev.map((c, i) =>
+                                  i === index ? { ...c, category: value } : c
+                                )
+                              );
+                            }}
+                          >
+                            <SelectTrigger className="h-8 min-h-0 py-1 w-[150px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Online">Online</SelectItem>
+                              <SelectItem value="In-Person">In-Person</SelectItem>
+                              <SelectItem value="Hybrid">Hybrid</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}

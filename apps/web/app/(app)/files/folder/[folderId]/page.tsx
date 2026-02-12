@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { useTerminology } from '@/hooks/use-terminology';
 import { Plus, Check, X, ChevronRight, Edit, Move, UserPlus } from 'lucide-react';
 import {
   Breadcrumb,
@@ -43,6 +44,7 @@ const FileFolderPage = () => {
   const params = useParams();
   const folderId = params.folderId as string;
   const t = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { files, uploadFileAsync, updateFile, deleteFile: deleteFileMutation, isUploading } = useCoachFiles();
@@ -348,7 +350,7 @@ const FileFolderPage = () => {
         selectionActions={selectedFiles.size > 0 ? (
           <div className="flex items-center gap-1">
             <Button variant="ghost" onClick={() => setSelectedFiles(new Set())} className="gap-2"><X className="size-4" /><span>{t('general.clearSelected', { count: selectedFiles.size })}</span></Button>
-            <Button variant="ghost" onClick={handleAssignToClients} className="gap-2"><UserPlus className="size-4" /><span>{t('forms.assignToClients')}</span></Button>
+            <Button variant="ghost" onClick={handleAssignToClients} className="gap-2"><UserPlus className="size-4" /><span>{terminology.assignToPlural}</span></Button>
             <Button variant="ghost" onClick={() => setIsBulkDeleteOpen(true)} className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="size-4" /><span>{t('general.delete')}</span></Button>
           </div>
         ) : undefined}
@@ -387,8 +389,8 @@ const FileFolderPage = () => {
       <AssignToClientsSidePanel
         open={isAssignToClientsOpen}
         onOpenChange={setIsAssignToClientsOpen}
-        title={t('forms.assignToClientsTitle')}
-        assignButtonLabel={(count) => count === 1 ? t('forms.assignToOneClient') : t('forms.assignToClientsCount', { count })}
+        title={`Assign files to ${terminology.pluralLower}`}
+        assignButtonLabel={(count) => terminology.assignToCountLabel(count)}
         onAssign={handleAssignFilesToClients}
         previewComponent={filesToAssign.length > 0 ? (
           <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">

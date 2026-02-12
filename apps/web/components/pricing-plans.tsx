@@ -257,9 +257,9 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                 ...proNewFeatures.map(f => ({ text: f, isNew: true })),
             ]
         }
-        // max - filter out storage-related features from Pro since Max has "Unlimited File Storage"
+        // max - filter out storage-related features from Pro since Max has "Unlimited On Demand Files"
         const proFeaturesForMax = proNewFeatures.filter(f =>
-            !f.toLowerCase().includes('storage') && !f.toLowerCase().includes('almacenamiento')
+            !f.toLowerCase().includes('storage') && !f.toLowerCase().includes('almacenamiento') && !f.toLowerCase().includes('on demand files')
         )
         return [
             ...starterFeatures.map(f => ({ text: f, isNew: false })),

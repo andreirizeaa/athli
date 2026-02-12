@@ -5,7 +5,7 @@ import { useFreeTrial } from '@/hooks/use-free-trial';
 import { useGlobalData } from '@/providers/global-data-provider';
 
 // DEV ONLY: Force simulate starter plan (must match entitlements-provider.tsx)
-const FORCE_SIMULATE_STARTER = true;
+const FORCE_SIMULATE_STARTER = false;
 
 export type AccessStatus = 'active' | 'trial' | 'expired' | 'loading';
 

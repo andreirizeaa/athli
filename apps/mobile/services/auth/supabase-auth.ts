@@ -29,24 +29,20 @@ export async function authenticateUser(
   emailCredentials?: { email: string; password: string }
 ): Promise<AuthResult> {
   try {
-    console.log(`🔵 [Auth Orchestrator] Starting authentication with provider: ${provider}`);
     let userId: string = '';
     let error: string | undefined;
 
     // Step 1: Authenticate with provider
-    console.log('🔵 [Auth Orchestrator] Step 1: Authenticating with provider...');
     switch (provider) {
       case 'google':
         const googleResult = await signInWithGoogle();
         userId = googleResult.userId;
         error = googleResult.error;
-        console.log('🔵 [Auth Orchestrator] Google result - userId:', userId, 'error:', error);
         break;
       case 'apple':
         const appleResult = await signInWithApple();
         userId = appleResult.userId;
         error = appleResult.error;
-        console.log('🔵 [Auth Orchestrator] Apple result - userId:', userId, 'error:', error);
         break;
       case 'email':
         if (!emailCredentials) {
@@ -58,14 +54,12 @@ export async function authenticateUser(
         );
         userId = emailResult.userId;
         error = emailResult.error;
-        console.log('🔵 [Auth Orchestrator] Email result - userId:', userId, 'error:', error);
         break;
       default:
         throw new Error('Invalid auth provider');
     }
 
     if (error || !userId) {
-      console.log('🔴 [Auth Orchestrator] Authentication failed:', error || 'No user ID');
       // Check if this is a user cancellation
       const isCancelled = error?.includes('cancelled') || error?.includes('canceled');
       if (isCancelled) {
@@ -76,25 +70,17 @@ export async function authenticateUser(
     }
 
     // Step 2: Validate user has a profile
-    console.log('🔵 [Auth Orchestrator] Step 2: Validating user profile for userId:', userId);
     const profileResult = await validateUserProfile(userId);
-    console.log('🔵 [Auth Orchestrator] Profile validation result:', {
-      profileType: profileResult.profileType,
-      hasProfile: !!profileResult.profile
-    });
 
     if (!profileResult.profileType || !profileResult.profile) {
       throw new Error('NO_PROFILE_FOUND');
     }
 
     // Step 3: Store user ID and profile type in storage
-    console.log('🔵 [Auth Orchestrator] Step 3: Storing user data in storage...');
     Storage.setItem(USER_ID_KEY, userId);
     Storage.setItem(PROFILE_TYPE_KEY, profileResult.profileType);
-    console.log('🔵 [Auth Orchestrator] Stored userId and profileType:', profileResult.profileType);
 
     // Step 4: Return auth result
-    console.log('🟢 [Auth Orchestrator] Authentication complete! Returning result...');
     return {
       userId,
       profileType: profileResult.profileType,
@@ -102,7 +88,6 @@ export async function authenticateUser(
       coachAssignments: profileResult.coachAssignments,
     };
   } catch (error: any) {
-    console.log('🔴 [Auth Orchestrator] Authentication error:', error);
     throw error;
   }
 }
@@ -118,7 +103,6 @@ export async function signOut(): Promise<void> {
     // Clear biometric preference on logout
     await useBiometricStore.getState().disableBiometric();
   } catch (error) {
-    console.log('Sign out error:', error);
     throw error;
   }
 }
@@ -188,7 +172,6 @@ export async function restoreSession(options?: { signOutOnFailure?: boolean }): 
       coachAssignments: profileResult.coachAssignments,
     };
   } catch (error) {
-    console.log('Error restoring session:', error);
     return null;
   }
 }

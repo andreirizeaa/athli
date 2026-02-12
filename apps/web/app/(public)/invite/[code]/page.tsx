@@ -35,6 +35,7 @@ export default function ClientInvitePage() {
   const [coachName, setCoachName] = useState<string | null>(null);
   const [onboardingId, setOnboardingId] = useState<string | null>(null);
   const [isLoadingCoach, setIsLoadingCoach] = useState(true);
+  const [hasReachedLimit, setHasReachedLimit] = useState(false);
 
   // Fetch coach information on mount
   useEffect(() => {
@@ -51,6 +52,9 @@ export default function ClientInvitePage() {
           setCoachName(response.data.coach.name);
           if (response.data.onboardingId) {
             setOnboardingId(response.data.onboardingId);
+          }
+          if (response.data.hasReachedLimit) {
+            setHasReachedLimit(true);
           }
         }
       } catch (error: any) {
@@ -241,6 +245,30 @@ export default function ClientInvitePage() {
         <div className="flex flex-col items-center justify-center gap-4 py-8">
           <Spinner className="size-8" />
           <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      ) : hasReachedLimit ? (
+        <div className="flex flex-col items-center justify-center gap-4 py-8 text-center">
+          <div className="rounded-full bg-muted p-4">
+            <svg
+              className="size-8 text-muted-foreground"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-foreground">
+            Unable to Join
+          </h2>
+          <p className="text-muted-foreground max-w-sm">
+            {coachName ? `${coachName} has` : 'This coach has'} reached their maximum number of clients. Please contact your coach directly for assistance.
+          </p>
         </div>
       ) : (
         <div className="space-y-6">

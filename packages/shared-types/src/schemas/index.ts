@@ -14,3 +14,4 @@ export * from './file-schema';
 export * from './client-schema';
 export * from './task-schema';
 export * from './payment-schema';
+export * from './entitlements-schema';

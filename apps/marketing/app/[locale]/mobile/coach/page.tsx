@@ -1,10 +1,19 @@
+import type { Metadata } from 'next'
 import { setRequestLocale, getTranslations } from 'next-intl/server'
 import { HeroHeader } from '@/components/header'
 import Footer from '@/components/footer'
 import MobileAppShowcase from '@/components/mobile-app-showcase'
 import type { Feature } from '@/components/mobile-app-showcase'
 
-const coachFeatureKeys = ['workout-builder', 'training', 'review-workouts', 'manage-client', 'habits', 'exercise-history', 'forms', 'chats'] as const
+const coachFeatureKeys = ['workout-builder', 'training', 'review-workouts', 'manage-client', 'habits', 'metrics', 'progress-photos', 'exercise-history', 'forms', 'chats'] as const
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+    const { locale } = await params
+    setRequestLocale(locale)
+    return {
+        title: 'Coach Mobile App - Athli',
+    }
+}
 
 export default async function MobileCoachPage({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params

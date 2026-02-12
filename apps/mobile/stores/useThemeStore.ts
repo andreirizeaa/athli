@@ -77,6 +77,14 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
       const effectiveScheme = resolveEffectiveScheme(preference, systemScheme);
       const colors = createPresetPalette(preset, effectiveScheme);
 
+      // Set native appearance immediately on initialization
+      // This ensures the status bar style is correct from the first render
+      if (preference === 'system') {
+        Appearance.setColorScheme(null);
+      } else {
+        Appearance.setColorScheme(preference);
+      }
+
       set({
         ...updates,
         colors,
@@ -165,11 +173,25 @@ export const useColorScheme = (): 'light' | 'dark' => {
   const systemScheme = useNativeColorScheme() ?? 'light';
 
   try {
+    const isInitialized = useThemeStore((state) => state.isInitialized);
     const preference = useThemeStore((state) => state.preference);
-    if (preference === 'system') {
-      return systemScheme;
+
+    // If store is initialized, use the preference from store
+    if (isInitialized) {
+      if (preference === 'system') {
+        return systemScheme;
+      }
+      return preference;
     }
-    return preference;
+
+    // Store not yet initialized - read directly from storage to avoid flash
+    // This ensures correct theme on first render before useLayoutEffect runs
+    const savedPreference = Storage.getItem(THEME_PREFERENCE_KEY);
+    if (savedPreference === 'light' || savedPreference === 'dark') {
+      return savedPreference;
+    }
+    // If preference is 'system' or not set, use system scheme
+    return systemScheme;
   } catch {
     // Fallback to system scheme if store not available
     return systemScheme;

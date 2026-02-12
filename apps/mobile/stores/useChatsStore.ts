@@ -69,7 +69,6 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
     try {
       const chats = await getChats();
       set({ chats, isLoading: false });
-      console.log('[ChatsStore] Chats loaded:', chats.length);
     } catch (error: any) {
       console.error('[ChatsStore] Error loading chats:', error);
       set({
@@ -84,7 +83,6 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
     try {
       const archivedChats = await getArchivedChats();
       set({ archivedChats });
-      console.log('[ChatsStore] Archived chats loaded:', archivedChats.length);
     } catch (error: any) {
       console.error('[ChatsStore] Error loading archived chats:', error);
     }
@@ -288,10 +286,8 @@ export const useChatsStore = create<ChatsStore>((set, get) => ({
     });
 
     const topChats = sortedChats.slice(0, count);
-    console.log(`[ChatsStore] Prefetching messages for top ${topChats.length} chats`);
 
     // Prefetch in parallel (don't block)
     await Promise.all(topChats.map((chat) => prefetchMessages(chat.id)));
-    console.log('[ChatsStore] Message prefetching complete');
   },
 }));

@@ -10,8 +10,9 @@ import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useCoachProfileStore } from '@/stores';
+import { useThemePreference, useCoachProfileStore, useEntitlements } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useTerminology } from '@/hooks/useTerminology';
 
 // Format schedule text for display
 const formatSchedule = (schedule: string | undefined): string => {
@@ -33,15 +34,24 @@ import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dro
 import { getCheckIns, deleteCheckIn, duplicateCheckIn } from '@/services/coach/coach-check-in-service';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Dialog } from '@/components/ui/dialog';
+import { UpgradeDialog } from '@/components/permissions/upgrade-dialog';
 
 export const CheckInsTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
+
+  // Feature access
+  const { hasFeature } = useEntitlements();
+  const hasCheckInsAccess = hasFeature('questionnaires');
+
+  // Upgrade dialog state
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   // Dialog state
   const [showErrorDialog, setShowErrorDialog] = useState(false);
@@ -51,9 +61,7 @@ export const CheckInsTab = () => {
   const { data: checkIns = [], refetch } = useQuery({
     queryKey: ['checkIns'],
     queryFn: async () => {
-      console.log('[CheckInsTab] Fetching check-ins...');
       const data = await getCheckIns();
-      console.log('[CheckInsTab] Received check-ins:', data.length, 'items');
       return data;
     },
     enabled: isAuthenticated,
@@ -76,13 +84,6 @@ export const CheckInsTab = () => {
       checkIn.schedule_config?.frequency?.toLowerCase().includes(lowerQuery)
     );
   }, [checkIns, searchQuery]);
-
-  console.log('[CheckInsTab] Render:', {
-    isAuthenticated,
-    totalCheckIns: checkIns.length,
-    filteredCheckIns: filteredCheckIns.length,
-    searchQuery
-  });
 
   // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
@@ -160,6 +161,12 @@ export const CheckInsTab = () => {
       return;
     }
 
+    // Feature gate: show upgrade dialog if no access
+    if (!hasCheckInsAccess) {
+      setShowUpgradeDialog(true);
+      return;
+    }
+
     router.push(`/modals/shared/assign-to-clients-modal?type=checkIn&itemIds=${item.id}`);
   };
 
@@ -179,7 +186,7 @@ export const CheckInsTab = () => {
 
     const dropdownOptions: DropdownMenuOption[] = [
       {
-        label: t('general.assign'),
+        label: terminology.assignToPlural,
         icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
         onPress: () => handleAssign(item),
       },
@@ -282,6 +289,12 @@ export const CheckInsTab = () => {
         message={errorMessage}
         showCloseIcon={false}
         buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+
+      <UpgradeDialog
+        visible={showUpgradeDialog}
+        onClose={() => setShowUpgradeDialog(false)}
+        feature={t('library.tabs.checkIns')}
       />
     </>
   );

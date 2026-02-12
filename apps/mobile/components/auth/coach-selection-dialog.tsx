@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView } from 'react-native';
-import { Image } from 'expo-image';
 import { Check } from 'lucide-react-native';
 import { PressableOpacity } from 'pressto';
 
 import { Dialog } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { Avatar } from '@/components/ui/avatar';
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations } from '@/stores';
 import type { CoachAssignment } from '@/types/profile';
@@ -58,22 +58,20 @@ export const CoachSelectionDialog = ({
                 onPress={() => setSelectedCoachId(coach.coach_id)}
               >
                 <View style={styles.avatarContainer}>
-                  {coach.profile_picture_url ? (
-                    <Image
-                      source={{ uri: coach.profile_picture_url }}
-                      style={styles.avatarImage}
-                      contentFit="cover"
-                      contentPosition="center"
-                    />
-                  ) : (
-                    <View
-                      style={[
-                        styles.avatarImage,
-                        styles.avatarPlaceholder,
-                        { backgroundColor: themeColors.border },
-                      ]}
-                    />
-                  )}
+                  <Avatar
+                    uri={coach.profile_picture_url}
+                    size={44}
+                    borderRadius={6}
+                    fallback={
+                      <View
+                        style={[
+                          styles.avatarImage,
+                          styles.avatarPlaceholder,
+                          { backgroundColor: themeColors.border },
+                        ]}
+                      />
+                    }
+                  />
                 </View>
                 <Text style={[styles.coachName, { color: themeColors.text }]} numberOfLines={1}>
                   {coach.name}
