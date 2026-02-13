@@ -13,6 +13,7 @@ import {
   BookOpen,
   ChevronRight,
   Cog,
+  CreditCard,
   ArrowLeftRight,
   FileText,
   LogOut,
@@ -29,6 +30,7 @@ import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference, useCoachProfileStore, useClientProfileStore } from '@/stores';
 import { useAppView } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useTerminology } from '@/hooks/useTerminology';
 import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { SettingsOption } from '@/components/ui/settings-option';
@@ -66,6 +68,7 @@ export default function SettingsScreen() {
   const { colors: themeColors } = useThemePreference();
   const { appView, setAppView } = useAppView();
   const { t } = useTranslations();
+  const terminology = useTerminology();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const clientProfile = useClientProfileStore((state) => state.profile);
   const setClientProfile = useClientProfileStore((state) => state.setProfile);
@@ -133,6 +136,10 @@ export default function SettingsScreen() {
 
   const handleOpenNotifications = () => {
     router.push({ pathname: '/settings/notifications' });
+  };
+
+  const handleOpenBilling = () => {
+    router.push({ pathname: '/settings/billing' });
   };
 
   const handleOpenProfile = () => {
@@ -279,6 +286,17 @@ export default function SettingsScreen() {
             onPress={handleOpenNotifications}
             showChevron
           />
+          {isCoach && !isAthleteView && (
+            <>
+              <Separator />
+              <SettingsOption
+                icon={<PlatformIcon sf="creditcard" mdi="credit-card" IconComponent={CreditCard} size={iconSize} color={iconColor} />}
+                title={t('settings.billing.title')}
+                onPress={handleOpenBilling}
+                showChevron
+              />
+            </>
+          )}
         </Card>
 
         {/* Explore - only for coaches */}
@@ -293,7 +311,7 @@ export default function SettingsScreen() {
                   </View>
                   <View style={styles.profileTextContainer}>
                     <Text style={[styles.optionTitle, { color: themeColors.text }]}>
-                      {t('profile.viewClientArea')}
+                      {`View your ${terminology.singularLower} area`}
                     </Text>
                   </View>
                   {isSwitchingToClient ? (

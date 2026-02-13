@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
-import { Image as ExpoImage } from 'expo-image';
 import { ChevronRight, ChevronDown } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -21,6 +20,7 @@ import { useModalCallbacks } from '@/stores';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { PlatformIcon } from '@/components/ui/platform-icon';
+import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import type { Client } from '@/services/client-service';
 import { scheduleSession } from '@/services/calendar-service';
@@ -335,20 +335,20 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
               <View style={styles.rowButtonContent}>
                 {selectedClient ? (
                   <View style={styles.clientRow}>
-                    {selectedClient.avatarUrl ? (
-                      <ExpoImage
-                        source={{ uri: selectedClient.avatarUrl }}
-                        style={styles.clientAvatar}
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          styles.clientAvatar,
-                          styles.avatarPlaceholder,
-                          { backgroundColor: themeColors.border },
-                        ]}
-                      />
-                    )}
+                    <Avatar
+                      uri={selectedClient.avatarUrl}
+                      size={24}
+                      borderRadius={12}
+                      fallback={
+                        <View
+                          style={[
+                            styles.clientAvatar,
+                            styles.avatarPlaceholder,
+                            { backgroundColor: themeColors.border },
+                          ]}
+                        />
+                      }
+                    />
                     <Text style={[styles.clientName, { color: themeColors.text }]}>
                       {selectedClient.name}
                     </Text>

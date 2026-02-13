@@ -24,6 +24,7 @@ import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { useGlobalData } from '@/providers/global-data-provider';
 import { ClientProfileProvider, useClientProfileContext } from './client-profile-context';
 import { resendClientInvite } from '@/api/coach/coach-client-invite-service';
+import { useTerminology } from '@/hooks/use-terminology';
 import { FullScreenLoader } from '@/components/ui/full-screen-loader';
 import { SectionLoader } from '@/components/ui/section-loader';
 import { EditClientDetailsSidePanel } from './components/edit-client-details-side-panel';
@@ -44,6 +45,7 @@ export type ClientProfileLayoutProps = {
 
 export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, basePath, activeTab: activeTabProp, onTabChange, hideMessageButton = false, useSectionLoader = false, hideLoader = false }: ClientProfileLayoutProps) => {
   const t = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
   const params = useParams<{ clientId: string; contactId: string }>();
@@ -264,7 +266,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
                     onClick={handleNavigateToAthletes}
                     className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                   >
-                    {t('athletes.profile.athletes')}
+                    {terminology.plural}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">

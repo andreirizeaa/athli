@@ -1,11 +1,15 @@
 import rateLimit from 'express-rate-limit';
+import { env } from '../config/env';
 
-// General API rate limiter
+const isDev = env.NODE_ENV === 'development';
+
+// General API rate limiter - more lenient in development
 export const rateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100,
+  max: isDev ? 1000 : 300, // 1000/min in dev, 300/min in prod
   standardHeaders: true,
   legacyHeaders: false,
+  skip: isDev ? () => true : undefined, // Skip rate limiting entirely in dev
 });
 
 // Strict rate limiter for login attempts

@@ -231,7 +231,7 @@ const messages = {
     popular: 'Most Popular',
     monthly: 'Monthly',
     annual: 'Annual',
-    twoMonthsFree: '2 months free with annual billing',
+    twoMonthsFree: 'Save 17% with annual billing',
     month: 'mo',
     year: 'yr',
     plan: 'plan',
@@ -268,7 +268,7 @@ const messages = {
     },
     pro: {
       name: 'Pro',
-      priceShort: 'From $15/mo',
+      priceShort: 'From $20/mo',
       description: 'Everything you need to grow your coaching business',
       features: [
         'Coach Mobile App (iOS & Android)',
@@ -285,12 +285,12 @@ const messages = {
         'Questionnaires',
         'Check-ins',
         'Habits & Metrics Tracking',
-        '5GB File Storage',
+        '5GB On Demand Files',
       ],
     },
     max: {
       name: 'Max',
-      priceShort: 'From $95/mo',
+      priceShort: 'From $99/mo',
       description: 'For established coaches who need unlimited capacity',
       features: [
         'Coach Mobile App (iOS & Android)',
@@ -301,7 +301,7 @@ const messages = {
         'Client Messaging',
       ],
       newFeatures: [
-        'Unlimited File Storage',
+        'Unlimited On Demand Files',
         'Broadcast Messaging',
         'AI Todo List',
         'Priority Support',
@@ -394,7 +394,7 @@ const messages = {
       },
       {
         title: 'Client Management',
-        features: ['Questionnaires', 'Check-ins', 'Habits Tracking', 'Metrics Tracking'],
+        features: ['Questionnaires', 'Check-ins', 'Habits Tracking', 'Metrics Tracking', 'Photo Tracking', 'Exercise History'],
       },
       {
         title: 'Storage & Support',
@@ -460,10 +460,22 @@ const messages = {
         highlights: ['Centralised client data', 'Real-time metric updates', 'Progress photos and history'],
       },
       habits: {
-        label: 'Habits & Metrics',
+        label: 'Habits',
         headline: 'Build accountability beyond the gym',
-        description: "Assign daily habits, track custom metrics, and monitor adherence from anywhere. Whether it's hydration, sleep, body weight, or energy levels, you'll see who's consistent and who needs a nudge.",
-        highlights: ['Assign any daily habit', 'Track custom metrics', 'Spot patterns early'],
+        description: "Assign daily habits and monitor adherence from anywhere. Whether it's hydration, sleep, or movement goals, you'll see who's consistent and who needs a nudge. Build lasting behaviour change one habit at a time.",
+        highlights: ['Assign any daily habit', 'Track streaks and consistency', 'Spot patterns early'],
+      },
+      metrics: {
+        label: 'Metrics',
+        headline: 'Track what matters most',
+        description: "Monitor custom metrics for every client, from body weight to energy levels to recovery scores. See trends over time, spot changes early, and make data-driven decisions that keep clients progressing.",
+        highlights: ['Custom metric tracking', 'Visual trend analysis', 'Historical comparisons'],
+      },
+      'progress-photos': {
+        label: 'Progress Photos',
+        headline: 'See the transformation unfold',
+        description: "Review client progress photos side-by-side and track visual changes over time. Sometimes the scales don't tell the full story, progress photos show the real results of consistent effort.",
+        highlights: ['Side-by-side comparisons', 'Organised photo timeline', 'Visual progress tracking'],
       },
       'exercise-history': {
         label: 'Exercise History',
@@ -511,10 +523,22 @@ const messages = {
         highlights: ['Full performance timeline', 'Visual progression charts', 'Personal records tracked'],
       },
       habits: {
-        label: 'Habits & Metrics',
+        label: 'Habits',
         headline: 'Small daily wins, lasting change',
-        description: "Track the daily habits and metrics your coach assigns and build streaks that stick. Whether it's drinking water, logging your weight, or getting enough sleep, consistency is where real results come from.",
-        highlights: ['Daily habit tracking', 'Custom metric logging', 'Streak-based motivation'],
+        description: "Track the daily habits your coach assigns and build streaks that stick. Whether it's drinking water, stretching, or getting enough sleep, consistency is where real results come from.",
+        highlights: ['Daily habit tracking', 'Build lasting streaks', 'Streak-based motivation'],
+      },
+      metrics: {
+        label: 'Metrics',
+        headline: 'Track what matters most',
+        description: "Log custom metrics your coach assigns, from body weight to energy levels. See your trends over time and stay motivated by watching your numbers move in the right direction.",
+        highlights: ['Custom metric logging', 'Visual trend tracking', 'Historical comparisons'],
+      },
+      'progress-photos': {
+        label: 'Progress Photos',
+        headline: 'See your transformation unfold',
+        description: "Capture and compare progress photos over time. Sometimes the scale doesn't tell the whole story. Progress photos show the real results of consistent effort.",
+        highlights: ['Side-by-side comparisons', 'Organised photo timeline', 'Visual progress tracking'],
       },
       forms: {
         label: 'Forms',

@@ -12,6 +12,7 @@ import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useTerminology } from '@/hooks/useTerminology';
 import { type SectionType, SECTION_TYPES } from '@athli/shared-types';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
@@ -25,6 +26,7 @@ import { Dialog } from '@/components/ui/dialog';
 export const SectionsTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
@@ -39,9 +41,7 @@ export const SectionsTab = () => {
   const { data: sections = [], refetch } = useQuery({
     queryKey: ['sections'],
     queryFn: async () => {
-      console.log('[SectionsTab] Fetching sections...');
       const data = await getSections();
-      console.log('[SectionsTab] Received sections:', data.length, 'items');
       return data;
     },
     enabled: isAuthenticated,
@@ -64,13 +64,6 @@ export const SectionsTab = () => {
       section.sectionType?.toLowerCase().includes(lowerQuery)
     );
   }, [sections, searchQuery]);
-
-  console.log('[SectionsTab] Render:', {
-    isAuthenticated,
-    totalSections: sections.length,
-    filteredSections: filteredSections.length,
-    searchQuery
-  });
 
   // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
@@ -222,7 +215,7 @@ export const SectionsTab = () => {
 
     const dropdownOptions: DropdownMenuOption[] = [
       {
-        label: t('general.assign'),
+        label: terminology.assignToPlural,
         icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
         onPress: () => handleAssign(item),
       },

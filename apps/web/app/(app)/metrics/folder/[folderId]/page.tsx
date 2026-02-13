@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { useTerminology } from '@/hooks/use-terminology';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -54,6 +55,7 @@ const MetricFolderPage = () => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const t = useTranslations();
+  const terminology = useTerminology();
 
   const {
     metrics,
@@ -543,7 +545,7 @@ const MetricFolderPage = () => {
                 className="gap-2"
               >
                 <UserPlus className="size-4" />
-                <span>{t('metrics.actions.assignToClients')}</span>
+                <span>{terminology.assignToPlural}</span>
               </Button>
               <Button
                 variant="ghost"
@@ -659,12 +661,8 @@ const MetricFolderPage = () => {
       <AssignToClientsSidePanel
         open={isAssignToClientsOpen}
         onOpenChange={setIsAssignToClientsOpen}
-        title={t('metrics.assignToClientsTitle')}
-        assignButtonLabel={(count) =>
-          count === 1
-            ? t('metrics.assignToOneClient')
-            : t('metrics.assignToClientsCount', { count })
-        }
+        title={`Assign metrics to ${terminology.pluralLower}`}
+        assignButtonLabel={(count) => terminology.assignToCountLabel(count)}
         onAssign={handleAssignMetricsToClients}
         previewComponent={
           metricsToAssign.length > 0 ? (

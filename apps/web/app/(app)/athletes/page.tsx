@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { useGlobalData } from '@/providers/global-data-provider';
+import { useEntitlements } from '@/lib/permissions/entitlements-provider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -24,6 +25,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { archiveUser as archiveClient, type Athlete } from '@/api/coach/coach-client-service';
 import { useCoachClients } from '@/hooks/use-coach-clients';
+import { useTerminology } from '@/hooks/use-terminology';
 import { cn } from '@/lib/general/utils';
 import { exportToCSV } from '@/lib/general/csv-export';
 import { toast } from 'sonner';
@@ -38,6 +40,14 @@ import { Badge } from '@/components/ui/badge';
 import { ConfirmArchiveDialog } from '@/components/app/confirm-archive-dialog';
 import { InviteLinkDialog, copyToClipboard } from '@/components/app/invite-link-dialog';
 import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   User,
   Users,
@@ -154,6 +164,9 @@ const AthletesPage = () => {
   const { uniqueCode } = useGlobalData();
   const { clients: athletes, isLoading, archiveClient } = useCoachClients();
   const { onboardings } = useCoachOnboardings();
+  const { clientLimit } = useEntitlements();
+  const terminology = useTerminology();
+  const hasReachedLimit = (athletes?.length || 0) >= clientLimit;
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set());
   const [revealedFields, setRevealedFields] = useState<Set<string>>(new Set());
   const [copiedFields, setCopiedFields] = useState<Set<string>>(new Set());
@@ -162,6 +175,7 @@ const AthletesPage = () => {
   const [isRestoreClientsOpen, setIsRestoreClientsOpen] = useState<boolean>(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState<boolean>(false);
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState<boolean>(false);
+  const [isClientLimitDialogOpen, setIsClientLimitDialogOpen] = useState<boolean>(false);
   const [filteredCount, setFilteredCount] = useState<number>(0);
   const itemsPerPage = 25;
   const timeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -299,10 +313,10 @@ const AthletesPage = () => {
 
       const message = selectedAthletes.size === 1
         ? `${archivedNames} has been successfully archived and will lose app access immediately`
-        : `${selectedAthletes.size} clients have been successfully archived and will lose app access immediately`;
+        : `${selectedAthletes.size} ${terminology.pluralLower} have been successfully archived and will lose app access immediately`;
 
       toast.success(message, {
-        description: 'You can restore archived clients later.',
+        description: `You can restore archived ${terminology.pluralLower} later.`,
         duration: 5000,
       });
 
@@ -482,6 +496,10 @@ const AthletesPage = () => {
   };
 
   const handleCopyInviteLink = () => {
+    if (hasReachedLimit) {
+      setIsClientLimitDialogOpen(true);
+      return;
+    }
     if (!uniqueCode) {
       toast.error('Unable to generate invite link. Please try again.');
       return;
@@ -494,11 +512,27 @@ const AthletesPage = () => {
     }
   };
 
+  const handleOpenAddAthlete = () => {
+    if (hasReachedLimit) {
+      setIsClientLimitDialogOpen(true);
+      return;
+    }
+    setIsAddAthleteOpen(true);
+  };
+
+  const handleOpenUploadClients = () => {
+    if (hasReachedLimit) {
+      setIsClientLimitDialogOpen(true);
+      return;
+    }
+    setIsUploadClientsOpen(true);
+  };
+
   // Create column definitions for DataGrid
   const columns: ColumnDefinition<Athlete>[] = [
     {
       id: 'name',
-      label: t('athletes.columns.athlete'),
+      label: terminology.singular,
       icon: <User className="size-3" />,
       getSortValue: (row) => (row.name || '').toLowerCase(),
       getSearchValue: (row) =>
@@ -970,7 +1004,7 @@ const AthletesPage = () => {
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
               <User className="size-3 text-muted-foreground" />
-              <span className="text-xs uppercase text-muted-foreground">{t('athletes.columns.athlete')}</span>
+              <span className="text-xs uppercase text-muted-foreground">{terminology.singular}</span>
               {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
               {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
             </div>
@@ -1118,10 +1152,12 @@ const AthletesPage = () => {
   return (
     <div className="h-full w-full flex flex-col">
       <PageHeader
-        title={t('athletes.title')}
-        subtitle={t('athletes.subtitle', { count: filteredCount })}
+        title={`${terminology.plural} (${filteredCount})`}
         action={
-          <div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center px-3 py-1.5 rounded-md border border-primary text-primary text-sm font-medium">
+              {athletes?.length || 0}/{clientLimit} {terminology.pluralLower}
+            </div>
             <DropdownMenu>
               <ButtonGroup>
                 <Button
@@ -1133,9 +1169,12 @@ const AthletesPage = () => {
                   <Copy className="size-4" />
                   <span>{t('athletes.actions.yourInviteLink')}</span>
                 </Button>
-                <Button onClick={() => setIsAddAthleteOpen(true)} className="gap-2">
+                <Button
+                  onClick={handleOpenAddAthlete}
+                  className="gap-2"
+                >
                   <UserPlus className="size-4" />
-                  <span>{t('athletes.actions.addClient')}</span>
+                  <span>{terminology.addSingular}</span>
                 </Button>
                 <ButtonGroupSeparator />
                 <DropdownMenuTrigger asChild>
@@ -1145,18 +1184,18 @@ const AthletesPage = () => {
                 </DropdownMenuTrigger>
               </ButtonGroup>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setIsAddAthleteOpen(true)}>
+                <DropdownMenuItem onClick={handleOpenAddAthlete}>
                   <UserPlus className="size-4 mr-2" />
-                  <span>{t('athletes.actions.singleClient')}</span>
+                  <span>{terminology.singleSingular}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsUploadClientsOpen(true)}>
+                <DropdownMenuItem onClick={handleOpenUploadClients}>
                   <Download className="mr-2 h-4 w-4" />
                   <span>{t('athletes.actions.uploadCSV')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setIsRestoreClientsOpen(true)}>
                   <ArchiveRestore className="mr-2 h-4 w-4" />
-                  <span>{t('athletes.actions.archivedClients')}</span>
+                  <span>{terminology.restoreArchived}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1288,17 +1327,20 @@ const AthletesPage = () => {
             </TooltipProvider>
           </div>
         }
-        emptyMessage={t('athletes.emptyMessage')}
+        emptyMessage={terminology.noPluralFound}
         emptyState={
           <EmptyGridState
-            title={t('athletes.emptyState.title')}
-            subtitle={t('athletes.emptyState.subtitle')}
+            title={terminology.invitePlural}
+            subtitle={terminology.managePlural}
             action={
               <DropdownMenu>
                 <ButtonGroup>
-                  <Button onClick={() => setIsAddAthleteOpen(true)} className="gap-2">
+                  <Button
+                    onClick={handleOpenAddAthlete}
+                    className="gap-2"
+                  >
                     <UserPlus className="size-4" />
-                    <span>{t('athletes.actions.addClient')}</span>
+                    <span>{terminology.addSingular}</span>
                   </Button>
                   <ButtonGroupSeparator />
                   <DropdownMenuTrigger asChild>
@@ -1308,13 +1350,13 @@ const AthletesPage = () => {
                   </DropdownMenuTrigger>
                 </ButtonGroup>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsAddAthleteOpen(true)}>
+                  <DropdownMenuItem onClick={handleOpenAddAthlete}>
                     <UserPlus className="size-4 mr-2" />
-                    <span>{t('athletes.actions.singleClient')}</span>
+                    <span>{terminology.singleSingular}</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsUploadClientsOpen(true)}>
+                  <DropdownMenuItem onClick={handleOpenUploadClients}>
                     <Users className="size-4 mr-2" />
-                    <span>{t('athletes.actions.uploadClients')}</span>
+                    <span>{terminology.uploadPlural}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setIsRestoreClientsOpen(true)}>
                     <ArchiveRestore className="size-4 mr-2" />
@@ -1363,6 +1405,26 @@ const AthletesPage = () => {
           // This is handled by the useCoachClients hook's query invalidation
         }}
       />
+
+      {/* Client Limit Dialog */}
+      <Dialog open={isClientLimitDialogOpen} onOpenChange={setIsClientLimitDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogDescription>
+              You&apos;ve reached your limit of {clientLimit} {terminology.pluralLower}. Upgrade your plan to add more {terminology.pluralLower} and continue growing your coaching business.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsClientLimitDialogOpen(false)}>
+              Maybe Later
+            </Button>
+            <Button onClick={() => router.push('/settings/billing')}>
+              Manage Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

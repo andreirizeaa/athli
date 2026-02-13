@@ -67,24 +67,20 @@ export const useBiometricStore = create<BiometricStore>((set, get) => ({
   },
 
   enableBiometric: async (userId: string) => {
-    console.log('[BiometricStore] enableBiometric called with userId:', userId);
     const { biometricAvailable } = get();
     if (!biometricAvailable) {
-      console.log('[BiometricStore] Biometric not available, returning false');
       return false;
     }
 
     // Verify biometric before enabling
     const result = await get().authenticateWithBiometric();
     if (!result.success) {
-      console.log('[BiometricStore] Biometric auth failed during enable:', result.error);
       return false;
     }
 
     try {
       await SecureStore.setItemAsync(BIOMETRIC_ENABLED_KEY, 'true');
       await SecureStore.setItemAsync(BIOMETRIC_USER_ID_KEY, userId);
-      console.log('[BiometricStore] Stored biometric enabled for userId:', userId);
       set({ biometricEnabled: true });
       return true;
     } catch (error) {
@@ -132,12 +128,6 @@ export const useBiometricStore = create<BiometricStore>((set, get) => ({
     try {
       const enabled = await SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY);
       const storedUserId = await SecureStore.getItemAsync(BIOMETRIC_USER_ID_KEY);
-      console.log('[BiometricStore] isBiometricEnabledForUser check:', {
-        checkingUserId: userId,
-        storedEnabled: enabled,
-        storedUserId: storedUserId,
-        match: enabled === 'true' && storedUserId === userId,
-      });
       return enabled === 'true' && storedUserId === userId;
     } catch (error) {
       console.error('[BiometricStore] Error checking biometric for user:', error);

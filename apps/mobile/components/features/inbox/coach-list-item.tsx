@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
 import { Send, CheckCircle } from 'lucide-react-native';
 import SquircleView from 'react-native-fast-squircle';
 
@@ -8,6 +7,7 @@ import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference, useAuthSessionStore } from '@/stores';
 import { useTranslations } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
+import { Avatar } from '@/components/ui/avatar';
 import { PressableScale } from 'pressto';
 import { type Coach } from '@/services/inbox-service';
 
@@ -126,16 +126,19 @@ export const CoachListItem = ({
           )}
           <View style={styles.avatarContainer}>
             <SquircleView cornerSmoothing={1} style={styles.avatar}>
-              {coach.other_user_avatar ? (
-                <Image source={{ uri: coach.other_user_avatar }} style={styles.avatarImage} />
-              ) : (
-                <View
-                  style={[
-                    styles.avatarPlaceholder,
-                    { backgroundColor: themeColors.border },
-                  ]}
-                />
-              )}
+              <Avatar
+                uri={coach.other_user_avatar}
+                size={54}
+                borderRadius={8}
+                fallback={
+                  <View
+                    style={[
+                      styles.avatarPlaceholder,
+                      { backgroundColor: themeColors.border },
+                    ]}
+                  />
+                }
+              />
             </SquircleView>
           </View>
           <View style={styles.messageContainer}>

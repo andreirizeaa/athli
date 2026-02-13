@@ -20,19 +20,12 @@ export async function validateUserProfile(
   userId: string
 ): Promise<ProfileValidationResult> {
   try {
-    console.log('[validateUserProfile] Checking profiles for userId:', userId);
-
     // Check coach_profiles_full first (view that merges with user_profiles)
     const { data: coachProfile, error: coachError } = await supabase
       .from('coach_profiles_full')
       .select('*')
       .eq('id', userId)
       .single();
-
-    console.log('[validateUserProfile] Coach profile query result:', { 
-      hasData: !!coachProfile, 
-      error: coachError?.message || null 
-    });
 
     if (!coachError && coachProfile) {
       return {
@@ -60,12 +53,6 @@ export async function validateUserProfile(
       .eq('client_id', userId)
       .single();
 
-    console.log('[validateUserProfile] Client profile query result:', { 
-      hasData: !!clientProfile, 
-      error: clientError?.message || null,
-      errorCode: clientError?.code || null
-    });
-
     if (!clientError && clientProfile) {
       // Get ALL coach assignments with coach profile info
       const { data: assignments } = await supabase
@@ -80,11 +67,6 @@ export async function validateUserProfile(
         `)
         .eq('client_id', userId)
         .in('status', ['connected', 'accepted', 'invited']);
-
-      console.log('[validateUserProfile] Coach assignments:', {
-        count: assignments?.length || 0,
-        assignments: assignments?.map(a => ({ coach_id: a.coach_id, status: a.status }))
-      });
 
       // Mark client as connected if any assignment is not already connected (fire-and-forget)
       const hasNonConnectedAssignment = assignments?.some(a => a.status !== 'connected');
@@ -127,8 +109,7 @@ export async function validateUserProfile(
       };
     }
 
-    // No profile found - log details
-    console.log('[validateUserProfile] No profile found for userId:', userId);
+    // No profile found
     return {
       profileType: null,
       profile: null,

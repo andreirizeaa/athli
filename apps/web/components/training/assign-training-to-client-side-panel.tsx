@@ -8,6 +8,7 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { SidePanel } from '@/components/app/side-panel';
 import { Spinner } from '@/components/ui/spinner';
 import { useCoachClients } from '@/hooks/use-coach-clients';
+import { useTerminology } from '@/hooks/use-terminology';
 import { Athlete } from '@/api/coach/coach-client-service';
 import { cn } from '@/lib/general/utils';
 
@@ -31,6 +32,7 @@ export const AssignTrainingToClientSidePanel = ({
 }: AssignTrainingToClientSidePanelProps) => {
     const router = useRouter();
     const { clients, isLoading } = useCoachClients();
+    const terminology = useTerminology();
 
     const handleClientClick = (client: Athlete) => {
         if (!selectedItem) return;
@@ -73,7 +75,7 @@ export const AssignTrainingToClientSidePanel = ({
 
     const getTitle = () => {
         if (title) return title;
-        if (!selectedItem) return 'Assign to Client';
+        if (!selectedItem) return `Assign to ${terminology.singular}`;
 
         const itemTypeLabel = selectedItem.type.charAt(0).toUpperCase() + selectedItem.type.slice(1);
         return `Assigning ${itemTypeLabel}: ${selectedItem.name}`;
@@ -82,7 +84,7 @@ export const AssignTrainingToClientSidePanel = ({
     const columns: ColumnDefinition<Athlete>[] = [
         {
             id: 'name',
-            label: 'Athlete',
+            label: terminology.singular,
             icon: <UserPlus className="size-3" />,
             width: { class: 'w-full', pixel: '100%' },
             getSortValue: (row) => row.name.toLowerCase(),
@@ -124,14 +126,14 @@ export const AssignTrainingToClientSidePanel = ({
                             columns={columns}
                             getRowId={(row) => row.id}
                             gridKey="assign-training-to-clients"
-                            searchPlaceholder="Search athletes..."
+                            searchPlaceholder={terminology.searchPlural}
                             enableSearch={true}
                             enableEditColumns={false}
                             enableExport={false}
                             enableRowSelection={false}
                             onRowClick={handleClientClick}
                             onRowKeyDown={handleRowKeyDown}
-                            emptyMessage="No athletes found."
+                            emptyMessage={terminology.noPluralFound}
                             rowHeight="54px"
                             compactMode={true}
                             showPagination={false}

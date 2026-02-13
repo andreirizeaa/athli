@@ -36,7 +36,6 @@ export function usePushNotifications() {
   // Handle notification tap - navigate to relevant screen
   const handleNotificationResponse = useCallback((response: Notifications.NotificationResponse) => {
     const data = response.notification.request.content.data;
-    console.log('[PushNotifications] Notification tapped:', data);
 
     // Only navigate for coaches (clients have no notification page)
     if (userType === 'coach' && data?.notification_type) {
@@ -45,8 +44,7 @@ export function usePushNotifications() {
   }, [router, userType]);
 
   // Handle foreground notification
-  const handleNotificationReceived = useCallback((notification: Notifications.Notification) => {
-    console.log('[PushNotifications] Notification received in foreground:', notification);
+  const handleNotificationReceived = useCallback((_notification: Notifications.Notification) => {
     // The notification will be shown by the notification handler we set up
   }, []);
 
@@ -73,7 +71,6 @@ export function usePushNotifications() {
           // Store token locally for logout cleanup
           Storage.setItem(PUSH_TOKEN_STORAGE_KEY, token);
           hasRegistered.current = true;
-          console.log('[PushNotifications] Registered successfully');
         }
       } catch (error) {
         console.error('[PushNotifications] Registration failed:', error);
@@ -124,7 +121,6 @@ export function usePushNotifications() {
         }
         Storage.removeItem(PUSH_TOKEN_STORAGE_KEY);
         hasRegistered.current = false;
-        console.log('[PushNotifications] Unregistered successfully');
       }
     } catch (error) {
       console.error('[PushNotifications] Unregister failed:', error);

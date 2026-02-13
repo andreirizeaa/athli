@@ -25,6 +25,7 @@ import { usePrefetchAllExercises } from '@/hooks/use-all-exercises';
 import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
 import { useCoachSequences } from '@/hooks/use-coach-sequences';
 import { useStripeConnection, useCoachPackages, useCoupons, useSummaryAnalytics, useSummaryActivity, useAllPackageStats } from '@/hooks/use-coach-packages';
+import { useReferrals } from '@/hooks/use-referrals';
 
 interface GlobalContextType {
     user: UserProfile | null;
@@ -92,6 +93,7 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
     useSummaryAnalytics();
     useSummaryActivity();
     useAllPackageStats();
+    useReferrals({ enabled: shouldPrefetch });
 
     const isLoading = isFilesLoading ||
         isHabitsLoading ||

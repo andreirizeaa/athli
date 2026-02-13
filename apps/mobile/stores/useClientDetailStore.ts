@@ -11,7 +11,7 @@ import {
   type AthleteInjury,
   type TrainingCalendarSchema,
 } from '@/services/client/client-service';
-import { getClients } from '@/services/coach/coach-client-service';
+import { useCoachDataStore } from './useCoachDataStore';
 import {
   getClientMetrics,
   type ClientMetric,
@@ -240,11 +240,17 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
 
     // If already loaded this client, skip
     if (currentClientId === clientId && get().client) {
-      console.log('[ClientDetailStore] Client already loaded:', clientId);
       return;
     }
 
-    console.log('[ClientDetailStore] Loading data for client:', clientId);
+    // Set loading immediately to prevent flash of "not found" state
+    set({
+      clientId,
+      client: null,
+      isLoading: true,
+      isLoadingClient: true,
+      error: null,
+    });
 
     // Get coach ID
     const {
@@ -253,15 +259,13 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
     const coachId = user?.id;
 
     if (!coachId) {
-      set({ error: 'Not authenticated', isLoading: false });
+      set({ error: 'Not authenticated', isLoading: false, isLoadingClient: false });
       return;
     }
 
-    // Reset state for new client
+    // Reset remaining state for new client
     set({
-      clientId,
       coachId,
-      client: null,
       bio: '',
       goals: [],
       injuries: [],
@@ -275,8 +279,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       trainingCalendar: {},
       uniqueExercises: [],
       loadedTrainingRange: null,
-      isLoading: true,
-      isLoadingClient: true,
       isLoadingMetrics: true,
       isLoadingHabits: true,
       isLoadingPhotos: true,
@@ -285,20 +287,15 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       isLoadingNotes: true,
       isLoadingTraining: true,
       isLoadingUniqueExercises: true,
-      error: null,
     });
 
     try {
       // 1. First fetch client info (required)
-      // Also fetch from clients list to get the avatar URL (which is more reliable)
-      const [clientData, clientsList] = await Promise.all([
-        getClientDetails(clientId, coachId),
-        getClients().catch(() => []),
-      ]);
+      const clientData = await getClientDetails(clientId, coachId);
 
-      // Find the client in the list to get the avatar URL
-      const clientFromList = clientsList.find(c => c.id === clientId);
-      const avatarUrl = clientFromList?.avatarUrl || clientData.avatarUrl;
+      // Get avatar URL from the already-loaded clients store (more reliable)
+      const clientFromStore = useCoachDataStore.getState().clients.find(c => c.id === clientId);
+      const avatarUrl = clientFromStore?.avatarUrl || clientData.avatarUrl;
 
       set({
         client: { ...clientData, avatarUrl },
@@ -360,8 +357,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         isLoadingTraining: false,
         isLoadingUniqueExercises: false,
       });
-
-      console.log('[ClientDetailStore] All data loaded for client:', clientId);
     } catch (err) {
       console.error('[ClientDetailStore] Error loading client:', err);
       set({
@@ -393,8 +388,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
   // Refresh specific section
   refreshSection: async (section) => {
     const { clientId, coachId } = get();
-    console.log('[refreshSection]', section, { clientId, coachId });
-    if (!clientId || !coachId) {
+        if (!clientId || !coachId) {
       console.warn('[refreshSection] Missing IDs, skipping');
       return;
     }
@@ -445,8 +439,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         case 'files':
           set({ isLoadingFiles: true });
           const filesData = await getClientFiles(clientId, coachId);
-          console.log('[refreshSection] files result:', filesData.length, filesData);
-          set({ files: filesData, isLoadingFiles: false });
+                    set({ files: filesData, isLoadingFiles: false });
           break;
 
         case 'check-ins':
@@ -508,8 +501,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
     // Fetch data for just this one date (start and end are the same date)
     const dateStr = formatDateForApi(targetDate);
 
-    console.log('[ClientDetailStore] Fetching training data for single date:', dateStr);
-
+    
     set({ isLoadingTraining: true });
 
     try {
@@ -562,8 +554,7 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         isLoadingTraining: false,
       });
 
-      console.log('[ClientDetailStore] Fetched training data for date:', dateStr);
-    } catch (err) {
+          } catch (err) {
       console.error('[ClientDetailStore] Error fetching training data for date:', err);
       set({ isLoadingTraining: false });
     }
@@ -619,14 +610,6 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
       newRangeEnd = extendResult.newRangeEnd || extendResult.endDate;
     }
 
-    console.log('[ClientDetailStore] Fetching training data:', {
-      currentRange: loadedTrainingRange,
-      targetDate: formatDateForApi(targetDate),
-      hasDataForDate,
-      forceFetch,
-      fetchRange: { start: fetchStartDate, end: fetchEndDate },
-    });
-
     set({ isLoadingTraining: true });
 
     try {
@@ -646,13 +629,11 @@ export const useClientDetailStore = create<ClientDetailStore>((set, get) => ({
         endDate: newRangeEnd,
       };
 
-      set({ 
+      set({
         trainingCalendar: mergedCalendar,
         loadedTrainingRange: newRange,
         isLoadingTraining: false,
       });
-
-      console.log('[ClientDetailStore] Updated training range to:', newRange);
     } catch (err) {
       console.error('[ClientDetailStore] Error extending training range:', err);
       set({ isLoadingTraining: false });

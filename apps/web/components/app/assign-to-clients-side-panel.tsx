@@ -8,6 +8,7 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { SidePanel } from '@/components/app/side-panel';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCoachClients } from '@/hooks/use-coach-clients';
+import { useTerminology } from '@/hooks/use-terminology';
 import { Athlete } from '@/api/coach/coach-client-service';
 import { Spinner } from '@/components/ui/spinner';
 import { UserPlus, Info } from 'lucide-react';
@@ -47,6 +48,7 @@ export const AssignToClientsSidePanel = ({
     alertMessage
 }: AssignToClientsSidePanelProps) => {
     const t = useTranslations();
+    const terminology = useTerminology();
     const { clients, isLoading } = useCoachClients();
     const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
     const [internalAssigning, setInternalAssigning] = useState(false);
@@ -87,7 +89,7 @@ export const AssignToClientsSidePanel = ({
     const columns: ColumnDefinition<Athlete>[] = useMemo(() => [
         {
             id: 'name',
-            label: t('athletes.title'),
+            label: terminology.plural,
             icon: <UserPlus className="size-3" />,
             width: { class: 'w-full', pixel: '100%' },
             getSortValue: (row) => row.name.toLowerCase(),
@@ -97,7 +99,7 @@ export const AssignToClientsSidePanel = ({
                     <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
                     <div className="flex items-center gap-2">
                         <UserPlus className="size-3 text-muted-foreground" />
-                        <span className="text-xs uppercase text-muted-foreground">{t('athletes.title')}</span>
+                        <span className="text-xs uppercase text-muted-foreground">{terminology.plural}</span>
                     </div>
                 </div>
             ),
@@ -175,7 +177,7 @@ export const AssignToClientsSidePanel = ({
                                 columns={columns}
                                 getRowId={(row) => row.id}
                                 gridKey="assign-to-clients"
-                                searchPlaceholder={t('metrics.searchAthletes')} // Utilizing existing string or generic
+                                searchPlaceholder={terminology.searchPlural}
                                 enableSearch={true}
                                 enableEditColumns={false}
                                 enableExport={false}
@@ -199,7 +201,7 @@ export const AssignToClientsSidePanel = ({
                                         handleToggleClient(row.id);
                                     }
                                 }}
-                                emptyMessage={t('metrics.noAthletesFound')}
+                                emptyMessage={terminology.noPluralFound}
                                 rowHeight="54px"
                                 compactMode={true}
                                 showPagination={false}

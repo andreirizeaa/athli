@@ -22,6 +22,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useFeatureAccess } from '@/lib/permissions/feature-gate';
 
 const PhotoComparisonPage = () => {
   const t = useTranslations();
@@ -33,8 +34,16 @@ const PhotoComparisonPage = () => {
   const queryClient = useQueryClient();
   const { user } = useUserProfile();
   const coachId = user?.id;
+  const { hasAccess: hasPhotoTrackingAccess, isLoading: isLoadingAccess } = useFeatureAccess('photo_tracking');
 
   const { photos, isLoading } = useClientPhotos(clientId);
+
+  // Redirect if user doesn't have access
+  useEffect(() => {
+    if (!isLoadingAccess && !hasPhotoTrackingAccess) {
+      router.push(`/athletes/${clientId}/photos`);
+    }
+  }, [hasPhotoTrackingAccess, isLoadingAccess, clientId, router]);
 
   // Group photos by date
   const groupedPhotos = useMemo(() => {
@@ -152,7 +161,7 @@ const PhotoComparisonPage = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingAccess || !hasPhotoTrackingAccess) {
     return null;
   }
 

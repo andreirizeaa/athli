@@ -3,9 +3,8 @@ import { apiFetch } from '@/api/api-client';
 export interface CoachPreferences {
     theme: 'light' | 'dark' | 'system';
     language: string;
-    timezone?: string;
-    units: 'metric' | 'imperial';
     color_preset: string;
+    client_terminology: 'athlete' | 'client' | 'member';
 }
 
 export async function getCoachPreferences() {

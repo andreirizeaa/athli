@@ -3,9 +3,10 @@ import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Play } from 'lucide-react-native';
+import { ChevronLeft, Play, LayoutGrid, ChevronRight } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { PressableScale } from 'pressto';
+import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
@@ -13,6 +14,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { Separator } from '@/components/ui/separator';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
+import { PlatformIcon } from '@/components/ui/platform-icon';
 import { getClientUniqueExercises, type UniqueExercise } from '@/services/client/client-training-service';
 import { useExerciseThumbnails } from '@/hooks/useExerciseThumbnails';
 
@@ -113,6 +115,10 @@ export default function ClientProgressScreen() {
     });
   }, [router]);
 
+  const handleViewAllPress = useCallback(() => {
+    router.push(`/client/${id}/all-exercise-history` as any);
+  }, [router, id]);
+
   const renderExerciseItem = useCallback(({ item }: { item: UniqueExercise }) => {
     const thumbnailUrl = getThumbnailUrl(item.rawThumbnailUrl);
 
@@ -147,17 +153,38 @@ export default function ClientProgressScreen() {
   }, [getThumbnailUrl, handleExercisePress, handleThumbnailPress, themeColors]);
 
   const ListHeader = useMemo(() => (
-    <View style={styles.searchContainer}>
-      <SearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        placeholder={t('general.searchPlaceholder')}
-      />
-      <Text style={[styles.countText, { color: themeColors.mutedText }]}>
-        {filteredExercises.length} {filteredExercises.length === 1 ? t('library.exercise') : t('library.exercises')}
-      </Text>
+    <View>
+      <View style={styles.searchContainer}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={t('general.searchPlaceholder')}
+        />
+      </View>
+      {/* All Exercises option */}
+      {exercises.length > 0 && !searchQuery.trim() && (
+        <>
+          <PressableScale onPress={handleViewAllPress} style={styles.exerciseItem}>
+            <SquircleView cornerSmoothing={1} style={[styles.allExercisesIcon, { backgroundColor: themeColors.surfacePrimary }]}>
+              <PlatformIcon
+                sf="square.grid.2x2.fill"
+                IconComponent={LayoutGrid}
+                size={24}
+                color={themeColors.text}
+              />
+            </SquircleView>
+            <View style={styles.infoContainer}>
+              <Text style={[styles.exerciseName, { color: themeColors.text }]} numberOfLines={1}>
+                {t('clientDetail.sections.allExercises')}
+              </Text>
+            </View>
+            <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+          </PressableScale>
+          <Separator style={styles.separator} />
+        </>
+      )}
     </View>
-  ), [themeColors, searchQuery, filteredExercises.length, t]);
+  ), [themeColors, searchQuery, filteredExercises.length, exercises.length, t, handleViewAllPress]);
 
   const ListEmpty = useMemo(() => (
     isLoading || isLoadingFromStore ? (
@@ -245,11 +272,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: 16,
     paddingBottom: 8,
-    gap: 8,
-  },
-  countText: {
-    ...typography.p2,
-    fontSize: 13,
   },
   listContent: {
     paddingBottom: 40,
@@ -280,6 +302,17 @@ const styles = StyleSheet.create({
   exerciseName: {
     ...typography.p1,
     fontWeight: '600',
+  },
+  allExercisesIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  allExercisesSubtitle: {
+    ...typography.p3,
+    marginTop: 2,
   },
   separator: {
     marginLeft: 86,

@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { Search, X, ArrowUpDown, TrendingUp, HelpCircle, Play, Loader2 } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Search, X, ArrowUpDown, TrendingUp, HelpCircle, Play, Loader2, LayoutGrid, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,6 +21,86 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VideoModal } from '@/components/training/builder/video-modal';
 import { getExerciseById, type Exercise } from '@/api/exercise/exercise-search';
 import { useExerciseThumbnails } from '@/hooks/use-exercise-thumbnails';
+import { useFeatureAccess } from '@/lib/permissions/feature-gate';
+
+// Screenshot preview component for upgrade prompt
+function ScreenshotPreview() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setDims({ w: el.offsetWidth, h: el.offsetHeight });
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { w, h } = dims;
+  const r = 8;
+
+  return (
+    <div ref={containerRef} className="relative">
+      {w > 0 && h > 0 && (
+        <svg
+          className="pointer-events-none absolute top-0 left-0 z-10"
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          fill="none"
+        >
+          <defs>
+            <linearGradient id="border-grad-exercise-history" x1="0.5" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="rgb(192,132,252)" />
+              <stop offset="100%" stopColor="rgb(165,180,252)" />
+            </linearGradient>
+          </defs>
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-exercise-history)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [0, -1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+          <motion.rect
+            x={1.5}
+            y={1.5}
+            width={w - 3}
+            height={h - 3}
+            rx={r}
+            ry={r}
+            pathLength={1}
+            stroke="url(#border-grad-exercise-history)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="0.15 0.85"
+            animate={{ strokeDashoffset: [-0.5, -1.5] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          />
+        </svg>
+      )}
+      <img
+        src="/app-screenshots/client/exercise-history/light.png"
+        alt="Exercise history feature preview"
+        className="block w-full h-auto rounded-lg border dark:hidden"
+      />
+      <img
+        src="/app-screenshots/client/exercise-history/dark.png"
+        alt="Exercise history feature preview"
+        className="hidden w-full h-auto rounded-lg border dark:block"
+      />
+    </div>
+  );
+}
 
 // Helper functions
 
@@ -90,10 +172,12 @@ const formatCombinationLabel = (combo: string): string => {
 
 const ClientProgressPage = () => {
   const params = useParams<{ clientId: string; contactId: string }>();
+  const router = useRouter();
   const isInbox = !!params.contactId;
 
   const { user } = useUserProfile();
   const { uniqueExercises: exercises, athlete } = useClientProfileContext();
+  const { hasAccess: hasExerciseHistoryAccess, isLoading: isLoadingAccess } = useFeatureAccess('exercise_history');
 
   // Load exercise thumbnails
   const { getThumbnailUrl } = useExerciseThumbnails(exercises);
@@ -101,10 +185,14 @@ const ClientProgressPage = () => {
   // UI state
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
+  const [isViewAll, setIsViewAll] = useState<boolean>(true);
 
   // Data state
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
+  const [allExerciseHistories, setAllExerciseHistories] = useState<Map<string, HistoryEntry[]>>(new Map());
+  const [isLoadingAllHistories, setIsLoadingAllHistories] = useState<boolean>(false);
+  const [gridFieldSelections, setGridFieldSelections] = useState<Map<string, 'field1' | 'field2'>>(new Map());
 
   // Chart controls
   const [selectedCombination, setSelectedCombination] = useState<string>('');
@@ -157,6 +245,44 @@ const ClientProgressPage = () => {
     };
     loadHistory();
   }, [selectedExerciseId, athlete?.id, user?.id]);
+
+  // Load all exercise histories when in View All mode
+  useEffect(() => {
+    const loadAllHistories = async () => {
+      if (!isViewAll || !athlete?.id || !user?.id || exercises.length === 0) {
+        return;
+      }
+      // Skip if already loaded
+      if (allExerciseHistories.size === exercises.length) {
+        return;
+      }
+      setIsLoadingAllHistories(true);
+      try {
+        const historyMap = new Map<string, HistoryEntry[]>();
+        await Promise.all(
+          exercises.map(async (exercise) => {
+            try {
+              const data = await getExerciseHistory({
+                clientId: athlete.id,
+                coachId: user.id,
+                exerciseId: exercise.id,
+              });
+              historyMap.set(exercise.id, data);
+            } catch (error) {
+              console.error(`Failed to load history for ${exercise.name}:`, error);
+              historyMap.set(exercise.id, []);
+            }
+          })
+        );
+        setAllExerciseHistories(historyMap);
+      } catch (error) {
+        console.error('Failed to load all exercise histories:', error);
+      } finally {
+        setIsLoadingAllHistories(false);
+      }
+    };
+    loadAllHistories();
+  }, [isViewAll, athlete?.id, user?.id, exercises]);
 
   // Filter exercises by search
   const filteredExercises = useMemo(() => {
@@ -488,6 +614,167 @@ const ClientProgressPage = () => {
     },
   };
 
+  // Helper to get available fields for an exercise (for grid view toggle)
+  const getExerciseFields = (exerciseId: string): { field1: string; field2: string } | null => {
+    const exerciseHistory = allExerciseHistories.get(exerciseId) || [];
+    let field1Label = '';
+    let field2Label = '';
+
+    for (const entry of exerciseHistory) {
+      const sets = entry.exercise_data?.sets || [];
+      for (const set of sets) {
+        // Check trackable fields
+        if (set.trackableField1?.label && set.trackableField1.label !== 'Optional') {
+          field1Label = set.trackableField1.label;
+        }
+        if (set.trackableField2?.label && set.trackableField2.label !== 'Optional') {
+          field2Label = set.trackableField2.label;
+        }
+        // Fallback to weight/reps
+        if (!field1Label && !field2Label) {
+          const weight = extractValue(set.weight);
+          const reps = extractValue(set.reps);
+          if (weight > 0 && reps > 0) {
+            field1Label = 'kg';
+            field2Label = 'Reps';
+          }
+        }
+        if (field1Label && field2Label) break;
+      }
+      if (field1Label && field2Label) break;
+    }
+
+    if (field1Label && field2Label) {
+      return { field1: field1Label, field2: field2Label };
+    }
+    return null;
+  };
+
+  // Helper to get chart data for any exercise (for grid view)
+  const getExerciseChartData = (exerciseId: string, selectedField?: 'field1' | 'field2'): { data: { date: string; value: number; timestamp: number }[]; label: string } => {
+    const exerciseHistory = allExerciseHistories.get(exerciseId) || [];
+    const dateGroups: Map<string, { sum: number; count: number; timestamp: number; dateLabel: string }> = new Map();
+    let detectedLabel = '';
+    const fields = getExerciseFields(exerciseId);
+    const isDual = fields !== null;
+    const useField = selectedField || 'field1';
+
+    exerciseHistory.forEach((entry) => {
+      const sets = entry.exercise_data?.sets || [];
+      sets.forEach((set) => {
+        let value = 0;
+
+        // Try trackable fields first
+        const hasTrackable1 = set.trackableField1?.label && set.trackableField1.label !== 'Optional';
+        const hasTrackable2 = set.trackableField2?.label && set.trackableField2.label !== 'Optional';
+
+        if (hasTrackable1 || hasTrackable2) {
+          if (isDual) {
+            if (useField === 'field1' && hasTrackable1) {
+              value = parseNumericValue(set.trackableField1.completed ?? set.trackableField1.prescribed);
+              if (!detectedLabel) detectedLabel = formatLabel(set.trackableField1.label);
+            } else if (useField === 'field2' && hasTrackable2) {
+              value = parseNumericValue(set.trackableField2.completed ?? set.trackableField2.prescribed);
+              if (!detectedLabel) detectedLabel = formatLabel(set.trackableField2.label);
+            } else if (hasTrackable1) {
+              value = parseNumericValue(set.trackableField1.completed ?? set.trackableField1.prescribed);
+              if (!detectedLabel) detectedLabel = formatLabel(set.trackableField1.label);
+            } else if (hasTrackable2) {
+              value = parseNumericValue(set.trackableField2.completed ?? set.trackableField2.prescribed);
+              if (!detectedLabel) detectedLabel = formatLabel(set.trackableField2.label);
+            }
+          } else {
+            if (hasTrackable1) {
+              value = parseNumericValue(set.trackableField1.completed ?? set.trackableField1.prescribed);
+              if (!detectedLabel) detectedLabel = formatLabel(set.trackableField1.label);
+            } else if (hasTrackable2) {
+              value = parseNumericValue(set.trackableField2.completed ?? set.trackableField2.prescribed);
+              if (!detectedLabel) detectedLabel = formatLabel(set.trackableField2.label);
+            }
+          }
+        } else {
+          // Fallback to weight, reps, etc.
+          const weight = extractValue(set.weight);
+          const reps = extractValue(set.reps);
+          if (isDual && fields?.field1 === 'kg' && fields?.field2 === 'Reps') {
+            if (useField === 'field1' && weight > 0) {
+              value = weight;
+              if (!detectedLabel) detectedLabel = 'Kg';
+            } else if (useField === 'field2' && reps > 0) {
+              value = reps;
+              if (!detectedLabel) detectedLabel = 'Reps';
+            }
+          } else {
+            if (weight > 0) {
+              value = weight;
+              if (!detectedLabel) detectedLabel = 'Kg';
+            } else if (reps > 0) {
+              value = reps;
+              if (!detectedLabel) detectedLabel = 'Reps';
+            }
+          }
+        }
+
+        if (value > 0) {
+          const timestamp = new Date(entry.date).getTime();
+          const dateLabel = format(new Date(entry.date), 'MMM d');
+          const existing = dateGroups.get(entry.date);
+          if (existing) {
+            existing.sum += value;
+            existing.count++;
+          } else {
+            dateGroups.set(entry.date, { sum: value, count: 1, timestamp, dateLabel });
+          }
+        }
+      });
+    });
+
+    const data = Array.from(dateGroups.values())
+      .map(group => ({
+        date: group.dateLabel,
+        value: Math.round((group.sum / group.count) * 10) / 10,
+        timestamp: group.timestamp
+      }))
+      .sort((a, b) => a.timestamp - b.timestamp);
+
+    return { data, label: detectedLabel || 'Value' };
+  };
+
+  // Helper to get stats for any exercise (for grid view)
+  const getExerciseStats = (exerciseId: string) => {
+    const exerciseHistory = allExerciseHistories.get(exerciseId) || [];
+    let totalWeight = 0;
+    let totalReps = 0;
+    let weightCount = 0;
+    let repsCount = 0;
+    let maxWeight = 0;
+
+    exerciseHistory.forEach((entry) => {
+      const sets = entry.exercise_data?.sets || [];
+      sets.forEach((set) => {
+        const weight = extractValue(set.weight);
+        const reps = extractValue(set.reps);
+
+        if (weight > 0) {
+          totalWeight += weight;
+          weightCount++;
+          maxWeight = Math.max(maxWeight, weight);
+        }
+        if (reps > 0) {
+          totalReps += reps;
+          repsCount++;
+        }
+      });
+    });
+
+    return {
+      avgWeight: weightCount > 0 ? totalWeight / weightCount : null,
+      avgReps: repsCount > 0 ? totalReps / repsCount : null,
+      maxWeight: maxWeight > 0 ? maxWeight : null,
+      sessionCount: exerciseHistory.length,
+    };
+  };
+
   const { yAxisDomain, yAxisTicks } = useMemo(() => {
     if (chartData.length === 0) return { yAxisDomain: ['auto', 'auto'], yAxisTicks: [] };
     const values = chartData.map(d => d.value);
@@ -555,6 +842,28 @@ const ClientProgressPage = () => {
     return parts.join(', ') || '-';
   };
 
+  // Show upgrade prompt for users without access
+  if (!isLoadingAccess && !hasExerciseHistoryAccess) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center p-8">
+        <div className="w-full max-w-lg rounded-lg border bg-card p-6 shadow-lg">
+          <div className="space-y-2 mb-4">
+            <h2 className="text-lg font-semibold">Upgrade to Pro</h2>
+            <p className="text-sm text-muted-foreground">
+              Track exercise progress over time with detailed charts and history logs for every exercise your client performs.
+            </p>
+          </div>
+          <ScreenshotPreview />
+          <div className="flex justify-end gap-3 mt-4">
+            <Button onClick={() => router.push('/settings/billing')}>
+              View Plans
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (exercises.length === 0) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center p-8">
@@ -597,6 +906,26 @@ const ClientProgressPage = () => {
             <Separator className="absolute bottom-[-1px] left-0 right-0" />
           </div>
           <div className="flex-1 overflow-y-auto flex flex-col">
+            {/* View All option */}
+            <div className="flex-shrink-0">
+              <button
+                onClick={() => {
+                  setIsViewAll(true);
+                  setSelectedExerciseId(null);
+                }}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors text-left',
+                  isViewAll
+                    ? 'bg-accent/50 border-l-2 border-l-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                )}
+              >
+                <LayoutGrid className="size-4 flex-shrink-0" />
+                <span className="text-sm font-medium">All Exercises</span>
+              </button>
+              <Separator className="w-full" />
+            </div>
+            {/* Exercises list */}
             <div className="space-y-0 flex-1 overflow-y-auto">
               {filteredExercises.length === 0 ? (
                 <div className="flex items-center justify-center py-8 px-4">
@@ -604,12 +933,15 @@ const ClientProgressPage = () => {
                 </div>
               ) : (
                 filteredExercises.map((exercise) => {
-                  const isSelected = selectedExerciseId === exercise.id;
+                  const isSelected = !isViewAll && selectedExerciseId === exercise.id;
 
                   return (
                     <React.Fragment key={exercise.id}>
                       <button
-                        onClick={() => setSelectedExerciseId(exercise.id)}
+                        onClick={() => {
+                          setSelectedExerciseId(exercise.id);
+                          setIsViewAll(false);
+                        }}
                         className={cn(
                           'w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors text-left group/exercise',
                           isSelected
@@ -645,7 +977,210 @@ const ClientProgressPage = () => {
 
         {/* Main content */}
         <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-          {selectedExercise && history.length > 0 ? (
+          {isViewAll ? (
+            /* View All Grid */
+            <div className="flex-1 overflow-auto p-4">
+              {isLoadingAllHistories ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-10 w-10 animate-spin text-foreground" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {filteredExercises.map((exercise) => {
+                    const exerciseFields = getExerciseFields(exercise.id);
+                    const selectedField = gridFieldSelections.get(exercise.id) || 'field1';
+                    const { data: exerciseChartData, label: exerciseYAxisLabel } = getExerciseChartData(exercise.id, selectedField);
+                    const stats = getExerciseStats(exercise.id);
+                    const exerciseChartConfig: ChartConfig = {
+                      value: {
+                        label: exerciseYAxisLabel,
+                        color: 'var(--primary)',
+                      },
+                    };
+
+                    // Calculate Y-axis domain and ticks for this exercise
+                    let exerciseYAxisDomain: [number | string, number | string] = ['auto', 'auto'];
+                    let exerciseYAxisTicks: number[] = [];
+                    if (exerciseChartData.length > 0) {
+                      const values = exerciseChartData.map(d => d.value);
+                      const min = Math.min(...values);
+                      const max = Math.max(...values);
+                      const range = max - min;
+
+                      if (range === 0) {
+                        exerciseYAxisDomain = [Math.max(0, min - 10), max + 10];
+                        exerciseYAxisTicks = [min];
+                      } else {
+                        const roughStep = range / 4;
+                        const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+                        const normalizedStep = roughStep / magnitude;
+                        let step = magnitude;
+                        if (normalizedStep < 1.5) step *= 1;
+                        else if (normalizedStep < 3) step *= 2;
+                        else if (normalizedStep < 7) step *= 5;
+                        else step *= 10;
+
+                        const niceMin = Math.floor(min / step) * step;
+                        const niceMax = Math.ceil(max / step) * step;
+                        exerciseYAxisDomain = [niceMin, niceMax];
+                        for (let v = niceMin; v <= niceMax; v += step) {
+                          exerciseYAxisTicks.push(v);
+                        }
+                      }
+                    }
+
+                    return (
+                      <div key={exercise.id} className="border rounded-lg p-4 bg-background flex flex-col gap-4">
+                        {/* Card Header */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 group/thumbnail">
+                            <div
+                              className="relative h-9 w-9 shrink-0 cursor-pointer"
+                              onClick={(e) => handleThumbnailClick(exercise, e)}
+                            >
+                              <Avatar className="h-9 w-9 rounded-md">
+                                <AvatarImage src={getThumbnailUrl(exercise.rawThumbnailUrl)} alt={exercise.name} className="object-cover" />
+                                <AvatarFallback className="rounded-md text-xs">
+                                  {exercise.name.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              {/* Hover overlay with play icon */}
+                              <div className="absolute inset-0 rounded-md bg-primary/80 opacity-0 group-hover/thumbnail:opacity-100 transition-opacity flex items-center justify-center">
+                                <Play className="size-4 text-primary-foreground fill-primary-foreground" />
+                              </div>
+                            </div>
+                            <span className="text-sm font-semibold">{exercise.name}</span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            onClick={() => {
+                              setSelectedExerciseId(exercise.id);
+                              setIsViewAll(false);
+                            }}
+                          >
+                            View
+                            <ChevronRight className="size-4" />
+                          </Button>
+                        </div>
+
+                        {/* Stats Row */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {stats.avgWeight !== null && (
+                              <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-muted/50 border">
+                                <TrendingUp className="size-3 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">Avg Weight:</span>
+                                <span className="text-xs font-semibold">{stats.avgWeight.toFixed(1)} kg</span>
+                              </div>
+                            )}
+                            {stats.avgReps !== null && (
+                              <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-muted/50 border">
+                                <TrendingUp className="size-3 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">Avg Reps:</span>
+                                <span className="text-xs font-semibold">{Math.round(stats.avgReps)}</span>
+                              </div>
+                            )}
+                            {stats.sessionCount > 0 && (
+                              <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-muted/50 border">
+                                <span className="text-xs text-muted-foreground">Sessions:</span>
+                                <span className="text-xs font-semibold">{stats.sessionCount}</span>
+                              </div>
+                            )}
+                          </div>
+                          {/* Y-axis toggle for dual fields */}
+                          {exerciseFields && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">Y-Axis:</span>
+                              <Tabs
+                                value={selectedField}
+                                onValueChange={(v) => {
+                                  setGridFieldSelections(prev => {
+                                    const next = new Map(prev);
+                                    next.set(exercise.id, v as 'field1' | 'field2');
+                                    return next;
+                                  });
+                                }}
+                              >
+                                <TabsList className="h-7">
+                                  <TabsTrigger
+                                    value="field1"
+                                    className="text-xs h-6 px-2 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary"
+                                  >
+                                    {formatLabel(exerciseFields.field1)}
+                                  </TabsTrigger>
+                                  <TabsTrigger
+                                    value="field2"
+                                    className="text-xs h-6 px-2 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary"
+                                  >
+                                    {formatLabel(exerciseFields.field2)}
+                                  </TabsTrigger>
+                                </TabsList>
+                              </Tabs>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Chart */}
+                        <div className="w-full border rounded-lg p-4 bg-background relative z-0">
+                          {exerciseChartData.length > 0 ? (
+                            <ChartContainer
+                              config={exerciseChartConfig}
+                              className="w-full h-[200px]"
+                            >
+                              <LineChart
+                                accessibilityLayer
+                                data={exerciseChartData}
+                                margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
+                              >
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.5} />
+                                <XAxis
+                                  dataKey="date"
+                                  tickLine={false}
+                                  axisLine={false}
+                                  tickMargin={8}
+                                  interval="preserveStartEnd"
+                                  tick={{ fill: 'currentColor', fontSize: 11 }}
+                                />
+                                <YAxis
+                                  tickLine={false}
+                                  axisLine={false}
+                                  tickMargin={8}
+                                  domain={exerciseYAxisDomain}
+                                  ticks={exerciseYAxisTicks.length > 0 ? exerciseYAxisTicks : undefined}
+                                  tickFormatter={(value) => value.toFixed(0)}
+                                  tick={{ fill: 'currentColor', fontSize: 11 }}
+                                  label={{ value: exerciseYAxisLabel, angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: 'currentColor', fontSize: 11 } }}
+                                />
+                                <ChartTooltip
+                                  cursor={false}
+                                  content={<ChartTooltipContent hideLabel />}
+                                />
+                                <Line
+                                  dataKey="value"
+                                  type="monotoneX"
+                                  stroke="var(--color-value)"
+                                  strokeWidth={2}
+                                  dot={false}
+                                />
+                              </LineChart>
+                            </ChartContainer>
+                          ) : (
+                            <div className="flex items-center justify-center h-[200px]">
+                              <div className="text-sm text-muted-foreground text-center">
+                                No data available
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : selectedExercise && history.length > 0 ? (
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               {/* Top header - Exercise name and variant tabs - height matches search bar container */}
               <div className="px-4 border-b flex items-center gap-3 flex-shrink-0 min-h-[61px]">

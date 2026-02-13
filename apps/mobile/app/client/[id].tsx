@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ChevronLeft,
@@ -27,13 +26,26 @@ import { PressableScale, PressableOpacity } from 'pressto';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
+import { useThemePreference, useTranslations, useClientDetailStore, useEntitlements } from '@/stores';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
+import { UpgradeDialog } from '@/components/permissions/upgrade-dialog';
+import { Avatar } from '@/components/ui/avatar';
 import { createNewChat } from '@/services/chats-service';
+
+// Feature gating map - which menu items require which features
+const FEATURE_GATES: Record<string, string> = {
+  'progress': 'exercise_history',
+  'metrics': 'habits_metrics',
+  'habits': 'habits_metrics',
+  'photos': 'photo_tracking',
+  'files': 'file_storage',
+  'check-ins': 'questionnaires',
+  'questionnaires': 'questionnaires',
+};
 
 type MenuItem = {
   id: string;
@@ -61,8 +73,15 @@ export default function ClientProfileScreen() {
 
   const iconColor = themeColors.text;
 
+  // Feature access
+  const { hasFeature } = useEntitlements();
+
   // Loading state for message button
   const [isLoadingChat, setIsLoadingChat] = useState(false);
+
+  // Upgrade dialog state
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [upgradeFeatureKey, setUpgradeFeatureKey] = useState<string | undefined>(undefined);
 
   // Load client data (including training) when screen mounts or id changes
   useEffect(() => {
@@ -114,6 +133,16 @@ export default function ClientProfileScreen() {
 
   const handleMenuItemPress = (item: MenuItem) => {
     haptics.medium();
+
+    // Check if this menu item requires feature access
+    const requiredFeature = FEATURE_GATES[item.id];
+    if (requiredFeature && !hasFeature(requiredFeature)) {
+      // Use menu item id for screenshot (e.g., 'metrics', 'habits', 'photos')
+      setUpgradeFeatureKey(item.id);
+      setShowUpgradeDialog(true);
+      return;
+    }
+
     router.push(item.route as any);
   };
 
@@ -305,21 +334,18 @@ export default function ClientProfileScreen() {
         {/* Profile Card */}
         <Card variant="profile">
           <View style={styles.avatarLarge}>
-            {client.avatarUrl ? (
-              <Image
-                source={{ uri: client.avatarUrl }}
-                style={styles.avatarLargeImage}
-                contentFit="cover"
-                contentPosition="center"
-                cachePolicy="memory-disk"
-              />
-            ) : (
-              <View style={[styles.avatarLargeImage, styles.avatarPlaceholder, { backgroundColor: themeColors.border }]}>
-                <Text style={[styles.avatarInitial, { color: themeColors.mutedText }]}>
-                  {client.name?.charAt(0)}
-                </Text>
-              </View>
-            )}
+            <Avatar
+              uri={client.avatarUrl}
+              size={80}
+              borderRadius={40}
+              fallback={
+                <View style={[styles.avatarLargeImage, styles.avatarPlaceholder, { backgroundColor: themeColors.border }]}>
+                  <Text style={[styles.avatarInitial, { color: themeColors.mutedText }]}>
+                    {client.name?.charAt(0)}
+                  </Text>
+                </View>
+              }
+            />
           </View>
           <Text style={[styles.profileName, { color: themeColors.text }]}>
             {client.name}
@@ -423,7 +449,14 @@ export default function ClientProfileScreen() {
           />
         </View>
       </View>
-    </View>
+
+      {/* Upgrade Dialog */}
+      <UpgradeDialog
+        visible={showUpgradeDialog}
+        onClose={() => setShowUpgradeDialog(false)}
+        featureKey={upgradeFeatureKey}
+      />
+      </View>
   );
 }
 

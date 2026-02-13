@@ -97,7 +97,7 @@ export const InvoicesCard = () => {
                   <span className="text-sm w-[25%] flex-shrink-0">
                     {format(new Date(invoice.created * 1000), 'd MMM, yyyy')}
                   </span>
-                  <span className="text-xs text-muted-foreground w-[25%] flex-shrink-0">
+                  <span className="text-sm w-[25%] flex-shrink-0">
                     {format(new Date(invoice.period_start * 1000), 'MMM d')} - {format(new Date(invoice.period_end * 1000), 'MMM d, yyyy')}
                   </span>
                   <span className="text-sm font-medium w-[20%] flex-shrink-0">
@@ -111,10 +111,9 @@ export const InvoicesCard = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 text-xs gap-1.5"
+                        className="h-7 text-xs gap-1.5 mr-[-10px]"
                         onClick={() => window.open(invoice.hosted_invoice_url!, '_blank')}
                       >
-                        <FileText className="h-3.5 w-3.5" />
                         View
                         <ExternalLink className="h-3 w-3" />
                       </Button>

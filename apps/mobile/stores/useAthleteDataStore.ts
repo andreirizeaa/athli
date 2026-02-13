@@ -52,16 +52,14 @@ export const useAthleteDataStore = create<AthleteDataStore>((set, get) => ({
 
   // Load all essential athlete data
   loadAthleteData: async (clientId: string, coachId: string) => {
-    const { isInitialLoadComplete } = get();
+    const { isInitialLoadComplete, isLoading } = get();
 
-    // Skip if already loaded
-    if (isInitialLoadComplete) {
-      console.log('[AthleteDataStore] Initial load already complete, skipping');
+    // Skip if already loaded or currently loading (prevents race condition)
+    if (isInitialLoadComplete || isLoading) {
       return;
     }
 
     set({ isLoading: true, error: null });
-    console.log('[AthleteDataStore] Loading athlete data...');
 
     try {
       const { startDate, endDate } = getDateRange();
@@ -91,8 +89,6 @@ export const useAthleteDataStore = create<AthleteDataStore>((set, get) => ({
         isInitialLoadComplete: true,
         error: null,
       });
-
-      console.log('[AthleteDataStore] Athlete data loaded successfully');
     } catch (error: any) {
       console.error('[AthleteDataStore] Error loading athlete data:', error);
       set({

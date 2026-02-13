@@ -21,6 +21,7 @@ import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useTerminology } from '@/hooks/useTerminology';
 import { getExercises, deleteExercises, duplicateExercises, starExercises, archiveExercises } from '@/services/coach/coach-exercise-service';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
@@ -137,6 +138,7 @@ export const ExercisesTab = () => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const terminology = useTerminology();
   const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
@@ -150,9 +152,7 @@ export const ExercisesTab = () => {
   const { data: exercises = [], refetch } = useQuery({
     queryKey: ['exercises'],
     queryFn: async () => {
-      console.log('[ExercisesTab] Fetching exercises...');
       const data = await getExercises();
-      console.log('[ExercisesTab] Received exercises:', data.length, 'items');
       return data;
     },
     enabled: isAuthenticated,
@@ -176,13 +176,6 @@ export const ExercisesTab = () => {
       exercise.equipment?.toLowerCase().includes(lowerQuery)
     );
   }, [exercises, searchQuery]);
-
-  console.log('[ExercisesTab] Render:', {
-    isAuthenticated,
-    totalExercises: exercises.length,
-    filteredExercises: filteredExercises.length,
-    searchQuery
-  });
 
   // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
@@ -356,7 +349,7 @@ export const ExercisesTab = () => {
 
     const dropdownOptions: DropdownMenuOption[] = [
       {
-        label: t('general.assign'),
+        label: terminology.assignToPlural,
         icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
         onPress: () => handleAssign(exercise),
       },

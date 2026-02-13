@@ -333,7 +333,7 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
 
       {/* Upgrade Dialog */}
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Payments Add-on Required</DialogTitle>
             <DialogDescription>

@@ -10,7 +10,8 @@ import {
   Clock,
   RotateCw,
   Dumbbell,
-  UserX
+  UserX,
+  CheckCircle2
 } from 'lucide-react';
 
 export interface TriggerOption {
@@ -31,6 +32,7 @@ export interface Habit {
 }
 
 export const TRIGGER_OPTIONS: TriggerOption[] = [
+  { id: 'checkin-complete', name: 'Check-in completed', icon: CheckCircle2 },
   { id: 'missed-workout', name: 'Missed workout', icon: Activity },
   { id: 'missed-check-in', name: 'Missed check in', icon: CalendarX },
   { id: 'missed-habit-log', name: 'Missed habit log', icon: CalendarX },
@@ -128,6 +130,49 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
         edges: [
           { id: 'e-trigger-1', source: 'trigger-1', target: 'action-1', type: 'smoothstep' },
           { id: 'e-1-2', source: 'action-1', target: 'action-2', type: 'smoothstep' },
+        ],
+      },
+      {
+        name: 'Check-in Completed Thank You',
+        description: 'Send a thank you message when a client completes their check-in',
+        requiresEditing: false,
+        nodes: [
+          {
+            id: 'trigger-1',
+            type: 'trigger',
+            position: { x: 400, y: 50 },
+            data: {
+              label: 'Trigger',
+              subtitle: 'Check-in completed',
+              icon: CheckCircle2,
+              option: {
+                id: 'checkin-complete',
+                name: 'Check-in completed',
+                icon: CheckCircle2,
+              },
+              onClick: () => { },
+            },
+          },
+          {
+            id: 'action-1',
+            type: 'action',
+            position: { x: 400, y: 200 },
+            data: {
+              label: 'Action 1',
+              subtitle: 'Send message',
+              icon: MessageSquare,
+              option: {
+                id: 'send-message',
+                name: 'Send message',
+                icon: MessageSquare,
+              },
+              messageText: 'Thanks for completing your check-in! I\'ll review it and get back to you soon.',
+              onClick: () => { },
+            },
+          },
+        ],
+        edges: [
+          { id: 'e-trigger-1', source: 'trigger-1', target: 'action-1', type: 'smoothstep' },
         ],
       },
       {

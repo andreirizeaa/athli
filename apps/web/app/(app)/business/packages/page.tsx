@@ -470,29 +470,29 @@ const PackagesPage = () => {
         gridPadding={true}
         compactPagination={true}
         emptyState={emptyState}
-        searchBarExtra={(
-          <Tabs value={showArchived ? 'archived' : 'active'} onValueChange={(v) => { setShowArchived(v === 'archived'); setSelectedIds(new Set()); }}>
-            <TabsList>
-              <TabsTrigger
-                value="active"
-                className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary"
-              >
-                {t('business.packages.filter.active')}
-              </TabsTrigger>
-              <TabsTrigger
-                value="archived"
-                className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary"
-              >
-                {t('business.packages.filter.archived')}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        )}
         filterBarActions={(
-          <Button onClick={() => setIsAddOpen(true)} className="gap-2">
-            <Plus className="size-4" />
-            <span>{t('business.packages.addPackage')}</span>
-          </Button>
+          <div className="flex items-center gap-3">
+            <Tabs value={showArchived ? 'archived' : 'active'} onValueChange={(v) => { setShowArchived(v === 'archived'); setSelectedIds(new Set()); }}>
+              <TabsList>
+                <TabsTrigger
+                  value="active"
+                  className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary"
+                >
+                  {t('business.packages.filter.active')}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="archived"
+                  className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary"
+                >
+                  {t('business.packages.filter.archived')}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button onClick={() => setIsAddOpen(true)} className="gap-2">
+              <Plus className="size-4" />
+              <span>{t('business.packages.addPackage')}</span>
+            </Button>
+          </div>
         )}
         selectionActions={
           selectedIds.size > 0 ? (
@@ -555,7 +555,7 @@ const PackagesPage = () => {
 
       {/* Upgrade Dialog */}
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {!hasPaymentsAddon ? 'Payments Add-on Required' : 'Connect Stripe First'}
