@@ -209,13 +209,15 @@ export function FreeTrialStep({ onContinue }: FreeTrialStepProps) {
               </div>
             </div>
             {isCodeApplied && (
-              <motion.p
+              <motion.div
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-sm text-muted-foreground"
+                className="p-3 rounded-xl border border-emerald-500 bg-emerald-50 dark:bg-emerald-950"
               >
-                {referrerName ? `Referred by ${referrerName}. ` : ''}You will receive <span className="font-bold text-base text-emerald-500">$20</span> in credits to go towards your second paid month.
-              </motion.p>
+                <p className="text-sm text-muted-foreground">
+                  {referrerName ? `Referred by ${referrerName}. ` : ''}You will receive <span className="font-bold text-base text-emerald-500">$20</span> in credits to go towards your second paid month.
+                </p>
+              </motion.div>
             )}
             {referralError && (
               <motion.p

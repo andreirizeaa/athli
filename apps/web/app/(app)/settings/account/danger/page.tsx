@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -71,7 +71,10 @@ const DangerPage = () => {
   const [deleteStep, setDeleteStep] = useState<1 | 2 | 3>(1);
   const [confirmInput, setConfirmInput] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isCheckingCanDelete, setIsCheckingCanDelete] = useState(false);
   const [showCancelPlanDialog, setShowCancelPlanDialog] = useState(false);
+  const [showClientSubscriptionsDialog, setShowClientSubscriptionsDialog] = useState(false);
+  const [activeClientSubscriptionCount, setActiveClientSubscriptionCount] = useState(0);
   const [step1ButtonDisabled, setStep1ButtonDisabled] = useState(true);
 
   // Fetch invoices to get period_end date (fallback when subscription.current_period_end is null)
@@ -117,11 +120,34 @@ const DangerPage = () => {
     }
   }, [isDeleteDialogOpen, deleteStep]);
 
-  const handleDeleteClick = () => {
+  const handleDeleteClick = async () => {
+    // First check: platform subscription must be cancelled
     if (!canDelete) {
       setShowCancelPlanDialog(true);
-    } else {
+      return;
+    }
+
+    // Second check: no active client subscriptions
+    setIsCheckingCanDelete(true);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const result = await authService.canDeleteAccount(session?.access_token);
+
+      if (!result.canDelete && result.reason === 'active_client_subscriptions') {
+        setActiveClientSubscriptionCount(result.activeSubscriptionCount || 0);
+        setShowClientSubscriptionsDialog(true);
+        return;
+      }
+
+      // All checks passed, show delete dialog
       setIsDeleteDialogOpen(true);
+    } catch (error) {
+      console.error('Error checking can delete:', error);
+      // On error, allow them to proceed - the backend will validate again
+      setIsDeleteDialogOpen(true);
+    } finally {
+      setIsCheckingCanDelete(false);
     }
   };
 
@@ -180,9 +206,13 @@ const DangerPage = () => {
                 size="sm"
                 onClick={handleDeleteClick}
                 className="ml-4 gap-2"
-                disabled={isDeletingAccount}
+                disabled={isDeletingAccount || isCheckingCanDelete}
               >
-                <Trash2 className="h-4 w-4" />
+                {isCheckingCanDelete ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
                 {t('settings.danger.deleteAccount')}
               </Button>
             </div>
@@ -300,8 +330,13 @@ const DangerPage = () => {
                   variant="destructive"
                   onClick={handleDeleteAccount}
                   disabled={isDeletingAccount}
+                  className="min-w-[150px]"
                 >
-                  {isDeletingAccount ? t('settings.danger.deleting') : t('settings.danger.deleteMyAccount')}
+                  {isDeletingAccount ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    t('settings.danger.deleteMyAccount')
+                  )}
                 </Button>
               </DialogFooter>
             </>
@@ -324,6 +359,29 @@ const DangerPage = () => {
             </Button>
             <Button onClick={handleGoToBilling}>
               {t('settings.danger.goToBilling')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Active Client Subscriptions Dialog - shown when coach has clients with active subscriptions */}
+      <Dialog open={showClientSubscriptionsDialog} onOpenChange={setShowClientSubscriptionsDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('settings.danger.activeClientSubscriptions')}</DialogTitle>
+            <DialogDescription>
+              {t('settings.danger.cancelClientSubscriptionsFirst', { count: activeClientSubscriptionCount })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowClientSubscriptionsDialog(false)}>
+              {t('settings.danger.cancel')}
+            </Button>
+            <Button onClick={() => {
+              setShowClientSubscriptionsDialog(false);
+              router.push('/billing');
+            }}>
+              {t('settings.danger.goToPayments')}
             </Button>
           </DialogFooter>
         </DialogContent>

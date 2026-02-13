@@ -230,25 +230,27 @@ const ReferAndEarnPage = () => {
 
   const { referrals, referredBy, credits, isLoading } = useReferrals();
 
+  // Extend Referral type with isReferrer flag for display
+  type ReferralItem = Referral & { isReferrer?: boolean };
+
   // Combine referrals made and credit received from being referred into one list
   const allReferralItems = useMemo(() => {
-    const items: Referral[] = [...referrals];
-    // Add the "referred by" entry if it exists (credit was received)
+    const items: ReferralItem[] = referrals.map(r => ({ ...r, isReferrer: false }));
+    // Add the "referred by" entry if it exists
     if (referredBy) {
       items.push({
         id: referredBy.id,
         coach_name: referredBy.coach_name,
         profile_picture_url: referredBy.profile_picture_url,
-        status: 'credit_received',
+        status: referredBy.status,
         credit_earned_cents: referredBy.credit_earned_cents,
         converted_at: referredBy.converted_at,
         created_at: referredBy.created_at,
+        isReferrer: true,
       });
     }
     return items;
   }, [referrals, referredBy]);
-
-  const hasReferrals = allReferralItems.length > 0 || credits.active_cents > 0;
 
   const copyToClipboard = async (text: string, onSuccess: () => void, successMessage: string) => {
     try {
@@ -335,10 +337,14 @@ const ReferAndEarnPage = () => {
         return t('status.trialStarted');
       case 'trial_ended':
         return t('status.trialEnded');
+      case 'trial_cancelled':
+        return t('status.trialCancelled');
       case 'converted':
         return t('status.converted');
       case 'credit_received':
         return t('status.creditReceived');
+      case 'accepted':
+        return t('status.accepted');
       default:
         return status;
     }
@@ -349,13 +355,17 @@ const ReferAndEarnPage = () => {
       case 'trial_started':
         return 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300';
       case 'trial_ended':
-        return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+        return 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300';
+      case 'trial_cancelled':
+        return 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300';
       case 'converted':
         return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300';
       case 'credit_received':
+        return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300';
+      case 'accepted':
         return 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300';
       default:
-        return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+        return 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400';
     }
   };
 
@@ -366,13 +376,17 @@ const ReferAndEarnPage = () => {
         return formatDate(referral.converted_at ?? null);
       case 'trial_ended':
         return formatDate(referral.trial_ended_at ?? null);
+      case 'trial_cancelled':
+        return formatDate(referral.trial_cancelled_at ?? null);
+      case 'accepted':
+        return formatDate(referral.created_at);
       case 'trial_started':
       default:
         return formatDate(referral.trial_started_at ?? null);
     }
   };
 
-  const columns: ColumnDefinition<Referral>[] = [
+  const columns: ColumnDefinition<ReferralItem>[] = [
     {
       id: 'coach',
       label: t('columns.coach'),
@@ -389,7 +403,10 @@ const ReferAndEarnPage = () => {
               {row.coach_name.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span className="text-sm font-medium">{row.coach_name}</span>
+          <span className="text-sm font-medium">
+            {row.coach_name}
+            {row.isReferrer && <span className="text-muted-foreground font-normal"> ({t('referrer')})</span>}
+          </span>
         </div>
       ),
     },
@@ -408,6 +425,24 @@ const ReferAndEarnPage = () => {
       ),
     },
     {
+      id: 'credits',
+      label: t('columns.credits'),
+      width: { class: 'w-[100px]', pixel: '100px' },
+      sortable: true,
+      getSortValue: (row) => row.credit_earned_cents,
+      renderCell: (row) => (
+        <div className="flex items-center w-full justify-center">
+          {(row.status === 'converted' || row.status === 'credit_received') && row.credit_earned_cents > 0 ? (
+            <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+              +${(row.credit_earned_cents / 100).toFixed(0)}
+            </span>
+          ) : (
+            <span className="text-sm">--</span>
+          )}
+        </div>
+      ),
+    },
+    {
       id: 'date',
       label: t('columns.date'),
       width: { class: 'w-[120px]', pixel: '120px' },
@@ -415,7 +450,7 @@ const ReferAndEarnPage = () => {
       getSortValue: (row) => new Date(row.created_at).getTime(),
       renderCell: (row) => (
         <div className="flex items-center w-full justify-end">
-          <span className="text-sm text-muted-foreground">{getEventDate(row)}</span>
+          <span className="text-sm">{getEventDate(row)}</span>
         </div>
       ),
     },
@@ -513,13 +548,13 @@ const ReferAndEarnPage = () => {
                       )}
                       <span>{t('copyCode')}</span>
                     </Button>
-                    {hasReferrals && (
+                    {allReferralItems.length > 0 && (
                       <Button
                         onClick={() => setReferralsDialogOpen(true)}
                         variant="outline"
                         className="flex-1 h-11 gap-2"
                       >
-                        <span>View Referrals</span>
+                        <span>{t('viewReferrals')}</span>
                         <ChevronRight className="size-4" />
                       </Button>
                     )}
@@ -557,7 +592,7 @@ const ReferAndEarnPage = () => {
 
       {/* Referrals Dialog */}
       <Dialog open={referralsDialogOpen} onOpenChange={setReferralsDialogOpen}>
-        <DialogContent className="w-[750px] h-[500px] !max-w-none flex flex-col">
+        <DialogContent className="w-[800px] h-[70vh] !max-w-none flex flex-col">
           <DialogHeader>
             <DialogTitle>{t('yourReferrals')}</DialogTitle>
           </DialogHeader>

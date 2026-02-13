@@ -11,6 +11,7 @@ export function useReferrals(options?: { enabled?: boolean }) {
     queryFn: getReferrals,
     enabled: isEnabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: 'always', // Always fetch fresh data when component mounts
   });
 
   return {

@@ -94,6 +94,70 @@ export class UserController {
   });
 
   /**
+   * Check if user can delete their account
+   * Returns blockers if there are active subscriptions that need to be cancelled first
+   */
+  canDeleteAccount = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+
+    // Check for active client subscriptions (recurring payments to this coach)
+    // We need to check subscriptions that are:
+    // - active or trialing status
+    // - NOT cancelled (status != 'cancelled')
+    // - NOT scheduled to cancel (cancel_at_period_end = false)
+    const { data: activeSubscriptions, error: subError } = await supabase
+      .from('client_subscriptions')
+      .select(`
+        id,
+        client_id,
+        package_id,
+        status,
+        cancel_at_period_end,
+        current_period_end,
+        coach_packages!inner (name)
+      `)
+      .eq('coach_id', userId)
+      .in('status', ['active', 'trialing', 'past_due'])
+      .eq('cancel_at_period_end', false);
+
+    if (subError) {
+      console.error('Error checking active subscriptions:', subError);
+      return internalError(res, { message: 'Failed to check account status' });
+    }
+
+    const activeCount = activeSubscriptions?.length || 0;
+
+    if (activeCount > 0) {
+      // Get unique package names
+      const packageNames = [...new Set(activeSubscriptions?.map((s: any) => s.coach_packages?.name).filter(Boolean))];
+
+      success(res, {
+        data: {
+          canDelete: false,
+          reason: 'active_client_subscriptions',
+          activeSubscriptionCount: activeCount,
+          packageNames,
+          message: `You have ${activeCount} active client subscription${activeCount === 1 ? '' : 's'}. Please cancel all client subscriptions before deleting your account.`,
+        },
+      });
+      return;
+    }
+
+    success(res, {
+      data: {
+        canDelete: true,
+      },
+    });
+  });
+
+  /**
    * Delete user account
    */
   deleteAccount = asyncHandler(async (req: Request, res: Response) => {

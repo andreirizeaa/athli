@@ -17,6 +17,7 @@ import { useGlobalData } from '@/providers/global-data-provider';
 import { useThemeConfig } from '@/components/app/active-theme';
 import { PresetValue } from '@/lib/theme';
 import { AIPanelProvider, useAIPanel } from '@/lib/providers/ai-panel-provider';
+import { UnpaidInvoiceOverlay } from './unpaid-invoice-overlay';
 
 // Re-export types for backward compatibility
 export type {
@@ -95,7 +96,10 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
             setCurrentLanguage={setLocale}
           />
         )}
-        <div className="flex-1 overflow-y-auto min-h-0">{children}</div>
+        <div className="flex-1 overflow-y-auto min-h-0 relative">
+          {children}
+          <UnpaidInvoiceOverlay />
+        </div>
       </SidebarInsetWithBorder>
       {isLoggingOut && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
