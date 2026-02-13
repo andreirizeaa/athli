@@ -172,8 +172,11 @@ const InboxPage = () => {
   // State-based tab management (no URL routing for tabs to avoid flicker)
   const [activeClientTab, setActiveClientTab] = React.useState('overview');
 
+  // Archived conversations toggle (moved up for useConversations dependency)
+  const [showArchivedConversations, setShowArchivedConversations] = React.useState(false);
+
   // Fetch real conversations from backend API
-  const { conversations, isLoading: isLoadingConversations, refetch: refetchConversations } = useConversations();
+  const { conversations, isLoading: isLoadingConversations, refetch: refetchConversations } = useConversations({ includeArchived: showArchivedConversations });
 
   // Keep athletes list for client profile view
   const { clients: athletes, isLoading: isLoadingClients } = useCoachClients();
@@ -2077,6 +2080,9 @@ const InboxPage = () => {
               setSearchQuery={setSearchQuery}
               filteredContacts={filteredContacts}
               selectedContactId={selectedContactId}
+              showArchivedConversations={showArchivedConversations}
+              setShowArchivedConversations={setShowArchivedConversations}
+              isLoading={isLoadingConversations}
               onOpenBroadcast={() => {
                 if (!hasBroadcastAccess) {
                   setIsBroadcastUpgradeOpen(true);

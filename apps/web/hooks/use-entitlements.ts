@@ -8,8 +8,31 @@ import {
   type CoachEntitlements,
   type PlatformSubscription,
   type AddonType,
+  type PlanType,
+  type BillingInterval,
 } from '@/api/billing/billing-service';
 import { useGlobalData } from '@/providers/global-data-provider';
+import { PRO_PRICING, MAX_PRICING, ADDONS } from '@athli/shared-types/pricing-constants';
+
+// Helper to calculate plan price based on type and client limit
+function getPlanPriceCents(plan: PlanType, clientLimit: number, interval: BillingInterval | null): number {
+  if (plan === 'starter' || !interval) return 0;
+
+  const pricing = plan === 'pro' ? PRO_PRICING : MAX_PRICING;
+  const tier = pricing[clientLimit];
+
+  if (!tier) {
+    // Find closest tier
+    const tiers = Object.keys(pricing).map(Number).sort((a, b) => a - b);
+    const closest = tiers.reduce((prev, curr) =>
+      Math.abs(curr - clientLimit) < Math.abs(prev - clientLimit) ? curr : prev
+    );
+    const closestTier = pricing[closest];
+    return (interval === 'year' ? closestTier[1] * 12 : closestTier[0]) * 100;
+  }
+
+  return (interval === 'year' ? tier[1] * 12 : tier[0]) * 100;
+}
 
 // Feature names for display
 const FEATURE_NAMES: Record<string, string> = {
@@ -192,9 +215,15 @@ export function useSubscription() {
         clientLimit: 5,
         totalMonthlyCents: 0,
         activeAddons: [] as AddonType[],
+        cancellingAddons: [] as AddonType[],
         billingInterval: null,
         isCancelling: false,
         nextBillingDate: null,
+        // Scheduled changes
+        hasScheduledChanges: false,
+        scheduledPlan: null as string | null,
+        scheduledClientLimit: null as number | null,
+        scheduledPriceCents: null as number | null,
       };
     }
 
@@ -202,20 +231,91 @@ export function useSubscription() {
       ?.filter(a => a.is_active)
       .map(a => a.addon_type) || [];
 
-    const addonTotal = subscription.addons
+    // Track which addons are scheduled for cancellation
+    const cancellingAddons = subscription.addons
+      ?.filter(a => a.is_active && a.cancel_at_period_end)
+      .map(a => a.addon_type) || [];
+
+    // Calculate addon total from active addons using pricing constants
+    // Map addon_type to ADDONS key: ai_assistant -> aiAssistant, etc.
+    const addonKeyMap: Record<AddonType, string> = {
+      ai_assistant: 'aiAssistant',
+      automations: 'automations',
+      payments: 'payments',
+    };
+
+    const activeAddonTypes = subscription.addons
       ?.filter(a => a.is_active)
-      .reduce((sum, a) => sum + a.price_cents, 0) || 0;
+      .map(a => a.addon_type) || [];
+
+    const addonTotalCents = activeAddonTypes.reduce((sum, addonType) => {
+      const addonKey = addonKeyMap[addonType];
+      const addon = ADDONS.find(a => a.key === addonKey);
+      if (!addon) return sum;
+      const price = subscription.billing_interval === 'year'
+        ? addon.annualPrice * 12 * 100
+        : addon.monthlyPrice * 100;
+      return sum + price;
+    }, 0);
+
+    // Calculate current plan price from pricing constants (source of truth)
+    // This ensures consistency with the update page pricing
+    const currentPlanPriceCents = getPlanPriceCents(
+      subscription.plan_type as PlanType,
+      subscription.client_limit,
+      subscription.billing_interval
+    );
+
+    // Calculate scheduled price if there are pending changes
+    const hasScheduledChanges = !!(subscription.scheduled_plan_type || subscription.scheduled_client_limit || cancellingAddons.length > 0);
+
+    let scheduledPriceCents: number | null = null;
+    if (hasScheduledChanges) {
+      // Calculate what the price will be after scheduled changes
+      const futurePlan = subscription.scheduled_plan_type || subscription.plan_type;
+      const futureClientLimit = subscription.scheduled_client_limit || subscription.client_limit;
+
+      // Calculate future plan price
+      const futurePlanPriceCents = getPlanPriceCents(
+        futurePlan as PlanType,
+        futureClientLimit,
+        subscription.billing_interval
+      );
+
+      // Calculate future addon total (only addons not scheduled for cancellation)
+      const futureAddonTypes = subscription.addons
+        ?.filter(a => a.is_active && !a.cancel_at_period_end)
+        .map(a => a.addon_type) || [];
+
+      const futureAddonTotalCents = futureAddonTypes.reduce((sum, addonType) => {
+        const addonKey = addonKeyMap[addonType];
+        const addon = ADDONS.find(a => a.key === addonKey);
+        if (!addon) return sum;
+        const price = subscription.billing_interval === 'year'
+          ? addon.annualPrice * 12 * 100
+          : addon.monthlyPrice * 100;
+        return sum + price;
+      }, 0);
+
+      scheduledPriceCents = futurePlanPriceCents + futureAddonTotalCents;
+    }
 
     return {
       plan: subscription.plan_type,
       clientLimit: subscription.client_limit,
-      totalMonthlyCents: subscription.current_price_cents + addonTotal,
+      totalMonthlyCents: currentPlanPriceCents + addonTotalCents,
       activeAddons,
+      cancellingAddons,
       billingInterval: subscription.billing_interval,
       isCancelling: subscription.cancel_at_period_end,
       nextBillingDate: subscription.current_period_end
         ? new Date(subscription.current_period_end)
         : null,
+      // Scheduled changes
+      hasScheduledChanges,
+      scheduledPlan: subscription.scheduled_plan_type,
+      scheduledClientLimit: subscription.scheduled_client_limit,
+      scheduledPriceCents,
     };
   }, [subscription]);
 

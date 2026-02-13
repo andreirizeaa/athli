@@ -25,6 +25,7 @@ import {
 import { cn } from '@/lib/general/utils';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
+import Lottie from 'lottie-react';
 import { useCoachFlows } from '@/hooks/use-coach-flows';
 import { useCoachChecklist } from '@/hooks/use-coach-checklist';
 import { useTerminology } from '@/hooks/use-terminology';
@@ -132,9 +133,18 @@ const GetStartedPage = () => {
   const [openAccordion, setOpenAccordion] = useState<number | null>(1);
   const [selectedChecklistItem, setSelectedChecklistItem] = useState<string>('workoutAi');
   const [isNavigating, setIsNavigating] = useState(false);
+  const [giftAnimationData, setGiftAnimationData] = useState<object | null>(null);
   const t = useTranslations('getStarted');
   const { flows } = useCoachFlows();
   const { data: checklist } = useCoachChecklist();
+
+  // Load the gift animation
+  useEffect(() => {
+    fetch('/animations/gift-animation.json')
+      .then(res => res.json())
+      .then(data => setGiftAnimationData(data))
+      .catch(() => {});
+  }, []);
 
   // Find the New Client Sign Up flow ID dynamically
   const newClientSignUpFlow = flows.find(f => f.name === 'New Client Sign Up');
@@ -205,13 +215,13 @@ const GetStartedPage = () => {
   useEffect(() => {
     const routes = [
       '/training/workouts',
-      '/training/programs',
-      '/training/exercises',
-      '/forms/check-ins',
+      '/library/training/programs',
+      '/library/training/exercises',
+      '/library/forms/check-ins',
       '/flows',
-      '/habits',
-      '/metrics',
-      '/files',
+      '/library/habits',
+      '/library/metrics',
+      '/library/files',
     ];
     routes.forEach(route => router.prefetch(route));
     if (newClientSignUpFlow) {
@@ -285,15 +295,15 @@ const GetStartedPage = () => {
                 {/* Left Side - Checklist Items */}
                 <div className="flex-1 flex flex-col gap-1">
                   {[
-                    { icon: Bot, key: 'workoutAi', route: '/training' },
-                    { icon: Copy, key: 'programTemplates', route: '/training' },
-                    { icon: Dumbbell, key: 'customExercises', route: '/training' },
+                    { icon: Bot, key: 'workoutAi', route: '/library/training' },
+                    { icon: Copy, key: 'programTemplates', route: '/library/training' },
+                    { icon: Dumbbell, key: 'customExercises', route: '/library/training' },
                     { icon: Zap, key: 'automateOnboardings', route: '/flows' },
-                    { icon: FileCheck, key: 'checkInsForms', route: '/forms' },
+                    { icon: FileCheck, key: 'checkInsForms', route: '/library/forms' },
                     { icon: Workflow, key: 'powerfulFlows', route: '/flows' },
-                    { icon: Sprout, key: 'lifestyleHabits', route: '/habits' },
-                    { icon: BarChart3, key: 'trackMetrics', route: '/metrics' },
-                    { icon: File, key: 'onDemandResources', route: '/files' },
+                    { icon: Sprout, key: 'lifestyleHabits', route: '/library/habits' },
+                    { icon: BarChart3, key: 'trackMetrics', route: '/library/metrics' },
+                    { icon: File, key: 'onDemandResources', route: '/library/files' },
                   ].map((item) => {
                     const isCompleted = isChecklistItemCompleted(item.key);
                     return (
@@ -385,27 +395,45 @@ const GetStartedPage = () => {
         </div>
       </div>
 
-      {/* Live Chat Section - Centered at 50% */}
+      {/* Live Chat & Referral Section - Centered at 50% */}
       <div className="relative z-10 flex justify-center mb-8">
         <div className="w-[50%] min-w-[400px]">
-          <div
-            className="group relative flex h-[140px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:shadow-md cursor-pointer"
-            onClick={() => { }}
-          >
-            <div className="relative w-[140px] shrink-0 overflow-hidden">
-              <img
-                src="/images/live-chat.png"
-                alt="Live Chat"
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
+          <div className="flex gap-4">
+            {/* Live Chat Card */}
+            <div
+              className="group relative flex flex-1 h-[140px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:shadow-md cursor-pointer"
+              onClick={() => { }}
+            >
+              <div className="relative w-[140px] shrink-0 overflow-hidden">
+                <img
+                  src="/images/live-chat.png"
+                  alt={t('liveChat.title')}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+              </div>
+              <div className="flex flex-1 flex-col justify-center p-6">
+                <h2 className="text-xl font-bold text-foreground mb-1 flex items-center gap-2">
+                  {t('liveChat.title')}
+                </h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {t('liveChat.description')}
+                </p>
+              </div>
             </div>
-            <div className="flex flex-1 flex-col justify-center p-6">
-              <h2 className="text-xl font-bold text-foreground mb-1 flex items-center gap-2">
-                {t('liveChat.title')}
-              </h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {t('liveChat.description')}
-              </p>
+
+            {/* Refer & Earn Card */}
+            <div
+              className="group relative flex flex-col items-center justify-center h-[140px] w-[140px] shrink-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:shadow-md cursor-pointer"
+              onClick={() => router.push('/refer-and-earn')}
+            >
+              {giftAnimationData && (
+                <Lottie
+                  animationData={giftAnimationData}
+                  loop
+                  autoplay
+                  className="w-[140px] h-[140px] transition-transform duration-500 group-hover:scale-[1.15]"
+                />
+              )}
             </div>
           </div>
         </div>

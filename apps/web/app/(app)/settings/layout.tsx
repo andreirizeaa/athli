@@ -4,24 +4,19 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/general/utils';
-import { User, Building2, Search, Settings, ChevronDown, ChevronUp, LogOut, CreditCard } from 'lucide-react';
-import { UnsavedChangesProvider, useUnsavedChanges } from './context/unsaved-changes-context';
+import { Search, LogOut } from 'lucide-react';
+import { useUnsavedChanges } from './context/unsaved-changes-context';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 import { useLogout } from '@/lib/providers/logout-provider';
 
-interface SectionConfig {
+interface NavItem {
   id: string;
   href: string;
-  subSections?: SectionConfig[];
-}
-
-interface GroupConfig {
-  id: 'personal' | 'billing' | 'appSettings' | 'business';
-  icon: React.ComponentType<{ className?: string }>;
-  sections: SectionConfig[];
+  labelKey: string;
+  isSectionHeader?: boolean;
+  indent?: boolean;
 }
 
 type SettingsLayoutProps = {
@@ -34,7 +29,6 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
   const router = useRouter();
   const { hasUnsavedChanges, setHasUnsavedChanges } = useUnsavedChanges();
   const { triggerLogout } = useLogout();
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['account', 'company']));
   const [searchQuery, setSearchQuery] = useState('');
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
@@ -60,164 +54,45 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
     };
   }, [children]);
 
-  const groups: GroupConfig[] = [
-    {
-      id: 'personal',
-      icon: User,
-      sections: [
-        {
-          id: 'account',
-          href: '/settings/account/profile',
-          subSections: [
-            { id: 'accountProfile', href: '/settings/account/profile' },
-            { id: 'accountSecurity', href: '/settings/account/security' },
-            { id: 'accountInformation', href: '/settings/account/information' },
-            { id: 'accountDanger', href: '/settings/account/danger' },
-          ],
-        },
-        { id: 'notifications', href: '/settings/profile/notifications' },
-      ],
-    },
-    {
-      id: 'billing',
-      icon: CreditCard,
-      sections: [
-        { id: 'billing', href: '/settings/billing' },
-      ],
-    },
-    {
-      id: 'appSettings',
-      icon: Settings,
-      sections: [
-        { id: 'customisations', href: '/settings/app/customisations' },
-      ],
-    },
-    {
-      id: 'business',
-      icon: Building2,
-      sections: [
-        {
-          id: 'company',
-          href: '/settings/business/company/information',
-          subSections: [
-            { id: 'companyInformation', href: '/settings/business/company/information' },
-            { id: 'companyBranding', href: '/settings/business/company/branding' },
-            { id: 'companyTeam', href: '/settings/business/company/team' },
-          ],
-        },
-      ],
-    },
+  // Flat list of all navigation items
+  const navItems: NavItem[] = [
+    // Account section
+    { id: 'account', href: '/settings/account/profile', labelKey: 'settings.sections.account', isSectionHeader: true },
+    { id: 'accountProfile', href: '/settings/account/profile', labelKey: 'settings.sections.accountProfile', indent: true },
+    { id: 'accountSecurity', href: '/settings/account/security', labelKey: 'settings.sections.accountSecurity', indent: true },
+    { id: 'accountInformation', href: '/settings/account/information', labelKey: 'settings.sections.accountInformation', indent: true },
+    { id: 'accountDanger', href: '/settings/account/danger', labelKey: 'settings.sections.accountDanger', indent: true },
+    // Notifications
+    { id: 'notifications', href: '/settings/profile/notifications', labelKey: 'settings.sections.notifications' },
+    // Billing
+    { id: 'billing', href: '/settings/billing', labelKey: 'settings.sections.billing' },
+    // Customisations
+    { id: 'customisations', href: '/settings/app/customisations', labelKey: 'settings.sections.customisations' },
+    // Company section
+    { id: 'company', href: '/settings/business/company/information', labelKey: 'settings.sections.company', isSectionHeader: true },
+    { id: 'companyInformation', href: '/settings/business/company/information', labelKey: 'settings.sections.companyInformation', indent: true },
+    { id: 'companyBranding', href: '/settings/business/company/branding', labelKey: 'settings.sections.companyBranding', indent: true },
+    { id: 'companyTeam', href: '/settings/business/company/team', labelKey: 'settings.sections.companyTeam', indent: true },
   ];
 
-  const toggleExpand = (sectionId: string) => {
-    setExpandedSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(sectionId)) {
-        next.delete(sectionId);
-      } else {
-        next.add(sectionId);
-      }
-      return next;
-    });
-  };
-
-  const handleExpandKeyDown = (event: React.KeyboardEvent, sectionId: string) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      toggleExpand(sectionId);
-    }
-  };
-
-  // Filter groups and sections based on search query
-  const filteredGroups = useMemo(() => {
+  // Filter items based on search query
+  const filteredItems = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
-    const sectionsToExpand = new Set<string>();
-    
+
     if (!query) {
-      return { groups, sectionsToExpand };
+      return navItems;
     }
 
-    const filtered = groups
-      .map((group) => {
-        const matchingSections: SectionConfig[] = [];
-        
-        group.sections.forEach((section) => {
-          const sectionName = t(`settings.sections.${section.id}`).toLowerCase();
-          const matchesMain = sectionName.includes(query);
-          
-          if (section.subSections) {
-            const matchingSubSections = section.subSections.filter((subSection) => {
-              const subSectionName = t(`settings.sections.${subSection.id}`).toLowerCase();
-              return subSectionName.includes(query);
-            });
-            
-            if (matchesMain || matchingSubSections.length > 0) {
-              if (matchingSubSections.length > 0) {
-                sectionsToExpand.add(section.id);
-              }
-              matchingSections.push({
-                ...section,
-                subSections: matchesMain ? section.subSections : matchingSubSections,
-              });
-            }
-          } else if (matchesMain) {
-            matchingSections.push(section);
-          }
-        });
-
-        if (matchingSections.length > 0) {
-          return {
-            ...group,
-            sections: matchingSections,
-          };
-        }
-        return null;
-      })
-      .filter((group): group is GroupConfig => group !== null);
-    
-    return { groups: filtered, sectionsToExpand };
-  }, [searchQuery, groups, t]);
+    return navItems.filter((item) => {
+      const itemName = t(item.labelKey).toLowerCase();
+      return itemName.includes(query);
+    });
+  }, [searchQuery, navItems, t]);
 
   // Check if a path is active
   const isPathActive = (href: string) => {
     return pathname === href || pathname.startsWith(href + '/');
   };
-
-  // Check if a sub-section path is active (more precise - checks against siblings)
-  const isSubSectionActive = (href: string, allSubSections: SectionConfig[]) => {
-    if (pathname === href) return true;
-    if (!pathname.startsWith(href + '/')) return false;
-    // Check if any sibling sub-section is a more specific match
-    const hasMoreSpecificMatch = allSubSections.some((sibling) => {
-      if (sibling.href === href) return false;
-      return sibling.href.length > href.length &&
-        (pathname === sibling.href || pathname.startsWith(sibling.href + '/'));
-    });
-    return !hasMoreSpecificMatch;
-  };
-
-  // Check if company section should be expanded based on pathname
-  const isCompanyPath = pathname.startsWith('/settings/business/company');
-  // Check if account section should be expanded based on pathname
-  const isAccountPath = pathname.startsWith('/settings/account');
-
-  // Update expanded sections when search results change or when on company/account path
-  const effectiveExpandedSections = useMemo(() => {
-    const base = new Set(expandedSections);
-    if (searchQuery.trim()) {
-      filteredGroups.sectionsToExpand.forEach((id) => base.add(id));
-    }
-    if (isCompanyPath) {
-      base.add('company');
-    }
-    if (isAccountPath) {
-      base.add('account');
-    }
-    return base;
-  }, [searchQuery, expandedSections, filteredGroups.sectionsToExpand, isCompanyPath, isAccountPath]);
-
-  const shouldExpandCompany = effectiveExpandedSections.has('company');
-  const shouldExpandAccount = effectiveExpandedSections.has('account');
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (hasUnsavedChanges && pathname !== href) {
@@ -248,6 +123,11 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
         {/* Left Sidebar - 1/7 width */}
         <div ref={sidebarRef} className="w-[14.285714%] flex flex-col border-r bg-background">
           <div className="flex flex-col py-2 flex-1">
+            {/* Settings Title */}
+            <div className="px-4 mb-4">
+              <h1 className="text-[22px] font-semibold">{t('settings.title')}</h1>
+            </div>
+
             {/* Search Bar */}
             <div className="px-2 mb-2">
               <div className="relative flex items-center">
@@ -261,115 +141,98 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
                 />
               </div>
             </div>
-            {filteredGroups.groups.map((group, groupIndex) => {
-              const GroupIcon = group.icon;
-              return (
-                <div key={group.id} className={cn('flex flex-col', groupIndex > 0 && 'mt-4')}>
-                  {/* Group Title */}
-                  <div className="text-foreground/70 flex h-8 shrink-0 items-center px-4 text-xs font-medium">
-                    <GroupIcon className="size-4 shrink-0 mr-2" />
-                    <span>{t(`settings.groups.${group.id}`)}</span>
-                  </div>
-                  {/* Group Sections */}
-                  <div className="flex flex-col gap-0.5 px-2">
-                    {group.sections.map((section) => {
-                      const isActive = section.subSections
-                        ? section.subSections.some((sub) => isPathActive(sub.href))
-                        : isPathActive(section.href);
-                      const isExpanded = section.id === 'company'
-                        ? shouldExpandCompany
-                        : section.id === 'account'
-                        ? shouldExpandAccount
-                        : effectiveExpandedSections.has(section.id);
-                      const hasSubSections = section.subSections && section.subSections.length > 0;
-                      
-                      if (hasSubSections) {
-                        return (
-                          <div key={section.id} className="flex flex-col">
-                            <button
-                              type="button"
-                              onClick={() => toggleExpand(section.id)}
-                              onKeyDown={(e) => handleExpandKeyDown(e, section.id)}
-                              className={cn(
-                                'w-full text-left rounded-md p-2 h-8 text-xs transition-colors font-semibold flex items-center justify-between',
-                                'hover:bg-accent hover:text-accent-foreground',
-                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                !isActive && 'text-foreground'
-                              )}
-                              aria-label={t(`settings.sections.${section.id}`)}
-                              aria-expanded={isExpanded}
-                            >
-                              <span>{t(`settings.sections.${section.id}`)}</span>
-                              {isExpanded ? (
-                                <ChevronUp className="size-4 shrink-0" />
-                              ) : (
-                                <ChevronDown className="size-4 shrink-0" />
-                              )}
-                            </button>
-                            {isExpanded && (
-                              <div className="flex flex-col gap-0.5 pl-4 relative mt-1">
-                                <div className="absolute left-2 top-0 bottom-0 w-px bg-border" />
-                                {section.subSections?.map((subSection) => {
-                                  const isSubActive = isSubSectionActive(subSection.href, section.subSections || []);
-                                  return (
-                                    <Link
-                                      key={subSection.id}
-                                      href={subSection.href}
-                                      onClick={(e) => handleLinkClick(e, subSection.href)}
-                                      className={cn(
-                                        'w-full text-left rounded-md p-2 h-8 text-xs transition-colors font-semibold',
-                                        'hover:bg-accent hover:text-accent-foreground',
-                                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                        'data-[active=true]:bg-accent data-[active=true]:text-accent-foreground',
-                                        isSubActive && 'bg-accent text-accent-foreground',
-                                        !isSubActive && 'text-foreground'
-                                      )}
-                                      data-active={isSubActive}
-                                      aria-label={t(`settings.sections.${subSection.id}`)}
-                                      aria-current={isSubActive ? 'page' : undefined}
-                                    >
-                                      {t(`settings.sections.${subSection.id}`)}
-                                    </Link>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                      
-                      return (
-                        <Link
-                          key={section.id}
-                          href={section.href}
-                          onClick={(e) => handleLinkClick(e, section.href)}
-                          className={cn(
-                            'w-full text-left rounded-md p-2 h-8 text-xs transition-colors font-semibold',
-                            'hover:bg-accent hover:text-accent-foreground',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                            'data-[active=true]:bg-accent data-[active=true]:text-accent-foreground',
-                            isActive && 'bg-accent text-accent-foreground',
-                            !isActive && 'text-foreground'
-                          )}
-                          data-active={isActive}
-                          aria-label={t(`settings.sections.${section.id}`)}
-                          aria-current={isActive ? 'page' : undefined}
-                        >
-                          {t(`settings.sections.${section.id}`)}
-                        </Link>
+
+            <div className="flex flex-col gap-0.5 px-3">
+              {(() => {
+                const elements: React.ReactNode[] = [];
+                let i = 0;
+
+                while (i < filteredItems.length) {
+                  const item = filteredItems[i];
+
+                  if (item.isSectionHeader) {
+                    // Render section header
+                    elements.push(
+                      <div
+                        key={item.id}
+                        className="text-left rounded-md p-2 h-9 text-sm font-medium text-foreground"
+                      >
+                        {t(item.labelKey)}
+                      </div>
+                    );
+                    i++;
+
+                    // Collect all indented items following this header
+                    const indentedItems: NavItem[] = [];
+                    while (i < filteredItems.length && filteredItems[i].indent) {
+                      indentedItems.push(filteredItems[i]);
+                      i++;
+                    }
+
+                    // Render indented items with left border
+                    if (indentedItems.length > 0) {
+                      elements.push(
+                        <div key={`${item.id}-group`} className="ml-2.5 border-l border-border pl-1.5">
+                          {indentedItems.map((indentedItem) => {
+                            const isActive = isPathActive(indentedItem.href);
+                            return (
+                              <Link
+                                key={indentedItem.id}
+                                href={indentedItem.href}
+                                onClick={(e) => handleLinkClick(e, indentedItem.href)}
+                                className={cn(
+                                  'text-left rounded-md p-2 h-9 text-sm transition-colors font-medium block',
+                                  'hover:bg-accent hover:text-accent-foreground',
+                                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                  isActive && 'bg-accent text-accent-foreground',
+                                  !isActive && 'text-foreground'
+                                )}
+                                aria-label={t(indentedItem.labelKey)}
+                                aria-current={isActive ? 'page' : undefined}
+                              >
+                                {t(indentedItem.labelKey)}
+                              </Link>
+                            );
+                          })}
+                        </div>
                       );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                    }
+                  } else {
+                    // Regular top-level item
+                    const isActive = isPathActive(item.href);
+                    elements.push(
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        onClick={(e) => handleLinkClick(e, item.href)}
+                        className={cn(
+                          'text-left rounded-md p-2 h-9 text-sm transition-colors font-medium',
+                          'hover:bg-accent hover:text-accent-foreground',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          isActive && 'bg-accent text-accent-foreground',
+                          !isActive && 'text-foreground'
+                        )}
+                        aria-label={t(item.labelKey)}
+                        aria-current={isActive ? 'page' : undefined}
+                      >
+                        {t(item.labelKey)}
+                      </Link>
+                    );
+                    i++;
+                  }
+                }
+
+                return elements;
+              })()}
+            </div>
+
             {/* Logout Button */}
             <div className="mt-auto px-2 py-2 border-t">
               <button
                 type="button"
                 onClick={triggerLogout}
                 className={cn(
-                  'w-full text-left rounded-md p-2 h-8 text-xs transition-colors font-semibold flex items-center gap-2',
+                  'w-full text-left rounded-md p-2 h-9 text-sm transition-colors font-medium flex items-center gap-2',
                   'hover:bg-destructive/10 hover:text-destructive',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   'text-destructive'
@@ -397,9 +260,7 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
 };
 
 const SettingsLayout = ({ children }: SettingsLayoutProps) => {
-  // UnsavedChangesProvider is now in AppShell, so we just render the content
   return <SettingsLayoutContent>{children}</SettingsLayoutContent>;
 };
 
 export default SettingsLayout;
-

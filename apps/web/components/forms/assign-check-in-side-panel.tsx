@@ -460,7 +460,7 @@ export const AssignCheckInSidePanel = ({
           <Alert className="bg-primary/5 border-primary/20 text-primary mb-6">
             <Info className="size-4" />
             <AlertDescription className="min-w-0 line-clamp-4">
-              Check-ins created here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general check-in, navigate to the respective main page in <Link href="/forms" className="underline hover:no-underline"><strong>Library</strong></Link>.
+              Check-ins created here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general check-in, navigate to the respective main page in <Link href="/library/forms" className="underline hover:no-underline"><strong>Library</strong></Link>.
             </AlertDescription>
           </Alert>
         )}
@@ -475,7 +475,7 @@ export const AssignCheckInSidePanel = ({
               <Info className="size-4" />
               <AlertDescription className="min-w-0 line-clamp-4">
                 {t('athletes.profile.checkIns.noFormsMessage')}{' '}
-                <Link href="/forms" className="underline hover:no-underline">
+                <Link href="/library/forms" className="underline hover:no-underline">
                   <strong>{t('athletes.profile.checkIns.formsLink')}</strong>
                 </Link>
                 .

@@ -652,7 +652,7 @@ export const AddMetricSidePanel = ({
                   <Info className="size-4" />
                   <AlertDescription className="min-w-0 line-clamp-4">
                     {t('metrics.noLibraryMetrics')}{' '}
-                    <Link href="/metrics" className="underline hover:no-underline">
+                    <Link href="/library/metrics" className="underline hover:no-underline">
                       <strong>{t('metrics.libraryLink')}</strong>
                     </Link>
                     .
@@ -752,7 +752,7 @@ export const AddMetricSidePanel = ({
                 <Alert className="bg-primary/5 border-primary/20 text-primary">
                   <Info className="size-4" />
                   <AlertDescription className="min-w-0 line-clamp-4">
-                    Metrics added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general metric, navigate to the respective main page in <Link href="/metrics" className="underline hover:no-underline"><strong>Library</strong></Link>.
+                    Metrics added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general metric, navigate to the respective main page in <Link href="/library/metrics" className="underline hover:no-underline"><strong>Library</strong></Link>.
                   </AlertDescription>
                 </Alert>
               )}
@@ -807,7 +807,7 @@ export const AddMetricSidePanel = ({
                 <Alert className="bg-primary/5 border-primary/20 text-primary">
                   <Info className="size-4" />
                   <AlertDescription className="min-w-0 line-clamp-4">
-                    Metrics added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general metric, navigate to the respective main page in <Link href="/metrics" className="underline hover:no-underline"><strong>Library</strong></Link>.
+                    Metrics added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general metric, navigate to the respective main page in <Link href="/library/metrics" className="underline hover:no-underline"><strong>Library</strong></Link>.
                   </AlertDescription>
                 </Alert>
               )}

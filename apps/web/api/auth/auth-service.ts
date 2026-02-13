@@ -176,6 +176,21 @@ class AuthService {
         });
     }
 
+    async canDeleteAccount(token?: string): Promise<{
+        canDelete: boolean;
+        reason?: string;
+        activeSubscriptionCount?: number;
+        packageNames?: string[];
+        message?: string;
+    }> {
+        const response = await apiFetch('/user/can-delete-account', {
+            method: 'GET',
+            authenticated: !token,
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        });
+        return response.data;
+    }
+
     async deleteAccount(token?: string): Promise<AuthResponse> {
         return apiFetch('/user/delete-account', {
             method: 'DELETE',

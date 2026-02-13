@@ -81,6 +81,20 @@ function getAddonPricing(addon: AddonType, interval: BillingInterval): number {
 }
 
 /**
+ * Calculate total subscription cost (plan + all addons) in dollars
+ */
+function calculateTotalSubscriptionCost(
+  plan: PlanType,
+  clientLimit: number,
+  addons: AddonType[],
+  interval: BillingInterval
+): number {
+  const planPrice = getPlanPricing(plan, clientLimit, interval);
+  const addonsTotal = addons.reduce((sum, addon) => sum + getAddonPricing(addon, interval), 0);
+  return planPrice + addonsTotal;
+}
+
+/**
  * Backfill pending referral credits when a coach creates their first Stripe customer.
  * This handles the case where Coach A referred Coach B, Coach B paid (generating credits),
  * but Coach A was still on free trial with no Stripe customer ID at that time.
@@ -290,8 +304,11 @@ export const billingController = {
           referrer_credit_cents,
           trial_started_at,
           trial_ended_at,
+          trial_cancelled_at,
           converted_at,
-          created_at
+          created_at,
+          referred_coach_name,
+          referred_coach_profile_picture_url
         `)
         .eq('referrer_coach_id', coachId)
         .order('created_at', { ascending: false });
@@ -308,6 +325,8 @@ export const billingController = {
         .select(`
           id,
           referrer_coach_id,
+          referrer_coach_name,
+          referrer_coach_profile_picture_url,
           status,
           referred_credit_cents,
           referred_credit_applied_at,
@@ -317,7 +336,9 @@ export const billingController = {
         .eq('referred_coach_id', coachId)
         .maybeSingle() as { data: {
           id: string;
-          referrer_coach_id: string;
+          referrer_coach_id: string | null;
+          referrer_coach_name: string | null;
+          referrer_coach_profile_picture_url: string | null;
           status: string;
           referred_credit_cents: number;
           referred_credit_applied_at: string | null;
@@ -325,8 +346,8 @@ export const billingController = {
           created_at: string;
         } | null };
 
-      // Get referred coach names
-      const referredCoachIds = referrals?.map(r => r.referred_coach_id) || [];
+      // Get referred coach names (filter out null values from deleted coaches)
+      const referredCoachIds = (referrals?.map(r => r.referred_coach_id) || []).filter(Boolean) as string[];
       // Also get the referrer's name if this coach was referred
       if (referredBy?.referrer_coach_id) {
         referredCoachIds.push(referredBy.referrer_coach_id);
@@ -405,28 +426,33 @@ export const billingController = {
       const usedCredits = Math.max(0, totalEarnedCents - activeCredits);
 
       // Map referrals with coach profiles (people this coach referred)
+      // Prefer stored name/picture (preserved if coach deleted), fall back to user_profiles
       const mappedReferrals = referrals?.map(r => ({
         id: r.id,
-        coach_name: coachProfiles[r.referred_coach_id]?.name || 'Unknown',
-        profile_picture_url: coachProfiles[r.referred_coach_id]?.profile_picture_url || null,
+        coach_name: r.referred_coach_name || coachProfiles[r.referred_coach_id]?.name || 'Unknown',
+        profile_picture_url: r.referred_coach_profile_picture_url || coachProfiles[r.referred_coach_id]?.profile_picture_url || null,
         status: r.status,
         credit_earned_cents: r.referrer_credit_cents || 0,
         trial_started_at: r.trial_started_at,
         trial_ended_at: r.trial_ended_at,
+        trial_cancelled_at: r.trial_cancelled_at,
         converted_at: r.converted_at,
         created_at: r.created_at,
       })) || [];
 
-      // Build referredBy info if this coach was referred and has converted (paid)
-      // Show once status is 'converted', regardless of whether credit was applied to Stripe yet
+      // Build referredBy info if this coach was referred by someone
+      // Show immediately with 'accepted' status, or 'credit_received' once converted
       let referredByInfo = null;
-      if (referredBy && referredBy.status === 'converted') {
+      if (referredBy) {
+        const isConverted = referredBy.status === 'converted';
+        // Prefer stored values (preserved if referrer deletes account), fall back to live profile
+        const liveProfile = referredBy.referrer_coach_id ? coachProfiles[referredBy.referrer_coach_id] : null;
         referredByInfo = {
           id: referredBy.id,
-          coach_name: coachProfiles[referredBy.referrer_coach_id]?.name || 'Unknown',
-          profile_picture_url: coachProfiles[referredBy.referrer_coach_id]?.profile_picture_url || null,
-          status: 'credit_received' as const,
-          credit_earned_cents: referredBy.referred_credit_cents || 0,
+          coach_name: referredBy.referrer_coach_name || liveProfile?.name || 'Unknown',
+          profile_picture_url: referredBy.referrer_coach_profile_picture_url || liveProfile?.profile_picture_url || null,
+          status: isConverted ? 'credit_received' as const : 'accepted' as const,
+          credit_earned_cents: isConverted ? (referredBy.referred_credit_cents || 0) : 0,
           converted_at: referredBy.converted_at,
           created_at: referredBy.created_at,
         };
@@ -607,10 +633,17 @@ export const billingController = {
         const periodStart = firstLine?.period?.start || invoice.period_start;
         const periodEnd = firstLine?.period?.end || invoice.period_end;
 
+        // Get line item descriptions for open invoices
+        const lineItems = invoice.lines?.data?.map((line) => ({
+          description: line.description,
+          amount: line.amount,
+        })) || [];
+
         return {
           id: invoice.id,
           number: invoice.number,
           amount_paid: invoice.amount_paid,
+          amount_due: invoice.amount_due,
           currency: invoice.currency,
           status: invoice.status,
           created: invoice.created,
@@ -618,6 +651,7 @@ export const billingController = {
           period_end: periodEnd,
           hosted_invoice_url: invoice.hosted_invoice_url,
           invoice_pdf: invoice.invoice_pdf,
+          line_items: lineItems,
         };
       });
 
@@ -656,6 +690,15 @@ export const billingController = {
       return;
     }
 
+    // Get user info for email pre-population
+    // Email is in Supabase auth, name is in user_profiles
+    const [authUserResult, profileResult] = await Promise.all([
+      supabase.auth.admin.getUserById(coachId),
+      supabase.from('user_profiles').select('name').eq('id', coachId).single(),
+    ]);
+    const userEmail = authUserResult.data?.user?.email;
+    const userName = profileResult.data?.name;
+
     // Get or create Stripe customer
     let { data: existingSub } = await supabase
       .from('platform_subscriptions')
@@ -667,17 +710,14 @@ export const billingController = {
 
     if (existingSub?.stripe_customer_id) {
       stripeCustomerId = existingSub.stripe_customer_id;
+      // Ensure customer has email for checkout pre-population
+      if (userEmail) {
+        await stripe.customers.update(stripeCustomerId, { email: userEmail });
+      }
     } else {
-      // Get user info
-      const { data: user } = await supabase
-        .from('user_profiles')
-        .select('email, name')
-        .eq('id', coachId)
-        .single();
-
       const customer = await stripe.customers.create({
-        email: user?.email,
-        name: user?.name,
+        email: userEmail,
+        name: userName,
         metadata: {
           coach_id: coachId,
           source: 'athli_platform',
@@ -685,18 +725,9 @@ export const billingController = {
       });
       stripeCustomerId = customer.id;
 
-      // Create initial subscription record
-      await supabase.from('platform_subscriptions').insert({
-        coach_id: coachId,
-        stripe_customer_id: stripeCustomerId,
-        plan_type: 'starter',
-        client_limit: 5,
-        status: 'active',
-      });
-
-      // Backfill any pending referral credits that couldn't be applied earlier
-      // (e.g., this coach referred someone who paid while this coach was still on free trial)
-      await backfillPendingReferralCredits(coachId, stripeCustomerId, supabase, stripe);
+      // Don't create platform_subscriptions record here - wait until checkout completes
+      // The coach_id is stored in Stripe customer metadata so we can look it up later
+      // The webhook handler (customer.subscription.created) will create the record
     }
 
     // Build line items with inline pricing to show client count in product name
@@ -709,10 +740,11 @@ export const billingController = {
       ? (interval === 'year' ? planTier[1] * 12 * 100 : planTier[0] * 100)
       : 0;
 
-    // Plan names for display
-    const planDisplayName = plan === 'pro' ? 'Athli Pro Plan' : 'Athli Max Plan';
+    // Plan names for display - include client count for compliance
+    const planBaseName = plan === 'pro' ? 'Athli Pro Plan' : 'Athli Max Plan';
+    const planDisplayName = `${planBaseName} (${clientLimit} clients)`;
 
-    // Main plan with client count in description
+    // Main plan with client count in name for invoice clarity
     lineItems.push({
       price_data: {
         currency: 'usd',
@@ -818,6 +850,8 @@ export const billingController = {
   },
 
   // ─── Update Plan (Upgrade/Downgrade) ─────────────────────────
+  // Upgrades: Charge prorated difference immediately, grant new entitlements immediately
+  // Downgrades: No refund, keep current entitlements until next billing cycle
 
   updatePlan: async (req: Request, res: Response) => {
     const stripe = getStripeClient();
@@ -829,9 +863,10 @@ export const billingController = {
       interval: BillingInterval;
     };
 
+    // Get current subscription details
     const { data: subscription } = await supabase
       .from('platform_subscriptions')
-      .select('stripe_subscription_id, plan_type')
+      .select('stripe_subscription_id, plan_type, client_limit, billing_interval, current_price_cents')
       .eq('coach_id', coachId)
       .maybeSingle();
 
@@ -839,6 +874,27 @@ export const billingController = {
       res.status(400).json({ error: 'No active subscription to update' });
       return;
     }
+
+    // Get current addons to calculate total price
+    const { data: currentAddons } = await supabase
+      .from('platform_addons')
+      .select('addon_type')
+      .eq('coach_id', coachId)
+      .eq('is_active', true);
+
+    const currentAddonTypes = (currentAddons?.map(a => a.addon_type) || []) as AddonType[];
+    const currentInterval = (subscription.billing_interval || 'month') as BillingInterval;
+
+    // Calculate current and new total prices (plan only, addons stay the same)
+    const currentPlanPrice = getPlanPricing(
+      subscription.plan_type as PlanType,
+      subscription.client_limit,
+      currentInterval
+    );
+    const newPlanPrice = getPlanPricing(plan, clientLimit, interval);
+
+    // Determine if this is an upgrade or downgrade based on plan price
+    const isUpgrade = newPlanPrice > currentPlanPrice;
 
     // Get current subscription from Stripe
     const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
@@ -853,36 +909,209 @@ export const billingController = {
       return;
     }
 
-    // Calculate new price
-    const newPrice = getPlanPricing(plan, clientLimit, interval);
+    // Plan name formatting helper
+    const formatPlanName = (planType: string, clients: number) => {
+      const baseName = planType === 'pro' ? 'Athli Pro Plan' : planType === 'max' ? 'Athli Max Plan' : 'Athli Starter Plan';
+      return `${baseName} (${clients} clients)`;
+    };
 
-    // Update the subscription
-    await stripe.subscriptions.update(subscription.stripe_subscription_id, {
-      items: [
-        {
-          id: planItem.id,
-          price_data: {
-            currency: 'usd',
-            product: planItem.price.product as string,
-            unit_amount: newPrice * 100,
-            recurring: {
-              interval: interval,
-            },
-          },
-        },
-      ],
-      metadata: {
-        plan_type: plan,
-        client_limit: clientLimit.toString(),
-        billing_interval: interval,
-      },
-      proration_behavior: 'create_prorations',
+    // Find or create a persistent product for the plan (with client count in name)
+    const newPlanDisplayName = formatPlanName(plan, clientLimit);
+    const productSearchKey = `athli_platform_${plan}_${clientLimit}`;
+
+    let productId: string;
+    const existingProducts = await stripe.products.search({
+      query: `metadata['athli_product_key']:'${productSearchKey}'`,
     });
 
-    res.json({ success: true });
+    if (existingProducts.data.length > 0 && existingProducts.data[0].active) {
+      productId = existingProducts.data[0].id;
+    } else {
+      // Create a new persistent product with client count in name
+      const newProduct = await stripe.products.create({
+        name: newPlanDisplayName,
+        description: `Up to ${clientLimit} clients • Cancel anytime`,
+        metadata: {
+          athli_product_key: productSearchKey,
+          plan_type: plan,
+          client_limit: clientLimit.toString(),
+        },
+      });
+      productId = newProduct.id;
+    }
+
+    if (isUpgrade) {
+      // UPGRADE: Charge full price difference immediately (not prorated), grant new entitlements immediately
+      const priceDifferenceCents = (newPlanPrice - currentPlanPrice) * 100;
+
+      // Update the subscription without proration (new price takes effect next billing cycle)
+      await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+        items: [
+          {
+            id: planItem.id,
+            price_data: {
+              currency: 'usd',
+              product: productId,
+              unit_amount: newPlanPrice * 100,
+              recurring: {
+                interval: interval,
+              },
+            },
+          },
+        ],
+        metadata: {
+          plan_type: plan,
+          client_limit: clientLimit.toString(),
+          billing_interval: interval,
+        },
+        proration_behavior: 'none', // No Stripe proration - we charge manually
+      });
+
+      // Manually charge the full price difference immediately
+      if (priceDifferenceCents > 0) {
+        // Get the payment method from the subscription
+        const paymentMethodId = stripeSubscription.default_payment_method as string;
+        if (!paymentMethodId) {
+          throw new Error('No payment method on file. Please update your payment method.');
+        }
+
+        // Create invoice with the payment method set
+        const invoice = await stripe.invoices.create({
+          customer: stripeSubscription.customer as string,
+          collection_method: 'charge_automatically',
+          default_payment_method: paymentMethodId,
+        });
+
+        // Add the upgrade charge to the invoice with properly formatted description
+        const oldPlanName = formatPlanName(subscription.plan_type, subscription.client_limit);
+        const newPlanName = formatPlanName(plan, clientLimit);
+        // For upgrades, period should be from today to end of billing cycle
+        const now = Math.floor(Date.now() / 1000);
+        const upgradePeriod = stripeSubscription.current_period_end
+          ? { start: now, end: stripeSubscription.current_period_end }
+          : undefined;
+
+        logger.info({
+          coachId,
+          periodStart: now,
+          periodEnd: stripeSubscription.current_period_end,
+        }, 'updatePlan: Creating upgrade invoice with period');
+
+        await stripe.invoiceItems.create({
+          customer: stripeSubscription.customer as string,
+          invoice: invoice.id,
+          amount: priceDifferenceCents,
+          currency: 'usd',
+          description: `Plan upgrade: ${oldPlanName} → ${newPlanName}`,
+          ...(upgradePeriod && { period: upgradePeriod }),
+        });
+
+        // Finalize and pay the invoice immediately
+        await stripe.invoices.finalizeInvoice(invoice.id);
+        const paidInvoice = await stripe.invoices.pay(invoice.id, {
+          payment_method: paymentMethodId,
+        });
+
+        if (paidInvoice.status !== 'paid') {
+          logger.warn({ invoiceId: invoice.id, status: paidInvoice.status }, 'Upgrade invoice payment not completed');
+          throw new Error('Payment failed. Please check your payment method.');
+        }
+      }
+
+      // Update the platform_subscriptions record immediately
+      await supabase
+        .from('platform_subscriptions')
+        .update({
+          plan_type: plan,
+          client_limit: clientLimit,
+          billing_interval: interval,
+          current_price_cents: newPlanPrice * 100,
+          // Clear any scheduled changes since we're applying immediately
+          scheduled_plan_type: null,
+          scheduled_client_limit: null,
+        })
+        .eq('coach_id', coachId);
+
+      // Update coach_entitlements immediately for upgrades
+      const entitlementUpdates: Record<string, any> = {
+        plan_type: plan,
+        client_limit: clientLimit,
+      };
+
+      // Set features based on plan
+      if (plan === 'max') {
+        entitlementUpdates.has_ai_workout_builder = true;
+        entitlementUpdates.has_custom_exercises = true;
+        entitlementUpdates.has_questionnaires = true;
+        entitlementUpdates.has_habits_metrics = true;
+        entitlementUpdates.storage_limit_gb = 50;
+        entitlementUpdates.has_broadcast_messaging = true;
+        entitlementUpdates.has_ai_todo_list = true;
+        entitlementUpdates.has_priority_support = true;
+      } else if (plan === 'pro') {
+        entitlementUpdates.has_ai_workout_builder = true;
+        entitlementUpdates.has_custom_exercises = true;
+        entitlementUpdates.has_questionnaires = true;
+        entitlementUpdates.has_habits_metrics = true;
+        entitlementUpdates.storage_limit_gb = 10;
+        entitlementUpdates.has_broadcast_messaging = false;
+        entitlementUpdates.has_ai_todo_list = false;
+        entitlementUpdates.has_priority_support = false;
+      }
+
+      await supabase
+        .from('coach_entitlements')
+        .update(entitlementUpdates)
+        .eq('coach_id', coachId);
+
+      logger.info({ coachId, plan, clientLimit, isUpgrade: true }, 'Plan upgraded immediately');
+    } else {
+      // DOWNGRADE: No refund, schedule change for end of billing period
+      // Update Stripe with no proration (no refund), change takes effect on next invoice
+      await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+        items: [
+          {
+            id: planItem.id,
+            price_data: {
+              currency: 'usd',
+              product: productId,
+              unit_amount: newPlanPrice * 100,
+              recurring: {
+                interval: interval,
+              },
+            },
+          },
+        ],
+        metadata: {
+          plan_type: plan,
+          client_limit: clientLimit.toString(),
+          billing_interval: interval,
+        },
+        proration_behavior: 'none', // No refund for downgrade
+      });
+
+      // Store scheduled changes - entitlements will be updated when billing period renews
+      await supabase
+        .from('platform_subscriptions')
+        .update({
+          // Keep current plan info until period end
+          // Store scheduled changes to apply at renewal
+          scheduled_plan_type: plan,
+          scheduled_client_limit: clientLimit,
+          billing_interval: interval, // Interval can change immediately
+        })
+        .eq('coach_id', coachId);
+
+      // DON'T update entitlements - they keep current level until next billing cycle
+      logger.info({ coachId, plan, clientLimit, isUpgrade: false }, 'Plan downgrade scheduled for end of period');
+    }
+
+    res.json({ success: true, isUpgrade });
   },
 
   // ─── Add/Remove Add-ons ──────────────────────────────────────
+  // Adding addons (upgrade): Charge prorated difference immediately, grant entitlements immediately
+  // Removing addons (downgrade): No refund, keep entitlements until next billing cycle
 
   updateAddons: async (req: Request, res: Response) => {
     const stripe = getStripeClient();
@@ -903,9 +1132,6 @@ export const billingController = {
 
     const interval = (subscription.billing_interval || 'month') as BillingInterval;
 
-    // Get current subscription items from Stripe
-    const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
-
     // Get current addons from DB
     const { data: currentAddons } = await supabase
       .from('platform_addons')
@@ -916,71 +1142,753 @@ export const billingController = {
     const currentAddonTypes = new Set(currentAddons?.map(a => a.addon_type) || []);
     const newAddonTypes = new Set(addons);
 
-    // Items to add
+    // Items to add (upgrade)
     const toAdd = addons.filter(a => !currentAddonTypes.has(a));
-    // Items to remove
+    // Items to remove (downgrade)
     const toRemove = (currentAddons || []).filter(a => !newAddonTypes.has(a.addon_type));
 
-    const itemsToUpdate: Stripe.SubscriptionUpdateParams.Item[] = [];
+    const addonNames: Record<AddonType, string> = {
+      automations: 'Athli Automations Add-on',
+      ai_assistant: 'Athli AI Assistant Add-on',
+      payments: 'Athli Payments Add-on',
+    };
 
-    // Add new addons - need to create product/price first since subscription update doesn't support inline product_data
-    for (const addon of toAdd) {
-      const addonNames: Record<AddonType, string> = {
-        automations: 'Automations',
-        ai_assistant: 'AI Assistant (Lyra)',
-        payments: 'Payments',
-      };
-      const price = getAddonPricing(addon, interval);
+    // Helper to map addon type to entitlement field
+    const addonToEntitlement: Record<AddonType, string> = {
+      automations: 'has_automations',
+      ai_assistant: 'has_ai_assistant',
+      payments: 'has_payments',
+    };
 
-      // Create or find product for this addon
-      const products = await stripe.products.search({
+    // ADDING ADDONS (Upgrade path) - charge full price immediately (not prorated), grant entitlements immediately
+    if (toAdd.length > 0) {
+      const itemsToAdd: Stripe.SubscriptionUpdateParams.Item[] = [];
+      let totalAddonPriceCents = 0;
+
+      // Get the Stripe subscription to get customer ID
+      const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
+
+      for (const addon of toAdd) {
+        const price = getAddonPricing(addon, interval);
+        totalAddonPriceCents += price * 100;
+
+        // Create or find product for this addon
+        const products = await stripe.products.search({
+          query: `metadata['athli_addon_type']:'${addon}'`,
+        });
+
+        let productId: string;
+        if (products.data.length > 0 && products.data[0].active) {
+          productId = products.data[0].id;
+        } else {
+          const product = await stripe.products.create({
+            name: addonNames[addon],
+            metadata: {
+              athli_addon_type: addon,
+            },
+          });
+          productId = product.id;
+        }
+
+        // Create a price for this addon
+        const newPrice = await stripe.prices.create({
+          product: productId,
+          currency: 'usd',
+          unit_amount: price * 100,
+          recurring: {
+            interval: interval,
+          },
+        });
+
+        itemsToAdd.push({
+          price: newPrice.id,
+          quantity: 1,
+        });
+      }
+
+      // Update Stripe subscription with new addons - no proration (we charge manually)
+      await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+        items: itemsToAdd,
+        proration_behavior: 'none',
+      });
+
+      // Manually charge the full addon price immediately
+      if (totalAddonPriceCents > 0) {
+        const addonNamesList = toAdd.map(a => addonNames[a]).join(', ');
+
+        // Get the payment method from the subscription
+        const paymentMethodId = stripeSubscription.default_payment_method as string;
+        if (!paymentMethodId) {
+          throw new Error('No payment method on file. Please update your payment method.');
+        }
+
+        // Create invoice with the payment method set
+        const invoice = await stripe.invoices.create({
+          customer: stripeSubscription.customer as string,
+          collection_method: 'charge_automatically',
+          default_payment_method: paymentMethodId,
+        });
+
+        // Add the addon charge to the invoice
+        // For upgrades, period should be from today to end of billing cycle
+        const now = Math.floor(Date.now() / 1000);
+        const addonPeriod = stripeSubscription.current_period_end
+          ? { start: now, end: stripeSubscription.current_period_end }
+          : undefined;
+
+        logger.info({
+          coachId,
+          periodStart: now,
+          periodEnd: stripeSubscription.current_period_end,
+        }, 'updateAddons: Creating addon invoice with period');
+
+        await stripe.invoiceItems.create({
+          customer: stripeSubscription.customer as string,
+          invoice: invoice.id,
+          amount: totalAddonPriceCents,
+          currency: 'usd',
+          description: `Add-on purchase: ${addonNamesList}`,
+          ...(addonPeriod && { period: addonPeriod }),
+        });
+
+        // Finalize and pay the invoice immediately
+        await stripe.invoices.finalizeInvoice(invoice.id);
+        const paidInvoice = await stripe.invoices.pay(invoice.id, {
+          payment_method: paymentMethodId,
+        });
+
+        if (paidInvoice.status !== 'paid') {
+          logger.warn({ invoiceId: invoice.id, status: paidInvoice.status }, 'Addon invoice payment not completed');
+          throw new Error('Payment failed. Please check your payment method.');
+        }
+      }
+
+      // Update our DB - add the new addons
+      for (const addon of toAdd) {
+        const price = getAddonPricing(addon, interval);
+        await supabase.from('platform_addons').upsert({
+          coach_id: coachId,
+          addon_type: addon,
+          price_cents: price * 100,
+          billing_interval: interval,
+          is_active: true,
+          cancel_at_period_end: false,
+        }, { onConflict: 'coach_id,addon_type' });
+      }
+
+      // Update entitlements immediately for added addons
+      const entitlementUpdates: Record<string, boolean> = {};
+      for (const addon of toAdd) {
+        entitlementUpdates[addonToEntitlement[addon]] = true;
+      }
+      await supabase
+        .from('coach_entitlements')
+        .update(entitlementUpdates)
+        .eq('coach_id', coachId);
+
+      logger.info({ coachId, addons: toAdd }, 'Addons added immediately');
+    }
+
+    // REMOVING ADDONS (Downgrade path) - no refund, schedule removal for end of period
+    if (toRemove.length > 0) {
+      const itemsToRemove: Stripe.SubscriptionUpdateParams.Item[] = [];
+
+      for (const addon of toRemove) {
+        if (addon.stripe_subscription_item_id) {
+          itemsToRemove.push({
+            id: addon.stripe_subscription_item_id,
+            deleted: true,
+          });
+        }
+      }
+
+      if (itemsToRemove.length > 0) {
+        // Remove from Stripe with no refund
+        await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+          items: itemsToRemove,
+          proration_behavior: 'none', // No refund for removal
+        });
+      }
+
+      // Schedule addon removal in DB - keep entitlements until period end
+      for (const addon of toRemove) {
+        await supabase
+          .from('platform_addons')
+          .update({ cancel_at_period_end: true })
+          .eq('coach_id', coachId)
+          .eq('addon_type', addon.addon_type);
+      }
+
+      // DON'T update entitlements - they keep current addons until next billing cycle
+      logger.info({ coachId, addons: toRemove.map(a => a.addon_type) }, 'Addon removal scheduled for end of period');
+    }
+
+    res.json({
+      success: true,
+      addedImmediately: toAdd,
+      scheduledForRemoval: toRemove.map(a => a.addon_type),
+    });
+  },
+
+  // ─── Update Subscription (Unified Plan + Addons) ─────────────
+  // Creates a single invoice for all upgrade charges
+
+  updateSubscription: async (req: Request, res: Response) => {
+    const supabase = getSupabaseClient();
+    const stripe = getStripeClient();
+    const coachId = (req as any).user.id;
+    const {
+      plan,
+      clientLimit,
+      interval: newInterval,
+      addons: newAddons,
+    } = req.body as {
+      plan?: PlanType;
+      clientLimit?: number;
+      interval?: BillingInterval;
+      addons?: AddonType[];
+    };
+
+    // Get current subscription
+    const { data: subscription, error: subError } = await supabase
+      .from('platform_subscriptions')
+      .select('*')
+      .eq('coach_id', coachId)
+      .single();
+
+    if (subError || !subscription) {
+      res.status(404).json({ error: 'No active subscription found' });
+      return;
+    }
+
+    if (!subscription.stripe_subscription_id) {
+      res.status(400).json({ error: 'No Stripe subscription linked' });
+      return;
+    }
+
+    const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
+    const currentInterval = subscription.billing_interval as BillingInterval;
+    const targetInterval = newInterval || currentInterval;
+    const isIntervalChanging = newInterval && newInterval !== currentInterval;
+    const isSwitchingToAnnual = isIntervalChanging && newInterval === 'year';
+
+    // Get current addons
+    const { data: currentAddons } = await supabase
+      .from('platform_addons')
+      .select('*')
+      .eq('coach_id', coachId)
+      .eq('is_active', true);
+
+    const currentAddonTypes = new Set((currentAddons || []).map(a => a.addon_type));
+
+    // Determine what's changing
+    const targetPlan = plan || subscription.plan_type;
+    const targetClientLimit = clientLimit || subscription.client_limit;
+    const targetAddons = newAddons || Array.from(currentAddonTypes) as AddonType[];
+
+    // Calculate current and new prices using respective intervals
+    const currentPlanPrice = getPlanPricing(subscription.plan_type, subscription.client_limit, currentInterval);
+    const newPlanPrice = getPlanPricing(targetPlan, targetClientLimit, targetInterval);
+
+    const currentAddonsPrice = Array.from(currentAddonTypes).reduce(
+      (sum, addon) => sum + getAddonPricing(addon as AddonType, currentInterval), 0
+    );
+    const newAddonsToAdd = targetAddons.filter(a => !currentAddonTypes.has(a));
+    const newAddonsPrice = newAddonsToAdd.reduce(
+      (sum, addon) => sum + getAddonPricing(addon, targetInterval), 0
+    );
+
+    // Addons to remove (schedule for end of period)
+    const addonsToRemove = (currentAddons || []).filter(a => !targetAddons.includes(a.addon_type as AddonType));
+
+    // Check if this is an upgrade (plan or addons or interval change to annual)
+    // Plan tier hierarchy: starter < pro < max
+    const planTierOrder: Record<string, number> = { starter: 0, pro: 1, max: 2 };
+    const currentTier = planTierOrder[subscription.plan_type] ?? 0;
+    const targetTier = planTierOrder[targetPlan] ?? 0;
+
+    let isPlanUpgrade = false;
+    if (isSwitchingToAnnual) {
+      // Switching to annual is always an upgrade - charged immediately
+      isPlanUpgrade = true;
+    } else if (targetTier > currentTier) {
+      // Moving to higher tier = upgrade
+      isPlanUpgrade = true;
+    } else if (targetTier < currentTier) {
+      // Moving to lower tier = downgrade
+      isPlanUpgrade = false;
+    } else {
+      // Same tier, compare prices (more clients = upgrade)
+      isPlanUpgrade = newPlanPrice > currentPlanPrice;
+    }
+    const hasNewAddons = newAddonsToAdd.length > 0;
+
+    // Calculate charges
+    let planPriceDifferenceCents = 0;
+    if (isSwitchingToAnnual) {
+      // When switching to annual, charge the FULL annual amount for plan + existing addons
+      const fullAnnualPlanPrice = getPlanPricing(targetPlan, targetClientLimit, 'year');
+      const fullAnnualAddonsPrice = targetAddons
+        .filter(a => currentAddonTypes.has(a)) // Only existing addons, not new ones
+        .reduce((sum, addon) => sum + getAddonPricing(addon, 'year'), 0);
+      planPriceDifferenceCents = (fullAnnualPlanPrice + fullAnnualAddonsPrice) * 100;
+    } else if (isPlanUpgrade) {
+      planPriceDifferenceCents = (newPlanPrice - currentPlanPrice) * 100;
+    }
+    const addonPriceCents = newAddonsPrice * 100;
+    const totalChargeCents = planPriceDifferenceCents + addonPriceCents;
+
+    // Helper for plan names
+    const formatPlanName = (planType: string, clients: number) => {
+      const baseName = planType === 'pro' ? 'Athli Pro Plan' : planType === 'max' ? 'Athli Max Plan' : 'Athli Starter Plan';
+      return `${baseName} (${clients} clients)`;
+    };
+
+    const addonNames: Record<AddonType, string> = {
+      automations: 'Athli Automations Add-on',
+      ai_assistant: 'Athli AI Assistant Add-on',
+      payments: 'Athli Payments Add-on',
+    };
+
+    const addonToEntitlement: Record<AddonType, string> = {
+      automations: 'has_automations',
+      ai_assistant: 'has_ai_assistant',
+      payments: 'has_payments',
+    };
+
+    // Track what we're updating
+    const updates: string[] = [];
+    const subscriptionItemUpdates: Stripe.SubscriptionUpdateParams.Item[] = [];
+    // Plan downgrade is when tier/clients decrease, NOT when just switching intervals
+    const isPlanDowngrade = plan && (plan !== subscription.plan_type || clientLimit !== subscription.client_limit) && !isPlanUpgrade && !isSwitchingToAnnual;
+
+    // ─── Handle Plan Change (including interval-only changes) ─────────────────────────────────────
+    // Update plan item when: plan changes, client limit changes, OR billing interval changes
+    if (plan && (plan !== subscription.plan_type || clientLimit !== subscription.client_limit || isIntervalChanging)) {
+      const planItem = stripeSubscription.items.data.find(
+        item => item.price.metadata?.athli_product_type === 'plan' ||
+               !item.price.metadata?.athli_addon_type
+      );
+
+      if (planItem) {
+        // Find or create product for new plan
+        const newPlanDisplayName = formatPlanName(targetPlan, targetClientLimit);
+        const productSearchKey = `athli_platform_${targetPlan}_${targetClientLimit}`;
+
+        let productId: string;
+        const existingProducts = await stripe.products.search({
+          query: `metadata['athli_product_key']:'${productSearchKey}'`,
+        });
+
+        if (existingProducts.data.length > 0 && existingProducts.data[0].active) {
+          productId = existingProducts.data[0].id;
+        } else {
+          const newProduct = await stripe.products.create({
+            name: newPlanDisplayName,
+            description: `Up to ${targetClientLimit} clients • Cancel anytime`,
+            metadata: {
+              athli_product_key: productSearchKey,
+              plan_type: targetPlan,
+              client_limit: targetClientLimit.toString(),
+            },
+          });
+          productId = newProduct.id;
+        }
+
+        // Only update Stripe subscription items immediately for upgrades
+        // For downgrades, we update Stripe separately to schedule the change
+        if (isPlanUpgrade) {
+          subscriptionItemUpdates.push({
+            id: planItem.id,
+            price_data: {
+              currency: 'usd',
+              product: productId,
+              unit_amount: newPlanPrice * 100,
+              recurring: { interval: targetInterval },
+            },
+          });
+          updates.push(`Plan upgrade: ${formatPlanName(subscription.plan_type, subscription.client_limit)} → ${newPlanDisplayName}`);
+        } else if (isPlanDowngrade) {
+          // For downgrades, update Stripe with the new price (takes effect next billing cycle)
+          // but don't include in the immediate update batch
+          // NOTE: We do NOT update Stripe metadata here - that would trigger webhook to update DB immediately
+          // Instead, metadata is updated at renewal when the downgrade actually takes effect
+          await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+            items: [
+              {
+                id: planItem.id,
+                price_data: {
+                  currency: 'usd',
+                  product: productId,
+                  unit_amount: newPlanPrice * 100,
+                  recurring: { interval: targetInterval },
+                },
+              },
+            ],
+            proration_behavior: 'none', // No refund for downgrade
+          });
+          logger.info({ coachId, plan: targetPlan, clientLimit: targetClientLimit }, 'Plan downgrade scheduled in Stripe');
+        }
+      }
+    }
+
+    // ─── Handle New Addons ──────────────────────────────────────
+    for (const addon of newAddonsToAdd) {
+      const price = getAddonPricing(addon, targetInterval);
+
+      // Find or create addon product
+      const existingAddonProducts = await stripe.products.search({
         query: `metadata['athli_addon_type']:'${addon}'`,
       });
 
       let productId: string;
-      if (products.data.length > 0) {
-        productId = products.data[0].id;
+      if (existingAddonProducts.data.length > 0 && existingAddonProducts.data[0].active) {
+        productId = existingAddonProducts.data[0].id;
       } else {
         const product = await stripe.products.create({
-          name: `Athli ${addonNames[addon]} Add-on`,
-          metadata: {
-            athli_addon_type: addon,
-          },
+          name: addonNames[addon],
+          metadata: { athli_addon_type: addon },
         });
         productId = product.id;
       }
 
-      // Create a price for this addon
       const newPrice = await stripe.prices.create({
         product: productId,
         currency: 'usd',
         unit_amount: price * 100,
-        recurring: {
-          interval: interval,
-        },
+        recurring: { interval: targetInterval },
       });
 
-      itemsToUpdate.push({
+      subscriptionItemUpdates.push({
         price: newPrice.id,
         quantity: 1,
       });
+
+      updates.push(`Add-on: ${addonNames[addon]}`);
     }
 
-    // Remove addons
-    for (const addon of toRemove) {
+    // ─── Handle Addon Removals (Schedule for period end) ────────
+    const itemsToRemove: Stripe.SubscriptionUpdateParams.Item[] = [];
+    for (const addon of addonsToRemove) {
       if (addon.stripe_subscription_item_id) {
-        itemsToUpdate.push({
+        itemsToRemove.push({
           id: addon.stripe_subscription_item_id,
           deleted: true,
         });
       }
     }
 
-    if (itemsToUpdate.length > 0) {
+    // ─── Handle Interval Change for Existing Addons ─────────────
+    // When switching to annual, all existing addon subscription items need to be updated
+    if (isIntervalChanging) {
+      for (const existingAddon of (currentAddons || [])) {
+        if (!targetAddons.includes(existingAddon.addon_type as AddonType)) continue; // Skip if being removed
+        if (newAddonsToAdd.includes(existingAddon.addon_type as AddonType)) continue; // Skip if already handled as new
+
+        const addonItem = stripeSubscription.items.data.find(
+          item => (item.price.product as any).metadata?.athli_addon_type === existingAddon.addon_type
+        );
+
+        if (addonItem) {
+          const addonPrice = getAddonPricing(existingAddon.addon_type as AddonType, targetInterval);
+
+          // Find or create addon product
+          const existingAddonProducts = await stripe.products.search({
+            query: `metadata['athli_addon_type']:'${existingAddon.addon_type}'`,
+          });
+
+          let productId: string;
+          if (existingAddonProducts.data.length > 0 && existingAddonProducts.data[0].active) {
+            productId = existingAddonProducts.data[0].id;
+          } else {
+            const product = await stripe.products.create({
+              name: addonNames[existingAddon.addon_type as AddonType],
+              metadata: { athli_addon_type: existingAddon.addon_type },
+            });
+            productId = product.id;
+          }
+
+          subscriptionItemUpdates.push({
+            id: addonItem.id,
+            price_data: {
+              currency: 'usd',
+              product: productId,
+              unit_amount: addonPrice * 100,
+              recurring: { interval: targetInterval },
+            },
+          });
+
+          // Update addon in DB
+          await supabase
+            .from('platform_addons')
+            .update({
+              price_cents: addonPrice * 100,
+              billing_interval: targetInterval,
+            })
+            .eq('coach_id', coachId)
+            .eq('addon_type', existingAddon.addon_type);
+        }
+      }
+    }
+
+    // ─── Apply Stripe Subscription Updates ──────────────────────
+    if (subscriptionItemUpdates.length > 0 || itemsToRemove.length > 0 || isIntervalChanging) {
       await stripe.subscriptions.update(subscription.stripe_subscription_id, {
-        items: itemsToUpdate,
-        proration_behavior: 'create_prorations',
+        items: [...subscriptionItemUpdates, ...itemsToRemove],
+        proration_behavior: 'none',
+        metadata: {
+          plan_type: targetPlan,
+          client_limit: targetClientLimit.toString(),
+          billing_interval: targetInterval,
+        },
       });
+    }
+
+    // ─── Create Single Invoice for All Upgrade Charges ──────────
+    if (totalChargeCents > 0) {
+      const paymentMethodId = stripeSubscription.default_payment_method as string;
+      if (!paymentMethodId) {
+        throw new Error('No payment method on file. Please update your payment method.');
+      }
+
+      // Create single invoice
+      const invoice = await stripe.invoices.create({
+        customer: stripeSubscription.customer as string,
+        collection_method: 'charge_automatically',
+        default_payment_method: paymentMethodId,
+      });
+
+      // Add line items for each upgrade component
+      // Include the billing period so invoices display correctly
+      // For upgrades, period should be from today to end of billing cycle
+      const now = Math.floor(Date.now() / 1000);
+      const billingPeriod = stripeSubscription.current_period_end
+        ? {
+            start: now,
+            end: stripeSubscription.current_period_end,
+          }
+        : undefined;
+
+      logger.info({
+        coachId,
+        billingPeriod,
+        periodStart: now,
+        periodEnd: stripeSubscription.current_period_end,
+      }, 'Creating upgrade invoice with billing period');
+
+      if (planPriceDifferenceCents > 0) {
+        const description = isSwitchingToAnnual
+          ? `Switch to annual billing: ${formatPlanName(targetPlan, targetClientLimit)} (1 year)`
+          : `Plan upgrade: ${formatPlanName(subscription.plan_type, subscription.client_limit)} → ${formatPlanName(targetPlan, targetClientLimit)}`;
+
+        await stripe.invoiceItems.create({
+          customer: stripeSubscription.customer as string,
+          invoice: invoice.id,
+          amount: planPriceDifferenceCents,
+          currency: 'usd',
+          description,
+          ...(billingPeriod && { period: billingPeriod }),
+        });
+      }
+
+      if (addonPriceCents > 0) {
+        const addonNamesList = newAddonsToAdd.map(a => addonNames[a]).join(', ');
+        await stripe.invoiceItems.create({
+          customer: stripeSubscription.customer as string,
+          invoice: invoice.id,
+          amount: addonPriceCents,
+          currency: 'usd',
+          description: `Add-on purchase: ${addonNamesList}`,
+          ...(billingPeriod && { period: billingPeriod }),
+        });
+      }
+
+      // Finalize and pay
+      await stripe.invoices.finalizeInvoice(invoice.id);
+      const paidInvoice = await stripe.invoices.pay(invoice.id, {
+        payment_method: paymentMethodId,
+      });
+
+      if (paidInvoice.status !== 'paid') {
+        logger.warn({ invoiceId: invoice.id, status: paidInvoice.status }, 'Subscription update invoice payment not completed');
+        throw new Error('Payment failed. Please check your payment method.');
+      }
+
+      logger.info({ coachId, invoiceId: invoice.id, amount: totalChargeCents }, 'Unified subscription upgrade invoice paid');
+    }
+
+    // ─── Update Database Records ────────────────────────────────
+
+    // Update plan in platform_subscriptions
+    if (plan || clientLimit || isIntervalChanging) {
+      const planUpdates: Record<string, any> = {
+        plan_type: targetPlan,
+        client_limit: targetClientLimit,
+        current_price_cents: newPlanPrice * 100,
+        billing_interval: targetInterval,
+      };
+
+      // If downgrade, schedule it instead (but NOT for interval changes to annual)
+      if (!isPlanUpgrade && !isSwitchingToAnnual && (plan !== subscription.plan_type || clientLimit !== subscription.client_limit)) {
+        planUpdates.scheduled_plan_type = targetPlan;
+        planUpdates.scheduled_client_limit = targetClientLimit;
+        // Don't update current values for downgrades
+        delete planUpdates.plan_type;
+        delete planUpdates.client_limit;
+        delete planUpdates.current_price_cents;
+        delete planUpdates.billing_interval;
+      } else {
+        planUpdates.scheduled_plan_type = null;
+        planUpdates.scheduled_client_limit = null;
+      }
+
+      await supabase
+        .from('platform_subscriptions')
+        .update(planUpdates)
+        .eq('coach_id', coachId);
+    }
+
+    // Add new addons to platform_addons
+    for (const addon of newAddonsToAdd) {
+      const price = getAddonPricing(addon, targetInterval);
+      await supabase.from('platform_addons').upsert({
+        coach_id: coachId,
+        addon_type: addon,
+        price_cents: price * 100,
+        billing_interval: targetInterval,
+        is_active: true,
+        cancel_at_period_end: false,
+      }, { onConflict: 'coach_id,addon_type' });
+    }
+
+    // Schedule addon removals
+    for (const addon of addonsToRemove) {
+      await supabase
+        .from('platform_addons')
+        .update({ cancel_at_period_end: true })
+        .eq('coach_id', coachId)
+        .eq('addon_type', addon.addon_type);
+    }
+
+    // ─── Update Entitlements ────────────────────────────────────
+    const entitlementUpdates: Record<string, any> = {};
+
+    // Plan entitlements (only for upgrades)
+    if (isPlanUpgrade) {
+      entitlementUpdates.plan_type = targetPlan;
+      entitlementUpdates.client_limit = targetClientLimit;
+
+      if (targetPlan === 'max') {
+        entitlementUpdates.has_ai_workout_builder = true;
+        entitlementUpdates.has_custom_exercises = true;
+        entitlementUpdates.has_questionnaires = true;
+        entitlementUpdates.has_habits_metrics = true;
+        entitlementUpdates.storage_limit_gb = 50;
+        entitlementUpdates.has_broadcast_messaging = true;
+        entitlementUpdates.has_ai_todo_list = true;
+        entitlementUpdates.has_priority_support = true;
+      } else if (targetPlan === 'pro') {
+        entitlementUpdates.has_ai_workout_builder = true;
+        entitlementUpdates.has_custom_exercises = true;
+        entitlementUpdates.has_questionnaires = true;
+        entitlementUpdates.has_habits_metrics = true;
+        entitlementUpdates.storage_limit_gb = 10;
+        entitlementUpdates.has_broadcast_messaging = false;
+        entitlementUpdates.has_ai_todo_list = false;
+        entitlementUpdates.has_priority_support = false;
+      }
+    }
+
+    // Addon entitlements (only for additions)
+    for (const addon of newAddonsToAdd) {
+      entitlementUpdates[addonToEntitlement[addon]] = true;
+    }
+
+    if (Object.keys(entitlementUpdates).length > 0) {
+      await supabase
+        .from('coach_entitlements')
+        .update(entitlementUpdates)
+        .eq('coach_id', coachId);
+    }
+
+    logger.info({
+      coachId,
+      planChange: plan ? { from: subscription.plan_type, to: targetPlan } : null,
+      addonsAdded: newAddonsToAdd,
+      addonsScheduledForRemoval: addonsToRemove.map(a => a.addon_type),
+      totalCharged: totalChargeCents,
+    }, 'Subscription updated with unified invoice');
+
+    res.json({
+      success: true,
+      planUpdated: !!(plan || isIntervalChanging),
+      isPlanUpgrade,
+      isPlanDowngrade: !!isPlanDowngrade,
+      intervalUpdated: !!isIntervalChanging,
+      newInterval: isIntervalChanging ? targetInterval : undefined,
+      addonsAdded: newAddonsToAdd,
+      addonsScheduledForRemoval: addonsToRemove.map(a => a.addon_type),
+      totalChargedCents: totalChargeCents,
+    });
+  },
+
+  // ─── Cancel Addon (Schedule for End of Period) ───────────────
+
+  cancelAddon: async (req: Request, res: Response) => {
+    const supabase = getSupabaseClient();
+    const coachId = (req as any).user.id;
+    const { addonType } = req.params as { addonType: AddonType };
+
+    // Validate addon type
+    const validAddonTypes: AddonType[] = ['automations', 'ai_assistant', 'payments'];
+    if (!validAddonTypes.includes(addonType)) {
+      res.status(400).json({ error: 'Invalid addon type' });
+      return;
+    }
+
+    // Update the addon to schedule cancellation
+    const { error } = await supabase
+      .from('platform_addons')
+      .update({ cancel_at_period_end: true })
+      .eq('coach_id', coachId)
+      .eq('addon_type', addonType)
+      .eq('is_active', true);
+
+    if (error) {
+      logger.error({ error, coachId, addonType }, 'Failed to schedule addon cancellation');
+      res.status(500).json({ error: 'Failed to schedule addon cancellation' });
+      return;
+    }
+
+    res.json({ success: true });
+  },
+
+  // ─── Reactivate Addon (Undo Scheduled Cancellation) ──────────
+
+  reactivateAddon: async (req: Request, res: Response) => {
+    const supabase = getSupabaseClient();
+    const coachId = (req as any).user.id;
+    const { addonType } = req.params as { addonType: AddonType };
+
+    // Validate addon type
+    const validAddonTypes: AddonType[] = ['automations', 'ai_assistant', 'payments'];
+    if (!validAddonTypes.includes(addonType)) {
+      res.status(400).json({ error: 'Invalid addon type' });
+      return;
+    }
+
+    // Update the addon to cancel the scheduled cancellation
+    const { error } = await supabase
+      .from('platform_addons')
+      .update({ cancel_at_period_end: false })
+      .eq('coach_id', coachId)
+      .eq('addon_type', addonType)
+      .eq('is_active', true);
+
+    if (error) {
+      logger.error({ error, coachId, addonType }, 'Failed to reactivate addon');
+      res.status(500).json({ error: 'Failed to reactivate addon' });
+      return;
     }
 
     res.json({ success: true });
@@ -1053,12 +1961,24 @@ export const billingController = {
       cancel_at_period_end: false,
     });
 
+    // Also reinstate all add-ons that were scheduled for cancellation
+    await supabase
+      .from('platform_addons')
+      .update({ cancel_at_period_end: false })
+      .eq('coach_id', coachId)
+      .eq('is_active', true)
+      .eq('cancel_at_period_end', true);
+
     res.json({ success: true });
   },
 
   // ─── Webhook Handler ─────────────────────────────────────────
 
   webhook: async (req: Request, res: Response) => {
+    console.log(`\n${'#'.repeat(60)}`);
+    console.log(`[BILLING WEBHOOK] Received webhook request`);
+    console.log(`${'#'.repeat(60)}\n`);
+
     const stripe = getStripeClient();
     const supabase = getSupabaseClient();
 
@@ -1085,6 +2005,8 @@ export const billingController = {
       return;
     }
 
+    console.log(`[BILLING WEBHOOK] Event type: ${event.type}, ID: ${event.id}`);
+
     // Idempotency check
     const { data: existingEvent } = await supabase
       .from('stripe_billing_webhook_events')
@@ -1093,9 +2015,12 @@ export const billingController = {
       .maybeSingle();
 
     if (existingEvent) {
+      console.log(`[BILLING WEBHOOK] DUPLICATE EVENT - skipping: ${event.id}`);
       res.status(200).json({ received: true, duplicate: true });
       return;
     }
+
+    console.log(`[BILLING WEBHOOK] Processing new event: ${event.type}`);
 
     // Extract coach_id from the event object (varies by event type)
     let coachId: string | null = null;
@@ -1269,6 +2194,7 @@ export const billingController = {
 
 async function handlePlatformWebhookEvent(event: Stripe.Event, supabase: any, stripe: Stripe) {
   const eventType = event.type;
+  console.log(`[BILLING WEBHOOK] handlePlatformWebhookEvent called with: ${eventType}`);
 
   switch (eventType) {
     case 'checkout.session.completed':
@@ -1288,7 +2214,9 @@ async function handlePlatformWebhookEvent(event: Stripe.Event, supabase: any, st
       break;
 
     case 'invoice.paid':
+      console.log(`[BILLING WEBHOOK] >>> INVOICE.PAID - calling handleInvoicePaid`);
       await handleInvoicePaid(event, supabase);
+      console.log(`[BILLING WEBHOOK] <<< INVOICE.PAID - handleInvoicePaid complete`);
       break;
 
     case 'invoice.payment_failed':
@@ -1335,10 +2263,16 @@ async function handleSubscriptionCreated(event: Stripe.Event, supabase: any) {
   const billingInterval = subscription.metadata?.billing_interval as BillingInterval;
   const addons = subscription.metadata?.addons?.split(',').filter(Boolean) as AddonType[] || [];
 
-  // Calculate total amount
-  const totalAmount = subscription.items.data.reduce((sum, item) => {
-    return sum + (item.price.unit_amount || 0);
-  }, 0);
+  // Calculate plan price only (not including addons - those are tracked separately)
+  // Use the pricing constants to calculate based on plan type and client limit
+  let planPriceCents = 0;
+  if (planType !== 'starter' && billingInterval) {
+    const planPricing = planType === 'pro' ? PRO_PRICING : MAX_PRICING;
+    const planTier = planPricing[clientLimit];
+    if (planTier) {
+      planPriceCents = billingInterval === 'year' ? planTier[1] * 12 * 100 : planTier[0] * 100;
+    }
+  }
 
   // Update platform subscription
   await supabase
@@ -1350,7 +2284,7 @@ async function handleSubscriptionCreated(event: Stripe.Event, supabase: any) {
       plan_type: planType,
       client_limit: clientLimit,
       billing_interval: billingInterval,
-      current_price_cents: totalAmount,
+      current_price_cents: planPriceCents,
       status: subscription.status === 'trialing' ? 'trialing' : 'active',
       current_period_start: subscription.current_period_start
         ? new Date(subscription.current_period_start * 1000).toISOString()
@@ -1401,6 +2335,11 @@ async function handleSubscriptionCreated(event: Stripe.Event, supabase: any) {
     .update({ free_trial_completed: true })
     .eq('id', coachId);
 
+  // Backfill any pending referral credits that couldn't be applied earlier
+  // (e.g., this coach referred someone who paid while this coach was still on free trial)
+  const stripe = getStripeClient();
+  await backfillPendingReferralCredits(coachId, subscription.customer as string, supabase, stripe);
+
   // Log activity
   await logPlatformBillingActivity(supabase, {
     coach_id: coachId,
@@ -1437,10 +2376,15 @@ async function handleSubscriptionUpdated(event: Stripe.Event, supabase: any) {
 
   const status = statusMap[subscription.status] || 'active';
 
-  // Calculate total amount
-  const totalAmount = subscription.items.data.reduce((sum, item) => {
-    return sum + (item.price.unit_amount || 0);
-  }, 0);
+  // Calculate plan price only (not including addons - those are tracked separately)
+  let planPriceCents = 0;
+  if (planType !== 'starter' && billingInterval) {
+    const planPricing = planType === 'pro' ? PRO_PRICING : MAX_PRICING;
+    const planTier = planPricing[clientLimit];
+    if (planTier) {
+      planPriceCents = billingInterval === 'year' ? planTier[1] * 12 * 100 : planTier[0] * 100;
+    }
+  }
 
   // Update subscription
   await supabase
@@ -1449,7 +2393,7 @@ async function handleSubscriptionUpdated(event: Stripe.Event, supabase: any) {
       plan_type: planType,
       client_limit: clientLimit,
       billing_interval: billingInterval,
-      current_price_cents: totalAmount,
+      current_price_cents: planPriceCents,
       status: status,
       current_period_start: subscription.current_period_start
         ? new Date(subscription.current_period_start * 1000).toISOString()
@@ -1549,16 +2493,35 @@ async function handleSubscriptionDeleted(event: Stripe.Event, supabase: any) {
 }
 
 async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
+  console.log(`[BILLING WEBHOOK] handleInvoicePaid ENTERED`);
+
   const stripe = getStripeClient();
   const invoice = event.data.object as Stripe.Invoice;
-  const subscriptionId = (invoice as any).subscription as string;
 
-  if (!subscriptionId) return;
+  // In newer Stripe API versions, subscription ID may be in parent.subscription_details.subscription
+  // Fall back to the old location for backwards compatibility
+  const subscriptionId = (invoice as any).subscription
+    || (invoice as any).parent?.subscription_details?.subscription;
+
+  console.log(`[BILLING WEBHOOK] handleInvoicePaid - subscriptionId: ${subscriptionId}`);
+
+  if (!subscriptionId) {
+    console.log(`[BILLING WEBHOOK] handleInvoicePaid - NO SUBSCRIPTION, returning early`);
+    logger.info({ invoiceId: invoice.id }, 'invoice.paid - no subscription, skipping');
+    return;
+  }
 
   // Get coach_id from invoice's subscription metadata (more reliable than DB lookup)
   // invoice.paid can fire before customer.subscription.created, so DB record may not exist yet
   const subscriptionMetadata = (invoice as any).parent?.subscription_details?.metadata;
   const invoiceLineMetadata = invoice.lines?.data?.[0]?.metadata;
+
+  logger.info({
+    subscriptionId,
+    invoiceId: invoice.id,
+    subscriptionMetadata,
+    invoiceLineMetadata,
+  }, 'invoice.paid - checking metadata sources');
 
   // Try multiple sources for coach_id
   let coachId = subscriptionMetadata?.coach_id || invoiceLineMetadata?.coach_id;
@@ -1566,11 +2529,14 @@ async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
 
   // Fallback: try to get from DB if metadata doesn't have it
   if (!coachId) {
-    const { data: sub } = await supabase
+    logger.info({ subscriptionId }, 'invoice.paid - metadata empty, looking up from DB');
+    const { data: sub, error: subError } = await supabase
       .from('platform_subscriptions')
       .select('coach_id, stripe_customer_id')
       .eq('stripe_subscription_id', subscriptionId)
       .maybeSingle();
+
+    logger.info({ sub, subError }, 'invoice.paid - DB lookup result');
 
     if (sub) {
       coachId = sub.coach_id;
@@ -1578,10 +2544,24 @@ async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
     }
   }
 
+  // Last resort: retrieve subscription from Stripe to get metadata
+  if (!coachId) {
+    logger.info({ subscriptionId }, 'invoice.paid - DB empty, retrieving from Stripe');
+    try {
+      const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+      coachId = stripeSubscription.metadata?.coach_id;
+      logger.info({ coachId, metadata: stripeSubscription.metadata }, 'invoice.paid - Stripe subscription metadata');
+    } catch (err: any) {
+      logger.warn({ err: err.message, subscriptionId }, 'invoice.paid - failed to retrieve subscription from Stripe');
+    }
+  }
+
   if (!coachId) {
     logger.warn({ subscriptionId, invoiceId: invoice.id }, 'Could not find coach_id for invoice.paid');
     return;
   }
+
+  logger.info({ coachId, subscriptionId, invoiceId: invoice.id }, 'invoice.paid - found coach_id');
 
   // Log payment
   await logPlatformBillingActivity(supabase, {
@@ -1596,49 +2576,77 @@ async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
 
   // Handle referral credits (only on first payment)
   // Check if this is the first invoice (subscription creation)
-  if ((invoice as any).billing_reason === 'subscription_create') {
+  const billingReason = (invoice as any).billing_reason;
+  console.log(`\n${'='.repeat(60)}`);
+  console.log(`[REFERRAL] Processing invoice.paid for coach: ${coachId}`);
+  console.log(`[REFERRAL] billing_reason: ${billingReason}`);
+  console.log(`[REFERRAL] invoice_id: ${invoice.id}`);
+  console.log(`${'='.repeat(60)}\n`);
+
+  if (billingReason === 'subscription_create') {
     try {
+      console.log(`[REFERRAL] billing_reason is subscription_create - checking for referral...`);
+
       // Check if this coach was referred and credits haven't been applied yet
-      const { data: referral } = await supabase
+      const { data: referral, error: referralError } = await supabase
         .from('coach_referrals')
-        .select('id, referrer_coach_id, referrer_credit_applied_at, referred_credit_applied_at')
+        .select('id, referrer_coach_id, referrer_credit_applied_at, referred_credit_applied_at, referred_coach_name, referred_coach_profile_picture_url, status')
         .eq('referred_coach_id', coachId)
         .maybeSingle();
 
+      console.log(`[REFERRAL] Lookup result:`, { referral, referralError });
+
       if (referral && !referral.referrer_credit_applied_at) {
+        console.log(`[REFERRAL] Found referral! ID: ${referral.id}, status: ${referral.status}`);
+        console.log(`[REFERRAL] referrer_credit_applied_at is null - proceeding with conversion`);
+
+        // Get the referred coach's current info (in case it wasn't stored yet)
+        const { data: referredCoachProfile } = await supabase
+          .from('user_profiles')
+          .select('name, profile_picture_url')
+          .eq('id', coachId)
+          .eq('user_type', 'coach')
+          .maybeSingle();
+
+        const referredCoachName = referral.referred_coach_name || referredCoachProfile?.name || 'Unknown';
+        const referredCoachPicture = referral.referred_coach_profile_picture_url || referredCoachProfile?.profile_picture_url;
         // Track whether credits were actually applied to Stripe
         let referrerCreditApplied = false;
         let referredCreditApplied = false;
 
-        // Get the referrer's Stripe customer ID
-        const { data: referrerSub } = await supabase
-          .from('platform_subscriptions')
-          .select('stripe_customer_id')
-          .eq('coach_id', referral.referrer_coach_id)
-          .maybeSingle();
+        // Check if referrer still exists (they might have deleted their account)
+        const referrerExists = !!referral.referrer_coach_id;
+        console.log(`[REFERRAL] referrerExists: ${referrerExists}, referrer_coach_id: ${referral.referrer_coach_id}`);
 
-        if (referrerSub?.stripe_customer_id) {
-          // Apply credit to the referrer's Stripe balance (for their next invoice)
-          await stripe.customers.createBalanceTransaction(referrerSub.stripe_customer_id, {
-            amount: -REFERRAL_CREDIT_CENTS, // Negative = credit
-            currency: 'usd',
-            description: 'Referral reward - Your referred coach subscribed!',
-          });
-          referrerCreditApplied = true;
+        // Get the referrer's Stripe customer ID (only if referrer exists)
+        if (referrerExists) {
+          const { data: referrerSub } = await supabase
+            .from('platform_subscriptions')
+            .select('stripe_customer_id')
+            .eq('coach_id', referral.referrer_coach_id)
+            .maybeSingle();
 
-          logger.info(
-            { referrerCoachId: referral.referrer_coach_id, creditCents: REFERRAL_CREDIT_CENTS },
-            'Applied referral credit to referrer'
-          );
+          if (referrerSub?.stripe_customer_id) {
+            console.log(`[REFERRAL] Applying $${REFERRAL_CREDIT_CENTS/100} credit to REFERRER (Coach A) stripe customer: ${referrerSub.stripe_customer_id}`);
+            // Apply credit to the referrer's Stripe balance (for their next invoice)
+            await stripe.customers.createBalanceTransaction(referrerSub.stripe_customer_id, {
+              amount: -REFERRAL_CREDIT_CENTS, // Negative = credit
+              currency: 'usd',
+              description: 'Referral reward - Your referred coach subscribed!',
+            });
+            referrerCreditApplied = true;
+            console.log(`[REFERRAL] SUCCESS - Applied credit to referrer`);
+          } else {
+            // Referrer doesn't have Stripe customer yet - credit will be applied when they subscribe
+            console.log(`[REFERRAL] Referrer has no Stripe customer yet - credit will be applied when they subscribe`);
+          }
         } else {
-          // Referrer doesn't have Stripe customer yet - credit will be applied when they subscribe
-          logger.info(
-            { referrerCoachId: referral.referrer_coach_id, creditCents: REFERRAL_CREDIT_CENTS },
-            'Referrer credit pending - no Stripe customer yet'
-          );
+          console.log(`[REFERRAL] Referrer deleted their account - skipping referrer credit`);
         }
 
         // Apply credit to the referred coach (Coach B) for their next invoice
+        // This happens regardless of whether the referrer still exists
+        console.log(`[REFERRAL] Applying $${REFERRAL_CREDIT_CENTS/100} credit to REFERRED (Coach B) stripe customer: ${stripeCustomerId}`);
         if (stripeCustomerId) {
           await stripe.customers.createBalanceTransaction(stripeCustomerId, {
             amount: -REFERRAL_CREDIT_CENTS, // Negative = credit
@@ -1646,36 +2654,69 @@ async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
             description: 'Referral bonus - $20 credit for your next invoice!',
           });
           referredCreditApplied = true;
-
-          logger.info(
-            { referredCoachId: coachId, creditCents: REFERRAL_CREDIT_CENTS },
-            'Applied referral credit to referred coach'
-          );
+          console.log(`[REFERRAL] SUCCESS - Applied credit to referred coach`);
+        } else {
+          console.log(`[REFERRAL] ERROR - No stripe customer ID for referred coach!`);
         }
 
         // Update referral status to converted
         // Only mark credits as "applied" if they were actually applied to Stripe
-        await supabase
+        const convertedAt = new Date().toISOString();
+        console.log(`[REFERRAL] Updating referral ${referral.id} to status=converted...`);
+
+        const { error: updateError } = await supabase
           .from('coach_referrals')
           .update({
             status: 'converted',
-            converted_at: new Date().toISOString(),
-            referrer_credit_cents: REFERRAL_CREDIT_CENTS,
-            referrer_credit_applied_at: referrerCreditApplied ? new Date().toISOString() : null,
+            converted_at: convertedAt,
+            referrer_credit_cents: referrerExists ? REFERRAL_CREDIT_CENTS : 0, // No credit if referrer deleted
+            referrer_credit_applied_at: referrerCreditApplied ? convertedAt : null,
             referred_credit_cents: REFERRAL_CREDIT_CENTS,
-            referred_credit_applied_at: referredCreditApplied ? new Date().toISOString() : null,
+            referred_credit_applied_at: referredCreditApplied ? convertedAt : null,
+            // Store coach info in case they delete their account later
+            referred_coach_name: referredCoachName,
+            referred_coach_profile_picture_url: referredCoachPicture,
           })
           .eq('id', referral.id);
 
-        // Log referral conversion for referrer
-        await logPlatformBillingActivity(supabase, {
-          coach_id: referral.referrer_coach_id,
-          event_type: 'referral_converted',
-          description: `Referral converted - $${(REFERRAL_CREDIT_CENTS / 100).toFixed(2)} credit earned`,
-          amount_cents: REFERRAL_CREDIT_CENTS,
-          stripe_event_id: event.id,
-          metadata: { referred_coach_id: coachId },
-        });
+        if (updateError) {
+          console.error(`[REFERRAL] ERROR updating referral status:`, updateError);
+        } else {
+          console.log(`[REFERRAL] SUCCESS - Referral ${referral.id} updated to converted`);
+        }
+
+        // Create 'converted' event for the referrer's activity timeline (only if referrer exists)
+        if (referrerExists) {
+          console.log(`[REFERRAL] Creating converted event for referrer ${referral.referrer_coach_id}...`);
+
+          const { error: eventError } = await supabase
+            .from('coach_referral_events')
+            .insert({
+              referral_id: referral.id,
+              referrer_coach_id: referral.referrer_coach_id,
+              event_type: 'converted',
+              referred_coach_name: referredCoachName,
+              referred_coach_profile_picture_url: referredCoachPicture,
+              credit_cents: REFERRAL_CREDIT_CENTS,
+              created_at: convertedAt,
+            });
+
+          if (eventError) {
+            console.error(`[REFERRAL] ERROR creating referral event:`, eventError);
+          } else {
+            console.log(`[REFERRAL] SUCCESS - Created converted event`);
+          }
+
+          // Log referral conversion for referrer
+          await logPlatformBillingActivity(supabase, {
+            coach_id: referral.referrer_coach_id,
+            event_type: 'referral_converted',
+            description: `Referral converted - $${(REFERRAL_CREDIT_CENTS / 100).toFixed(2)} credit earned`,
+            amount_cents: REFERRAL_CREDIT_CENTS,
+            stripe_event_id: event.id,
+            metadata: { referred_coach_id: coachId },
+          });
+        }
 
         // Log credit earned for referred coach
         await logPlatformBillingActivity(supabase, {
@@ -1686,19 +2727,171 @@ async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
           stripe_event_id: event.id,
           metadata: { referrer_coach_id: referral.referrer_coach_id },
         });
+
+        console.log(`[REFERRAL] ${'*'.repeat(50)}`);
+        console.log(`[REFERRAL] CONVERSION COMPLETE for coach ${coachId}`);
+        console.log(`[REFERRAL] Referral ID: ${referral.id}`);
+        console.log(`[REFERRAL] Referrer: ${referral.referrer_coach_id}`);
+        console.log(`[REFERRAL] ${'*'.repeat(50)}\n`);
+        logger.info({ coachId, referralId: referral.id, referrerCoachId: referral.referrer_coach_id, referrerExists }, 'Referral converted successfully');
+      } else {
+        console.log(`[REFERRAL] NOT PROCESSING - referral: ${!!referral}, creditAlreadyApplied: ${referral?.referrer_credit_applied_at}`);
+        logger.info({ coachId, referralExists: !!referral, creditAlreadyApplied: referral?.referrer_credit_applied_at }, 'Referral not processed - already applied or no referral');
       }
     } catch (referralError: any) {
       // Don't fail the webhook if referral credit fails
+      console.error(`[REFERRAL] EXCEPTION:`, referralError);
       logger.warn({ err: referralError.message, coachId }, 'Failed to process referral credits');
+    }
+  } else {
+    console.log(`[REFERRAL] SKIPPING - billing_reason is '${billingReason}', not 'subscription_create'`);
+    logger.info({ coachId, billingReason }, 'Skipping referral processing - not subscription_create');
+  }
+
+  // Apply scheduled downgrades on subscription renewal (billing cycle)
+  if (billingReason === 'subscription_cycle') {
+    try {
+      logger.info({ coachId }, 'Checking for scheduled downgrades to apply at renewal');
+
+      // Check for scheduled plan downgrade
+      const { data: subscriptionData } = await supabase
+        .from('platform_subscriptions')
+        .select('scheduled_plan_type, scheduled_client_limit, plan_type, client_limit, billing_interval, stripe_subscription_id')
+        .eq('coach_id', coachId)
+        .maybeSingle();
+
+      if (subscriptionData?.scheduled_plan_type || subscriptionData?.scheduled_client_limit) {
+        const newPlan = subscriptionData.scheduled_plan_type || subscriptionData.plan_type;
+        const newClientLimit = subscriptionData.scheduled_client_limit || subscriptionData.client_limit;
+
+        // Apply scheduled plan change to DB
+        await supabase
+          .from('platform_subscriptions')
+          .update({
+            plan_type: newPlan,
+            client_limit: newClientLimit,
+            scheduled_plan_type: null,
+            scheduled_client_limit: null,
+          })
+          .eq('coach_id', coachId);
+
+        // Update Stripe subscription metadata now that the downgrade is taking effect
+        if (subscriptionData.stripe_subscription_id) {
+          try {
+            await stripe.subscriptions.update(subscriptionData.stripe_subscription_id, {
+              metadata: {
+                plan_type: newPlan,
+                client_limit: newClientLimit.toString(),
+                billing_interval: subscriptionData.billing_interval || 'month',
+              },
+            });
+            logger.info({ coachId, newPlan, newClientLimit }, 'Updated Stripe metadata for scheduled downgrade');
+          } catch (stripeErr: any) {
+            logger.warn({ err: stripeErr.message, coachId }, 'Failed to update Stripe metadata for downgrade');
+          }
+        }
+
+        // Update entitlements to new (downgraded) level
+        const entitlementUpdates: Record<string, any> = {
+          plan_type: newPlan,
+          client_limit: newClientLimit,
+        };
+
+        // Set features based on plan
+        if (newPlan === 'max') {
+          entitlementUpdates.has_ai_workout_builder = true;
+          entitlementUpdates.has_custom_exercises = true;
+          entitlementUpdates.has_questionnaires = true;
+          entitlementUpdates.has_habits_metrics = true;
+          entitlementUpdates.storage_limit_gb = 50;
+          entitlementUpdates.has_broadcast_messaging = true;
+          entitlementUpdates.has_ai_todo_list = true;
+          entitlementUpdates.has_priority_support = true;
+        } else if (newPlan === 'pro') {
+          entitlementUpdates.has_ai_workout_builder = true;
+          entitlementUpdates.has_custom_exercises = true;
+          entitlementUpdates.has_questionnaires = true;
+          entitlementUpdates.has_habits_metrics = true;
+          entitlementUpdates.storage_limit_gb = 10;
+          entitlementUpdates.has_broadcast_messaging = false;
+          entitlementUpdates.has_ai_todo_list = false;
+          entitlementUpdates.has_priority_support = false;
+        } else if (newPlan === 'starter') {
+          entitlementUpdates.has_ai_workout_builder = false;
+          entitlementUpdates.has_custom_exercises = false;
+          entitlementUpdates.has_questionnaires = false;
+          entitlementUpdates.has_habits_metrics = false;
+          entitlementUpdates.storage_limit_gb = 1;
+          entitlementUpdates.has_broadcast_messaging = false;
+          entitlementUpdates.has_ai_todo_list = false;
+          entitlementUpdates.has_priority_support = false;
+        }
+
+        await supabase
+          .from('coach_entitlements')
+          .update(entitlementUpdates)
+          .eq('coach_id', coachId);
+
+        logger.info({ coachId, newPlan, newClientLimit }, 'Applied scheduled plan downgrade at renewal');
+      }
+
+      // Check for scheduled addon removals
+      const { data: addonsToRemove } = await supabase
+        .from('platform_addons')
+        .select('addon_type')
+        .eq('coach_id', coachId)
+        .eq('is_active', true)
+        .eq('cancel_at_period_end', true);
+
+      if (addonsToRemove && addonsToRemove.length > 0) {
+        // Map addon type to entitlement field
+        const addonToEntitlement: Record<string, string> = {
+          automations: 'has_automations',
+          ai_assistant: 'has_ai_assistant',
+          payments: 'has_payments',
+        };
+
+        // Deactivate the addons
+        for (const addon of addonsToRemove) {
+          await supabase
+            .from('platform_addons')
+            .update({ is_active: false, cancel_at_period_end: false })
+            .eq('coach_id', coachId)
+            .eq('addon_type', addon.addon_type);
+        }
+
+        // Remove entitlements for cancelled addons
+        const addonEntitlementUpdates: Record<string, boolean> = {};
+        for (const addon of addonsToRemove) {
+          const entitlementField = addonToEntitlement[addon.addon_type];
+          if (entitlementField) {
+            addonEntitlementUpdates[entitlementField] = false;
+          }
+        }
+
+        if (Object.keys(addonEntitlementUpdates).length > 0) {
+          await supabase
+            .from('coach_entitlements')
+            .update(addonEntitlementUpdates)
+            .eq('coach_id', coachId);
+        }
+
+        logger.info({ coachId, addons: addonsToRemove.map(a => a.addon_type) }, 'Applied scheduled addon removals at renewal');
+      }
+    } catch (err: any) {
+      logger.warn({ err: err.message, coachId }, 'Failed to apply scheduled downgrades at renewal');
     }
   }
 
+  console.log(`[REFERRAL] invoice.paid processing complete for coach ${coachId}\n`);
   logger.info({ coachId, amount: invoice.amount_paid }, 'Platform invoice paid');
 }
 
 async function handleInvoicePaymentFailed(event: Stripe.Event, supabase: any) {
   const invoice = event.data.object as Stripe.Invoice;
-  const subscription = (invoice as any).subscription as string;
+  // In newer Stripe API versions, subscription ID may be in parent.subscription_details.subscription
+  const subscription = (invoice as any).subscription
+    || (invoice as any).parent?.subscription_details?.subscription;
 
   if (!subscription) return;
 
