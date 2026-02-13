@@ -114,6 +114,21 @@ userRouter.get('/fetch/:id', userController.fetchUser);
 
 /**
  * @swagger
+ * /api/v1/user/can-delete-account:
+ *   get:
+ *     summary: Check if user can delete their account
+ *     description: Returns blockers if there are active subscriptions that need to be cancelled first
+ *     tags: [User]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Account deletion status
+ */
+userRouter.get('/can-delete-account', supabaseAuthenticate, userController.canDeleteAccount);
+
+/**
+ * @swagger
  * /api/v1/user/delete-account:
  *   delete:
  *     summary: Delete user account

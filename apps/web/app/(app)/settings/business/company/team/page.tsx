@@ -61,7 +61,7 @@ const TeamPage = () => {
                         <span className="text-sm font-medium">{displayName}</span>
                       </div>
                     </div>
-                    <Select value={role} onValueChange={(value) => setRole(value as Role)}>
+                    <Select value={role} onValueChange={(value) => setRole(value as Role)} disabled>
                       <SelectTrigger className="w-[140px]">
                         <SelectValue />
                       </SelectTrigger>

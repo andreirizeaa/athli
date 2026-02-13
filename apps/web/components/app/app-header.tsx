@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bell, Clock, Gift, Headset, Lightbulb, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Bell, Clock, Headset, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAIPanel } from '@/lib/providers/ai-panel-provider';
 import Lottie from 'lottie-react';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,6 @@ import { UserMenu } from './user-menu';
 import { NotificationSidePanel } from './notification-side-panel';
 import { useCoachNotifications } from '@/hooks/use-coach-notifications';
 import { useAccess } from '@/lib/permissions';
-import { useQuery } from '@tanstack/react-query';
-import { getReferrals } from '@/api/billing/billing-service';
 
 type AppHeaderProps = {
   isThemeMounted: boolean;
@@ -38,14 +36,6 @@ export function AppHeader({
 
   const { unreadCount } = useCoachNotifications();
   const { status, trialDaysRemaining } = useAccess();
-
-  // Fetch active credits for the header badge
-  const { data: referralData } = useQuery({
-    queryKey: ['referrals'],
-    queryFn: getReferrals,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-  const activeCredits = referralData?.credits?.active_cents ?? 0;
 
   const isOnTrial = status === 'trial';
   const isAssistantPage = pathname?.startsWith('/assistant');
@@ -136,48 +126,6 @@ export function AppHeader({
             <Headset className="size-4" />
             {t('general.help')}
           </Button>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size={activeCredits > 0 ? 'default' : 'icon'}
-                asChild
-                aria-label={t('sidebar.links.referAndEarn') || 'Refer and Earn'}
-                className={activeCredits > 0 ? 'gap-1.5' : ''}
-              >
-                <Link href="/refer-and-earn">
-                  {activeCredits > 0 && (
-                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                      ${(activeCredits / 100).toFixed(0)}
-                    </span>
-                  )}
-                  <Gift className="size-4" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {activeCredits > 0
-                ? t('sidebar.links.referAndEarn') + ` - $${(activeCredits / 100).toFixed(0)} credit`
-                : t('sidebar.links.referAndEarn') || 'Refer and Earn'}
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                asChild
-                aria-label={t('sidebar.featureRequests.label') || 'Feature Requests'}
-              >
-                <Link href="/features">
-                  <Lightbulb className="size-4" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t('sidebar.featureRequests.label') || 'Feature Requests'}
-            </TooltipContent>
-          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

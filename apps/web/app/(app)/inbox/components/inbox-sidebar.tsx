@@ -9,9 +9,14 @@ import {
     PanelLeftClose,
     PanelLeftOpen,
     Megaphone,
+    Settings,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/general/utils';
 import { type Contact } from '@/components/app/app-shell';
 import { ContactListItem } from './contact-list-item';
@@ -24,6 +29,9 @@ interface InboxSidebarProps {
     setSearchQuery: (value: string) => void;
     filteredContacts: Contact[];
     selectedContactId: string | undefined;
+    showArchivedConversations: boolean;
+    setShowArchivedConversations: (value: boolean) => void;
+    isLoading?: boolean;
 
     onOpenBroadcast: () => void;
     onContactClick: (contactId: string) => void;
@@ -36,6 +44,9 @@ export const InboxSidebar = React.memo(function InboxSidebar({
     setSearchQuery,
     filteredContacts,
     selectedContactId,
+    showArchivedConversations,
+    setShowArchivedConversations,
+    isLoading,
 
     onOpenBroadcast,
     onContactClick,
@@ -158,14 +169,14 @@ export const InboxSidebar = React.memo(function InboxSidebar({
 
                     {/* Search Row: Input or Icon (Fixed Height) */}
                     <div className="h-12 relative -mt-[4px]">
-                        {/* Expanded: Search Input */}
+                        {/* Expanded: Search Input + Settings */}
                         <div
                             className={cn(
-                                'absolute inset-0 transition-all duration-300 flex items-center',
+                                'absolute inset-0 transition-all duration-300 flex items-center gap-1',
                                 isSidebarCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'
                             )}
                         >
-                            <div className="relative w-full">
+                            <div className="relative flex-1">
                                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                                 <Input
                                     type="text"
@@ -186,6 +197,28 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                                     </Button>
                                 )}
                             </div>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="size-9 shrink-0 relative">
+                                        <Settings className="size-4" />
+                                        {showArchivedConversations && (
+                                            <span className="absolute -top-0.5 -right-0.5 size-[18px] bg-primary text-primary-foreground rounded-full text-[9px] flex items-center justify-center font-medium">1</span>
+                                        )}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent align="end" className="w-64">
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="show-archived-inbox" className="text-sm font-normal">
+                                            Show archived conversations
+                                        </Label>
+                                        <Switch
+                                            id="show-archived-inbox"
+                                            checked={showArchivedConversations}
+                                            onCheckedChange={setShowArchivedConversations}
+                                        />
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
                         </div>
 
                         {/* Collapsed: Search Icon (Same Position) */}
@@ -208,7 +241,11 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                 </div>
                 <div className="flex-1 overflow-auto pt-2">
                     <div className="block min-w-0 border-border">
-                        {filteredContacts.length ? (
+                        {isLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <Spinner className="size-6" />
+                            </div>
+                        ) : filteredContacts.length ? (
                             filteredContacts.map((contact) => (
                                 <ContactListItem
                                     contact={contact}

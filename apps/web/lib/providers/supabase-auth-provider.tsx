@@ -76,7 +76,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   // Helper to check if current path is a protected route (where session expired dialog should show)
   const isOnProtectedRoute = () => {
     const currentPath = pathnameRef.current;
-    const protectedPrefixes = ['/training', '/business', '/settings', '/onboarding', '/dashboard'];
+    const protectedPrefixes = ['/library', '/business', '/settings', '/onboarding', '/dashboard'];
     return protectedPrefixes.some(prefix => currentPath?.startsWith(prefix));
   };
 

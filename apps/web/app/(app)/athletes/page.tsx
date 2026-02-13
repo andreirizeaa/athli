@@ -38,6 +38,8 @@ import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { PageHeader } from '@/components/app/page-header';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmArchiveDialog } from '@/components/app/confirm-archive-dialog';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
+import { ClientLimitExceededDialog } from '@/components/app/client-limit-exceeded-dialog';
 import { InviteLinkDialog, copyToClipboard } from '@/components/app/invite-link-dialog';
 import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
 import {
@@ -72,7 +74,11 @@ import {
   Archive,
   ArchiveRestore,
   Cake,
+  Settings,
 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import flags from 'react-phone-number-input/flags';
 import type { Country } from 'react-phone-number-input';
 import { getCountryCode, getCountryName } from '@/lib/general/country-utils';
@@ -162,11 +168,17 @@ const AthletesPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const { uniqueCode } = useGlobalData();
-  const { clients: athletes, isLoading, archiveClient } = useCoachClients();
+  const [showArchivedClients, setShowArchivedClients] = useState<boolean>(false);
+  const { clients: athletes, activeClientCount, isLoading, archiveClient, unarchiveClient } = useCoachClients({ includeArchived: showArchivedClients });
   const { onboardings } = useCoachOnboardings();
   const { clientLimit } = useEntitlements();
   const terminology = useTerminology();
-  const hasReachedLimit = (athletes?.length || 0) >= clientLimit;
+  const hasReachedLimit = activeClientCount >= clientLimit;
+
+  // Update document title based on terminology
+  useEffect(() => {
+    document.title = `${terminology.plural} - Athli`;
+  }, [terminology.plural]);
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set());
   const [revealedFields, setRevealedFields] = useState<Set<string>>(new Set());
   const [copiedFields, setCopiedFields] = useState<Set<string>>(new Set());
@@ -175,7 +187,9 @@ const AthletesPage = () => {
   const [isRestoreClientsOpen, setIsRestoreClientsOpen] = useState<boolean>(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState<boolean>(false);
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState<boolean>(false);
+  const [isUnarchiveConfirmOpen, setIsUnarchiveConfirmOpen] = useState<boolean>(false);
   const [isClientLimitDialogOpen, setIsClientLimitDialogOpen] = useState<boolean>(false);
+  const [isUnarchiveLimitDialogOpen, setIsUnarchiveLimitDialogOpen] = useState<boolean>(false);
   const [filteredCount, setFilteredCount] = useState<number>(0);
   const itemsPerPage = 25;
   const timeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -302,18 +316,16 @@ const AthletesPage = () => {
   const handleConfirmArchive = async () => {
     setIsArchiving(true);
     try {
-      const athleteIds = Array.from(selectedAthletes);
-      // Get names of athletes being archived
-      const archivedNames = athletes
-        .filter(a => selectedAthletes.has(a.id))
-        .map(a => a.name)
-        .join(', ');
+      // Only archive active clients (not already archived ones)
+      const activeToArchive = selectedActiveClients;
+      const athleteIds = activeToArchive.map(a => a.id);
+      const archivedNames = activeToArchive.map(a => a.name).join(', ');
 
       await Promise.all(athleteIds.map(id => archiveClient(id)));
 
-      const message = selectedAthletes.size === 1
+      const message = activeToArchive.length === 1
         ? `${archivedNames} has been successfully archived and will lose app access immediately`
-        : `${selectedAthletes.size} ${terminology.pluralLower} have been successfully archived and will lose app access immediately`;
+        : `${activeToArchive.length} ${terminology.pluralLower} have been successfully archived and will lose app access immediately`;
 
       toast.success(message, {
         description: `You can restore archived ${terminology.pluralLower} later.`,
@@ -330,6 +342,56 @@ const AthletesPage = () => {
     }
   };
 
+  const [isUnarchiving, setIsUnarchiving] = useState<boolean>(false);
+
+  const handleUnarchiveSelected = () => {
+    if (selectedAthletes.size === 0) return;
+    // Check if unarchiving would exceed client limit
+    const selectedArchivedCount = athletes
+      .filter(a => selectedAthletes.has(a.id) && a.status === 'archived')
+      .length;
+    if (activeClientCount + selectedArchivedCount > clientLimit) {
+      setIsUnarchiveLimitDialogOpen(true);
+      return;
+    }
+    setIsUnarchiveConfirmOpen(true);
+  };
+
+  const handleConfirmUnarchive = async () => {
+    setIsUnarchiving(true);
+    try {
+      const archivedIds = athletes
+        .filter(a => selectedAthletes.has(a.id) && a.status === 'archived')
+        .map(a => a.id);
+
+      const unarchivedNames = athletes
+        .filter(a => selectedAthletes.has(a.id) && a.status === 'archived')
+        .map(a => a.name)
+        .join(', ');
+
+      await Promise.all(archivedIds.map(id => unarchiveClient(id)));
+
+      const message = archivedIds.length === 1
+        ? `${unarchivedNames} has been successfully unarchived and will regain app access immediately`
+        : `${archivedIds.length} ${terminology.pluralLower} have been successfully unarchived and will regain app access immediately`;
+
+      toast.success(message);
+
+      setSelectedAthletes(new Set());
+      setIsUnarchiveConfirmOpen(false);
+    } catch (error) {
+      toast.error('Failed to unarchive client(s)');
+      console.error(error);
+    } finally {
+      setIsUnarchiving(false);
+    }
+  };
+
+  // Determine what's selected for showing appropriate buttons
+  const selectedArchivedClients = athletes.filter(a => selectedAthletes.has(a.id) && a.status === 'archived');
+  const selectedActiveClients = athletes.filter(a => selectedAthletes.has(a.id) && a.status !== 'archived');
+  const hasSelectedArchived = selectedArchivedClients.length > 0;
+  const hasSelectedActive = selectedActiveClients.length > 0;
 
   const handleNavigateToMessages = (athleteId: string) => {
     router.push(`/inbox/${athleteId}`);
@@ -634,27 +696,27 @@ const AthletesPage = () => {
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => {
               const category = row.category;
-              if (category === 'in-person') {
+              if (category === 'online') {
                 return (
-                  <Badge variant="default" className="text-xs rounded-full bg-primary text-primary-foreground border-transparent">
-                    {t('athletes.filters.inPerson')}
+                  <Badge variant="outline" className="text-xs rounded-full border-blue-500 text-blue-500 bg-transparent">
+                    {t('athletes.filters.online')}
                   </Badge>
                 );
-              } else if (category === 'online') {
+              } else if (category === 'in-person') {
                 return (
-                  <Badge variant="outline" className="text-xs border-primary text-primary bg-transparent">
-                    {t('athletes.filters.online')}
+                  <Badge variant="outline" className="text-xs rounded-full border-violet-500 text-violet-500 bg-transparent">
+                    {t('athletes.filters.inPerson')}
                   </Badge>
                 );
               } else if (category === 'hybrid') {
                 return (
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-xs rounded-full border-amber-500 text-amber-500 bg-transparent">
                     {t('athletes.filters.hybrid')}
                   </Badge>
                 );
               } else if (category === null) {
                 return (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="outline" className="text-xs rounded-full">
                     {t('athletes.filters.uncategorized', { defaultValue: 'Not set' })}
                   </Badge>
                 );
@@ -677,26 +739,38 @@ const AthletesPage = () => {
             },
             tooltip: t('athletes.columnTooltips.status'),
             getSortValue: (row) => {
-              const order: Record<string, number> = { connected: 2, accepted: 1, invited: 0 };
+              const order: Record<string, number> = { connected: 2, accepted: 1, invited: 0, archived: -1 };
               return order[row.status] ?? -1;
             },
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => {
-              const statusMap: Record<string, { label: string; variant: 'default' | 'outline' | 'secondary' }> = {
-                connected: { label: t('athletes.status.connected'), variant: 'default' },
-                accepted: { label: t('athletes.status.accepted'), variant: 'outline' },
-                invited: { label: t('athletes.status.invited'), variant: 'secondary' },
-              };
-              const info = statusMap[row.status];
-              if (!info) {
-                return <span className="text-sm text-muted-foreground">--</span>;
+              if (row.status === 'archived') {
+                return (
+                  <Badge variant="outline" className="text-xs rounded-full border-destructive text-destructive">
+                    {t('general.archived')}
+                  </Badge>
+                );
+              } else if (row.status === 'connected') {
+                return (
+                  <Badge variant="outline" className="text-xs rounded-full border-green-500 text-green-500">
+                    {t('athletes.status.connected')}
+                  </Badge>
+                );
+              } else if (row.status === 'accepted') {
+                return (
+                  <Badge variant="outline" className="text-xs rounded-full border-yellow-500 text-yellow-500">
+                    {t('athletes.status.accepted')}
+                  </Badge>
+                );
+              } else if (row.status === 'invited') {
+                return (
+                  <Badge variant="outline" className="text-xs rounded-full">
+                    {t('athletes.status.invited')}
+                  </Badge>
+                );
               }
-              return (
-                <Badge variant={info.variant} className="text-xs rounded-full">
-                  {info.label}
-                </Badge>
-              );
+              return <span className="text-sm text-muted-foreground">--</span>;
             },
           };
         case 'email':
@@ -948,6 +1022,13 @@ const AthletesPage = () => {
   ];
 
   // Create filter definitions
+  const statusOptions = [
+    { value: 'connected', label: t('athletes.status.connected') },
+    { value: 'accepted', label: t('athletes.status.accepted') },
+    { value: 'invited', label: t('athletes.status.invited') },
+    ...(showArchivedClients ? [{ value: 'archived', label: t('general.archived') }] : []),
+  ];
+
   const filters: FilterDefinition<Athlete>[] = [
     {
       id: 'category',
@@ -964,11 +1045,7 @@ const AthletesPage = () => {
       id: 'status',
       label: t('athletes.filters.status'),
       icon: <HeartPulse className="size-4" />,
-      options: [
-        { value: 'connected', label: t('athletes.status.connected') },
-        { value: 'accepted', label: t('athletes.status.accepted') },
-        { value: 'invited', label: t('athletes.status.invited') },
-      ],
+      options: statusOptions,
       getFilterValue: (row) => row.status || null,
     },
   ];
@@ -1156,7 +1233,7 @@ const AthletesPage = () => {
         action={
           <div className="flex items-center gap-2">
             <div className="flex items-center px-3 py-1.5 rounded-md border border-primary text-primary text-sm font-medium">
-              {athletes?.length || 0}/{clientLimit} {terminology.pluralLower}
+              {activeClientCount}/{clientLimit} {terminology.pluralLower}
             </div>
             <DropdownMenu>
               <ButtonGroup>
@@ -1213,6 +1290,31 @@ const AthletesPage = () => {
         searchPlaceholder={t('athletes.searchPlaceholder')}
         searchFields={[(row: Athlete) => `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`]}
         filters={filters}
+        filterBarActions={
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" className="gap-2">
+                <Settings className="size-4" />
+                <span>Settings</span>
+                {showArchivedClients && (
+                  <span className="size-[18px] bg-primary text-primary-foreground rounded-full text-[9px] flex items-center justify-center font-medium">1</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="show-archived" className="text-sm font-normal">
+                  Show archived {terminology.pluralLower}
+                </Label>
+                <Switch
+                  id="show-archived"
+                  checked={showArchivedClients}
+                  onCheckedChange={setShowArchivedClients}
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
+        }
         enableEditColumns={true}
         enableExport={true}
         exportFileName="athletes.csv"
@@ -1306,25 +1408,48 @@ const AthletesPage = () => {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleArchiveSelected}
-                    className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    disabled={isArchiving}
-                    aria-label={t('athletes.actions.archiveSelectedAria')}
-                  >
-                    {isArchiving ? <Spinner className="size-4" /> : <Archive className="size-4" />}
-                    <span>{t('athletes.actions.archive')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('athletes.actions.archive')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {hasSelectedArchived && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={handleUnarchiveSelected}
+                      className="gap-2"
+                      disabled={isUnarchiving}
+                      aria-label={t('athletes.actions.unarchiveSelectedAria', { defaultValue: 'Unarchive selected' })}
+                    >
+                      {isUnarchiving ? <Spinner className="size-4" /> : <ArchiveRestore className="size-4" />}
+                      <span>{t('athletes.actions.unarchivePlural', { item: terminology.pluralLower, defaultValue: `Unarchive ${terminology.pluralLower}` })}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('athletes.actions.unarchivePluralTooltip', { item: terminology.pluralLower, defaultValue: `Unarchive ${terminology.pluralLower} that are archived` })}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {hasSelectedActive && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={handleArchiveSelected}
+                      className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      disabled={isArchiving}
+                      aria-label={t('athletes.actions.archiveSelectedAria')}
+                    >
+                      {isArchiving ? <Spinner className="size-4" /> : <Archive className="size-4" />}
+                      <span>{t('athletes.actions.archivePlural', { item: terminology.pluralLower, defaultValue: `Archive ${terminology.pluralLower}` })}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('athletes.actions.archivePluralTooltip', { item: terminology.pluralLower, defaultValue: `Archive ${terminology.pluralLower} that are active` })}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
         }
         emptyMessage={terminology.noPluralFound}
@@ -1375,6 +1500,7 @@ const AthletesPage = () => {
         showPagination={true}
         gridPadding={true}
         compactPagination={true}
+        isLoading={isLoading}
       />
       <AddClientSidePanel
         open={isAddAthleteOpen}
@@ -1388,7 +1514,27 @@ const AthletesPage = () => {
         open={isArchiveConfirmOpen}
         onOpenChange={setIsArchiveConfirmOpen}
         onConfirm={handleConfirmArchive}
-        count={selectedAthletes.size}
+        count={selectedActiveClients.length}
+        isLoading={isArchiving}
+      />
+      <ConfirmDeleteDialog
+        open={isUnarchiveConfirmOpen}
+        onOpenChange={setIsUnarchiveConfirmOpen}
+        onConfirm={handleConfirmUnarchive}
+        title={`Unarchive ${selectedArchivedClients.length === 1 ? selectedArchivedClients[0]?.name : `${selectedArchivedClients.length} ${terminology.pluralLower}`}`}
+        description={`Are you sure you want to unarchive ${selectedArchivedClients.length === 1 ? 'this client' : `these ${selectedArchivedClients.length} ${terminology.pluralLower}`}? They will regain access to the app immediately.`}
+        confirmText="Unarchive"
+        variant="default"
+        twoStep
+        step2Title="Confirm Unarchive"
+        step2Description={`Please confirm one more time to unarchive ${selectedArchivedClients.length === 1 ? 'this client' : `these ${selectedArchivedClients.length} ${terminology.pluralLower}`}.`}
+        step2ConfirmText="Confirm Unarchive"
+      />
+      <ClientLimitExceededDialog
+        open={isUnarchiveLimitDialogOpen}
+        onOpenChange={setIsUnarchiveLimitDialogOpen}
+        clientLimit={clientLimit}
+        currentCount={activeClientCount}
       />
       {uniqueCode && (
         <InviteLinkDialog

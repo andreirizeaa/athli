@@ -182,7 +182,8 @@
       "WebFetch(domain:www.quora.com)",
       "Bash(pnpm turbo build:*)",
       "Bash(npm info:*)",
-      "WebFetch(domain:bxgbbpiswmauqdqkkaha.supabase.co)"
+      "WebFetch(domain:bxgbbpiswmauqdqkkaha.supabase.co)",
+      "Bash(npx turbo run build:*)"
     ]
   }
 }

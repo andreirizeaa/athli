@@ -14,14 +14,12 @@ import { useEntitlements, useSubscription } from '@/hooks/use-entitlements';
 export default function UpdatePlanPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const { clients } = useCoachClients();
+  const { activeClientCount, isLoading: isLoadingClients } = useCoachClients();
   const { isLoading: isLoadingEntitlements } = useEntitlements();
   const { isLoading: isLoadingSubscription } = useSubscription();
 
-  const isLoading = isLoadingEntitlements || isLoadingSubscription;
-
-  // Get the count of active clients (non-archived)
-  const activeClientCount = clients.length;
+  // Wait for all data to load before showing pricing
+  const isLoading = isLoadingEntitlements || isLoadingSubscription || isLoadingClients;
 
   useEffect(() => {
     setMounted(true);

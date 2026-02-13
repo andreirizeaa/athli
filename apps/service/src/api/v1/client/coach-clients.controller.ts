@@ -275,7 +275,7 @@ export const coachClientController = {
             const supabase = getSupabaseClient();
 
             // 1. Separate assignment updates from profile updates
-            const assignmentFields = ['category', 'status', 'is_archived'];
+            const assignmentFields = ['category', 'status', 'is_active', 'is_archived'];
             const profileFields = ['name', 'phone', 'gender', 'country', 'birth_date', 'unit_system', 'height_cm', 'timezone'];
 
             const assignmentUpdates: any = {};
@@ -602,8 +602,10 @@ export const coachClientController = {
         }
 
         const supabase = getSupabaseClient();
+        // Use coach_clients_all_view which includes archived clients
+        // (coach_clients_view filters out archived clients at the database level)
         const { data: clients, error } = await supabase
-            .from('coach_clients_view')
+            .from('coach_clients_all_view')
             .select('*')
             .eq('coach_id', coachId)
             .eq('is_archived', true);

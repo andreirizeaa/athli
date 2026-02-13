@@ -35,7 +35,7 @@ export function CompleteStep({ onComplete }: CompleteStepProps) {
         transition={{ delay: 0.2, duration: 0.4 }}
         className="text-muted-foreground text-lg mb-8"
       >
-        Your business profile is ready.
+        You can now start coaching your clients.
       </motion.p>
       <motion.div
         initial={{ opacity: 0, y: 10 }}

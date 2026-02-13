@@ -6,8 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,14 +18,35 @@ import {
 import { useAccess } from '@/lib/permissions';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { useEntitlements, useSubscription } from '@/hooks/use-entitlements';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '@/api/api-client';
 import confetti from 'canvas-confetti';
 import { InvoicesCard } from './invoices-card';
+
+interface Invoice {
+  id: string;
+  period_end: number;
+}
+
+interface InvoicesResponse {
+  invoices: Invoice[];
+}
 
 // Plan display names
 const PLAN_NAMES: Record<string, string> = {
   starter: 'Starter',
   pro: 'Pro',
   max: 'Max',
+};
+
+// Format date for display
+const formatCancelDate = (date: Date | null) => {
+  if (!date) return '';
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 };
 
 const BillingPage = () => {
@@ -47,13 +67,45 @@ const BillingPage = () => {
   const {
     totalMonthlyCents,
     billingInterval,
+    isCancelling,
+    cancellingAddons,
+    nextBillingDate,
+    hasScheduledChanges,
+    scheduledPlan,
+    scheduledClientLimit,
+    scheduledPriceCents,
     isLoading: isLoadingSubscription,
   } = useSubscription();
   const [showTrialWarning, setShowTrialWarning] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Fetch invoices to get period_end date (fallback when subscription.current_period_end is null)
+  const { data: invoicesData } = useQuery({
+    queryKey: ['billing-invoices'],
+    queryFn: () => apiFetch<InvoicesResponse>('/billing/invoices'),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Get the cancellation date from subscription or latest invoice
+  const cancellationDate = useMemo(() => {
+    if (nextBillingDate) return nextBillingDate;
+    // Fallback to latest invoice's period_end
+    const latestInvoice = invoicesData?.invoices?.[0];
+    if (latestInvoice?.period_end) {
+      return new Date(latestInvoice.period_end * 1000);
+    }
+    return null;
+  }, [nextBillingDate, invoicesData]);
 
   // Show confetti on successful checkout and remove success param from URL
   useEffect(() => {
     if (searchParams.get('success') === 'true') {
+      // Invalidate cached data to show updated entitlements/subscription
+      queryClient.invalidateQueries({ queryKey: ['entitlements'] });
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['billing-invoices'] });
+
       // Remove success param from URL without reload
       router.replace('/settings/billing', { scroll: false });
 
@@ -84,16 +136,16 @@ const BillingPage = () => {
         });
       }, 300);
     }
-  }, [searchParams, router]);
+  }, [searchParams, router, queryClient]);
 
   const activeClientsCount = clients.length;
 
   // Build current plan from entitlements
   const currentPlan = useMemo(() => {
-    const addons = [];
-    if (hasAutomations) addons.push({ name: 'Automations', included: true });
-    if (hasAiAssistant) addons.push({ name: 'AI Assistant', included: true });
-    if (hasPayments) addons.push({ name: 'Payments', included: true });
+    const addons: { name: string; included: boolean; isCancelling: boolean; addonType: string }[] = [];
+    if (hasAutomations) addons.push({ name: 'Automations', included: true, isCancelling: cancellingAddons.includes('automations'), addonType: 'automations' });
+    if (hasAiAssistant) addons.push({ name: 'AI Assistant', included: true, isCancelling: cancellingAddons.includes('ai_assistant'), addonType: 'ai_assistant' });
+    if (hasPayments) addons.push({ name: 'Payments', included: true, isCancelling: cancellingAddons.includes('payments'), addonType: 'payments' });
 
     return {
       name: PLAN_NAMES[plan] || plan,
@@ -103,7 +155,7 @@ const BillingPage = () => {
       billingInterval: billingInterval || 'month' as const,
       addons,
     };
-  }, [plan, isTrial, status, clientLimit, hasAutomations, hasAiAssistant, hasPayments, totalMonthlyCents, billingInterval]);
+  }, [plan, isTrial, status, clientLimit, hasAutomations, hasAiAssistant, hasPayments, totalMonthlyCents, billingInterval, cancellingAddons]);
 
   const clientPercentage = currentPlan.clientsLimit > 0
     ? (activeClientsCount / currentPlan.clientsLimit) * 100
@@ -113,12 +165,14 @@ const BillingPage = () => {
     if (currentPlan.isTrial) {
       setShowTrialWarning(true);
     } else {
+      setIsNavigating(true);
       router.push('/settings/billing/update');
     }
   };
 
   const handleConfirmTrialEnd = () => {
     setShowTrialWarning(false);
+    setIsNavigating(true);
     router.push('/settings/billing/update');
   };
 
@@ -126,64 +180,204 @@ const BillingPage = () => {
     <>
       <div className="w-full h-full flex flex-col overflow-auto">
         <div className="w-full flex-1 overflow-auto px-4 pt-4 pb-2 bg-background flex flex-col items-center gap-4">
-          {/* Current Plan Card */}
+          {/* Current Plan Card - Two-card layout when scheduled changes exist */}
           <Card className="bg-background max-w-3xl w-full">
             <CardHeader className="px-4">
               <div className="flex items-center justify-between">
                 <CardTitle>Current Plan</CardTitle>
                 {currentPlan.isTrial && (
-                  <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
+                  <span className="px-2.5 py-0.5 text-sm font-medium rounded-sm border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
                     {trialDaysRemaining} days left in trial
-                  </Badge>
+                  </span>
+                )}
+                {!currentPlan.isTrial && hasScheduledChanges && (
+                  <span className="px-2.5 py-0.5 text-sm font-medium rounded-sm border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
+                    Changes scheduled
+                  </span>
                 )}
               </div>
             </CardHeader>
             <Separator className="w-full mt-[-8px]" />
             <CardContent className="px-4 pt-1 pb-4">
-              <div className="flex items-start justify-between gap-8">
-                {/* Left side - Plan details */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-semibold">{currentPlan.name}</h3>
-                    {currentPlan.isTrial && (
-                      <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
-                        Free Trial
-                      </Badge>
-                    )}
+              {/* Show two-card layout when there are scheduled changes */}
+              {!currentPlan.isTrial && hasScheduledChanges && (scheduledPlan || scheduledClientLimit || cancellingAddons.length > 0) ? (
+                <div className="space-y-4">
+                  {/* Current Plan Card */}
+                  <div className="border rounded-lg p-4 bg-muted/50">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-base font-semibold text-foreground">Current Plan</p>
+                      {(cancellationDate || nextBillingDate) && (
+                        <span className="text-xs font-medium px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded">
+                          Until {(cancellationDate || nextBillingDate)!.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Plan:</span>
+                        <span className="font-medium">{currentPlan.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Clients:</span>
+                        <span className="font-medium">{currentPlan.clientsLimit}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Price:</span>
+                        <span className="font-medium">${currentPlan.price}/{currentPlan.billingInterval === 'month' ? 'mo' : 'yr'}</span>
+                      </div>
+                      {currentPlan.addons.length > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Add-ons:</span>
+                          <span className="font-medium">{currentPlan.addons.map(a => a.name).join(', ')}</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-3">
+                      You'll keep all your current features until your next billing date.
+                    </p>
                   </div>
 
-                  {/* Plan includes */}
-                  <div className="mt-3 space-y-1.5">
-                    <p className="text-sm">
-                      <span className="text-muted-foreground">Clients:</span>{' '}
-                      <span className="font-medium">Up to {currentPlan.clientsLimit}</span>
-                    </p>
-                    {currentPlan.addons.map((addon) => (
-                      <p key={addon.name} className="text-sm">
-                        <span className="text-muted-foreground">{addon.name}:</span>{' '}
-                        <span className="font-medium">{addon.included ? 'Included' : 'Not included'}</span>
+                  {/* New Plan Card */}
+                  <div className="border rounded-lg p-4 border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-base font-semibold text-foreground">New Plan</p>
+                      {(cancellationDate || nextBillingDate) && (
+                        <span className="text-xs font-medium px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded">
+                          Starting {(cancellationDate || nextBillingDate)!.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Plan:</span>
+                        <span className="font-medium">{PLAN_NAMES[scheduledPlan || plan] || (scheduledPlan || plan)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Clients:</span>
+                        <span className="font-medium">{scheduledClientLimit || clientLimit}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Price:</span>
+                        <span className="font-medium">${scheduledPriceCents !== null ? (scheduledPriceCents / 100).toFixed(0) : 0}/{billingInterval === 'month' ? 'mo' : 'yr'}</span>
+                      </div>
+                      {/* Show remaining add-ons (those not being cancelled) */}
+                      {currentPlan.addons.filter(a => !cancellingAddons.includes(a.addonType)).length > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Add-ons:</span>
+                          <span className="font-medium">
+                            {currentPlan.addons.filter(a => !cancellingAddons.includes(a.addonType)).map(a => a.name).join(', ')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Price difference summary */}
+                  {(() => {
+                    const currentPriceCents = currentPlan.price * 100;
+                    const newPriceCents = scheduledPriceCents ?? 0;
+                    const diff = currentPriceCents - newPriceCents;
+                    const isSaving = diff > 0;
+                    const periodLabel = billingInterval === 'month' ? 'mo' : 'yr';
+
+                    if (diff === 0) {
+                      return (
+                        <div className="flex justify-between items-center px-1 pt-1">
+                          <span className="text-base font-medium">Price change:</span>
+                          <span className="text-base font-semibold text-muted-foreground">No change</span>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="flex justify-between items-center px-1 pt-1">
+                        <span className="text-base font-medium">
+                          {isSaving ? `${billingInterval === 'month' ? 'Monthly' : 'Annual'} savings:` : `${billingInterval === 'month' ? 'Monthly' : 'Annual'} increase:`}
+                        </span>
+                        <span className={`text-base font-semibold ${isSaving ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                          ${Math.abs(diff / 100).toFixed(0)}/{periodLabel}
+                        </span>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Update Plan button */}
+                  <div className="flex justify-end pt-2">
+                    <Button onClick={handleChangePlan} disabled={isNavigating} className="gap-2 relative">
+                      <span className={isNavigating ? 'opacity-0' : ''}>Update Plan</span>
+                      <ArrowRight className={`size-4 ${isNavigating ? 'opacity-0' : ''}`} />
+                      {isNavigating && (
+                        <Loader2 className="size-4 animate-spin absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* Standard layout when no scheduled changes */
+                <div className="flex items-start justify-between gap-8">
+                  {/* Left side - Plan details */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-semibold">{currentPlan.name}</h3>
+                      {currentPlan.isTrial && (
+                        <span className="px-2.5 py-0.5 text-sm font-medium rounded-sm border bg-[#dcfce7] text-[#14532d] border-[#bbf7d0] dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30">
+                          Free Trial
+                        </span>
+                      )}
+                      {isCancelling && !currentPlan.isTrial && (
+                        <span className="px-2.5 py-0.5 text-sm font-medium rounded-sm border bg-red-100 text-red-900 border-red-200 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30">
+                          Cancelling {cancellationDate && formatCancelDate(cancellationDate)}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Plan includes */}
+                    <div className="mt-3 space-y-1.5">
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Clients:</span>{' '}
+                        <span className="font-medium">Up to {currentPlan.clientsLimit}</span>
                       </p>
-                    ))}
+                      {currentPlan.addons.map((addon) => (
+                        <p key={addon.name} className="text-sm">
+                          <span className="text-muted-foreground">{addon.name}:</span>{' '}
+                          <span className="font-medium">
+                            {addon.included
+                              ? (currentPlan.isTrial ? 'Included with Free Trial' : 'Included')
+                              : 'Not included'}
+                          </span>
+                          {addon.isCancelling && cancellationDate && (
+                            <span className="text-red-600 dark:text-red-400 ml-2">
+                              (Cancelling on {formatCancelDate(cancellationDate)})
+                            </span>
+                          )}
+                        </p>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                {/* Right side - Billing & Action */}
-                <div className="flex flex-col items-end gap-3">
-                  <Button onClick={handleChangePlan} className="gap-2">
-                    Change Plan
-                    <ArrowRight className="size-4" />
-                  </Button>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold">
-                      ${currentPlan.price}
-                      <span className="text-sm font-normal text-muted-foreground">/{currentPlan.billingInterval}</span>
-                    </p>
-                    {currentPlan.isTrial && (
-                      <p className="text-xs text-muted-foreground">Free during trial</p>
-                    )}
+                  {/* Right side - Billing & Action */}
+                  <div className="flex flex-col items-end justify-between self-stretch">
+                    <Button onClick={handleChangePlan} disabled={isNavigating} className="gap-2 relative">
+                      <span className={isNavigating ? 'opacity-0' : ''}>
+                        {isCancelling && !currentPlan.isTrial ? "Don't Cancel" : 'Update Plan'}
+                      </span>
+                      {!isCancelling && <ArrowRight className={`size-4 ${isNavigating ? 'opacity-0' : ''}`} />}
+                      {isNavigating && (
+                        <Loader2 className="size-4 animate-spin absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                      )}
+                    </Button>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold">
+                        ${currentPlan.price}
+                        <span className="text-sm font-normal text-muted-foreground">/{currentPlan.billingInterval}</span>
+                      </p>
+                      {currentPlan.isTrial && (
+                        <p className="text-xs text-muted-foreground">Free during trial</p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -200,7 +394,9 @@ const BillingPage = () => {
                     {isLoadingClients ? 'Loading...' : `${activeClientsCount} of ${currentPlan.clientsLimit} clients`}
                   </span>
                   <span className="text-sm font-medium">
-                    {Math.round(clientPercentage)}%
+                    {clientPercentage < 1 && clientPercentage > 0
+                      ? `${clientPercentage.toFixed(1)}%`
+                      : `${Math.round(clientPercentage)}%`}
                   </span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -218,10 +414,16 @@ const BillingPage = () => {
                       variant="outline"
                       size="sm"
                       onClick={handleChangePlan}
-                      className="gap-2"
+                      disabled={isNavigating}
+                      className="gap-2 relative"
                     >
-                      Increase Allowance
-                      <ArrowRight className="size-4" />
+                      <span className={isNavigating ? 'opacity-0' : ''}>
+                        {isCancelling && !currentPlan.isTrial ? "Don't Cancel" : 'Increase Allowance'}
+                      </span>
+                      {!isCancelling && <ArrowRight className={`size-4 ${isNavigating ? 'opacity-0' : ''}`} />}
+                      {isNavigating && (
+                        <Loader2 className="size-4 animate-spin absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                      )}
                     </Button>
                   </div>
                 )}
@@ -244,11 +446,14 @@ const BillingPage = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTrialWarning(false)}>
+            <Button variant="outline" onClick={() => setShowTrialWarning(false)} disabled={isNavigating}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmTrialEnd}>
-              Continue
+            <Button onClick={handleConfirmTrialEnd} disabled={isNavigating} className="relative">
+              <span className={isNavigating ? 'opacity-0' : ''}>Continue</span>
+              {isNavigating && (
+                <Loader2 className="size-4 animate-spin absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
