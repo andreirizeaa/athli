@@ -152,9 +152,9 @@ function transformResults(data: SearchResults): CategoryResults[] {
         id: f.id,
         name: f.filename,
         subtitle: undefined,
-        path: '/files',
+        path: '/library/files',
       })),
-      sectionPath: '/files',
+      sectionPath: '/library/files',
     });
   }
 
@@ -167,9 +167,9 @@ function transformResults(data: SearchResults): CategoryResults[] {
         id: h.id,
         name: h.name,
         subtitle: h.description,
-        path: '/habits',
+        path: '/library/habits',
       })),
-      sectionPath: '/habits',
+      sectionPath: '/library/habits',
     });
   }
 
@@ -182,9 +182,9 @@ function transformResults(data: SearchResults): CategoryResults[] {
         id: m.id,
         name: m.name,
         subtitle: m.unit ? `Unit: ${m.unit}` : m.description,
-        path: '/metrics',
+        path: '/library/metrics',
       })),
-      sectionPath: '/metrics',
+      sectionPath: '/library/metrics',
     });
   }
 

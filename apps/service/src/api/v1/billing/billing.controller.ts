@@ -986,6 +986,68 @@ export const billingController = {
     res.json({ success: true });
   },
 
+  // ─── Cancel Addon (Schedule for End of Period) ───────────────
+
+  cancelAddon: async (req: Request, res: Response) => {
+    const supabase = getSupabaseClient();
+    const coachId = (req as any).user.id;
+    const { addonType } = req.params as { addonType: AddonType };
+
+    // Validate addon type
+    const validAddonTypes: AddonType[] = ['automations', 'ai_assistant', 'payments'];
+    if (!validAddonTypes.includes(addonType)) {
+      res.status(400).json({ error: 'Invalid addon type' });
+      return;
+    }
+
+    // Update the addon to schedule cancellation
+    const { error } = await supabase
+      .from('platform_addons')
+      .update({ cancel_at_period_end: true })
+      .eq('coach_id', coachId)
+      .eq('addon_type', addonType)
+      .eq('is_active', true);
+
+    if (error) {
+      logger.error({ error, coachId, addonType }, 'Failed to schedule addon cancellation');
+      res.status(500).json({ error: 'Failed to schedule addon cancellation' });
+      return;
+    }
+
+    res.json({ success: true });
+  },
+
+  // ─── Reactivate Addon (Undo Scheduled Cancellation) ──────────
+
+  reactivateAddon: async (req: Request, res: Response) => {
+    const supabase = getSupabaseClient();
+    const coachId = (req as any).user.id;
+    const { addonType } = req.params as { addonType: AddonType };
+
+    // Validate addon type
+    const validAddonTypes: AddonType[] = ['automations', 'ai_assistant', 'payments'];
+    if (!validAddonTypes.includes(addonType)) {
+      res.status(400).json({ error: 'Invalid addon type' });
+      return;
+    }
+
+    // Update the addon to cancel the scheduled cancellation
+    const { error } = await supabase
+      .from('platform_addons')
+      .update({ cancel_at_period_end: false })
+      .eq('coach_id', coachId)
+      .eq('addon_type', addonType)
+      .eq('is_active', true);
+
+    if (error) {
+      logger.error({ error, coachId, addonType }, 'Failed to reactivate addon');
+      res.status(500).json({ error: 'Failed to reactivate addon' });
+      return;
+    }
+
+    res.json({ success: true });
+  },
+
   // ─── Cancel Subscription ─────────────────────────────────────
 
   cancelSubscription: async (req: Request, res: Response) => {
@@ -1052,6 +1114,14 @@ export const billingController = {
     await stripe.subscriptions.update(subscription.stripe_subscription_id, {
       cancel_at_period_end: false,
     });
+
+    // Also reinstate all add-ons that were scheduled for cancellation
+    await supabase
+      .from('platform_addons')
+      .update({ cancel_at_period_end: false })
+      .eq('coach_id', coachId)
+      .eq('is_active', true)
+      .eq('cancel_at_period_end', true);
 
     res.json({ success: true });
   },

@@ -14,7 +14,6 @@ import { useClientFiles } from '@/hooks/use-client-files';
 import { useClientBio } from '@/hooks/use-client-bio';
 import { useClientGoals } from '@/hooks/use-client-goals';
 import { useClientInjuries } from '@/hooks/use-client-injuries';
-import { useClientDetails } from '@/hooks/use-client-details';
 import { useClientWorkoutStats } from '@/hooks/use-client-workout-stats';
 import { useClientUniqueExercises } from '@/hooks/use-client-unique-exercises';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -22,7 +21,8 @@ import type { Athlete, ClientMetric, ClientHabit, ClientNote } from '@/api/coach
 import type { ClientPhoto } from '@/api/client/client-photo-service';
 import type { ClientCheckIn, ClientQuestionnaire } from '@/api/client/client-form-service';
 import type { ClientFileAssignment } from '@/api/coach/coach-file-service';
-import type { AthleteDetails, WorkoutStatistics, AthleteGoal, AthleteInjury } from '@/api/client/client-service';
+import type { WorkoutStatistics } from '@/api/client/client-service';
+import type { AthleteDetails, AthleteGoal, AthleteInjury } from '@athli/shared-types';
 import type { UniqueExercise } from '@/api/client/client-training-service';
 
 interface ClientProfileContextType {
@@ -84,7 +84,27 @@ export const ClientProfileProvider = ({ children, clientId: clientIdProp }: Clie
     const { bio, isLoading: isLoadingBio, isFetching: isFetchingBio } = useClientBio(resolvedClientId);
     const { goals, isLoading: isLoadingGoals, isFetching: isFetchingGoals } = useClientGoals(resolvedClientId);
     const { injuries, isLoading: isLoadingInjuries, isFetching: isFetchingInjuries } = useClientInjuries(resolvedClientId);
-    const { details, isLoading: isLoadingDetails, isFetching: isFetchingDetails } = useClientDetails(resolvedClientId);
+    // Derive details from athlete data (no separate API call needed)
+    const details: AthleteDetails | null = athlete ? {
+        id: athlete.id,
+        name: athlete.name,
+        firstName: athlete.firstName,
+        lastName: athlete.lastName,
+        email: athlete.email,
+        birthDate: athlete.birthDate,
+        category: athlete.category as any,
+        gender: athlete.gender,
+        phone: athlete.phone,
+        country: athlete.country,
+        height: athlete.height,
+        avatarUrl: athlete.avatarUrl,
+        timezone: athlete.timezone,
+        status: athlete.status,
+        createdAt: athlete.createdAt,
+        clientFor: athlete.clientFor,
+    } : null;
+    const isLoadingDetails = false;
+    const isFetchingDetails = false;
     const { stats: workoutStats, isLoading: isLoadingWorkoutStats, isFetching: isFetchingWorkoutStats } = useClientWorkoutStats(resolvedClientId);
     const { uniqueExercises, isLoading: isLoadingUniqueExercises, isFetching: isFetchingUniqueExercises } = useClientUniqueExercises(resolvedClientId);
 
@@ -141,7 +161,6 @@ export const ClientProfileProvider = ({ children, clientId: clientIdProp }: Clie
             queryClient.invalidateQueries({ queryKey: ['client-bio', targetId] }),
             queryClient.invalidateQueries({ queryKey: ['client-goals', targetId] }),
             queryClient.invalidateQueries({ queryKey: ['client-injuries', targetId] }),
-            queryClient.invalidateQueries({ queryKey: ['client-details', targetId] }),
             queryClient.invalidateQueries({ queryKey: ['client-workout-stats', targetId] }),
             queryClient.invalidateQueries({ queryKey: ['client-unique-exercises', targetId] }),
         ]);
@@ -152,7 +171,7 @@ export const ClientProfileProvider = ({ children, clientId: clientIdProp }: Clie
         if (!athlete?.id) return;
         const targetId = athlete.id;
 
-        const queryKeyMap = {
+        const queryKeyMap: Record<string, string[]> = {
             'metrics': ['client-metrics', targetId],
             'habits': ['client-habits', targetId],
             'photos': ['client-photos', targetId],
@@ -163,7 +182,7 @@ export const ClientProfileProvider = ({ children, clientId: clientIdProp }: Clie
             'bio': ['client-bio', targetId],
             'goals': ['client-goals', targetId],
             'injuries': ['client-injuries', targetId],
-            'details': ['client-details', targetId],
+            'details': ['client-profile', rawClientId], // Details now come from client-profile
             'workout-stats': ['client-workout-stats', targetId],
             'unique-exercises': ['client-unique-exercises', targetId],
         };

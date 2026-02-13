@@ -81,7 +81,7 @@ export function SidebarMenuItemWithTabs({
           className="flex flex-col px-0 py-1.5 min-w-[160px]"
         >
           <div className="flex items-center justify-between px-3 pb-1.5">
-            <span className="text-[10px] font-semibold text-background/70 uppercase">
+            <span className="text-xs font-semibold text-background/70 uppercase">
               {label}
             </span>
             <Icon className="size-3.5 text-background/70" />
@@ -108,7 +108,7 @@ export function SidebarMenuItemWithTabs({
                 key={tab.value}
                 href={tabHref}
                 className={cn(
-                  'mx-1.5 px-2 py-1 text-sm rounded transition-colors',
+                  'mx-1.5 px-2 py-1 text-[15px] rounded transition-colors',
                   'hover:bg-background/20',
                   isTabActive && 'bg-background/20 font-medium'
                 )}

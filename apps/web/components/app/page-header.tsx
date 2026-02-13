@@ -8,18 +8,22 @@ interface PageHeaderProps {
     title: string;
     subtitle?: string;
     action?: React.ReactNode;
+    leading?: React.ReactNode;
     className?: string;
 }
 
-export const PageHeader = ({ title, subtitle, action, className }: PageHeaderProps) => {
+export const PageHeader = ({ title, subtitle, action, leading, className }: PageHeaderProps) => {
     return (
         <div className={cn("w-full relative flex-shrink-0", className)}>
             <div className="pl-4 pr-4 flex items-center justify-between mb-2 mt-2">
-                <div className="flex flex-col">
-                    <h1 className="text-[22px] font-semibold">{title}</h1>
-                    {subtitle && (
-                        <p className="text-sm text-muted-foreground">{subtitle}</p>
-                    )}
+                <div className="flex items-center gap-2">
+                    {leading}
+                    <div className="flex flex-col">
+                        <h1 className="text-[22px] font-semibold">{title}</h1>
+                        {subtitle && (
+                            <p className="text-sm text-muted-foreground">{subtitle}</p>
+                        )}
+                    </div>
                 </div>
                 {action && <div className="flex items-center gap-2">{action}</div>}
             </div>

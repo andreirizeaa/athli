@@ -223,7 +223,7 @@ export const AddQuestionnaireSidePanel = ({
             <Info className="size-4" />
             <AlertDescription className="min-w-0 line-clamp-4">
               {t('athletes.profile.questionnaires.noFormsMessage')}{' '}
-              <Link href="/forms" className="underline hover:no-underline">
+              <Link href="/library/forms" className="underline hover:no-underline">
                 <strong>{t('athletes.profile.questionnaires.formsLink')}</strong>
               </Link>
               .

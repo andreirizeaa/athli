@@ -28,6 +28,9 @@ export interface Athlete {
   birthDate: string | null;
   age: number | null;
   height: string | null;
+  gender?: 'male' | 'female' | 'prefer-not-to-say' | null;
+  timezone?: string | null;
+  isArchived?: boolean;
   lastActivity: string;
   last7DaysTraining: string;
   last30DaysTraining: string;

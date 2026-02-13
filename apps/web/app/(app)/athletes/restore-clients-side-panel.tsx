@@ -11,6 +11,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getArchivedClients, restoreClient, type Athlete } from '@/api/coach/coach-client-service';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
+import { ClientLimitExceededDialog } from '@/components/app/client-limit-exceeded-dialog';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { useCoachClients } from '@/hooks/use-coach-clients';
 
 interface RestoreClientsSidePanelProps {
     open: boolean;
@@ -32,6 +35,10 @@ export const RestoreClientsSidePanel = ({
     const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(false);
     const [isRestoring, setIsRestoring] = useState(false);
+    const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false);
+
+    const { clientLimit } = useEntitlements();
+    const { activeClientCount } = useCoachClients();
 
     const handleOpenChange = (isOpen: boolean) => {
         onOpenChange(isOpen);
@@ -62,6 +69,13 @@ export const RestoreClientsSidePanel = ({
 
     const handleRestore = async () => {
         if (selectedClientIds.size === 0) return;
+
+        // Check if restoring would exceed limit
+        const newTotalCount = activeClientCount + selectedClientIds.size;
+        if (newTotalCount > clientLimit) {
+            setIsLimitDialogOpen(true);
+            return;
+        }
 
         setIsRestoring(true);
         try {
@@ -198,6 +212,12 @@ export const RestoreClientsSidePanel = ({
                     </div>
                 )}
             </div>
+            <ClientLimitExceededDialog
+                open={isLimitDialogOpen}
+                onOpenChange={setIsLimitDialogOpen}
+                clientLimit={clientLimit}
+                currentCount={activeClientCount}
+            />
         </SidePanel>
     );
 };

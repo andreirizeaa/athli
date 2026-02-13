@@ -1,0 +1,896 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
+import { AssignTrainingToClientSidePanel } from '@/components/training/assign-training-to-client-side-panel';
+import { SelectClientSidePanel } from '@/components/training/select-client-side-panel';
+import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
+import { EmptyGridState } from '@/components/app/empty-grid-state';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
+import { Spinner } from '@/components/ui/spinner';
+import { cn } from '@/lib/general/utils';
+import {
+  X,
+  Check,
+  ArrowUpNarrowWide,
+  ArrowDownWideNarrow,
+  Plus,
+  FileText,
+  Tag,
+  Clock,
+  UserPlus,
+  Star,
+  Trash2,
+  Copy,
+  BrainCog,
+  Dumbbell,
+} from 'lucide-react';
+
+import type { Program } from '@/components/app/app-shell';
+import { getPrograms, starPrograms, deletePrograms, duplicateProgram, createProgram, getProgramById } from '@/api/coach/coach-program-service';
+import { toast } from 'sonner';
+import { useTrainingData } from '../training-data-context';
+import { CreateProgramSidePanel } from './components/create-program-side-panel';
+import { ProgramNameCell } from './components/program-name-cell';
+import { DIFFICULTY_LEVELS } from '@athli/shared-types';
+
+type ColumnId = 'description' | 'type' | 'difficulty' | 'length' | 'totalWorkouts' | 'actions';
+
+const COLUMN_ORDER: ColumnId[] = [
+  'description',
+  'type',
+  'difficulty',
+  'length',
+  'totalWorkouts',
+  'actions',
+];
+
+const PROGRAM_COLUMN_DEFINITIONS = [
+  { id: 'description', label: 'Description', icon: <FileText className="size-3" /> },
+  { id: 'type', label: 'Type', icon: <Tag className="size-3" /> },
+  { id: 'difficulty', label: 'Difficulty', icon: <BrainCog className="size-3" /> },
+  { id: 'length', label: 'Length', icon: <Clock className="size-3" /> },
+  { id: 'totalWorkouts', label: 'Workouts', icon: <Dumbbell className="size-3" /> },
+];
+
+const PROGRAM_TYPES = [
+  'Weightlifting',
+  'Bodyweight',
+  'Cardio',
+  'HIIT',
+  'CrossFit',
+  'Running',
+  'Cycling',
+  'Swimming',
+  'Yoga',
+  'Pilates',
+  'Combination',
+] as const;
+
+const PROGRAM_DIFFICULTY_LEVELS = DIFFICULTY_LEVELS.map(level => level.label);
+
+const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): string => {
+  const widths: Record<ColumnId, { class: string; pixel: string }> = {
+    description: { class: 'min-w-[250px]', pixel: '250px' },
+    type: { class: 'min-w-[140px]', pixel: '140px' },
+    difficulty: { class: 'min-w-[140px]', pixel: '140px' },
+    length: { class: 'min-w-[130px]', pixel: '130px' },
+    totalWorkouts: { class: 'min-w-[120px]', pixel: '120px' },
+    actions: { class: 'w-[100px]', pixel: '100px' },
+  };
+
+  return widths[colId]?.[format] || (format === 'class' ? 'min-w-[130px]' : '130px');
+};
+
+// Helper to check if value is empty (null, undefined, empty string, 0, or empty array)
+const isEmpty = (value: any): boolean => {
+  if (value === null || value === undefined || value === '' || value === 0) return true;
+  if (Array.isArray(value) && value.length === 0) return true;
+  return false;
+};
+
+// Helper function to format program type for display
+const formatProgramType = (type: string): string => {
+  if (!type) return '--';
+  // Handle common abbreviations and special cases
+  const abbreviations: Record<string, string> = {
+    hiit: 'HIIT',
+    amrap: 'AMRAP',
+    crossfit: 'CrossFit',
+    emom: 'EMOM',
+  };
+
+  if (abbreviations[type.toLowerCase()]) {
+    return abbreviations[type.toLowerCase()];
+  }
+
+  // Convert snake_case or kebab-case to Title Case
+  return type
+    .replace(/_/g, ' ')
+    .replace(/-/g, ' ')
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+// Helper function to format difficulty for display
+const formatDifficulty = (difficulty: string): string => {
+  if (!difficulty) return '--';
+  const level = DIFFICULTY_LEVELS.find((l) => l.value === difficulty.toLowerCase());
+  if (level) return level.label;
+
+  // Fallback for case sensitivity or non-standard values
+  return difficulty
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+const ProgramsPage = () => {
+  const t = useTranslations();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { programs, isLoadingPrograms, setPrograms, refreshPrograms } = useTrainingData();
+  const [selectedPrograms, setSelectedPrograms] = useState<Set<string>>(new Set());
+  const [starredPrograms, setStarredPrograms] = useState<Set<string>>(new Set());
+  const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
+  const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
+  const [filteredCount, setFilteredCount] = useState<number>(0);
+  const [itemsPerPage] = useState<number>(25);
+  const [isCreateProgramOpen, setIsCreateProgramOpen] = useState<boolean>(false);
+  const [isAssignProgramOpen, setIsAssignProgramOpen] = useState<boolean>(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
+  const [programToDelete, setProgramToDelete] = useState<string | null>(null);
+  const [isAssignIndividualProgramOpen, setIsAssignIndividualProgramOpen] = useState<boolean>(false);
+  const [selectedProgramForAssignment, setSelectedProgramForAssignment] = useState<Program | null>(null);
+
+
+  useEffect(() => {
+    // Initialize filteredCount and starred programs from context data
+    setFilteredCount(programs.length);
+    const starred = new Set(programs.filter(p => p.isFavourite).map(p => p.id));
+    setStarredPrograms(starred);
+  }, [programs]);
+
+  // Auto-open create program panel if ?create=true
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      setIsCreateProgramOpen(true);
+      // Clear the query param
+      window.history.replaceState({}, '', '/library/training/programs');
+    }
+  }, [searchParams]);
+
+  const handleToggleProgram = React.useCallback((programId: string) => {
+    setSelectedPrograms((prev) => {
+      const next = new Set(prev);
+      if (next.has(programId)) {
+        next.delete(programId);
+      } else {
+        next.add(programId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleNavigateToProgram = React.useCallback((programId: string) => {
+    router.push(`/training/programs/${programId}/edit`);
+  }, [router]);
+
+  const handleNavigateToAthletes = () => {
+    router.push('/athletes');
+  };
+
+  const handleOpenAssignProgram = () => {
+    setIsAssignProgramOpen(true);
+  };
+
+  const handleOpenAssignIndividualProgram = React.useCallback((program: Program) => {
+    setSelectedProgramForAssignment(program);
+    setIsAssignIndividualProgramOpen(true);
+  }, []);
+
+  const handleToggleStar = React.useCallback(async (programId: string, e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    try {
+      const isStarred = starredPrograms.has(programId);
+      await starPrograms(programId, !isStarred);
+
+      setStarredPrograms((prev) => {
+        const next = new Set(prev);
+        if (next.has(programId)) {
+          next.delete(programId);
+        } else {
+          next.add(programId);
+        }
+        return next;
+      });
+
+      if (isStarred) {
+        toast.success(t('programs.detail.toast.unstarredSuccessfully', { name: t('programs.program') }));
+      } else {
+        toast.success(t('programs.detail.toast.starredSuccessfully', { name: t('programs.program') }));
+      }
+    } catch (error) {
+      console.error('Failed to star program:', error);
+      toast.error(t('general.error'));
+    }
+  }, [starredPrograms, t]);
+
+  const handleStarKeyDown = React.useCallback((programId: string, e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleToggleStar(programId, e);
+    }
+  }, [handleToggleStar]);
+
+  const handleClearSelected = () => {
+    setSelectedPrograms(new Set());
+  };
+
+  const handleStarSelected = async () => {
+    if (selectedPrograms.size === 0) return;
+    try {
+      await starPrograms(Array.from(selectedPrograms), true);
+      // Update starred state for selected programs
+      setStarredPrograms((prev) => {
+        const next = new Set(prev);
+        selectedPrograms.forEach((id) => {
+          if (!next.has(id)) {
+            next.add(id);
+          }
+        });
+        return next;
+      });
+      // Clear selection after starring
+      setSelectedPrograms(new Set());
+    } catch (error) {
+      console.error('Failed to star programs:', error);
+    }
+  };
+
+
+  const handleBulkDelete = async () => {
+    if (selectedPrograms.size === 0) return;
+    try {
+      const idsToDelete = Array.from(selectedPrograms);
+      const deleteCount = idsToDelete.length;
+
+      let singleItemName = '';
+      if (deleteCount === 1) {
+        const item = programs.find(p => p.id === idsToDelete[0]);
+        if (item) singleItemName = item.program;
+      }
+
+      await deletePrograms(idsToDelete);
+      // Reload programs after deleting
+      await refreshPrograms();
+
+      if (deleteCount === 1 && singleItemName) {
+        toast.success(`Successfully deleted ${singleItemName}`);
+      } else {
+        toast.success(`Successfully deleted ${deleteCount} program${deleteCount === 1 ? '' : 's'}`);
+      }
+
+      // Clear selection after deleting
+      setSelectedPrograms(new Set());
+    } catch (error) {
+      console.error('Failed to delete programs:', error);
+      toast.error('Failed to delete programs');
+    }
+  };
+
+  const handleConfirmSingleDelete = async () => {
+    if (!programToDelete) return;
+    try {
+      const program = programs.find(p => p.id === programToDelete);
+      await deletePrograms([programToDelete]);
+      await refreshPrograms();
+
+      if (program) {
+        toast.success(`Successfully deleted ${program.program}`);
+      } else {
+        toast.success('Successfully deleted program');
+      }
+
+      setProgramToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete program:', error);
+      toast.error('Failed to delete program');
+    }
+  };
+
+  const handleDuplicateSelected = async () => {
+    if (selectedPrograms.size !== 1) return;
+    const programId = Array.from(selectedPrograms)[0];
+    const program = programs.find((p) => p.id === programId);
+    if (!program) return;
+    handleDuplicateSelectedPerRow(programId, program.program);
+  };
+
+  const [isBulkDuplicating, setIsBulkDuplicating] = useState<boolean>(false);
+
+  const handleDuplicateSelectedPerRow = React.useCallback(async (programId: string, name: string) => {
+    setIsBulkDuplicating(true);
+    try {
+      const fullProgram = await getProgramById(programId);
+      await createProgram({
+        name: fullProgram.program,
+        description: fullProgram.description,
+        type: fullProgram.type,
+        difficulty: fullProgram.program_data.difficulty,
+        weeks: fullProgram.program_data.weeks,
+        schema: fullProgram.program_data.schema,
+        days: fullProgram.program_data.days
+      });
+      // Reload programs to show the duplicated one
+      await refreshPrograms();
+      // Clear selection after duplicating
+      setSelectedPrograms(new Set());
+      toast.success(t('workouts.detail.toast.duplicatedSuccessfully', { name }));
+    } catch (error) {
+      console.error('Failed to duplicate program:', error);
+    } finally {
+      setIsBulkDuplicating(false);
+    }
+  }, [refreshPrograms, t]);
+
+  const handleOpenCreateProgram = () => {
+    setIsCreateProgramOpen(true);
+  };
+
+
+  const handleProgramRowKeyDown = (
+    event: React.KeyboardEvent<HTMLTableRowElement>,
+    programId: string
+  ) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      const targetElement = event.target as HTMLElement;
+      if (targetElement.closest('[data-no-row-link="true"]')) {
+        return;
+      }
+
+      event.preventDefault();
+      handleNavigateToProgram(programId);
+    }
+  };
+
+  const handleProgramRowClick = (
+    event: React.MouseEvent<HTMLTableRowElement>,
+    programId: string
+  ) => {
+    const targetElement = event.target as HTMLElement;
+    if (targetElement.closest('[data-no-row-link="true"]')) {
+      return;
+    }
+
+    handleNavigateToProgram(programId);
+  };
+
+  const formatDate = (dateStr: string | undefined): string => {
+    if (!dateStr) return '--';
+    const [day, month, year] = dateStr.split('-');
+    const date = new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day));
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return `${months[date.getMonth()]} ${date.getDate()}, 20${year}`;
+  };
+
+
+  const isFuzzyMatch = (text: string, query: string): boolean => {
+    const normalizedText = text.toLowerCase();
+    const normalizedQuery = query.toLowerCase().trim();
+
+    if (!normalizedQuery) {
+      return true;
+    }
+
+    if (normalizedText.includes(normalizedQuery)) {
+      return true;
+    }
+
+    let textIndex = 0;
+    let queryIndex = 0;
+
+    while (textIndex < normalizedText.length && queryIndex < normalizedQuery.length) {
+      if (normalizedText[textIndex] === normalizedQuery[queryIndex]) {
+        queryIndex += 1;
+      }
+      textIndex += 1;
+    }
+
+    return queryIndex === normalizedQuery.length;
+  };
+
+  const filteredColumnOrder = React.useMemo(() =>
+    columnOrder.filter((colId) => visibleColumns.has(colId) && colId !== 'actions'),
+    [columnOrder, visibleColumns]
+  );
+
+  const uniqueTypes = React.useMemo(() => Array.from(new Set(programs.map((w) => w.type))).sort(), [programs]);
+
+  // Create column definitions for DataGrid
+  // Add "program" column for sorting (not in filteredColumnOrder so it won't render)
+  const allColumns: ColumnDefinition<Program>[] = React.useMemo(() => [
+    {
+      id: 'program',
+      label: t('programs.columns.program'),
+      icon: <FileText className="size-3" />,
+      getSortValue: (row) => row.program.toLowerCase(),
+      getSearchValue: (row) => row.program,
+    },
+    ...filteredColumnOrder.map((columnId): ColumnDefinition<Program> => {
+      switch (columnId) {
+        case 'description':
+          return {
+            id: 'description',
+            label: t('general.description'),
+            icon: <FileText className="size-3" />,
+            width: {
+              class: getColumnWidth('description', 'class'),
+              pixel: getColumnWidth('description', 'pixel'),
+            },
+            tooltip: t('programs.columnTooltips.description'),
+            getSortValue: (row) => row.description.toLowerCase(),
+            getSearchValue: (row) =>
+              `${row.program} ${row.description} ${row.type} ${row.equipment}`,
+            renderCell: (row) =>
+              isEmpty(row.description) ? (
+                <div className="flex items-center h-full min-w-0 w-full">
+                  <span className="text-sm truncate block min-w-0 w-full">--</span>
+                </div>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center h-full min-w-0 w-full">
+                      <span className="text-sm truncate block min-w-0 w-full">{row.description}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    className="max-w-[250px] break-words"
+                    side="top"
+                    align="start"
+                  >
+                    <p className="whitespace-pre-wrap">{row.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ),
+          };
+        case 'type':
+          return {
+            id: 'type',
+            label: t('general.type'),
+            icon: <Tag className="size-3" />,
+            width: {
+              class: getColumnWidth('type', 'class'),
+              pixel: getColumnWidth('type', 'pixel'),
+            },
+            tooltip: t('programs.columnTooltips.type'),
+            getSortValue: (row) => row.type.toLowerCase(),
+            renderCell: (row) => (
+              <div className="flex items-center h-full">
+                <span className="text-sm">
+                  {isEmpty(row.type) ? '--' : formatProgramType(row.type)}
+                </span>
+              </div>
+            ),
+          };
+        case 'length':
+          return {
+            id: 'length',
+            label: t('programs.columns.length'),
+            icon: <Clock className="size-3" />,
+            width: {
+              class: getColumnWidth('length', 'class'),
+              pixel: getColumnWidth('length', 'pixel'),
+            },
+            tooltip: t('programs.columnTooltips.length'),
+            getSortValue: (row) => {
+              const weeks = parseInt(row.length.split(' ')[0]);
+              return isNaN(weeks) ? 0 : weeks;
+            },
+            renderCell: (row) => (
+              <div className="flex items-center h-full">
+                <span className="text-sm">
+                  {isEmpty(row.length) ? '--' : row.length}
+                </span>
+              </div>
+            ),
+          };
+        case 'difficulty':
+          return {
+            id: 'difficulty',
+            label: t('general.difficulty'),
+            icon: <BrainCog className="size-3" />,
+            width: {
+              class: getColumnWidth('difficulty', 'class'),
+              pixel: getColumnWidth('difficulty', 'pixel'),
+            },
+            tooltip: t('programs.columnTooltips.difficulty'),
+            getSortValue: (row) => row.difficulty.toLowerCase(),
+            renderCell: (row) => (
+              <div className="flex items-center h-full">
+                <span className="text-sm">
+                  {isEmpty(row.difficulty) ? '--' : formatDifficulty(row.difficulty)}
+                </span>
+              </div>
+            ),
+          };
+        case 'totalWorkouts':
+          return {
+            id: 'totalWorkouts',
+            label: t('programs.columns.totalWorkouts'),
+            icon: <Dumbbell className="size-3" />,
+            width: {
+              class: getColumnWidth('totalWorkouts', 'class'),
+              pixel: getColumnWidth('totalWorkouts', 'pixel'),
+            },
+            tooltip: t('programs.columnTooltips.totalWorkouts'),
+            getSortValue: (row) => row.totalWorkouts,
+            renderCell: (row) => (
+              <div className="flex items-center h-full">
+                <span className="text-sm">
+                  {row.totalWorkouts} {row.totalWorkouts === 1 ? 'workout' : 'workouts'}
+                </span>
+              </div>
+            ),
+          };
+
+
+        default:
+          return {
+            id: columnId,
+            label: columnId,
+            getSortValue: () => '',
+            renderCell: () => null,
+          };
+      }
+    }),
+  ], [filteredColumnOrder, t]);
+
+  // Add actions column
+  const actionsColumn: ColumnDefinition<Program> = React.useMemo(() => ({
+    id: 'actions',
+    label: '',
+    sortable: false,
+    width: { class: 'w-[100px]', pixel: '100px' },
+    renderCell: (row) => (
+      <div className="flex items-center justify-end w-full" data-no-row-link="true">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(e) => {
+            e.stopPropagation();
+            setProgramToDelete(row.id);
+          }}
+          className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+          aria-label={`Delete ${row.program}`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    ),
+  }), [t]);
+
+  const columns: ColumnDefinition<Program>[] = React.useMemo(() => [...allColumns, actionsColumn], [allColumns, actionsColumn]);
+
+  // Create filter definitions
+  const filters: FilterDefinition<Program>[] = React.useMemo(() => [
+    {
+      id: 'type',
+      label: t('programs.filters.type'),
+      icon: <Tag className="size-4" />,
+      options: uniqueTypes.map((type) => ({ value: type, label: formatProgramType(type) })),
+      getFilterValue: (row) => row.type,
+    },
+    {
+      id: 'difficulty',
+      label: t('general.difficulty'),
+      icon: <BrainCog className="size-4" />,
+      options: DIFFICULTY_LEVELS.map(level => ({ value: level.value, label: level.label })),
+      getFilterValue: (row) => row.difficulty,
+    },
+    {
+      id: 'show',
+      label: t('general.show'),
+      icon: <Star className="size-4" />,
+      options: [
+        { value: 'starred', label: t('programs.filters.starred') },
+        { value: 'unstarred', label: t('programs.filters.unstarred') },
+      ],
+      getFilterValue: (row) => (starredPrograms.has(row.id) ? 'starred' : 'unstarred'),
+    },
+  ], [t, uniqueTypes, starredPrograms]);
+
+  // Create first column renderer
+  const renderFirstColumn = React.useCallback((program: Program, isSelected: boolean) => {
+    const isStarred = starredPrograms.has(program.id);
+    return (
+      <ProgramNameCell
+        program={program}
+        isSelected={isSelected}
+        isStarred={isStarred}
+        onToggleProgram={handleToggleProgram}
+        onAssign={handleOpenAssignIndividualProgram}
+        onToggleStar={handleToggleStar}
+        onStarKeyDown={handleStarKeyDown}
+      />
+    );
+  }, [starredPrograms, handleToggleProgram, handleOpenAssignIndividualProgram, handleToggleStar, handleStarKeyDown]);
+
+  // Create first column header with sorting
+  const renderFirstColumnHeader = React.useCallback(({
+    isSorted,
+    isAscending,
+    isDescending,
+    onSort,
+    isAllSelected,
+    onToggleAll,
+    enableRowSelection,
+  }: {
+    isSorted: boolean;
+    isAscending: boolean;
+    isDescending: boolean;
+    onSort: (direction: 'asc' | 'desc') => void;
+    isAllSelected: boolean;
+    onToggleAll: () => void;
+    enableRowSelection: boolean;
+  }) => {
+    return (
+      <div className="flex items-center gap-3 h-full w-full">
+        {enableRowSelection && (
+          <Checkbox
+            key={`select-all-programs-${isAllSelected}`}
+            checked={isAllSelected}
+            onCheckedChange={onToggleAll}
+            aria-label={t('programs.actions.selectAllPrograms')}
+          />
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
+              <FileText className="size-3 text-muted-foreground" />
+              <span className="text-xs uppercase text-muted-foreground">{t('programs.columns.program')}</span>
+              {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
+              {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem
+              onClick={() => onSort('asc')}
+              className={cn(isAscending && 'bg-accent')}
+            >
+              <ArrowUpNarrowWide className="size-4 mr-2" />
+              <span className="flex-1">{t('programs.actions.sortAscending')}</span>
+              {isAscending && <Check className="ml-2 size-4" />}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onSort('desc')}
+              className={cn(isDescending && 'bg-accent')}
+            >
+              <ArrowDownWideNarrow className="size-4 mr-2" />
+              <span className="flex-1">{t('programs.actions.sortDescending')}</span>
+              {isDescending && <Check className="ml-2 size-4" />}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  }, [t]);
+
+  return (
+    <div className="h-full w-full flex flex-col">
+      <div className="w-full relative">
+        <div className="px-4 flex items-center justify-between mb-2 mt-2">
+          <div className="flex flex-col">
+            <p className="text-sm text-foreground">
+              {`${filteredCount} ${filteredCount === 1 ? t('programs.program') : t('programs.programPlural')}`}
+            </p>
+          </div>
+          <div>
+            <ButtonGroup>
+              {programs.length > 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={handleOpenAssignProgram}
+                  className="gap-2 border border-primary"
+                  aria-label={t('programs.actions.assignProgram')}
+                >
+                  <UserPlus className="size-4" />
+                  <span>{t('general.assign')}</span>
+                </Button>
+              )}
+              <Button onClick={handleOpenCreateProgram} className="gap-2" aria-label={t('programs.actions.createProgram')}>
+                <Plus className="size-4" />
+                <span>{t('programs.actions.createProgram')}</span>
+              </Button>
+            </ButtonGroup>
+          </div>
+        </div>
+      </div>
+      <DataGrid
+        data={programs}
+        columns={columns}
+        getRowId={(row) => row.id}
+        gridKey="programs"
+        itemsPerPage={itemsPerPage}
+        onFilteredDataChange={setFilteredCount}
+        enableSearch={true}
+        searchPlaceholder={t('programs.searchPlaceholder')}
+        filters={filters}
+        enableEditColumns={true}
+        enableRowSelection={true}
+        selectedRowIds={selectedPrograms}
+        onSelectionChange={setSelectedPrograms}
+        onRowClick={(row, event) => {
+          const targetElement = event.target as HTMLElement;
+          if (targetElement.closest('[data-no-row-link="true"]')) {
+            return;
+          }
+          handleNavigateToProgram(row.id);
+        }}
+        onRowKeyDown={(row, event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            const targetElement = event.target as HTMLElement;
+            if (targetElement.closest('[data-no-row-link="true"]')) {
+              return;
+            }
+            event.preventDefault();
+            handleNavigateToProgram(row.id);
+          }
+        }}
+        defaultColumnOrder={COLUMN_ORDER}
+        defaultVisibleColumns={COLUMN_ORDER}
+        selectionActions={
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              onClick={handleClearSelected}
+              className="gap-2"
+              aria-label={t('programs.actions.clearSelectedAria')}
+              title={t('programs.actions.clearSelected')}
+            >
+              <X className="size-4" />
+              <span>
+                {t('general.clearSelected', { count: selectedPrograms.size })}
+              </span>
+            </Button>
+            {/* RESTORED Duplicate Selected */}
+            {selectedPrograms.size === 1 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={handleDuplicateSelected}
+                      className="gap-2"
+                      disabled={isBulkDuplicating}
+                      aria-label={t('programs.actions.duplicateAria')}
+                      title={t('programs.actions.duplicate')}
+                    >
+                      {isBulkDuplicating ? <Spinner className="size-4" /> : <Copy className="size-4" />}
+                      <span>{t('programs.actions.duplicate')}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('programs.actions.duplicate')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            <Button
+              variant="ghost"
+              onClick={handleStarSelected}
+              className="gap-2"
+              aria-label={t('programs.actions.starSelectedAria')}
+              title={t('programs.actions.starSelected')}
+            >
+              <Star className="size-4" />
+              <span>{t('programs.actions.starSelected')}</span>
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setIsBulkDeleteOpen(true)}
+              className="gap-2 text-destructive hover:text-destructive"
+              aria-label={t('programs.actions.deleteSelectedAria')}
+              title={t('programs.actions.deleteSelected')}
+            >
+              <Trash2 className="size-4" />
+              <span>{t('programs.actions.deleteSelected')}</span>
+            </Button>
+          </div>
+        }
+        emptyMessage={t('programs.emptyMessage')}
+        emptyState={
+          <EmptyGridState
+            title={t('programs.emptyState.title')}
+            subtitle={t('programs.emptyState.subtitle')}
+            action={
+              <Button
+                onClick={handleOpenCreateProgram}
+                aria-label={t('programs.emptyState.startCreatingAria')}
+              >
+                {t('programs.emptyState.startCreating')}
+              </Button>
+            }
+          />
+        }
+        rowHeight="54px"
+        stickyFirstColumn={true}
+        firstColumnWidth="320px"
+        firstColumnId="program"
+        renderFirstColumn={renderFirstColumn}
+        renderFirstColumnHeader={renderFirstColumnHeader}
+        showPagination={true}
+        gridPadding={true}
+        compactPagination={true}
+      />
+
+      <ConfirmDeleteDialog
+        open={isBulkDeleteOpen}
+        onOpenChange={setIsBulkDeleteOpen}
+        onConfirm={handleBulkDelete}
+        count={selectedPrograms.size}
+        itemType={t('programs.title').toLowerCase()}
+      />
+
+      <ConfirmDeleteDialog
+        open={programToDelete !== null}
+        onOpenChange={(open) => !open && setProgramToDelete(null)}
+        onConfirm={handleConfirmSingleDelete}
+        itemName={programs.find(p => p.id === programToDelete)?.program}
+        itemType="program"
+      />
+      <SelectClientSidePanel
+        open={isAssignProgramOpen}
+        onOpenChange={setIsAssignProgramOpen}
+        title={t('programs.actions.assignProgram')}
+      />
+      <AssignTrainingToClientSidePanel
+        open={isAssignIndividualProgramOpen}
+        onOpenChange={(open) => {
+          setIsAssignIndividualProgramOpen(open);
+          if (!open) {
+            setSelectedProgramForAssignment(null);
+          }
+        }}
+        selectedItem={selectedProgramForAssignment ? {
+          type: 'program',
+          id: selectedProgramForAssignment.id,
+          name: selectedProgramForAssignment.program
+        } : null}
+      />
+      <CreateProgramSidePanel
+        open={isCreateProgramOpen}
+        onOpenChange={setIsCreateProgramOpen}
+      />
+    </div>
+  );
+};
+
+export default ProgramsPage;

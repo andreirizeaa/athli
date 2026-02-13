@@ -1,4 +1,5 @@
 import { getSupabaseClient } from './supabase.service';
+import { getStripeClient } from './stripe.service';
 import { avatarService } from './avatar.service';
 import { onboardingExecutor } from './onboarding-executor.service';
 import { demoDataService } from './demo-data.service';
@@ -760,7 +761,7 @@ class UserService {
 
   /**
    * Delete user account
-   * For coaches: Deletes coach_profiles which triggers storage cleanup and cascade deletion
+   * For coaches: Cancels Stripe subscription, then deletes coach_profiles which triggers storage cleanup and cascade deletion
    * For clients: Deletes user_profiles (this shouldn't happen from web - only coaches use web)
    */
   async deleteAccount(userId: string): Promise<void> {
@@ -774,6 +775,28 @@ class UserService {
       .maybeSingle();
 
     if (coachProfile) {
+      // IMPORTANT: Cancel any Stripe subscription FIRST before deleting account
+      // This ensures no future charges occur even if subscription was set to cancel at period end
+      try {
+        const { data: subscription } = await supabase
+          .from('platform_subscriptions')
+          .select('stripe_subscription_id, stripe_customer_id')
+          .eq('coach_id', userId)
+          .maybeSingle();
+
+        if (subscription?.stripe_subscription_id) {
+          const stripe = getStripeClient();
+          // Cancel immediately - don't wait for period end since account is being deleted
+          await stripe.subscriptions.cancel(subscription.stripe_subscription_id, {
+            prorate: false, // Don't issue prorated refund - they chose to delete early
+          });
+          console.log(`[AccountDeletion] Cancelled Stripe subscription ${subscription.stripe_subscription_id} for coach ${userId}`);
+        }
+      } catch (stripeError: any) {
+        // Log but don't fail - subscription may already be cancelled or not exist
+        console.error(`[AccountDeletion] Error cancelling Stripe subscription for coach ${userId}:`, stripeError.message);
+      }
+
       // Delete coach_profiles - triggers handle storage and cascade cleanup
       // See migration 132_coach_account_deletion_cleanup.sql for trigger details
       const { error } = await supabase

@@ -35,7 +35,7 @@ import {
   ChevronRight,
   ChevronDown,
   Download,
-  Settings,
+  SlidersHorizontal,
 } from 'lucide-react';
 import {
   DndContext,
@@ -198,6 +198,8 @@ export type DataGridProps<T = any> = {
   getRowClassName?: (row: T) => string;
   getRowHeight?: (row: T) => string;
   alwaysShowHeaders?: boolean;
+  /** Show a loading spinner in the grid body */
+  isLoading?: boolean;
 };
 
 const isFuzzyMatch = (text: string, query: string): boolean => {
@@ -400,6 +402,7 @@ export function DataGrid<T extends Record<string, any>>({
   getRowClassName,
   getRowHeight,
   alwaysShowHeaders = false,
+  isLoading = false,
 }: DataGridProps<T>) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -1322,7 +1325,7 @@ export function DataGrid<T extends Record<string, any>>({
                   className="gap-2"
                   aria-label="Edit columns"
                 >
-                  <Settings className="size-4" />
+                  <SlidersHorizontal className="size-4" />
                   <span>Edit columns</span>
                 </Button>
               )}
@@ -1471,7 +1474,15 @@ export function DataGrid<T extends Record<string, any>>({
                 paginatedData.length === 0 ? 'overflow-y-auto overflow-x-hidden' : ''
               )}
             >
-              {paginatedData.length === 0 && (emptyState || emptyMessage) && (() => {
+              {isLoading && (
+                <div
+                  className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 pointer-events-none"
+                  style={{ top: alwaysShowHeaders ? '40px' : '0' }}
+                >
+                  <Spinner className="size-6" />
+                </div>
+              )}
+              {!isLoading && paginatedData.length === 0 && (emptyState || emptyMessage) && (() => {
                 // Check if any filters or search are active
                 const hasActiveFilters = searchQuery.trim() !== '' ||
                   Object.values(filterValues).some(value =>
@@ -1479,7 +1490,7 @@ export function DataGrid<T extends Record<string, any>>({
                     (Array.isArray(value) ? value.length > 0 : true)
                   );
 
-                // Show overlay if empty. If headers are shown (due to filters or alwaysShowHeaders), 
+                // Show overlay if empty. If headers are shown (due to filters or alwaysShowHeaders),
                 // we position it below the headers.
                 const showHeaders = alwaysShowHeaders || hasActiveFilters;
 

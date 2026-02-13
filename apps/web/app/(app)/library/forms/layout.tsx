@@ -1,0 +1,68 @@
+'use client';
+
+import React from 'react';
+import { useRouter, useSelectedLayoutSegments } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { PageTabs } from '@/components/page-tabs';
+import { Separator } from '@/components/ui/separator';
+import { LibrarySidebarToggle } from '../library-sidebar-toggle';
+
+type FormsLayoutProps = {
+  children: React.ReactNode;
+};
+
+const FormsLayout = ({ children }: FormsLayoutProps) => {
+  const t = useTranslations();
+  const router = useRouter();
+  const segments = useSelectedLayoutSegments();
+
+  const tabs = [
+    {
+      value: 'check-ins',
+      label: t('forms.tabs.checkIns'),
+    },
+    {
+      value: 'questionnaires',
+      label: t('forms.tabs.questionnaires'),
+    },
+  ];
+
+  const validTabValues = tabs.map((tab) => tab.value);
+  // Check if any segment matches a tab value (for routes like /library/forms/check-ins/[formId], segments would be ["check-ins", "formId"])
+  const activeTab = segments.find((segment) => validTabValues.includes(segment)) || 'check-ins';
+
+  const shouldShowHeader = segments.length === 1 && validTabValues.includes(segments[0]);
+
+  const handleTabChange = (value: string) => {
+    if (value === activeTab) {
+      return;
+    }
+
+    router.push(`/library/forms/${value}`);
+  };
+
+  return (
+    <div className="h-full w-full flex flex-col bg-background overflow-auto">
+      {shouldShowHeader && (
+        <div className="w-full relative flex-shrink-0">
+          <div className="pl-4 pr-4 flex items-center gap-2 mb-2 mt-2">
+            <LibrarySidebarToggle />
+            <h1 className="text-[22px] font-semibold">{t('sidebar.links.forms')}</h1>
+          </div>
+          <div className="px-4">
+            <PageTabs
+              tabs={tabs}
+              value={activeTab}
+              onValueChange={handleTabChange}
+              className="mt-1"
+            />
+          </div>
+          <Separator className="absolute bottom-[-1px] left-0 right-0" />
+        </div>
+      )}
+      <div className="w-full flex-1 overflow-auto relative">{children}</div>
+    </div>
+  );
+};
+
+export default FormsLayout;

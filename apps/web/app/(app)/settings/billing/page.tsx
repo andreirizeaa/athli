@@ -19,14 +19,35 @@ import {
 import { useAccess } from '@/lib/permissions';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { useEntitlements, useSubscription } from '@/hooks/use-entitlements';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/api/api-client';
 import confetti from 'canvas-confetti';
 import { InvoicesCard } from './invoices-card';
+
+interface Invoice {
+  id: string;
+  period_end: number;
+}
+
+interface InvoicesResponse {
+  invoices: Invoice[];
+}
 
 // Plan display names
 const PLAN_NAMES: Record<string, string> = {
   starter: 'Starter',
   pro: 'Pro',
   max: 'Max',
+};
+
+// Format date for display
+const formatCancelDate = (date: Date | null) => {
+  if (!date) return '';
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 };
 
 const BillingPage = () => {
@@ -47,9 +68,30 @@ const BillingPage = () => {
   const {
     totalMonthlyCents,
     billingInterval,
+    isCancelling,
+    cancellingAddons,
+    nextBillingDate,
     isLoading: isLoadingSubscription,
   } = useSubscription();
   const [showTrialWarning, setShowTrialWarning] = useState(false);
+
+  // Fetch invoices to get period_end date (fallback when subscription.current_period_end is null)
+  const { data: invoicesData } = useQuery({
+    queryKey: ['billing-invoices'],
+    queryFn: () => apiFetch<InvoicesResponse>('/billing/invoices'),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Get the cancellation date from subscription or latest invoice
+  const cancellationDate = useMemo(() => {
+    if (nextBillingDate) return nextBillingDate;
+    // Fallback to latest invoice's period_end
+    const latestInvoice = invoicesData?.invoices?.[0];
+    if (latestInvoice?.period_end) {
+      return new Date(latestInvoice.period_end * 1000);
+    }
+    return null;
+  }, [nextBillingDate, invoicesData]);
 
   // Show confetti on successful checkout and remove success param from URL
   useEffect(() => {
@@ -90,10 +132,10 @@ const BillingPage = () => {
 
   // Build current plan from entitlements
   const currentPlan = useMemo(() => {
-    const addons = [];
-    if (hasAutomations) addons.push({ name: 'Automations', included: true });
-    if (hasAiAssistant) addons.push({ name: 'AI Assistant', included: true });
-    if (hasPayments) addons.push({ name: 'Payments', included: true });
+    const addons: { name: string; included: boolean; isCancelling: boolean; addonType: string }[] = [];
+    if (hasAutomations) addons.push({ name: 'Automations', included: true, isCancelling: cancellingAddons.includes('automations'), addonType: 'automations' });
+    if (hasAiAssistant) addons.push({ name: 'AI Assistant', included: true, isCancelling: cancellingAddons.includes('ai_assistant'), addonType: 'ai_assistant' });
+    if (hasPayments) addons.push({ name: 'Payments', included: true, isCancelling: cancellingAddons.includes('payments'), addonType: 'payments' });
 
     return {
       name: PLAN_NAMES[plan] || plan,
@@ -103,7 +145,7 @@ const BillingPage = () => {
       billingInterval: billingInterval || 'month' as const,
       addons,
     };
-  }, [plan, isTrial, status, clientLimit, hasAutomations, hasAiAssistant, hasPayments, totalMonthlyCents, billingInterval]);
+  }, [plan, isTrial, status, clientLimit, hasAutomations, hasAiAssistant, hasPayments, totalMonthlyCents, billingInterval, cancellingAddons]);
 
   const clientPercentage = currentPlan.clientsLimit > 0
     ? (activeClientsCount / currentPlan.clientsLimit) * 100
@@ -150,6 +192,11 @@ const BillingPage = () => {
                         Free Trial
                       </Badge>
                     )}
+                    {isCancelling && !currentPlan.isTrial && (
+                      <Badge variant="outline" className="bg-red-100 text-red-900 border-red-200 hover:bg-red-100 rounded-sm px-2.5 py-0.5 font-medium text-sm">
+                        Cancelling {cancellationDate && formatCancelDate(cancellationDate)}
+                      </Badge>
+                    )}
                   </div>
 
                   {/* Plan includes */}
@@ -162,16 +209,21 @@ const BillingPage = () => {
                       <p key={addon.name} className="text-sm">
                         <span className="text-muted-foreground">{addon.name}:</span>{' '}
                         <span className="font-medium">{addon.included ? 'Included' : 'Not included'}</span>
+                        {addon.isCancelling && cancellationDate && (
+                          <span className="text-red-600 dark:text-red-400 ml-2">
+                            (Cancelling on {formatCancelDate(cancellationDate)})
+                          </span>
+                        )}
                       </p>
                     ))}
                   </div>
                 </div>
 
                 {/* Right side - Billing & Action */}
-                <div className="flex flex-col items-end gap-3">
+                <div className="flex flex-col items-end justify-between self-stretch">
                   <Button onClick={handleChangePlan} className="gap-2">
-                    Change Plan
-                    <ArrowRight className="size-4" />
+                    {isCancelling && !currentPlan.isTrial ? "Don't Cancel" : 'Update Plan'}
+                    {!isCancelling && <ArrowRight className="size-4" />}
                   </Button>
                   <div className="text-right">
                     <p className="text-2xl font-bold">
@@ -200,7 +252,9 @@ const BillingPage = () => {
                     {isLoadingClients ? 'Loading...' : `${activeClientsCount} of ${currentPlan.clientsLimit} clients`}
                   </span>
                   <span className="text-sm font-medium">
-                    {Math.round(clientPercentage)}%
+                    {clientPercentage < 1 && clientPercentage > 0
+                      ? `${clientPercentage.toFixed(1)}%`
+                      : `${Math.round(clientPercentage)}%`}
                   </span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -220,8 +274,8 @@ const BillingPage = () => {
                       onClick={handleChangePlan}
                       className="gap-2"
                     >
-                      Increase Allowance
-                      <ArrowRight className="size-4" />
+                      {isCancelling && !currentPlan.isTrial ? "Don't Cancel" : 'Increase Allowance'}
+                      {!isCancelling && <ArrowRight className="size-4" />}
                     </Button>
                   </div>
                 )}

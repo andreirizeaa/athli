@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter, useSelectedLayoutSegments } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -24,11 +25,16 @@ import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { useGlobalData } from '@/providers/global-data-provider';
 import { ClientProfileProvider, useClientProfileContext } from './client-profile-context';
 import { resendClientInvite } from '@/api/coach/coach-client-invite-service';
+import { unarchiveClient } from '@/api/coach/coach-client-service';
 import { useTerminology } from '@/hooks/use-terminology';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { useCoachClients } from '@/hooks/use-coach-clients';
 import { FullScreenLoader } from '@/components/ui/full-screen-loader';
 import { SectionLoader } from '@/components/ui/section-loader';
 import { EditClientDetailsSidePanel } from './components/edit-client-details-side-panel';
 import { InviteLinkDialog, copyToClipboard } from '@/components/app/invite-link-dialog';
+import { ArchivedClientDialog } from '@/components/app/archived-client-dialog';
+import { ClientLimitExceededDialog } from '@/components/app/client-limit-exceeded-dialog';
 import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
 import { getFlagEmoji } from '@/lib/general/country-utils';
 
@@ -57,8 +63,47 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
   const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState<boolean>(false);
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
+  const [isArchivedDialogOpen, setIsArchivedDialogOpen] = useState(false);
+  const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false);
+  const [isUnarchiving, setIsUnarchiving] = useState(false);
+  const queryClient = useQueryClient();
 
   const { athlete, details, isLoading, error } = useClientProfileContext();
+  const { clientLimit } = useEntitlements();
+  const { activeClientCount } = useCoachClients();
+  const isArchived = athlete?.status === 'archived';
+
+  // Show archived dialog when loading an archived client
+  useEffect(() => {
+    if (athlete && isArchived && !isLoading) {
+      setIsArchivedDialogOpen(true);
+    }
+  }, [athlete, isArchived, isLoading]);
+
+  const handleUnarchive = async () => {
+    if (!athlete?.id) return;
+
+    // Check if at limit
+    if (activeClientCount >= clientLimit) {
+      setIsLimitDialogOpen(true);
+      return;
+    }
+
+    setIsUnarchiving(true);
+    try {
+      await unarchiveClient(athlete.id);
+      toast.success(`${athlete.name} has been unarchived and will regain app access immediately`);
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['coach-clients'] });
+      queryClient.invalidateQueries({ queryKey: ['client-profile', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    } catch (err) {
+      toast.error('Failed to unarchive client');
+      console.error(err);
+    } finally {
+      setIsUnarchiving(false);
+    }
+  };
 
   React.useEffect(() => {
     if (athlete?.name) {
@@ -341,7 +386,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
         </div>
         <div className="absolute top-2 right-4 flex items-center gap-2">
           <ButtonGroup>
-            {athlete?.status !== 'accepted' && athlete?.status !== 'connected' && (
+            {athlete?.status === 'invited' && (
               <>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -418,6 +463,20 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
           uniqueCode={uniqueCode}
         />
       )}
+      {athlete && (
+        <ArchivedClientDialog
+          open={isArchivedDialogOpen}
+          onOpenChange={setIsArchivedDialogOpen}
+          onUnarchive={handleUnarchive}
+          clientName={athlete.name || 'Client'}
+        />
+      )}
+      <ClientLimitExceededDialog
+        open={isLimitDialogOpen}
+        onOpenChange={setIsLimitDialogOpen}
+        clientLimit={clientLimit}
+        currentCount={activeClientCount}
+      />
     </div>
   );
 };

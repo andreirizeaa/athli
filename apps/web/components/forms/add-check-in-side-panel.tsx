@@ -261,7 +261,7 @@ export const AddCheckInSidePanel = ({
             <Info className="size-4" />
             <AlertDescription className="min-w-0 line-clamp-4">
               {t('athletes.profile.checkIns.noFormsMessage')}{' '}
-              <Link href="/forms" className="underline hover:no-underline">
+              <Link href="/library/forms" className="underline hover:no-underline">
                 <strong>{t('athletes.profile.checkIns.formsLink')}</strong>
               </Link>
               .
