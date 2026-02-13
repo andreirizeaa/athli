@@ -587,7 +587,7 @@ export function FlowEditorSidePanel({
                         gridKey: 'select-questionnaires',
                         searchPlaceholder: 'Search questionnaires...',
                         emptyMessage: 'Please create a questionnaire in the',
-                        emptyLink: '/forms',
+                        emptyLink: '/library/forms',
                         emptyLinkText: 'Forms',
                       } : selectedActionOption?.id === 'assign-check-in' ? {
                         data: checkIns,
@@ -598,7 +598,7 @@ export function FlowEditorSidePanel({
                         gridKey: 'select-check-ins',
                         searchPlaceholder: 'Search check-ins...',
                         emptyMessage: 'Please create a check-in in the',
-                        emptyLink: '/forms',
+                        emptyLink: '/library/forms',
                         emptyLinkText: 'Forms',
                       } : selectedActionOption?.id === 'add-file' ? {
                         data: files,
@@ -609,7 +609,7 @@ export function FlowEditorSidePanel({
                         gridKey: 'select-files',
                         searchPlaceholder: 'Search files...',
                         emptyMessage: 'Please add a file in the',
-                        emptyLink: '/files',
+                        emptyLink: '/library/files',
                         emptyLinkText: 'Files',
                       } : selectedActionOption?.id === 'add-habit' ? {
                         data: habits,
@@ -620,7 +620,7 @@ export function FlowEditorSidePanel({
                         gridKey: 'select-habits',
                         searchPlaceholder: 'Search habits...',
                         emptyMessage: 'Please add a habit in the',
-                        emptyLink: '/habits',
+                        emptyLink: '/library/habits',
                         emptyLinkText: 'Habits',
                       } : selectedActionOption?.id === 'add-metric' ? {
                         data: metrics,
@@ -631,7 +631,7 @@ export function FlowEditorSidePanel({
                         gridKey: 'select-metrics',
                         searchPlaceholder: 'Search metrics...',
                         emptyMessage: 'Please add a metric in the',
-                        emptyLink: '/metrics',
+                        emptyLink: '/library/metrics',
                         emptyLinkText: 'Metrics',
                       } : null;
 

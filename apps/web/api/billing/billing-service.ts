@@ -44,6 +44,7 @@ export interface PlatformAddon {
   price_cents: number;
   billing_interval: BillingInterval | null;
   is_active: boolean;
+  cancel_at_period_end: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -157,6 +158,24 @@ export async function cancelSubscription(options?: {
  */
 export async function reactivateSubscription(): Promise<{ success: boolean }> {
   return apiFetch('/billing/reactivate', {
+    method: 'POST',
+  });
+}
+
+/**
+ * Cancel addon (schedule for end of period)
+ */
+export async function cancelAddon(addonType: AddonType): Promise<{ success: boolean }> {
+  return apiFetch(`/billing/addons/${addonType}/cancel`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Reactivate addon (undo scheduled cancellation)
+ */
+export async function reactivateAddon(addonType: AddonType): Promise<{ success: boolean }> {
+  return apiFetch(`/billing/addons/${addonType}/reactivate`, {
     method: 'POST',
   });
 }

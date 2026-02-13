@@ -15,7 +15,7 @@ const authRedirectRoutes = ['/auth/login', '/auth/register', '/auth/forgot-passw
 // OAuth callback must be publicly accessible for OAuth providers to redirect to
 const oauthCallbackRoutes = ['/auth/callback'];
 // Routes that require authentication
-const protectedRoutes = ['/home', '/athletes', '/training', '/forms', '/todo', '/inbox', '/settings', '/ai-assistant'];
+const protectedRoutes = ['/home', '/athletes', '/library', '/todo', '/inbox', '/settings', '/ai-assistant'];
 // Download routes that require authentication but are accessible after auth flow
 const downloadRoutes = ['/download'];
 

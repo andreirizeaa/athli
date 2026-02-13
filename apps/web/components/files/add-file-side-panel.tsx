@@ -403,7 +403,7 @@ export const AddFileSidePanel = ({
           <Alert className="bg-primary/5 border-primary/20 text-primary mb-6">
             <Info className="size-4" />
             <AlertDescription className="min-w-0 line-clamp-4">
-              Files added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general file, navigate to the respective main page in <Link href="/files" className="underline hover:no-underline"><strong>Library</strong></Link>.
+              Files added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general file, navigate to the respective main page in <Link href="/library/files" className="underline hover:no-underline"><strong>Library</strong></Link>.
             </AlertDescription>
           </Alert>
         )}
@@ -585,7 +585,7 @@ export const AddFileSidePanel = ({
                 <Info className="size-4" />
                 <AlertDescription className="min-w-0 line-clamp-4">
                   {t('files.noLibraryFiles')}{' '}
-                  <Link href="/files" className="underline hover:no-underline">
+                  <Link href="/library/files" className="underline hover:no-underline">
                     <strong>{t('files.libraryLink')}</strong>
                   </Link>
                   .

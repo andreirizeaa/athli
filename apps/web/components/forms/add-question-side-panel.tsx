@@ -590,7 +590,7 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
                     <Button
                       variant="ghost"
                       className="w-full justify-start text-xs gap-2 h-8 px-2"
-                      onClick={() => router.push('/metrics')}
+                      onClick={() => router.push('/library/metrics')}
                     >
                       <Plus className="size-3" />
                       {t('forms.detail.addQuestion.pleaseAddMetric')}

@@ -158,7 +158,7 @@ export function SearchComponent() {
     <>
       {/* Header search bar trigger */}
       <div className="relative hidden max-w-xl flex-1 lg:block min-w-0">
-        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+        <Search className="text-muted-foreground absolute top-1/2 left-3 size-5 -translate-y-1/2" />
         <Input
           type="search"
           placeholder={t('sidebar.search.placeholder')}

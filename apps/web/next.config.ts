@@ -2,6 +2,36 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  async redirects() {
+    return [
+      // Library restructuring redirects
+      {
+        source: '/training/:path*',
+        destination: '/library/training/:path*',
+        permanent: true,
+      },
+      {
+        source: '/forms/:path*',
+        destination: '/library/forms/:path*',
+        permanent: true,
+      },
+      {
+        source: '/metrics/:path*',
+        destination: '/library/metrics/:path*',
+        permanent: true,
+      },
+      {
+        source: '/habits/:path*',
+        destination: '/library/habits/:path*',
+        permanent: true,
+      },
+      {
+        source: '/files/:path*',
+        destination: '/library/files/:path*',
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

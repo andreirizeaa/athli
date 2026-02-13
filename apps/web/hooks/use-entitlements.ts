@@ -192,6 +192,7 @@ export function useSubscription() {
         clientLimit: 5,
         totalMonthlyCents: 0,
         activeAddons: [] as AddonType[],
+        cancellingAddons: [] as AddonType[],
         billingInterval: null,
         isCancelling: false,
         nextBillingDate: null,
@@ -200,6 +201,11 @@ export function useSubscription() {
 
     const activeAddons = subscription.addons
       ?.filter(a => a.is_active)
+      .map(a => a.addon_type) || [];
+
+    // Track which addons are scheduled for cancellation
+    const cancellingAddons = subscription.addons
+      ?.filter(a => a.is_active && a.cancel_at_period_end)
       .map(a => a.addon_type) || [];
 
     const addonTotal = subscription.addons
@@ -211,6 +217,7 @@ export function useSubscription() {
       clientLimit: subscription.client_limit,
       totalMonthlyCents: subscription.current_price_cents + addonTotal,
       activeAddons,
+      cancellingAddons,
       billingInterval: subscription.billing_interval,
       isCancelling: subscription.cancel_at_period_end,
       nextBillingDate: subscription.current_period_end

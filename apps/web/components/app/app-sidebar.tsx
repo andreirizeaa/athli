@@ -7,19 +7,19 @@ import Link from 'next/link';
 import { AthliLogo, AthliIcon } from '@/components/athli-logo';
 import {
   // CalendarDays,
-  Dumbbell,
+  ChevronRight,
   File,
+  Gift,
   Home,
+  Library,
+  Lightbulb,
   MessageCircle,
   Settings,
   UserPlus,
   Users,
   CheckSquare,
-  Sprout,
-  ClipboardList,
   Workflow,
   ClipboardCheck,
-  BarChart3,
   Rocket,
   WandSparkles,
   Zap,
@@ -39,6 +39,12 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { cn } from '@/lib/general/utils';
 import { SidebarMenuItemWithTabs } from '@/components/app/sidebar-menu-item-with-tabs';
 
 export function AppSidebar() {
@@ -104,31 +110,41 @@ export function AppSidebar() {
     },
   ] as const;
 
-  const libraryNavItems = [
+  const librarySections = [
     {
-      href: '/training/workouts',
+      id: 'training',
       labelKey: 'sidebar.links.training',
-      icon: Dumbbell,
+      href: '/library/training/workouts',
+      subItems: [
+        { value: 'workouts', labelKey: 'library.workouts', href: '/library/training/workouts' },
+        { value: 'sections', labelKey: 'library.sections.title', href: '/library/training/sections' },
+        { value: 'programs', labelKey: 'library.programs', href: '/library/training/programs' },
+        { value: 'exercises', labelKey: 'library.exercises', href: '/library/training/exercises' },
+      ],
     },
     {
-      href: '/forms/check-ins',
+      id: 'forms',
       labelKey: 'sidebar.links.forms',
-      icon: ClipboardList,
+      href: '/library/forms/check-ins',
+      subItems: [
+        { value: 'check-ins', labelKey: 'forms.tabs.checkIns', href: '/library/forms/check-ins' },
+        { value: 'questionnaires', labelKey: 'forms.tabs.questionnaires', href: '/library/forms/questionnaires' },
+      ],
     },
     {
-      href: '/metrics',
+      id: 'metrics',
       labelKey: 'sidebar.links.metrics',
-      icon: BarChart3,
+      href: '/library/metrics',
     },
     {
-      href: '/habits',
+      id: 'habits',
       labelKey: 'sidebar.links.habits',
-      icon: Sprout,
+      href: '/library/habits',
     },
     {
-      href: '/files',
+      id: 'files',
       labelKey: 'sidebar.links.files',
-      icon: File,
+      href: '/library/files',
     },
   ] as const;
 
@@ -151,18 +167,6 @@ export function AppSidebar() {
     { value: 'athli-assistant', labelKey: 'home.athliAssistant' },
   ];
 
-  const trainingTabs = [
-    { value: 'workouts', labelKey: 'library.workouts' },
-    { value: 'sections', labelKey: 'library.sections.title' },
-    { value: 'programs', labelKey: 'library.programs' },
-    { value: 'exercises', labelKey: 'library.exercises' },
-  ];
-
-  const formsTabs = [
-    { value: 'check-ins', labelKey: 'forms.tabs.checkIns' },
-    { value: 'questionnaires', labelKey: 'forms.tabs.questionnaires' },
-  ];
-
   const businessTabs = [
     { value: 'activity', labelKey: 'business.tabs.activity' },
     { value: 'packages', labelKey: 'business.tabs.packages' },
@@ -171,10 +175,11 @@ export function AppSidebar() {
   ];
 
   const settingsTabs = [
-    { value: 'account/profile', labelKey: 'settings.groups.personal' },
+    { value: 'account/profile', labelKey: 'settings.sections.account' },
+    { value: 'profile/notifications', labelKey: 'settings.sections.notifications' },
     { value: 'billing', labelKey: 'settings.sections.billing' },
-    { value: 'app/customisations', labelKey: 'settings.groups.appSettings' },
-    { value: 'business/company/information', labelKey: 'settings.groups.business' },
+    { value: 'app/customisations', labelKey: 'settings.sections.customisations' },
+    { value: 'business/company/information', labelKey: 'settings.sections.company' },
   ];
 
   return (
@@ -321,67 +326,84 @@ export function AppSidebar() {
           </div>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {libraryNavItems.map((item) => {
-                const Icon = item.icon;
-                const href = item.href;
-
-                // Use SidebarMenuItemWithTabs for Training
-                if (href === '/training/workouts') {
-                  return (
-                    <SidebarMenuItemWithTabs
-                      key={item.href}
-                      href={href}
-                      labelKey={item.labelKey}
-                      icon={Icon}
-                      basePath="/training"
-                      tabs={trainingTabs}
-                    />
-                  );
-                }
-
-                // Use SidebarMenuItemWithTabs for Forms
-                if (href === '/forms/check-ins') {
-                  return (
-                    <SidebarMenuItemWithTabs
-                      key={item.href}
-                      href={href}
-                      labelKey={item.labelKey}
-                      icon={Icon}
-                      basePath="/forms"
-                      tabs={formsTabs}
-                    />
-                  );
-                }
-
-                let isActive = false;
-                if (
-                  href === '/metrics' ||
-                  href === '/files' ||
-                  href === '/habits'
-                ) {
-                  isActive = activePath === href || activePath.startsWith(`${href}/`);
-                } else {
-                  isActive = activePath === href;
-                }
-                const label =
-                  'label' in item ? item.label : 'labelKey' in item ? t(item.labelKey) : '';
-
-                return (
-                  <SidebarMenuItem key={item.href}>
+              <SidebarMenuItem>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
                     <SidebarMenuButton
                       asChild
-                      isActive={isActive}
-                      tooltip={label as string}
+                      isActive={activePath.startsWith('/library')}
+                      tooltip={isCollapsed ? t('sidebar.links.library') : undefined}
                       className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
                     >
-                      <Link href={item.href}>
-                        <Icon className="shrink-0" />
-                        <span>{label as string}</span>
+                      <Link href="/library/training/workouts">
+                        <Library className="shrink-0" />
+                        <span className="flex-1">{t('sidebar.links.library')}</span>
+                        {!isCollapsed && (
+                          <ChevronRight className="!size-3 shrink-0 opacity-50 group-data-[collapsible=icon]:hidden" />
+                        )}
                       </Link>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="right"
+                    align="start"
+                    sideOffset={isCollapsed ? 0 : -2}
+                    className="flex flex-col px-0 py-1.5 min-w-[160px]"
+                  >
+                    <div className="flex items-center justify-between px-3 pb-1.5">
+                      <span className="text-xs font-semibold text-background/70 uppercase">
+                        {t('sidebar.links.library')}
+                      </span>
+                      <Library className="size-3.5 text-background/70" />
+                    </div>
+                    <div className="h-px w-full bg-background/20 mb-1" />
+                    {librarySections.map((section) => {
+                      const hasSubItems = 'subItems' in section && section.subItems;
+
+                      if (hasSubItems) {
+                        return (
+                          <div key={section.id} className="flex flex-col">
+                            <span className="mx-1.5 px-2 py-1 text-[15px] text-background/70 font-medium">
+                              {t(section.labelKey)}
+                            </span>
+                            {section.subItems.map((subItem) => {
+                              const isSubActive = activePath === subItem.href || activePath.startsWith(`${subItem.href}/`);
+                              return (
+                                <Link
+                                  key={subItem.value}
+                                  href={subItem.href}
+                                  className={cn(
+                                    'mx-1.5 ml-5 px-2 py-1 text-[15px] rounded transition-colors',
+                                    'hover:bg-background/20',
+                                    isSubActive && 'bg-background/20 font-medium'
+                                  )}
+                                >
+                                  {t(subItem.labelKey)}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+
+                      const isSectionActive = activePath === section.href || activePath.startsWith(`${section.href}/`);
+                      return (
+                        <Link
+                          key={section.id}
+                          href={section.href}
+                          className={cn(
+                            'mx-1.5 px-2 py-1 text-[15px] rounded transition-colors',
+                            'hover:bg-background/20',
+                            isSectionActive && 'bg-background/20 font-medium'
+                          )}
+                        >
+                          {t(section.labelKey)}
+                        </Link>
+                      );
+                    })}
+                  </TooltipContent>
+                </Tooltip>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -428,6 +450,32 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="mt-auto pb-3">
         <SidebarMenu className="gap-0.5">
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={activePath === '/features'}
+              tooltip={t('sidebar.featureRequests.label')}
+              className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
+            >
+              <Link href="/features">
+                <Lightbulb className="shrink-0" />
+                <span>{t('sidebar.featureRequests.label')}</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={activePath === '/refer-and-earn'}
+              tooltip={t('sidebar.links.referAndEarn')}
+              className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
+            >
+              <Link href="/refer-and-earn">
+                <Gift className="shrink-0" />
+                <span>{t('sidebar.links.referAndEarn')}</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItemWithTabs
             href="/settings/account/profile"
             labelKey="sidebar.settings.label"

@@ -5,15 +5,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { getConversations } from '@/lib/messaging/messaging-api-client';
 
-export const useConversations = (options?: { enabled?: boolean }) => {
+export const useConversations = (options?: { enabled?: boolean; includeArchived?: boolean }) => {
+  const includeArchived = options?.includeArchived ?? false;
+
   const {
     data: conversations,
     isLoading,
     error,
     refetch,
   } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: () => getConversations({}),
+    queryKey: ['conversations', { includeArchived }],
+    queryFn: () => getConversations({ includeArchived }),
     staleTime: 30 * 60 * 1000, // 30 minutes - rely on realtime for updates
     gcTime: 5 * 60 * 1000, // 5 minutes
     enabled: options?.enabled !== false,

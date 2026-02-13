@@ -96,7 +96,7 @@ export const getClient = async (id: string): Promise<Athlete> => {
     email: client.email || '',
     coachingType: (client.category as any) || 'online',
     category: client.category || null,
-    status: client.status || 'invited',
+    status: client.is_archived ? 'archived' : (client.status || 'invited'),
     avatarUrl: client.avatar_url || '',
     createdAt: createdAt.getTime(),
     phone: client.phone || '',
@@ -107,6 +107,9 @@ export const getClient = async (id: string): Promise<Athlete> => {
     birthDate: client.date_of_birth || null,
     age: calculateAge(client.date_of_birth),
     height: client.height_cm || null,
+    gender: client.gender || null,
+    timezone: client.timezone || null,
+    isArchived: client.is_archived || false,
     clientFor: clientForDays.toString(),
   };
 };
@@ -297,6 +300,27 @@ export const archiveUser = async (athleteId: string): Promise<void> => {
       is_active: false,
       is_archived: true,
     }) as any,
+  });
+};
+
+/**
+ * Service method to get all clients (active and archived) for a coach
+ */
+export const getAllClients = async (): Promise<Athlete[]> => {
+  const [activeClients, archivedClients] = await Promise.all([
+    getClients(),
+    getArchivedClients(),
+  ]);
+  return [...activeClients, ...archivedClients];
+};
+
+/**
+ * Service method to unarchive a single client
+ */
+export const unarchiveClient = async (clientId: string): Promise<void> => {
+  await apiFetch(`/clients/restore`, {
+    method: 'POST',
+    body: JSON.stringify({ clientIds: [clientId] }) as any,
   });
 };
 

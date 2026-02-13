@@ -205,13 +205,13 @@ const GetStartedPage = () => {
   useEffect(() => {
     const routes = [
       '/training/workouts',
-      '/training/programs',
-      '/training/exercises',
-      '/forms/check-ins',
+      '/library/training/programs',
+      '/library/training/exercises',
+      '/library/forms/check-ins',
       '/flows',
-      '/habits',
-      '/metrics',
-      '/files',
+      '/library/habits',
+      '/library/metrics',
+      '/library/files',
     ];
     routes.forEach(route => router.prefetch(route));
     if (newClientSignUpFlow) {
@@ -285,15 +285,15 @@ const GetStartedPage = () => {
                 {/* Left Side - Checklist Items */}
                 <div className="flex-1 flex flex-col gap-1">
                   {[
-                    { icon: Bot, key: 'workoutAi', route: '/training' },
-                    { icon: Copy, key: 'programTemplates', route: '/training' },
-                    { icon: Dumbbell, key: 'customExercises', route: '/training' },
+                    { icon: Bot, key: 'workoutAi', route: '/library/training' },
+                    { icon: Copy, key: 'programTemplates', route: '/library/training' },
+                    { icon: Dumbbell, key: 'customExercises', route: '/library/training' },
                     { icon: Zap, key: 'automateOnboardings', route: '/flows' },
-                    { icon: FileCheck, key: 'checkInsForms', route: '/forms' },
+                    { icon: FileCheck, key: 'checkInsForms', route: '/library/forms' },
                     { icon: Workflow, key: 'powerfulFlows', route: '/flows' },
-                    { icon: Sprout, key: 'lifestyleHabits', route: '/habits' },
-                    { icon: BarChart3, key: 'trackMetrics', route: '/metrics' },
-                    { icon: File, key: 'onDemandResources', route: '/files' },
+                    { icon: Sprout, key: 'lifestyleHabits', route: '/library/habits' },
+                    { icon: BarChart3, key: 'trackMetrics', route: '/library/metrics' },
+                    { icon: File, key: 'onDemandResources', route: '/library/files' },
                   ].map((item) => {
                     const isCompleted = isChecklistItemCompleted(item.key);
                     return (

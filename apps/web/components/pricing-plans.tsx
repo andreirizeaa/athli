@@ -5,6 +5,14 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { Check, ChevronDown, ChevronUp, Workflow, Radio, Sparkles, Wallet, Loader2, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useTranslations } from 'next-intl'
@@ -28,7 +36,7 @@ import {
     ADDONS,
     ANNUAL_DISCOUNT_PERCENT,
 } from '@athli/shared-types/pricing-constants'
-import { createCheckoutSession, createPortalSession, type AddonType } from '@/api/billing/billing-service'
+import { createCheckoutSession, updateAddons, cancelSubscription, reactivateSubscription, cancelAddon, reactivateAddon, createPortalSession, type AddonType } from '@/api/billing/billing-service'
 import { useEntitlements, useSubscription } from '@/hooks/use-entitlements'
 
 function AddonIcon({ type, animationData }: { type: AddonConfig['icon']; animationData?: object }) {
@@ -76,7 +84,7 @@ export default function PricingPlans({
         hasPayments,
         isLoading: isLoadingEntitlements,
     } = useEntitlements()
-    const { billingInterval: currentBillingInterval, isLoading: isLoadingSubscription } = useSubscription()
+    const { billingInterval: currentBillingInterval, isCancelling: isSubscriptionCancelling, cancellingAddons, isLoading: isLoadingSubscription } = useSubscription()
 
     // Build current addons from entitlements
     const currentAddons = useMemo(() => {
@@ -92,15 +100,143 @@ export default function PricingPlans({
 
     // Track cancellation state - null means not cancelling, 'subscription' for main, or addon key
     const [cancellingItem, setCancellingItem] = useState<string | null>(null)
+    const [isOpeningPortal, setIsOpeningPortal] = useState(false)
+    // Confirmation dialog state - which item to confirm cancellation for
+    const [confirmCancelItem, setConfirmCancelItem] = useState<string | null>(null)
+    // Two-step confirmation - track which step (1 = first confirm, 2 = final confirm)
+    const [cancelConfirmStep, setCancelConfirmStep] = useState<1 | 2>(1)
+    // Disable confirm button for 1 second on step 2
+    const [confirmButtonDisabled, setConfirmButtonDisabled] = useState(false)
+    // Confirmation dialog state for reactivation
+    const [confirmReactivateItem, setConfirmReactivateItem] = useState<string | null>(null)
+    // Alert for trying to update while subscription is being cancelled
+    const [showReinstateAlert, setShowReinstateAlert] = useState(false)
+    // Alert for trying to reinstate an add-on while subscription is being cancelled
+    const [showReinstateAddonAlert, setShowReinstateAddonAlert] = useState(false)
 
-    const handleCancel = async (item: 'subscription' | string) => {
-        setCancellingItem(item)
+    // Enable confirm button after 1 second delay when step 2 is reached
+    useEffect(() => {
+        if (cancelConfirmStep === 2) {
+            setConfirmButtonDisabled(true)
+            const timer = setTimeout(() => {
+                setConfirmButtonDisabled(false)
+            }, 1000)
+            return () => clearTimeout(timer)
+        }
+    }, [cancelConfirmStep])
+
+    // Map addon keys to addon types
+    const addonKeyToType: Record<string, AddonType> = {
+        automations: 'automations',
+        aiAssistant: 'ai_assistant',
+        payments: 'payments',
+    }
+
+    // Get addon display name
+    const getAddonDisplayName = (addonKey: string) => {
+        const addonNames: Record<string, string> = {
+            automations: 'Automations',
+            aiAssistant: 'AI Assistant',
+            payments: 'Payments',
+        }
+        return addonNames[addonKey] || addonKey
+    }
+
+    // Check if an addon is scheduled for cancellation
+    const isAddonCancelling = (addonKey: string): boolean => {
+        const addonType = addonKeyToType[addonKey]
+        return addonType ? (cancellingAddons || []).includes(addonType) : false
+    }
+
+    const handleCancelAddon = async (addonKey: string) => {
+        setConfirmCancelItem(null)
+        setCancellingItem(addonKey)
+        try {
+            const addonType = addonKeyToType[addonKey]
+            if (!addonType) {
+                throw new Error('Invalid addon key')
+            }
+
+            // Schedule addon for cancellation at period end
+            await cancelAddon(addonType)
+
+            toast.success('Add-on scheduled for cancellation')
+
+            // Reload the page to reflect changes
+            window.location.reload()
+        } catch (error) {
+            console.error('Failed to cancel addon:', error)
+            toast.error('Failed to cancel add-on. Please try again.')
+            setCancellingItem(null)
+        }
+    }
+
+    const handleReactivateAddon = async (addonKey: string) => {
+        setConfirmReactivateItem(null)
+        setCancellingItem(addonKey)
+        try {
+            const addonType = addonKeyToType[addonKey]
+            if (!addonType) {
+                throw new Error('Invalid addon key')
+            }
+
+            await reactivateAddon(addonType)
+
+            toast.success('Add-on reactivated successfully')
+
+            // Reload the page to reflect changes
+            window.location.reload()
+        } catch (error) {
+            console.error('Failed to reactivate addon:', error)
+            toast.error('Failed to reactivate add-on. Please try again.')
+            setCancellingItem(null)
+        }
+    }
+
+    const handleCancelSubscription = async () => {
+        setConfirmCancelItem(null)
+        setCancellingItem('subscription')
+        try {
+            // Cancel at period end (not immediately)
+            await cancelSubscription({ cancelImmediately: false })
+
+            toast.success('Subscription scheduled for cancellation')
+
+            // Reload the page to reflect changes
+            window.location.reload()
+        } catch (error) {
+            console.error('Failed to cancel subscription:', error)
+            toast.error('Failed to cancel subscription. Please try again.')
+            setCancellingItem(null)
+        }
+    }
+
+    const handleReactivateSubscription = async () => {
+        setConfirmReactivateItem(null)
+        setCancellingItem('subscription')
+        try {
+            await reactivateSubscription()
+
+            toast.success('Subscription reactivated successfully')
+
+            // Reload the page to reflect changes
+            window.location.reload()
+        } catch (error) {
+            console.error('Failed to reactivate subscription:', error)
+            toast.error('Failed to reactivate subscription. Please try again.')
+            setCancellingItem(null)
+        }
+    }
+
+    const handleManageBilling = async () => {
+        setIsOpeningPortal(true)
         try {
             const { url } = await createPortalSession(window.location.href)
             window.location.href = url
         } catch (error) {
-            console.error('Failed to open portal:', error)
-            setCancellingItem(null)
+            console.error('Failed to open billing portal:', error)
+            toast.error('Failed to open billing portal. Please try again.')
+            setIsOpeningPortal(false)
         }
     }
 
@@ -110,7 +246,7 @@ export default function PricingPlans({
     const [selectedPlan, setSelectedPlan] = useState<Plan>('pro')
     const [totalClients, setTotalClients] = useState(50)
     const [selectedAddons, setSelectedAddons] = useState<string[]>([])
-    const [featuresExpanded, setFeaturesExpanded] = useState(false)
+    const [featuresExpanded, setFeaturesExpanded] = useState(true)
     const [aiAnimationData, setAiAnimationData] = useState<object | null>(null)
     const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
     const [showSavingsPopup, setShowSavingsPopup] = useState(false)
@@ -411,6 +547,12 @@ export default function PricingPlans({
 
     // Handle checkout - create Stripe checkout session
     const handleCheckout = async () => {
+        // If subscription is being cancelled, show alert to reinstate first
+        if (isSubscriptionCancelling) {
+            setShowReinstateAlert(true)
+            return
+        }
+
         if (selectedPlan === 'starter') {
             // Starter plan - no checkout needed, just redirect
             router.push('/settings/billing')
@@ -834,7 +976,7 @@ export default function PricingPlans({
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-base text-muted-foreground -mt-1">
                                             {t('chooseClients.growBusiness', { limit: PLANS[selectedPlan].maxClients })}
                                         </p>
 
@@ -904,21 +1046,29 @@ export default function PricingPlans({
                                                 )}
                                                 onClick={() => !isCurrentlySubscribed && toggleAddon(addon.key)}
                                             >
-                                                {/* Top right: Cancel button for subscribed addons, checkbox for others */}
+                                                {/* Top right: Cancel/Reactivate button for subscribed addons, checkbox for others */}
                                                 <div className="absolute top-4 right-6">
                                                     {isCurrentlySubscribed ? (
                                                         <Button
                                                             variant="outline"
-                                                            size="sm"
-                                                            className="text-xs text-muted-foreground h-7 min-w-[95px]"
+                                                            className="border-primary text-primary hover:bg-primary/10"
                                                             onClick={(e) => {
                                                                 e.stopPropagation()
-                                                                handleCancel(addon.key)
+                                                                // If subscription is being cancelled, addon will be cancelled too - show alert to reinstate subscription first
+                                                                if (isSubscriptionCancelling) {
+                                                                    setShowReinstateAddonAlert(true)
+                                                                } else if (isAddonCancelling(addon.key)) {
+                                                                    setConfirmReactivateItem(addon.key)
+                                                                } else {
+                                                                    setConfirmCancelItem(addon.key)
+                                                                }
                                                             }}
                                                             disabled={cancellingItem !== null}
                                                         >
                                                             {cancellingItem === addon.key ? (
-                                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                            ) : (isSubscriptionCancelling || isAddonCancelling(addon.key)) ? (
+                                                                "Don't Cancel"
                                                             ) : (
                                                                 'Cancel Add-on'
                                                             )}
@@ -957,12 +1107,12 @@ export default function PricingPlans({
                                                                 {t(`addons.${addon.key}.name`)}
                                                             </h3>
                                                             <span className={cn(
-                                                                'px-2 py-0.5 text-xs font-medium rounded-md',
+                                                                'px-2.5 py-0.5 text-sm font-medium rounded-sm border',
                                                                 isCurrentlySubscribed
-                                                                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                                                                    ? 'bg-[#dcfce7] text-[#14532d] border-[#bbf7d0] dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30'
                                                                     : isSelected
-                                                                        ? 'bg-primary/20 text-primary'
-                                                                        : 'bg-muted text-muted-foreground'
+                                                                        ? 'bg-primary/20 text-primary border-primary/30'
+                                                                        : 'bg-muted text-muted-foreground border-muted-foreground/20'
                                                             )}>
                                                                 {isCurrentlySubscribed ? 'Active' : t('addon')}
                                                             </span>
@@ -1088,19 +1238,38 @@ export default function PricingPlans({
                                             )}
                                         </Button>
 
-                                        {/* Cancel Subscription Button - only in update mode for paid plans */}
+                                        {/* Cancel/Reactivate Subscription Button - only in update mode for paid plans */}
                                         {canCancel && (
                                             <Button
                                                 variant="outline"
                                                 size="lg"
-                                                className="w-full rounded-xl text-base text-muted-foreground"
-                                                onClick={() => handleCancel('subscription')}
-                                                disabled={cancellingItem !== null}
+                                                className="w-full rounded-xl text-base border-primary text-primary hover:bg-primary/10"
+                                                onClick={() => isSubscriptionCancelling ? setConfirmReactivateItem('subscription') : setConfirmCancelItem('subscription')}
+                                                disabled={cancellingItem !== null || isOpeningPortal}
                                             >
                                                 {cancellingItem === 'subscription' ? (
                                                     <Loader2 className="h-5 w-5 animate-spin" />
+                                                ) : isSubscriptionCancelling ? (
+                                                    "Don't Cancel"
                                                 ) : (
                                                     'Cancel Subscription'
+                                                )}
+                                            </Button>
+                                        )}
+
+                                        {/* Manage Billing Button - opens Stripe customer portal */}
+                                        {isUpdateMode && (
+                                            <Button
+                                                variant="outline"
+                                                size="lg"
+                                                className="w-full rounded-xl text-base border-primary text-primary hover:bg-primary/10"
+                                                onClick={handleManageBilling}
+                                                disabled={cancellingItem !== null || isOpeningPortal}
+                                            >
+                                                {isOpeningPortal ? (
+                                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                                ) : (
+                                                    'Manage Billing'
                                                 )}
                                             </Button>
                                         )}
@@ -1134,6 +1303,197 @@ export default function PricingPlans({
                     </div>
                 </div>
             </div>
+
+            {/* Cancel Add-on Confirmation Dialog - Two Step */}
+            <Dialog
+                open={confirmCancelItem !== null && confirmCancelItem !== 'subscription'}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setConfirmCancelItem(null)
+                        setCancelConfirmStep(1)
+                    }
+                }}
+            >
+                <DialogContent className="z-[10000]" overlayClassName="z-[10000]">
+                    <DialogHeader className="min-h-[72px]">
+                        <DialogTitle>
+                            {cancelConfirmStep === 1
+                                ? `Cancel ${confirmCancelItem ? getAddonDisplayName(confirmCancelItem) : ''} Add-on`
+                                : 'Confirm Cancellation'
+                            }
+                        </DialogTitle>
+                        <DialogDescription>
+                            {cancelConfirmStep === 1
+                                ? 'Are you sure you want to cancel this add-on? The cancellation will take effect at the end of your billing period.'
+                                : 'Please confirm one more time to cancel this add-on.'
+                            }
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            className="min-w-[100px]"
+                            onClick={() => {
+                                if (cancelConfirmStep === 2) {
+                                    setCancelConfirmStep(1)
+                                } else {
+                                    setConfirmCancelItem(null)
+                                    setCancelConfirmStep(1)
+                                }
+                            }}
+                        >
+                            {cancelConfirmStep === 1 ? 'Keep Add-on' : 'Go Back'}
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            className="min-w-[140px]"
+                            disabled={cancelConfirmStep === 2 && confirmButtonDisabled}
+                            onClick={() => {
+                                if (cancelConfirmStep === 1) {
+                                    setCancelConfirmStep(2)
+                                } else {
+                                    confirmCancelItem && handleCancelAddon(confirmCancelItem)
+                                }
+                            }}
+                        >
+                            {cancelConfirmStep === 1 ? 'Cancel Add-on' : 'Confirm Cancellation'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Cancel Subscription Confirmation Dialog - Two Step */}
+            <Dialog
+                open={confirmCancelItem === 'subscription'}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setConfirmCancelItem(null)
+                        setCancelConfirmStep(1)
+                    }
+                }}
+            >
+                <DialogContent className="z-[10000]" overlayClassName="z-[10000]">
+                    <DialogHeader className="min-h-[96px]">
+                        <DialogTitle>
+                            {cancelConfirmStep === 1 ? 'Cancel Subscription' : 'Confirm Cancellation'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {cancelConfirmStep === 1
+                                ? <>Are you sure you want to cancel your subscription? Your subscription will remain active until the end of your current billing period.{currentAddons.length > 0 && ' All add-ons will also be cancelled.'}</>
+                                : 'Please confirm one more time to cancel your subscription.'
+                            }
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            className="min-w-[140px]"
+                            onClick={() => {
+                                if (cancelConfirmStep === 2) {
+                                    setCancelConfirmStep(1)
+                                } else {
+                                    setConfirmCancelItem(null)
+                                    setCancelConfirmStep(1)
+                                }
+                            }}
+                        >
+                            {cancelConfirmStep === 1 ? 'Keep Subscription' : 'Go Back'}
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            className="min-w-[160px]"
+                            disabled={cancelConfirmStep === 2 && confirmButtonDisabled}
+                            onClick={() => {
+                                if (cancelConfirmStep === 1) {
+                                    setCancelConfirmStep(2)
+                                } else {
+                                    handleCancelSubscription()
+                                }
+                            }}
+                        >
+                            {cancelConfirmStep === 1 ? 'Cancel Subscription' : 'Confirm Cancellation'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Reactivate Add-on Confirmation Dialog */}
+            <Dialog open={confirmReactivateItem !== null && confirmReactivateItem !== 'subscription'} onOpenChange={(open) => !open && setConfirmReactivateItem(null)}>
+                <DialogContent className="z-[10000]" overlayClassName="z-[10000]">
+                    <DialogHeader>
+                        <DialogTitle>Reactivate {confirmReactivateItem ? getAddonDisplayName(confirmReactivateItem) : ''} Add-on</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to reactivate this add-on? The scheduled cancellation will be removed and you will continue to be billed for this add-on.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setConfirmReactivateItem(null)}>
+                            Keep Cancellation
+                        </Button>
+                        <Button
+                            onClick={() => confirmReactivateItem && handleReactivateAddon(confirmReactivateItem)}
+                        >
+                            Reactivate Add-on
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Reactivate Subscription Confirmation Dialog */}
+            <Dialog open={confirmReactivateItem === 'subscription'} onOpenChange={(open) => !open && setConfirmReactivateItem(null)}>
+                <DialogContent className="z-[10000]" overlayClassName="z-[10000]">
+                    <DialogHeader>
+                        <DialogTitle>Reactivate Subscription</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to reactivate your subscription? The scheduled cancellation will be removed and you will continue to be billed as normal.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setConfirmReactivateItem(null)}>
+                            Keep Cancellation
+                        </Button>
+                        <Button
+                            onClick={handleReactivateSubscription}
+                        >
+                            Reactivate Subscription
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Reinstate Alert - shown when trying to update while subscription is being cancelled */}
+            <Dialog open={showReinstateAlert} onOpenChange={setShowReinstateAlert}>
+                <DialogContent className="z-[10000]" overlayClassName="z-[10000]">
+                    <DialogHeader>
+                        <DialogTitle>Subscription Set to be Cancelled</DialogTitle>
+                        <DialogDescription>
+                            Your subscription is currently scheduled for cancellation. Please reinstate your subscription first before making any changes.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button onClick={() => setShowReinstateAlert(false)}>
+                            OK
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Reinstate Add-on Alert - shown when trying to reinstate an add-on while subscription is being cancelled */}
+            <Dialog open={showReinstateAddonAlert} onOpenChange={setShowReinstateAddonAlert}>
+                <DialogContent className="z-[10000]" overlayClassName="z-[10000]">
+                    <DialogHeader>
+                        <DialogTitle>Subscription Set to be Cancelled</DialogTitle>
+                        <DialogDescription>
+                            Please reinstate your subscription first before reinstating an add-on. Reinstating your subscription will also reinstate all add-ons.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button onClick={() => setShowReinstateAddonAlert(false)}>
+                            OK
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </section>
     )
 }
