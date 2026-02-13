@@ -3,17 +3,22 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AthliLogo } from '@/components/athli-logo';
 import PricingPlans from '@/components/pricing-plans';
 import PricingComparison from '@/components/pricing-comparison';
 import { useCoachClients } from '@/hooks/use-coach-clients';
+import { useEntitlements, useSubscription } from '@/hooks/use-entitlements';
 
 export default function UpdatePlanPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const { clients } = useCoachClients();
+  const { isLoading: isLoadingEntitlements } = useEntitlements();
+  const { isLoading: isLoadingSubscription } = useSubscription();
+
+  const isLoading = isLoadingEntitlements || isLoadingSubscription;
 
   // Get the count of active clients (non-archived)
   const activeClientCount = clients.length;
@@ -75,8 +80,21 @@ export default function UpdatePlanPage() {
 
       {/* Content */}
       <div className="relative z-10">
-        <PricingPlans hideHeader isUpdateMode minClientCount={activeClientCount} />
-        <PricingComparison />
+        {isLoading ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <>
+            <PricingPlans
+              hideHeader
+              isUpdateMode
+              minClientCount={activeClientCount}
+            />
+
+            <PricingComparison />
+          </>
+        )}
       </div>
     </div>,
     document.body

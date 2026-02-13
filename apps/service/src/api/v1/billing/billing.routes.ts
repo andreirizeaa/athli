@@ -7,6 +7,9 @@ export const billingRouter = Router();
 // Webhook - NO auth (Stripe calls this)
 billingRouter.post('/webhook', billingController.webhook);
 
+// Public: Lookup referral code info (no auth - for referral landing page)
+billingRouter.get('/referral-lookup/:code', billingController.lookupReferralCode);
+
 // Coach: Get current subscription
 billingRouter.get('/subscription', supabaseAuthenticate, billingController.getSubscription);
 
@@ -15,6 +18,15 @@ billingRouter.get('/entitlements', supabaseAuthenticate, billingController.getEn
 
 // Coach: Get billing activity log
 billingRouter.get('/activity', supabaseAuthenticate, billingController.getBillingActivity);
+
+// Coach: Get referrals and credit stats
+billingRouter.get('/referrals', supabaseAuthenticate, billingController.getReferrals);
+
+// Coach: Send referral invite email
+billingRouter.post('/referral-invite', supabaseAuthenticate, billingController.sendReferralInvite);
+
+// Coach: Apply a referral code (link as referred)
+billingRouter.post('/apply-referral', supabaseAuthenticate, billingController.applyReferralCode);
 
 // Coach: Get invoices from Stripe
 billingRouter.get('/invoices', supabaseAuthenticate, billingController.getInvoices);

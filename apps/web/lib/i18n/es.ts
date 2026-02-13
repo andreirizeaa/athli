@@ -2531,7 +2531,7 @@ export const esMessages = {
     popular: 'Más Popular',
     monthly: 'Mensual',
     annual: 'Anual',
-    twoMonthsFree: '2 meses gratis con facturación anual',
+    twoMonthsFree: 'Ahorra 17% con facturación anual',
     month: 'mes',
     year: 'año',
     plan: 'plan',
@@ -2564,7 +2564,7 @@ export const esMessages = {
     },
     pro: {
       name: 'Pro',
-      priceShort: 'Desde $15/mes',
+      priceShort: 'Desde $20/mes',
       description: 'Todo lo que necesitas para hacer crecer tu negocio de entrenamiento',
       features: [
         'App Móvil para Entrenadores (iOS y Android)',
@@ -2586,7 +2586,7 @@ export const esMessages = {
     },
     max: {
       name: 'Max',
-      priceShort: 'Desde $95/mes',
+      priceShort: 'Desde $99/mes',
       description: 'Para entrenadores establecidos que necesitan capacidad ilimitada',
       features: [
         'App Móvil para Entrenadores (iOS y Android)',
@@ -2659,7 +2659,7 @@ export const esMessages = {
       extraClients: 'Clientes extra',
       addons: 'Complementos',
       total: 'Total',
-      billedAnnually: 'facturado anualmente',
+      billedAnnually: 'Facturado Anualmente',
       capacity: 'Capacidad total de clientes',
       cta: 'Comenzar prueba gratuita',
       pricesInUSD: 'Todos los precios están en USD',

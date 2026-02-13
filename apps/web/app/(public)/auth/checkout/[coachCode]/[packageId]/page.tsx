@@ -244,7 +244,7 @@ function AuthFormStep({
           <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"
-              className="h-12 rounded-xl transition-all bg-background"
+              className="h-12 rounded-xl transition-all !bg-background hover:!bg-sidebar border-primary/50"
               onClick={handleGoogleSignIn}
               disabled={isSigningUp || isGoogleLoading || isAppleLoading}
             >
@@ -265,7 +265,7 @@ function AuthFormStep({
 
             <Button
               variant="outline"
-              className="h-12 rounded-xl transition-all bg-background"
+              className="h-12 rounded-xl transition-all !bg-background hover:!bg-sidebar border-primary/50"
               onClick={handleAppleSignIn}
               disabled={isSigningUp || isGoogleLoading || isAppleLoading}
             >

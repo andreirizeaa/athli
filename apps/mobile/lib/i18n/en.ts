@@ -163,6 +163,7 @@ export const en = {
     discardChanges: 'Discard Changes?',
     discardChangesMessage: 'You have unsaved changes. Are you sure you want to discard them?',
     cancel: 'Cancel',
+    continue: 'Continue',
     discard: 'Discard',
   },
   home: {
@@ -1395,6 +1396,8 @@ export const en = {
       invoices: 'Invoices',
       noInvoices: 'No invoices yet',
       failedToLoadInvoices: 'Failed to load invoices',
+      endTrialTitle: "You're on a Free Trial",
+      endTrialMessage: 'You currently have {{days}} days left on your free trial. If you proceed to purchase a plan, your free trial will end and billing will start immediately.',
     },
     personalDetails: {
       title: 'Personal Details',

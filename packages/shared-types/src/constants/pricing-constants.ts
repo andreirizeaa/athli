@@ -24,48 +24,56 @@ export interface AddonConfig {
 }
 
 /**
+ * Annual discount percentage (17% off)
+ */
+export const ANNUAL_DISCOUNT_PERCENT = 17;
+
+/**
  * Base plan configurations
  */
 export const PLANS: Record<Plan, PlanConfig> = {
   starter: { monthlyPrice: 0, annualPrice: 0, baseClients: 5, extraClientPrice: 0, maxClients: 5 },
-  pro: { monthlyPrice: 7, annualPrice: 6, baseClients: 5, extraClientPrice: 2, maxClients: 300 },
-  max: { monthlyPrice: 59, annualPrice: 49, baseClients: 50, extraClientPrice: 1, maxClients: 500 },
+  pro: { monthlyPrice: 20, annualPrice: 17, baseClients: 5, extraClientPrice: 2, maxClients: 300 },
+  max: { monthlyPrice: 99, annualPrice: 82, baseClients: 50, extraClientPrice: 1, maxClients: 500 },
 };
 
 /**
  * Pro plan pricing tiers - price decreases per client as volume increases
+ * Annual prices are ~17% off monthly (rounded to whole numbers)
  * Format: { clients: [monthlyPrice, annualPrice] }
  */
 export const PRO_PRICING: Record<number, [number, number]> = {
-  5: [7, 6],        // $1.40/client
-  10: [12, 10],     // $1.20/client
-  20: [20, 17],     // $1.00/client
-  50: [40, 33],     // $0.80/client
-  75: [53, 44],     // $0.71/client
-  100: [65, 54],    // $0.65/client
-  125: [77, 64],    // $0.62/client
-  150: [86, 72],    // $0.57/client
-  200: [100, 83],   // $0.50/client
-  250: [111, 93],   // $0.44/client
-  300: [121, 101],  // $0.40/client
+  5: [20, 17],      // $4.00/client
+  10: [28, 23],     // $2.80/client
+  20: [48, 40],     // $2.40/client
+  50: [90, 75],     // $1.80/client
+  75: [120, 100],   // $1.60/client
+  100: [145, 120],  // $1.45/client
+  125: [170, 141],  // $1.36/client
+  150: [195, 162],  // $1.30/client
+  200: [235, 195],  // $1.18/client
+  250: [260, 216],  // $1.04/client
+  300: [280, 232],  // $0.93/client
 };
 
 /**
- * Max plan pricing tiers - higher base price (more features), but better per-client at scale
+ * Max plan pricing tiers - includes all Pro features plus advanced capabilities
+ * Always slightly more expensive than Pro at overlapping client tiers
+ * Annual prices are ~17% off monthly (rounded to whole numbers)
  * Format: { clients: [monthlyPrice, annualPrice] }
  */
 export const MAX_PRICING: Record<number, [number, number]> = {
-  50: [59, 49],     // $1.18/client
-  75: [83, 69],     // $1.11/client
-  100: [105, 88],   // $1.05/client
-  150: [136, 113],  // $0.91/client
-  200: [164, 137],  // $0.82/client
-  250: [188, 157],  // $0.75/client
-  300: [210, 175],  // $0.70/client
-  350: [229, 191],  // $0.65/client
-  400: [244, 203],  // $0.61/client
-  450: [256, 213],  // $0.57/client
-  500: [266, 222],  // $0.53/client
+  50: [99, 82],     // $1.98/client (Pro: $1.80)
+  75: [130, 108],   // $1.73/client (Pro: $1.60)
+  100: [158, 131],  // $1.58/client (Pro: $1.45)
+  150: [210, 174],  // $1.40/client (Pro: $1.30)
+  200: [255, 212],  // $1.28/client (Pro: $1.18)
+  250: [295, 245],  // $1.18/client (Pro: $1.04)
+  300: [330, 274],  // $1.10/client (Pro: $0.93)
+  350: [360, 299],  // $1.03/client
+  400: [390, 324],  // $0.98/client
+  450: [405, 336],  // $0.90/client
+  500: [420, 349],  // $0.84/client
 };
 
 /**
@@ -76,9 +84,10 @@ export const MAX_CLIENT_OPTIONS = [50, 75, 100, 150, 200, 250, 300, 350, 400, 45
 
 /**
  * Add-on configurations
+ * Annual prices are ~17% off monthly (rounded to whole numbers)
  */
 export const ADDONS: AddonConfig[] = [
-  { key: 'automations', monthlyPrice: 35, annualPrice: 29, icon: 'automations' },
-  { key: 'aiAssistant', monthlyPrice: 20, annualPrice: 17, icon: 'ai' },
+  { key: 'aiAssistant', monthlyPrice: 25, annualPrice: 21, icon: 'ai' },
+  { key: 'automations', monthlyPrice: 20, annualPrice: 17, icon: 'automations' },
   { key: 'payments', monthlyPrice: 10, annualPrice: 8, icon: 'payments' },
 ];

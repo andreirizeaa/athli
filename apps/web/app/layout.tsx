@@ -14,6 +14,7 @@ import { DEFAULT_THEME } from '@/lib/theme';
 import { cn } from '@/lib/general/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { RateLimitOverlay } from '@/components/app/rate-limit-overlay';
+import { TopLoader } from '@/components/app/top-loader';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -60,6 +61,7 @@ export default async function RootLayout({
         className={cn(`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen overflow-x-hidden`, 'bg-background group/layout font-sans')}
         {...bodyAttributes}
       >
+        <TopLoader />
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

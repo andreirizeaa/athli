@@ -231,7 +231,7 @@ const messages = {
     popular: 'Most Popular',
     monthly: 'Monthly',
     annual: 'Annual',
-    twoMonthsFree: '2 months free with annual billing',
+    twoMonthsFree: 'Save 17% with annual billing',
     month: 'mo',
     year: 'yr',
     plan: 'plan',
@@ -268,7 +268,7 @@ const messages = {
     },
     pro: {
       name: 'Pro',
-      priceShort: 'From $15/mo',
+      priceShort: 'From $20/mo',
       description: 'Everything you need to grow your coaching business',
       features: [
         'Coach Mobile App (iOS & Android)',
@@ -290,7 +290,7 @@ const messages = {
     },
     max: {
       name: 'Max',
-      priceShort: 'From $95/mo',
+      priceShort: 'From $99/mo',
       description: 'For established coaches who need unlimited capacity',
       features: [
         'Coach Mobile App (iOS & Android)',
