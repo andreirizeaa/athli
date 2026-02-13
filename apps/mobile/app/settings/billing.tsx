@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -8,11 +8,12 @@ import { useQuery } from '@tanstack/react-query';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useTranslations, useCoachEntitlementsStore } from '@/stores';
+import { useThemePreference, useTranslations, useCoachEntitlementsStore, useCoachProfileStore } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { Card } from '@/components/ui/card';
+import { Dialog } from '@/components/ui/dialog';
 import { getClients } from '@/services/coach/coach-client-service';
 
 export default function BillingScreen() {
@@ -27,6 +28,9 @@ export default function BillingScreen() {
   const isOnTrial = useCoachEntitlementsStore((state) => state.isOnTrial);
   const isLoadingEntitlements = useCoachEntitlementsStore((state) => state.isLoading);
 
+  // Get coach profile for created_at
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+
   // Fetch clients count
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ['clients'],
@@ -38,16 +42,17 @@ export default function BillingScreen() {
   const clientsLimit = entitlements?.client_limit || 50;
   const clientPercentage = Math.min((activeClientsCount / clientsLimit) * 100, 100);
   const isAtLimit = activeClientsCount >= clientsLimit;
-  const isApproachingLimit = clientPercentage >= 80 && !isAtLimit;
+  const isNearLimit = clientPercentage >= 80;
 
-  // Calculate trial days remaining
+  // Calculate trial days remaining (30 days from coach profile created_at)
   const trialDaysRemaining = React.useMemo(() => {
-    if (!isOnTrial || !entitlements?.trial_ends_at) return 0;
-    const trialEnd = new Date(entitlements.trial_ends_at);
+    if (!isOnTrial || !coachProfile?.created_at) return 0;
+    const createdAt = new Date(coachProfile.created_at);
+    const trialEnd = new Date(createdAt.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days after creation
     const now = new Date();
     const diffMs = trialEnd.getTime() - now.getTime();
     return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-  }, [isOnTrial, entitlements?.trial_ends_at]);
+  }, [isOnTrial, coachProfile?.created_at]);
 
   const planName = entitlements?.plan_type === 'max' ? 'Max' : entitlements?.plan_type === 'pro' ? 'Pro' : 'Starter';
 
@@ -81,8 +86,19 @@ export default function BillingScreen() {
     router.push('/settings/invoices');
   };
 
+  const [showTrialWarning, setShowTrialWarning] = useState(false);
+
   const handleUpdatePlan = () => {
     haptics.medium();
+    if (isOnTrial) {
+      setShowTrialWarning(true);
+    } else {
+      router.push('/settings/billing-update');
+    }
+  };
+
+  const handleConfirmTrialEnd = () => {
+    setShowTrialWarning(false);
     router.push('/settings/billing-update');
   };
 
@@ -231,7 +247,7 @@ export default function BillingScreen() {
                   {
                     backgroundColor: isAtLimit
                       ? (themeColors.error || themeColors.destructive || '#ef4444')
-                      : isApproachingLimit
+                      : isNearLimit
                         ? themeColors.warning
                         : themeColors.primary,
                     width: `${clientPercentage}%`,
@@ -240,10 +256,10 @@ export default function BillingScreen() {
               />
             </View>
 
-            {isAtLimit && (
+            {isNearLimit && (
               <>
-                <Text style={[styles.warningText, { color: themeColors.error || themeColors.destructive || '#ef4444' }]}>
-                  {t('settings.billing.reachedLimit')}
+                <Text style={[styles.warningText, { color: isAtLimit ? (themeColors.error || themeColors.destructive || '#ef4444') : themeColors.warning }]}>
+                  {isAtLimit ? t('settings.billing.reachedLimit') : t('settings.billing.approachingLimit')}
                 </Text>
                 <View style={[styles.fullWidthDivider, { backgroundColor: themeColors.border }]} />
                 <PressableScale
@@ -255,11 +271,6 @@ export default function BillingScreen() {
                   </Text>
                 </PressableScale>
               </>
-            )}
-            {isApproachingLimit && (
-              <Text style={[styles.warningText, { color: themeColors.warning }]}>
-                {t('settings.billing.approachingLimit')}
-              </Text>
             )}
           </Card>
 
@@ -309,6 +320,26 @@ export default function BillingScreen() {
         </Text>
         <View style={styles.headerPlaceholder} />
       </View>
+
+      {/* Trial Warning Dialog */}
+      <Dialog
+        visible={showTrialWarning}
+        onClose={() => setShowTrialWarning(false)}
+        title={t('settings.billing.endTrialTitle')}
+        message={t('settings.billing.endTrialMessage', { days: trialDaysRemaining })}
+        buttons={[
+          {
+            label: t('common.cancel'),
+            onPress: () => setShowTrialWarning(false),
+            variant: 'secondary',
+          },
+          {
+            label: t('common.continue'),
+            onPress: handleConfirmTrialEnd,
+            variant: 'primary',
+          },
+        ]}
+      />
     </View>
   );
 }

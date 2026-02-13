@@ -2841,42 +2841,47 @@ export const enMessages = {
     },
   },
   referAndEarn: {
-    title: 'Share Athli with your friends',
-    subtitle: 'Earn with no limits! For each successful referral, receive up to a free month.',
-    copyReferralLink: 'Copy Referral Link',
-    referralLinkCopied: 'Referral link copied to clipboard!',
-    copyFailed: 'Failed to copy referral link',
+    hero: {
+      title: 'Share Athli, get $20',
+      description: 'Invite your coaching friends to Athli. When they subscribe, you both get $20 credit towards your next invoice. No limits on referrals.',
+    },
+    emailPlaceholder: 'Enter your friend\'s email',
+    invite: 'Invite',
+    copyLink: 'Copy Link',
+    copyCode: 'Copy Code',
+    referralLinkCopied: 'Referral link copied!',
+    referralCodeCopied: 'Referral code copied!',
+    copyFailed: 'Failed to copy',
+    enterEmail: 'Please enter an email address',
+    invalidEmail: 'Please enter a valid email address',
+    inviteSent: 'Invite sent successfully!',
+    inviteFailed: 'Failed to send invite',
+    yourReferrals: 'Your Referrals',
+    noReferrals: 'No referrals yet',
+    noReferralsSubtitle: 'Share your referral link to start earning credits.',
     columns: {
       coach: 'Coach',
       date: 'Date',
       status: 'Status',
+      credit: 'Credit',
     },
     status: {
-      signedUp: 'Signed up',
-      freeTrial: 'Free trial',
-      paidPlan: 'Paid Plan',
+      trialStarted: 'Trial started',
+      trialEnded: 'Trial ended',
+      converted: 'Subscribed',
+      creditReceived: 'Credit received',
     },
-    steps: {
-      referFriends: {
-        title: 'Refer friends',
-        description: 'Share your special link to other coaches',
-      },
-      friendSignsUp: {
-        title: 'Friend signs up',
-        description: 'Their free trial is now doubled to 30 days!',
-      },
-      coachJoinsPaidPlan: {
-        title: 'Coach joins a paid plan',
-        description: 'They complete their free month and purchase a plan',
-      },
-      rewardGifted: {
-        title: 'Reward is gifted',
-        description: 'You receive a pro-rated free month subject to their plan value',
-      },
-      referMoreCoaches: {
-        title: 'Refer more coaches',
-        description: 'Uncapped referral benefits!',
-      },
+    credits: {
+      totalEarned: 'Total Earned',
+      active: 'Active Credits',
+      activeDescription: 'Applied to your next invoice',
+      used: 'Credits Used',
+    },
+    howItWorks: {
+      title: 'How it works',
+      step1: 'Referral signs up',
+      step2: 'Referral pays',
+      step3: 'You each get $20',
     },
   },
   checkInReviews: {
@@ -3166,7 +3171,7 @@ export const enMessages = {
     popular: 'Most Popular',
     monthly: 'Monthly',
     annual: 'Annual',
-    twoMonthsFree: '2 months free with annual billing',
+    twoMonthsFree: 'Save 17% with annual billing',
     month: 'mo',
     year: 'yr',
     plan: 'plan',
@@ -3199,7 +3204,7 @@ export const enMessages = {
     },
     pro: {
       name: 'Pro',
-      priceShort: 'From $15/mo',
+      priceShort: 'From $20/mo',
       description: 'Everything you need to grow your coaching business',
       features: [
         'Coach Mobile App (iOS & Android)',
@@ -3221,7 +3226,7 @@ export const enMessages = {
     },
     max: {
       name: 'Max',
-      priceShort: 'From $95/mo',
+      priceShort: 'From $99/mo',
       description: 'For established coaches who need unlimited capacity',
       features: [
         'Coach Mobile App (iOS & Android)',
@@ -3294,7 +3299,7 @@ export const enMessages = {
       extraClients: 'Extra clients',
       addons: 'Add-ons',
       total: 'Total',
-      billedAnnually: 'billed annually',
+      billedAnnually: 'Billed Annually',
       capacity: 'Total client capacity',
       cta: 'Start a free trial',
       pricesInUSD: 'All prices are in USD',

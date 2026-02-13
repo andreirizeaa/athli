@@ -1,26 +1,32 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useParams, usePathname } from 'next/navigation';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createClient } from '@/supabase/client';
-import { getCoachByCode } from '@/api/coach/coach-public-service';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Spinner } from '@/components/ui/spinner';
+import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { AuthErrorAlert } from '@/components/auth/auth-error-alert';
 import { AuthLayout } from '@/components/auth/auth-layout';
 import { toast } from 'sonner';
-import { Spinner } from '@/components/ui/spinner';
+import { isWeakPasswordError, getPasswordErrorMessage } from '@/lib/utils/auth-errors';
+import { lookupReferralCode, type ReferrerInfo } from '@/api/billing/billing-service';
 
-export default function CoachReferralPage() {
+const REFERRAL_CODE_KEY = 'athli_referral_code';
+
+export default function ReferralSignUpPage() {
   const params = useParams<{ code: string }>();
-  const router = useRouter();
+  const { signUp, signInWithGoogle, signInWithApple } = useSupabaseAuth();
   const pathname = usePathname();
-  const supabase = createClient();
 
-  const code = Array.isArray(params.code) ? params.code[0] : params.code;
+  const [referrer, setReferrer] = useState<ReferrerInfo | null>(null);
+  const [isLoadingReferrer, setIsLoadingReferrer] = useState(true);
+  const [referrerError, setReferrerError] = useState(false);
+
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
@@ -29,35 +35,38 @@ export default function CoachReferralPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const [referringCoachId, setReferringCoachId] = useState<string | null>(null);
-  const [referringUserName, setReferringUserName] = useState<string | null>(null);
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const code = Array.isArray(params.code) ? params.code[0] : params.code;
 
-  // Fetch referring user information on mount
+  // Fetch referrer info on mount
   useEffect(() => {
-    const fetchUser = async () => {
-      if (!code) {
-        setIsLoadingUser(false);
-        return;
-      }
+    if (!code) return;
 
+    const fetchReferrer = async () => {
       try {
-        const response = await getCoachByCode(code);
-        if (response.data && response.data.coach) {
-          setReferringCoachId(response.data.coach.id);
-          setReferringUserName(response.data.coach.name);
-        }
-      } catch (error: any) {
-        console.error('Error fetching referring user:', error);
-        // Don't show error toast - just use fallback text
-        setReferringUserName(null);
+        const data = await lookupReferralCode(code);
+        setReferrer(data);
+        // Save the referral code and referrer name to localStorage
+        localStorage.setItem(REFERRAL_CODE_KEY, code);
+        localStorage.setItem('athli_referrer_name', data.name);
+      } catch (err: any) {
+        console.error('Failed to lookup referral code:', err);
+        setReferrerError(true);
       } finally {
-        setIsLoadingUser(false);
+        setIsLoadingReferrer(false);
       }
     };
 
-    fetchUser();
+    fetchReferrer();
   }, [code]);
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((word) => word[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,49 +78,20 @@ export default function CoachReferralPage() {
 
     setIsSigningUp(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name,
-            user_type: 'coach',
-            referred_by: referringCoachId, // Track the referring user
-          },
-          emailRedirectTo: `${window.location.origin}/auth/verify-email`,
-        },
-      });
+      // Store email in sessionStorage for verify-email page
+      sessionStorage.setItem('auth_flow_data', JSON.stringify({
+        email: email,
+        flow: 'register',
+      }));
 
-      if (error) {
-        // If user already exists, try to sign them in instead
-        if (error.message.includes('already registered') || error.message.includes('already exists')) {
-          try {
-            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            });
-
-            if (signInError) {
-              throw new Error('An account with this email already exists. Please use the correct password or reset your password.');
-            }
-
-            if (signInData?.session?.user) {
-              toast.success('Signed in successfully!');
-              router.push('/home');
-              return;
-            }
-          } catch (signInError: any) {
-            throw new Error('An account with this email already exists. Please use the correct password or reset your password.');
-          }
-        }
-        throw error;
-      }
-
-      // New account created successfully
+      await signUp(email, password, name);
       toast.success('Account created! Please check your email for verification code.');
-      router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`);
+      // signUp already redirects to verify-email page
     } catch (err: any) {
-      toast.error(err.message || 'Failed to create account');
+      const message = isWeakPasswordError(err)
+        ? getPasswordErrorMessage(err)
+        : (err.message || 'Failed to create account');
+      toast.error(message);
       setIsSigningUp(false);
     }
   };
@@ -119,19 +99,7 @@ export default function CoachReferralPage() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?referred_by=${referringCoachId}&redirect=/auth/verify-email`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'email profile',
-        },
-      });
-
-      if (error) throw error;
+      await signInWithGoogle();
       // The redirect will happen automatically via OAuth
     } catch (err: any) {
       toast.error(err.message || 'Failed to sign up with Google');
@@ -142,187 +110,213 @@ export default function CoachReferralPage() {
   const handleAppleSignIn = async () => {
     setIsAppleLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?referred_by=${referringCoachId}&redirect=/auth/verify-email`,
-          scopes: 'email name',
-        },
-      });
-
-      if (error) throw error;
+      await signInWithApple();
+      // The redirect will happen automatically via OAuth
     } catch (err: any) {
       toast.error(err.message || 'Failed to sign up with Apple');
       setIsAppleLoading(false);
     }
   };
 
-  return (
-    <AuthLayout showHomeButton={false}>
-      <AuthErrorAlert pathname={pathname} />
-      {isLoadingUser ? (
-        <div className="flex flex-col items-center justify-center gap-4 py-8">
+  // Show loading while fetching referrer
+  if (isLoadingReferrer) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
           <Spinner className="size-8" />
           <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
-      ) : (
-        <div className="space-y-6">
-          <div className="text-center space-y-2">
-            <h2 className="text-3xl font-bold text-foreground">Create New Account</h2>
-            {referringUserName && (
-              <p className="text-sm text-muted-foreground">
-                You&apos;ve been referred by {referringUserName}
-              </p>
-            )}
-          </div>
+      </div>
+    );
+  }
 
-          {/* Provider Buttons */}
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              className="w-full h-12 rounded-xl transition-all"
-              onClick={handleGoogleSignIn}
-              disabled={isSigningUp || isGoogleLoading || isAppleLoading}
-            >
-              {isGoogleLoading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <>
-                  <svg className="mr-1.5 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                  </svg>
-                  Google
-                </>
-              )}
-            </Button>
+  // If referrer not found, still show the form but without the referrer info
+  // (They can still sign up, just won't have referral applied)
 
-            <Button
-              variant="outline"
-              className="w-full h-12 rounded-xl transition-all"
-              onClick={handleAppleSignIn}
-              disabled={isSigningUp || isGoogleLoading || isAppleLoading}
-            >
-              {isAppleLoading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <>
-                  <svg className="mr-1.5 h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-                  </svg>
-                  Apple
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <div className="w-full border-t border-border" />
-            <span className="text-muted-foreground shrink-0 text-sm">or</span>
-            <div className="w-full border-t border-border" />
-          </div>
-
-          {/* Form */}
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-muted-foreground text-sm">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  type="text"
-                  required
-                  className="w-full h-12 rounded-xl"
-                  placeholder="Full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={isSigningUp || isGoogleLoading || isAppleLoading}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-muted-foreground text-sm">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="w-full h-12 rounded-xl"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isSigningUp || isGoogleLoading || isAppleLoading}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-muted-foreground text-sm">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    required
-                    className="w-full h-12 pr-10 rounded-xl"
-                    placeholder="Create a password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isSigningUp || isGoogleLoading || isAppleLoading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    tabIndex={0}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    disabled={isSigningUp || isGoogleLoading || isAppleLoading}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
+  return (
+    <AuthLayout>
+      <div className="space-y-6">
+        {/* Referrer Info - only show if we have valid referrer */}
+        {referrer && !referrerError && (
+          <div className="flex items-center gap-3 p-4 rounded-xl border bg-sidebar">
+            <Avatar className="size-12 border-2 border-background shadow">
+              <AvatarImage src={referrer.profilePictureUrl || undefined} alt={referrer.name} />
+              <AvatarFallback className="text-sm font-semibold bg-primary/10">
+                {getInitials(referrer.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-sm text-muted-foreground">You&apos;ve been invited by</p>
+              <p className="font-semibold">{referrer.name}</p>
             </div>
+          </div>
+        )}
 
-            <div className="pt-2">
-              <Button
-                type="submit"
-                className="w-full h-12 rounded-xl"
-                disabled={isSigningUp || isGoogleLoading || isAppleLoading}
-              >
-                {isSigningUp ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin mr-2" />
-                    Registering...
-                  </>
-                ) : (
-                  'Register'
-                )}
-              </Button>
-            </div>
-          </form>
-
-          {/* Sign in link */}
-          <div className="text-center text-sm text-muted-foreground">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <h2 className="text-3xl font-bold text-foreground">Create an Account</h2>
+          <p className="text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link href="/auth/login" className="text-foreground hover:text-foreground/90 underline">
-              Sign in
+              Log in
             </Link>
-          </div>
+          </p>
         </div>
-      )}
+
+        {/* Error Alert - shown under header */}
+        <AuthErrorAlert pathname={pathname} />
+
+        {/* Provider Buttons */}
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            variant="outline"
+            className="h-12 rounded-xl transition-all !bg-background hover:!bg-sidebar border-primary/50"
+            onClick={handleGoogleSignIn}
+            disabled={isSigningUp || isGoogleLoading || isAppleLoading}
+          >
+            {isGoogleLoading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <>
+                <svg className="mr-1.5 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+                Login with Google
+              </>
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
+            className="h-12 rounded-xl transition-all !bg-background hover:!bg-sidebar border-primary/50"
+            onClick={handleAppleSignIn}
+            disabled={isSigningUp || isGoogleLoading || isAppleLoading}
+          >
+            {isAppleLoading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <>
+                <svg className="mr-1.5 h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+                </svg>
+                Login with Apple
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3">
+          <div className="w-full border-t border-border" />
+          <span className="text-muted-foreground shrink-0 text-sm">or</span>
+          <div className="w-full border-t border-border" />
+        </div>
+
+        {/* Form */}
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-muted-foreground text-sm">
+                Name
+              </Label>
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                required
+                className="w-full h-12 rounded-xl"
+                placeholder="John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={isSigningUp || isGoogleLoading || isAppleLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-muted-foreground text-sm">
+                Email
+              </Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="w-full h-12 rounded-xl"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isSigningUp || isGoogleLoading || isAppleLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-muted-foreground text-sm">
+                Password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  className="w-full h-12 pr-10 rounded-xl"
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isSigningUp || isGoogleLoading || isAppleLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  tabIndex={0}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  disabled={isSigningUp || isGoogleLoading || isAppleLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <Button
+              type="submit"
+              className="w-full h-12 rounded-xl"
+              disabled={isSigningUp || isGoogleLoading || isAppleLoading}
+            >
+              {isSigningUp ? (
+                <>
+                  <Loader2 className="size-4 animate-spin mr-2" />
+                  Creating account...
+                </>
+              ) : (
+                'Create Account'
+              )}
+            </Button>
+          </div>
+        </form>
+
+        {/* Terms */}
+        <div className="text-center text-sm text-muted-foreground">
+          By signing up, you agree to our{' '}
+          <a href={`${process.env.NEXT_PUBLIC_LANDING_PAGE || '/'}/terms-of-use`} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground/70">
+            Terms
+          </a>{' '}
+          and{' '}
+          <a href={`${process.env.NEXT_PUBLIC_LANDING_PAGE || '/'}/privacy-policy`} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground/70">
+            Privacy Policy
+          </a>
+          .
+        </div>
+      </div>
     </AuthLayout>
   );
 }

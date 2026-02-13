@@ -2019,7 +2019,7 @@ export const paymentsController = {
 
     // Idempotency check
     const { data: existingEvent } = await supabase
-      .from('stripe_webhook_events')
+      .from('stripe_payment_webhook_events')
       .select('id')
       .eq('id', event.id)
       .maybeSingle();
@@ -2030,16 +2030,68 @@ export const paymentsController = {
       return;
     }
 
+    // Extract client_id and coach_id from the event object
+    let clientId: string | null = null;
+    let coachId: string | null = null;
+    const eventObject = event.data.object as any;
+
+    // Try to get IDs from metadata first
+    if (eventObject.metadata?.client_id) {
+      clientId = eventObject.metadata.client_id;
+    }
+    if (eventObject.metadata?.coach_id) {
+      coachId = eventObject.metadata.coach_id;
+    }
+
+    // If we have client_id but not coach_id, look up the coach from client assignment
+    if (clientId && !coachId) {
+      const { data: assignment } = await supabase
+        .from('coach_client_assignments')
+        .select('coach_id')
+        .eq('client_id', clientId)
+        .eq('is_active', true)
+        .maybeSingle();
+      coachId = assignment?.coach_id || null;
+    }
+
+    // For subscription events, try to get IDs from the subscription
+    if (!clientId && eventObject.subscription) {
+      const { data: sub } = await supabase
+        .from('client_subscriptions')
+        .select('client_id, coach_id')
+        .eq('stripe_subscription_id', eventObject.subscription)
+        .maybeSingle();
+      if (sub) {
+        clientId = sub.client_id;
+        coachId = sub.coach_id;
+      }
+    }
+
+    // For invoice events with subscription reference
+    if (!clientId && eventObject.subscription && typeof eventObject.subscription === 'string') {
+      const { data: sub } = await supabase
+        .from('client_subscriptions')
+        .select('client_id, coach_id')
+        .eq('stripe_subscription_id', eventObject.subscription)
+        .maybeSingle();
+      if (sub) {
+        clientId = sub.client_id;
+        coachId = sub.coach_id;
+      }
+    }
+
     try {
       await handleWebhookEvent(event, supabase, stripe);
 
-      // Record event for idempotency
+      // Record event for idempotency (with coach_id and client_id if found)
       await supabase
-        .from('stripe_webhook_events')
+        .from('stripe_payment_webhook_events')
         .insert({
           id: event.id,
           type: event.type,
           payload: event as any,
+          coach_id: coachId,
+          client_id: clientId,
         });
     } catch (err: any) {
       logger.error({ err: err.message, eventType: event.type, eventId: event.id }, 'Webhook processing error');

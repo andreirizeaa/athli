@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Check, ChevronDown, ChevronUp, Workflow, Radio, Sparkles, Wallet, Loader2 } from 'lucide-react'
-import { motion } from 'motion/react'
+import { Check, ChevronDown, ChevronUp, Workflow, Radio, Sparkles, Wallet, Loader2, ArrowRight } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/general/utils'
 import { Slider } from '@/components/ui/slider'
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import Lottie from 'lottie-react'
 import { toast } from 'sonner'
+import confetti from 'canvas-confetti'
 import {
     type Plan,
     type BillingInterval,
@@ -25,8 +26,10 @@ import {
     PRO_CLIENT_OPTIONS,
     MAX_CLIENT_OPTIONS,
     ADDONS,
+    ANNUAL_DISCOUNT_PERCENT,
 } from '@athli/shared-types/pricing-constants'
-import { createCheckoutSession, type AddonType } from '@/api/billing/billing-service'
+import { createCheckoutSession, createPortalSession, type AddonType } from '@/api/billing/billing-service'
+import { useEntitlements, useSubscription } from '@/hooks/use-entitlements'
 
 function AddonIcon({ type, animationData }: { type: AddonConfig['icon']; animationData?: object }) {
     const iconClass = "w-8 h-8 text-muted-foreground"
@@ -55,24 +58,121 @@ interface PricingPlansProps {
     minClientCount?: number;
 }
 
-export default function PricingPlans({ hideHeader = false, isUpdateMode = false, minClientCount = 0 }: PricingPlansProps) {
+export default function PricingPlans({
+    hideHeader = false,
+    isUpdateMode = false,
+    minClientCount = 0,
+}: PricingPlansProps) {
     const t = useTranslations('pricing')
     const router = useRouter()
 
-    const [billingInterval, setBillingInterval] = useState<BillingInterval>('annual')
-    const [selectedPlan, setSelectedPlan] = useState<Plan>('pro')
-    // Initialize with min client count rounded up to nearest tier, or default to 50
-    const getInitialClientCount = () => {
-        if (minClientCount <= 0) return 50
-        // Find the first tier >= minClientCount
-        const proOption = PRO_CLIENT_OPTIONS.find(num => num >= minClientCount)
-        return proOption ?? PRO_CLIENT_OPTIONS[PRO_CLIENT_OPTIONS.length - 1]
+    // Fetch entitlements directly when in update mode
+    const {
+        plan: currentPlan,
+        clientLimit: currentClientLimit,
+        isTrial,
+        hasAutomations,
+        hasAiAssistant,
+        hasPayments,
+        isLoading: isLoadingEntitlements,
+    } = useEntitlements()
+    const { billingInterval: currentBillingInterval, isLoading: isLoadingSubscription } = useSubscription()
+
+    // Build current addons from entitlements
+    const currentAddons = useMemo(() => {
+        const addons: string[] = []
+        if (hasAutomations) addons.push('automations')
+        if (hasAiAssistant) addons.push('ai_assistant')
+        if (hasPayments) addons.push('payments')
+        return addons
+    }, [hasAutomations, hasAiAssistant, hasPayments])
+
+    // Can cancel if on paid plan (pro or max, not trial)
+    const canCancel = isUpdateMode && !isTrial && (currentPlan === 'pro' || currentPlan === 'max')
+
+    // Track cancellation state - null means not cancelling, 'subscription' for main, or addon key
+    const [cancellingItem, setCancellingItem] = useState<string | null>(null)
+
+    const handleCancel = async (item: 'subscription' | string) => {
+        setCancellingItem(item)
+        try {
+            const { url } = await createPortalSession(window.location.href)
+            window.location.href = url
+        } catch (error) {
+            console.error('Failed to open portal:', error)
+            setCancellingItem(null)
+        }
     }
-    const [totalClients, setTotalClients] = useState(getInitialClientCount)
+
+    // State initialization - only set once when entitlements load
+    const [isInitialized, setIsInitialized] = useState(false)
+    const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
+    const [selectedPlan, setSelectedPlan] = useState<Plan>('pro')
+    const [totalClients, setTotalClients] = useState(50)
     const [selectedAddons, setSelectedAddons] = useState<string[]>([])
     const [featuresExpanded, setFeaturesExpanded] = useState(false)
     const [aiAnimationData, setAiAnimationData] = useState<object | null>(null)
     const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
+    const [showSavingsPopup, setShowSavingsPopup] = useState(false)
+    const toggleRef = useRef<HTMLDivElement>(null)
+
+    // Initialize state from entitlements when they load (only once)
+    useEffect(() => {
+        if (isUpdateMode && !isLoadingEntitlements && !isLoadingSubscription && !isInitialized) {
+            // Set billing interval
+            if (currentBillingInterval) {
+                setBillingInterval(currentBillingInterval === 'year' ? 'annual' : 'monthly')
+            }
+
+            // Set plan
+            if (currentPlan && (currentPlan === 'starter' || currentPlan === 'pro' || currentPlan === 'max')) {
+                setSelectedPlan(currentPlan as Plan)
+            }
+
+            // Set client limit
+            if (currentClientLimit) {
+                setTotalClients(currentClientLimit)
+            } else if (minClientCount > 0) {
+                const proOption = PRO_CLIENT_OPTIONS.find(num => num >= minClientCount)
+                setTotalClients(proOption ?? PRO_CLIENT_OPTIONS[PRO_CLIENT_OPTIONS.length - 1])
+            }
+
+            // Set addons
+            const addonTypeToKey: Record<string, string> = {
+                automations: 'automations',
+                ai_assistant: 'aiAssistant',
+                payments: 'payments',
+            }
+            const addonKeys = currentAddons.map(type => addonTypeToKey[type] || type).filter(Boolean)
+            setSelectedAddons(addonKeys)
+
+            setIsInitialized(true)
+        }
+    }, [isUpdateMode, isLoadingEntitlements, isLoadingSubscription, isInitialized, currentPlan, currentClientLimit, currentBillingInterval, currentAddons, minClientCount])
+
+    // Check if anything has changed from current subscription (in update mode)
+    const hasChanges = useMemo(() => {
+        if (!isUpdateMode) return true // Always allow checkout in non-update mode
+
+        // Compare current selection with original values
+        const originalInterval = currentBillingInterval === 'year' ? 'annual' : 'monthly'
+        const originalAddonsKeys = (currentAddons || []).map(type => {
+            const addonTypeToKey: Record<string, string> = {
+                automations: 'automations',
+                ai_assistant: 'aiAssistant',
+                payments: 'payments',
+            }
+            return addonTypeToKey[type] || type
+        }).sort()
+        const currentAddonsKeys = [...selectedAddons].sort()
+
+        const planChanged = selectedPlan !== currentPlan
+        const clientsChanged = totalClients !== currentClientLimit
+        const intervalChanged = billingInterval !== originalInterval
+        const addonsChanged = JSON.stringify(originalAddonsKeys) !== JSON.stringify(currentAddonsKeys)
+
+        return planChanged || clientsChanged || intervalChanged || addonsChanged
+    }, [isUpdateMode, selectedPlan, currentPlan, totalClients, currentClientLimit, billingInterval, currentBillingInterval, selectedAddons, currentAddons])
 
     useEffect(() => {
         fetch('/animations/ai-sphere-animation.json')
@@ -80,6 +180,47 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
             .then(data => setAiAnimationData(data))
             .catch(() => {})
     }, [])
+
+    // Handle billing interval change with confetti celebration
+    const handleBillingChange = (checked: boolean) => {
+        const newInterval = checked ? 'annual' : 'monthly'
+        setBillingInterval(newInterval)
+
+        // Fire confetti when switching to annual
+        if (newInterval === 'annual') {
+            // Get the position of the toggle for confetti origin
+            if (toggleRef.current) {
+                const rect = toggleRef.current.getBoundingClientRect()
+                const x = (rect.left + rect.width / 2) / window.innerWidth
+                const y = (rect.top + rect.height / 2 + 50) / window.innerHeight
+
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { x, y },
+                    colors: ['#10b981', '#8b5cf6', '#f59e0b', '#3b82f6', '#ec4899', '#f97316'],
+                    zIndex: 99999,
+                })
+            }
+
+            // Show savings popup
+            setShowSavingsPopup(true)
+
+            // Auto-hide after 2 seconds
+            setTimeout(() => {
+                setShowSavingsPopup(false)
+            }, 2000)
+        }
+    }
+
+    // Hide popup on click anywhere
+    useEffect(() => {
+        if (!showSavingsPopup) return
+
+        const handleClick = () => setShowSavingsPopup(false)
+        window.addEventListener('click', handleClick)
+        return () => window.removeEventListener('click', handleClick)
+    }, [showSavingsPopup])
 
     // Adjust totalClients when minClientCount changes (e.g., after clients load)
     useEffect(() => {
@@ -299,10 +440,11 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                 cancelUrl: `${window.location.origin}/settings/billing/update`,
             })
 
-            // Redirect to Stripe checkout
+            // Open Stripe checkout in new tab
             if (url) {
-                window.location.href = url
+                window.open(url, '_blank')
             }
+            setIsCheckoutLoading(false)
         } catch (error: any) {
             console.error('Checkout error:', error)
             toast.error('Failed to start checkout. Please try again.')
@@ -321,8 +463,8 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                 )}
 
                 {/* Billing Toggle */}
-                <div className="mt-8 flex flex-col items-center gap-2">
-                    <div className="inline-flex items-center gap-3 rounded-full border bg-muted px-4 py-2">
+                <div className="mt-8 flex flex-col items-center gap-2 relative">
+                    <div ref={toggleRef} className="relative inline-flex items-center gap-3 rounded-full border bg-muted px-4 py-2">
                         <span className={cn(
                             'text-sm font-medium transition-colors',
                             billingInterval === 'monthly' ? 'text-foreground' : 'text-muted-foreground'
@@ -331,7 +473,7 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                         </span>
                         <Switch
                             checked={billingInterval === 'annual'}
-                            onCheckedChange={(checked) => setBillingInterval(checked ? 'annual' : 'monthly')}
+                            onCheckedChange={handleBillingChange}
                         />
                         <span className={cn(
                             'text-sm font-medium transition-colors',
@@ -340,9 +482,34 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                             {t('annual')}
                         </span>
                     </div>
+
+                    {/* Savings Badge - always visible */}
                     <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                         {t('twoMonthsFree')}
                     </span>
+
+                    {/* Animated Savings Popup */}
+                    <AnimatePresence>
+                        {showSavingsPopup && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -10, scale: 0.9 }}
+                                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                className="absolute top-full mt-4 z-50"
+                            >
+                                <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl shadow-lg">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-2xl">🎉</span>
+                                        <div>
+                                            <p className="font-bold text-lg">You're saving {ANNUAL_DISCOUNT_PERCENT}%!</p>
+                                            <p className="text-emerald-100 text-sm">Great choice with annual billing</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 {/* Main Layout: Plans + Summary */}
@@ -385,8 +552,8 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                     </div>
 
                                     <div className="flex-1">
-                                        <h3 className="text-xl font-semibold">{t('starter.name')}</h3>
-                                        <p className="text-sm text-muted-foreground mt-2 pr-6">{t('starter.description')}</p>
+                                        <h3 className="text-2xl font-semibold">{t('starter.name')}</h3>
+                                        <p className="text-base text-muted-foreground mt-2 pr-6">{t('starter.description')}</p>
 
                                         {/* Expandable features */}
                                         {!featuresExpanded ? (
@@ -482,8 +649,8 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                     </div>
 
                                     <div className="flex-1">
-                                        <h3 className="text-xl font-semibold">{t('pro.name')}</h3>
-                                        <p className="text-sm text-muted-foreground mt-2 pr-6">{t('pro.description')}</p>
+                                        <h3 className="text-2xl font-semibold">{t('pro.name')}</h3>
+                                        <p className="text-base text-muted-foreground mt-2 pr-6">{t('pro.description')}</p>
 
                                         {/* Expandable features */}
                                         {!featuresExpanded ? (
@@ -528,9 +695,14 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                     )}
 
                                     <div className="mt-auto pt-6">
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-4xl font-bold">${selectedPlan === 'pro' ? getPrice('pro', totalClients) : getPrice('pro', PLANS.pro.baseClients)}</span>
-                                            <span className="text-muted-foreground">/{t('month')}</span>
+                                        <div className="flex items-baseline justify-between">
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-4xl font-bold">${selectedPlan === 'pro' ? getPrice('pro', totalClients) : getPrice('pro', PLANS.pro.baseClients)}</span>
+                                                <span className="text-muted-foreground">/{t('month')}</span>
+                                            </div>
+                                            {billingInterval === 'annual' && (
+                                                <span className="text-xs text-muted-foreground">{t('summary.billedAnnually')}</span>
+                                            )}
                                         </div>
                                         <p className="text-sm text-muted-foreground mt-1">
                                             {t('upTo')} <span className="font-semibold">{selectedPlan === 'pro' ? totalClients : PLANS.pro.baseClients} {t('clients')}</span>
@@ -566,8 +738,8 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                     </div>
 
                                     <div className="flex-1">
-                                        <h3 className="text-xl font-semibold">{t('max.name')}</h3>
-                                        <p className="text-sm text-muted-foreground mt-2 pr-6">{t('max.description')}</p>
+                                        <h3 className="text-2xl font-semibold">{t('max.name')}</h3>
+                                        <p className="text-base text-muted-foreground mt-2 pr-6">{t('max.description')}</p>
 
                                         {/* Expandable features */}
                                         {!featuresExpanded ? (
@@ -612,9 +784,14 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                     )}
 
                                     <div className="mt-auto pt-6">
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-4xl font-bold">${selectedPlan === 'max' ? getPrice('max', totalClients) : getPrice('max', PLANS.max.baseClients)}</span>
-                                            <span className="text-muted-foreground">/{t('month')}</span>
+                                        <div className="flex items-baseline justify-between">
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-4xl font-bold">${selectedPlan === 'max' ? getPrice('max', totalClients) : getPrice('max', PLANS.max.baseClients)}</span>
+                                                <span className="text-muted-foreground">/{t('month')}</span>
+                                            </div>
+                                            {billingInterval === 'annual' && (
+                                                <span className="text-xs text-muted-foreground">{t('summary.billedAnnually')}</span>
+                                            )}
                                         </div>
                                         <p className="text-sm text-muted-foreground mt-1">
                                             {t('upTo')} <span className="font-semibold">{selectedPlan === 'max' ? totalClients : PLANS.max.baseClients} {t('clients')}</span>
@@ -630,6 +807,7 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                 initial={{ opacity: 0, y: 12 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.4 }}
+                                className="relative z-20"
                             >
                                 <Card className="p-6">
                                     <div className="text-center space-y-4">
@@ -637,12 +815,17 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                             <span className="text-lg">{t('chooseClients.title')}</span>
                                             <Select
                                                 value={totalClients.toString()}
-                                                onValueChange={(value) => handleClientChange(parseInt(value))}
+                                                onValueChange={(value) => {
+                                                    const parsed = parseInt(value)
+                                                    if (!isNaN(parsed)) {
+                                                        handleClientChange(parsed)
+                                                    }
+                                                }}
                                             >
-                                                <SelectTrigger className="w-auto border-0 shadow-none bg-transparent text-lg text-primary font-semibold p-0 h-auto gap-1 focus:ring-0 focus-visible:ring-0">
+                                                <SelectTrigger className="w-[140px] h-10 border-0 border-b-2 border-primary bg-transparent rounded-none text-lg text-primary font-semibold focus:ring-0 focus-visible:ring-0 [&_svg]:!text-primary [&_svg]:!opacity-100">
                                                     <SelectValue />
                                                 </SelectTrigger>
-                                                <SelectContent>
+                                                <SelectContent position="popper" sideOffset={4} className="z-[10000]">
                                                     {availableClientOptions.map((num) => (
                                                         <SelectItem key={num} value={num.toString()}>
                                                             {num} {t('clients')}
@@ -659,9 +842,14 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                         <div className="pt-4 pb-2">
                                             <Slider
                                                 value={[Math.max(0, availableClientOptions.indexOf(totalClients))]}
-                                                onValueChange={([index]) => handleClientChange(availableClientOptions[index])}
+                                                onValueChange={([index]) => {
+                                                    const value = availableClientOptions[index]
+                                                    if (value !== undefined) {
+                                                        handleClientChange(value)
+                                                    }
+                                                }}
                                                 min={0}
-                                                max={availableClientOptions.length - 1}
+                                                max={Math.max(0, availableClientOptions.length - 1)}
                                                 step={1}
                                                 className="w-full"
                                             />
@@ -692,6 +880,15 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                     const isSelected = selectedAddons.includes(addon.key)
                                     const addonFeatures = t.raw(`addons.${addon.key}.features`) as string[]
 
+                                    // Check if this addon is currently subscribed (in update mode)
+                                    const addonTypeToKey: Record<string, string> = {
+                                        automations: 'automations',
+                                        ai_assistant: 'aiAssistant',
+                                        payments: 'payments',
+                                    }
+                                    const currentAddonKeys = (currentAddons || []).map(type => addonTypeToKey[type] || type)
+                                    const isCurrentlySubscribed = isUpdateMode && currentAddonKeys.includes(addon.key)
+
                                     return (
                                         <motion.div
                                             key={addon.key}
@@ -701,21 +898,41 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                         >
                                             <Card
                                                 className={cn(
-                                                    'relative p-6 cursor-pointer transition-all hover:shadow-md bg-card',
+                                                    'relative p-6 transition-all bg-card',
+                                                    !isCurrentlySubscribed && 'cursor-pointer hover:shadow-md',
                                                     isSelected && 'ring-2 ring-primary'
                                                 )}
-                                                onClick={() => toggleAddon(addon.key)}
+                                                onClick={() => !isCurrentlySubscribed && toggleAddon(addon.key)}
                                             >
-                                                {/* Radio indicator - top right */}
+                                                {/* Top right: Cancel button for subscribed addons, checkbox for others */}
                                                 <div className="absolute top-4 right-6">
-                                                    <div className={cn(
-                                                        'h-6 w-6 rounded-full border-2 flex items-center justify-center',
-                                                        isSelected ? 'border-primary' : 'border-muted-foreground/30'
-                                                    )}>
-                                                        {isSelected && (
-                                                            <div className="h-3 w-3 rounded-full bg-primary" />
-                                                        )}
-                                                    </div>
+                                                    {isCurrentlySubscribed ? (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-xs text-muted-foreground h-7 min-w-[95px]"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleCancel(addon.key)
+                                                            }}
+                                                            disabled={cancellingItem !== null}
+                                                        >
+                                                            {cancellingItem === addon.key ? (
+                                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                            ) : (
+                                                                'Cancel Add-on'
+                                                            )}
+                                                        </Button>
+                                                    ) : (
+                                                        <div className={cn(
+                                                            'h-6 w-6 rounded-full border-2 flex items-center justify-center',
+                                                            isSelected ? 'border-primary' : 'border-muted-foreground/30'
+                                                        )}>
+                                                            {isSelected && (
+                                                                <div className="h-3 w-3 rounded-full bg-primary" />
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {/* Price - bottom right, vertically centered */}
@@ -741,11 +958,13 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                                             </h3>
                                                             <span className={cn(
                                                                 'px-2 py-0.5 text-xs font-medium rounded-md',
-                                                                isSelected
-                                                                    ? 'bg-primary/20 text-primary'
-                                                                    : 'bg-muted text-muted-foreground'
+                                                                isCurrentlySubscribed
+                                                                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                                                                    : isSelected
+                                                                        ? 'bg-primary/20 text-primary'
+                                                                        : 'bg-muted text-muted-foreground'
                                                             )}>
-                                                                {t('addon')}
+                                                                {isCurrentlySubscribed ? 'Active' : t('addon')}
                                                             </span>
                                                         </div>
                                                         <p className="text-sm text-muted-foreground mt-1">
@@ -779,10 +998,10 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                 viewport={{ once: true }}
                                 transition={{ duration: 0.4, delay: 0.1 }}
                             >
-                                <Card className="flex flex-col min-h-[280px] p-6 pt-[22px]">
+                                <Card className="flex flex-col p-6 pt-[22px]">
                                     {/* Title - same position as plan card titles */}
-                                    <h3 className="text-xl font-semibold leading-tight">{t('summary.title')}</h3>
-                                    <hr className="border-border -mx-6 -mt-1" />
+                                    <h3 className="text-2xl font-semibold leading-tight">{t('summary.title')}</h3>
+                                    <hr className="border-border -mx-6 mt-3" />
                                     {/* Selected Plan */}
                                     <div className="flex items-start justify-between py-2">
                                         <div>
@@ -793,9 +1012,14 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                         </div>
                                         <div className="text-right">
                                             <p className="text-sm font-semibold">
-                                                ${(priceBreakdown.planCost + priceBreakdown.extraClientsCost).toFixed(2)}
+                                                ${billingInterval === 'annual'
+                                                    ? ((priceBreakdown.planCost + priceBreakdown.extraClientsCost) * 12).toFixed(0)
+                                                    : (priceBreakdown.planCost + priceBreakdown.extraClientsCost).toFixed(2)}
+                                                <span className="font-normal text-muted-foreground">/{billingInterval === 'annual' ? t('year') : t('month')}</span>
                                             </p>
-                                            <p className="text-xs text-muted-foreground">/{t('month')}</p>
+                                            {billingInterval === 'annual' && (
+                                                <p className="text-xs text-muted-foreground">{t('summary.billedAnnually')}</p>
+                                            )}
                                         </div>
                                     </div>
 
@@ -803,7 +1027,7 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                     {selectedAddons.length > 0 && (
                                         <>
                                             <hr className="border-border -mx-6" />
-                                            <div className="flex-1 py-2">
+                                            <div className="py-2">
                                                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">{t('summary.addons')}</p>
                                                 <div className="space-y-2">
                                                     {selectedAddons.map(addonKey => {
@@ -813,8 +1037,12 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                                             <div key={addonKey} className="flex items-start justify-between">
                                                                 <p className="text-sm font-semibold text-primary">{t(`addons.${addonKey}.name`)}</p>
                                                                 <div className="text-right">
-                                                                    <p className="text-sm font-semibold">${getBilledAddonPrice(addon).toFixed(2)}</p>
-                                                                    <p className="text-xs text-muted-foreground">/{t('month')}</p>
+                                                                    <p className="text-sm font-semibold">
+                                                                        ${billingInterval === 'annual'
+                                                                            ? (getBilledAddonPrice(addon) * 12).toFixed(0)
+                                                                            : getBilledAddonPrice(addon).toFixed(2)}
+                                                                        <span className="font-normal text-muted-foreground">/{billingInterval === 'annual' ? t('year') : t('month')}</span>
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         )
@@ -824,64 +1052,83 @@ export default function PricingPlans({ hideHeader = false, isUpdateMode = false,
                                         </>
                                     )}
 
-                                    {/* Spacer when no add-ons */}
-                                    {selectedAddons.length === 0 && <div className="flex-1" />}
-
                                     {/* Footer - Total & CTA */}
-                                    <div className="mt-auto pt-3 border-t -mx-6 px-6 space-y-2">
+                                    <div className="pt-3 border-t -mx-6 px-6 space-y-2">
                                         {/* Total */}
                                         <div className="flex items-center justify-between">
-                                            <p className="text-sm font-semibold">{t('summary.total')}</p>
+                                            <p className="text-xl font-bold">{t('summary.total')}</p>
                                             <div className="text-right">
                                                 <p className="text-xl font-bold">
                                                     ${priceBreakdown.total.toFixed(2)}
-                                                    <span className="text-xs font-normal text-muted-foreground">/{t('month')}</span>
+                                                    <span className="text-sm font-normal text-muted-foreground">/{t('month')}</span>
                                                 </p>
                                             </div>
                                         </div>
 
                                         {billingInterval === 'annual' && priceBreakdown.total > 0 && (
-                                            <p className="text-xs text-muted-foreground text-right">
+                                            <p className="text-sm text-muted-foreground text-right">
                                                 ${(priceBreakdown.total * 12).toFixed(2)}/{t('year')} {t('summary.billedAnnually')}
                                             </p>
                                         )}
 
                                         {/* CTA Button */}
                                         <Button
-                                            className="w-full"
+                                            size="lg"
+                                            className="w-full rounded-xl text-base mt-2"
                                             onClick={handleCheckout}
-                                            disabled={isCheckoutLoading || selectedPlan === 'starter'}
+                                            disabled={isCheckoutLoading || selectedPlan === 'starter' || (isUpdateMode && !hasChanges)}
                                         >
                                             {isCheckoutLoading ? (
-                                                <>
-                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                    Loading...
-                                                </>
+                                                <Loader2 className="h-5 w-5 animate-spin" />
                                             ) : (
-                                                isUpdateMode ? 'Update plan' : t('summary.cta')
+                                                <>
+                                                    <span className="text-nowrap">{isUpdateMode ? 'Update plan' : t('summary.cta')}</span>
+                                                    <ArrowRight className="size-4" />
+                                                </>
                                             )}
                                         </Button>
 
+                                        {/* Cancel Subscription Button - only in update mode for paid plans */}
+                                        {canCancel && (
+                                            <Button
+                                                variant="outline"
+                                                size="lg"
+                                                className="w-full rounded-xl text-base text-muted-foreground"
+                                                onClick={() => handleCancel('subscription')}
+                                                disabled={cancellingItem !== null}
+                                            >
+                                                {cancellingItem === 'subscription' ? (
+                                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                                ) : (
+                                                    'Cancel Subscription'
+                                                )}
+                                            </Button>
+                                        )}
+
                                         {/* USD Note */}
-                                        <p className="text-xs text-center text-muted-foreground">
+                                        <p className="text-sm text-center text-muted-foreground">
                                             {t('summary.pricesInUSD')}
-                                        </p>
-
-                                        <hr className="border-border -mx-6" />
-
-                                        {/* Terms */}
-                                        <p className="text-xs text-center text-muted-foreground pt-2 pb-4">
-                                            {t('summary.termsPrefix')}{' '}
-                                            <Link href="/terms-of-use" className="underline hover:text-foreground">
-                                                {t('summary.termsLink')}
-                                            </Link>{' '}
-                                            {t('summary.and')}{' '}
-                                            <Link href="/privacy-policy" className="underline hover:text-foreground">
-                                                {t('summary.privacyLink')}
-                                            </Link>
                                         </p>
                                     </div>
                                 </Card>
+
+                                {/* Terms */}
+                                <p className="text-sm text-center text-muted-foreground mt-4">
+                                    By continuing, you agree to our{' '}
+                                    <Link href="/terms-of-use" className="underline hover:text-foreground">
+                                        Terms of Service
+                                    </Link>{' '}
+                                    and{' '}
+                                    <Link href="/privacy-policy" className="underline hover:text-foreground">
+                                        Privacy Policy
+                                    </Link>
+                                </p>
+
+                                {/* Powered by Stripe */}
+                                <div className="flex items-center justify-center gap-2 mt-3">
+                                    <span className="text-sm text-muted-foreground">Powered by</span>
+                                    <img src="/icons/stripe.png" alt="Stripe" className="h-12" />
+                                </div>
                             </motion.div>
                         </div>
                     </div>

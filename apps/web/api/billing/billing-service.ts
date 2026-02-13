@@ -240,6 +240,85 @@ export function getAddonDisplayName(addon: AddonType): string {
   return names[addon];
 }
 
+// ─── Referrals ───────────────────────────────────────────────
+
+export type ReferralStatus = 'trial_started' | 'trial_ended' | 'converted' | 'credit_received';
+
+export interface Referral {
+  id: string;
+  coach_name: string;
+  profile_picture_url: string | null;
+  status: ReferralStatus;
+  credit_earned_cents: number;
+  trial_started_at?: string;
+  trial_ended_at?: string | null;
+  converted_at?: string | null;
+  created_at: string;
+}
+
+export interface ReferredBy {
+  id: string;
+  coach_name: string;
+  profile_picture_url: string | null;
+  status: 'credit_received';
+  credit_earned_cents: number;
+  converted_at: string | null;
+  created_at: string;
+}
+
+export interface ReferralCredits {
+  total_earned_cents: number;
+  active_cents: number;
+  used_cents: number;
+}
+
+export interface ReferralsResponse {
+  referrals: Referral[];
+  referred_by: ReferredBy | null;
+  credits: ReferralCredits;
+}
+
+/**
+ * Get referrals made by this coach and credit stats
+ */
+export async function getReferrals(): Promise<ReferralsResponse> {
+  return apiFetch('/billing/referrals');
+}
+
+/**
+ * Send a referral invite email to a friend
+ */
+export async function sendReferralInvite(email: string): Promise<{ success: boolean }> {
+  return apiFetch('/billing/referral-invite', {
+    method: 'POST',
+    body: { email },
+  });
+}
+
+/**
+ * Apply a referral code to the current coach's account
+ * This links them as being referred by the coach who owns the code
+ */
+export async function applyReferralCode(code: string): Promise<{ success: boolean; referrerName?: string; error?: string }> {
+  return apiFetch('/billing/apply-referral', {
+    method: 'POST',
+    body: { code },
+  });
+}
+
+/**
+ * Lookup referral code info (public - no auth required)
+ * Used on the referral landing page to show who invited the user
+ */
+export interface ReferrerInfo {
+  name: string;
+  profilePictureUrl: string | null;
+}
+
+export async function lookupReferralCode(code: string): Promise<ReferrerInfo> {
+  return apiFetch(`/billing/referral-lookup/${encodeURIComponent(code)}`);
+}
+
 // ─── AI Assistant Usage ──────────────────────────────────────
 
 export interface AiPromptUsage {

@@ -15,6 +15,8 @@ import { UserMenu } from './user-menu';
 import { NotificationSidePanel } from './notification-side-panel';
 import { useCoachNotifications } from '@/hooks/use-coach-notifications';
 import { useAccess } from '@/lib/permissions';
+import { useQuery } from '@tanstack/react-query';
+import { getReferrals } from '@/api/billing/billing-service';
 
 type AppHeaderProps = {
   isThemeMounted: boolean;
@@ -36,6 +38,14 @@ export function AppHeader({
 
   const { unreadCount } = useCoachNotifications();
   const { status, trialDaysRemaining } = useAccess();
+
+  // Fetch active credits for the header badge
+  const { data: referralData } = useQuery({
+    queryKey: ['referrals'],
+    queryFn: getReferrals,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+  const activeCredits = referralData?.credits?.active_cents ?? 0;
 
   const isOnTrial = status === 'trial';
   const isAssistantPage = pathname?.startsWith('/assistant');
@@ -130,17 +140,25 @@ export function AppHeader({
             <TooltipTrigger asChild>
               <Button
                 variant="outline"
-                size="icon"
+                size={activeCredits > 0 ? 'default' : 'icon'}
                 asChild
                 aria-label={t('sidebar.links.referAndEarn') || 'Refer and Earn'}
+                className={activeCredits > 0 ? 'gap-1.5' : ''}
               >
                 <Link href="/refer-and-earn">
+                  {activeCredits > 0 && (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                      ${(activeCredits / 100).toFixed(0)}
+                    </span>
+                  )}
                   <Gift className="size-4" />
                 </Link>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {t('sidebar.links.referAndEarn') || 'Refer and Earn'}
+              {activeCredits > 0
+                ? t('sidebar.links.referAndEarn') + ` - $${(activeCredits / 100).toFixed(0)} credit`
+                : t('sidebar.links.referAndEarn') || 'Refer and Earn'}
             </TooltipContent>
           </Tooltip>
           <Tooltip>

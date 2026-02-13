@@ -5,12 +5,13 @@ import NextLink from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Check, Workflow, Sparkles, Wallet, ArrowRight } from 'lucide-react'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import Lottie from 'lottie-react'
+import confetti from 'canvas-confetti'
 import {
     type Plan,
     type BillingInterval,
@@ -20,6 +21,7 @@ import {
     PRO_CLIENT_OPTIONS,
     MAX_CLIENT_OPTIONS,
     ADDONS,
+    ANNUAL_DISCOUNT_PERCENT,
 } from '@athli/shared-types/pricing-constants'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
@@ -121,6 +123,8 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
     const [proClients, setProClients] = useState(5)
     const [maxClients, setMaxClients] = useState(50)
     const [aiAnimationData, setAiAnimationData] = useState<object | null>(null)
+    const [showSavingsPopup, setShowSavingsPopup] = useState(false)
+    const toggleRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         fetch('/animations/ai-sphere-animation.json')
@@ -128,6 +132,47 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
             .then(data => setAiAnimationData(data))
             .catch(() => {})
     }, [])
+
+    // Handle billing interval change with confetti celebration
+    const handleBillingChange = (checked: boolean) => {
+        const newInterval = checked ? 'annual' : 'monthly'
+        setBillingInterval(newInterval)
+
+        // Fire confetti when switching to annual
+        if (newInterval === 'annual') {
+            // Get the position of the toggle for confetti origin
+            if (toggleRef.current) {
+                const rect = toggleRef.current.getBoundingClientRect()
+                const x = (rect.left + rect.width / 2) / window.innerWidth
+                const y = (rect.top + rect.height / 2 + 50) / window.innerHeight
+
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { x, y },
+                    colors: ['#10b981', '#8b5cf6', '#f59e0b', '#3b82f6', '#ec4899', '#f97316'],
+                    zIndex: 99999,
+                })
+            }
+
+            // Show savings popup
+            setShowSavingsPopup(true)
+
+            // Auto-hide after 2 seconds
+            setTimeout(() => {
+                setShowSavingsPopup(false)
+            }, 2000)
+        }
+    }
+
+    // Hide popup on click anywhere
+    useEffect(() => {
+        if (!showSavingsPopup) return
+
+        const handleClick = () => setShowSavingsPopup(false)
+        window.addEventListener('click', handleClick)
+        return () => window.removeEventListener('click', handleClick)
+    }, [showSavingsPopup])
 
     const starterFeatures = t.raw('starter.features') as string[]
     const proNewFeatures = t.raw('pro.newFeatures') as string[]
@@ -192,8 +237,8 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
                 )}
 
                 {/* Billing Toggle */}
-                <div className="mt-8 flex flex-col items-center gap-2">
-                    <div className="inline-flex items-center gap-3 rounded-full border bg-muted px-4 py-2">
+                <div className="mt-8 flex flex-col items-center gap-2 relative">
+                    <div ref={toggleRef} className="relative inline-flex items-center gap-3 rounded-full border bg-muted px-4 py-2">
                         <span className={cn(
                             'text-sm font-medium transition-colors',
                             billingInterval === 'monthly' ? 'text-foreground' : 'text-muted-foreground'
@@ -202,7 +247,7 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
                         </span>
                         <Switch
                             checked={billingInterval === 'annual'}
-                            onCheckedChange={(checked) => setBillingInterval(checked ? 'annual' : 'monthly')}
+                            onCheckedChange={handleBillingChange}
                         />
                         <span className={cn(
                             'text-sm font-medium transition-colors',
@@ -211,9 +256,34 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
                             {t('annual')}
                         </span>
                     </div>
+
+                    {/* Savings Badge - always visible */}
                     <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                         {t('twoMonthsFree')}
                     </span>
+
+                    {/* Animated Savings Popup */}
+                    <AnimatePresence>
+                        {showSavingsPopup && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -10, scale: 0.9 }}
+                                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                className="absolute top-full mt-4 z-50"
+                            >
+                                <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-3 rounded-xl shadow-lg">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-2xl">🎉</span>
+                                        <div>
+                                            <p className="font-bold text-lg">You're saving {ANNUAL_DISCOUNT_PERCENT}%!</p>
+                                            <p className="text-emerald-100 text-sm">Great choice with annual billing</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 {/* Plan Cards */}
@@ -227,8 +297,8 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
                     >
                         <Card className="relative flex flex-col h-full p-6">
                             <div>
-                                <h3 className="text-xl font-semibold">{t('starter.name')}</h3>
-                                <p className="text-sm text-muted-foreground mt-2">{t('starter.description')}</p>
+                                <h3 className="text-2xl font-semibold">{t('starter.name')}</h3>
+                                <p className="text-base text-muted-foreground mt-2">{t('starter.description')}</p>
 
                                 <div className="mt-4">
                                     <span className="text-4xl font-bold">{t('starter.name')}</span>
@@ -281,8 +351,8 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
                                 </div>
 
                                 <div>
-                                    <h3 className="text-xl font-semibold">{t('pro.name')}</h3>
-                                    <p className="text-sm text-muted-foreground mt-2">{t('pro.description')}</p>
+                                    <h3 className="text-2xl font-semibold">{t('pro.name')}</h3>
+                                    <p className="text-base text-muted-foreground mt-2">{t('pro.description')}</p>
 
                                     <div className="mt-4">
                                         <span className="text-4xl font-bold">${getProPrice()}</span>
@@ -351,8 +421,8 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
                     >
                         <Card className="relative flex flex-col h-full p-6">
                             <div>
-                                <h3 className="text-xl font-semibold">{t('max.name')}</h3>
-                                <p className="text-sm text-muted-foreground mt-2">{t('max.description')}</p>
+                                <h3 className="text-2xl font-semibold">{t('max.name')}</h3>
+                                <p className="text-base text-muted-foreground mt-2">{t('max.description')}</p>
 
                                 <div className="mt-4">
                                     <span className="text-4xl font-bold">${getMaxPrice()}</span>

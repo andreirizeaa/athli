@@ -4,6 +4,7 @@ import { getStripeClient } from '../../../services/stripe.service';
 import { getSupabaseClient } from '../../../services/supabase.service';
 import { logger } from '../../../config/logger';
 import { PRO_PRICING, MAX_PRICING, ADDONS } from '@athli/shared-types/src/constants/pricing-constants';
+import { getPlanPriceId, getAddonPriceId } from '../../../services/stripe-platform-price.service';
 
 // ─── Pricing Configuration ────────────────────────────────────
 
@@ -13,6 +14,9 @@ const ADDON_PRICING = {
   ai_assistant: [ADDONS[1].monthlyPrice, ADDONS[1].annualPrice],
   payments: [ADDONS[2].monthlyPrice, ADDONS[2].annualPrice],
 } as const;
+
+// Referral credit amount in cents ($20)
+const REFERRAL_CREDIT_CENTS = 2000;
 
 type PlanType = 'starter' | 'pro' | 'max';
 type AddonType = 'automations' | 'ai_assistant' | 'payments';
@@ -74,6 +78,84 @@ function getPlanPricing(plan: PlanType, clientLimit: number, interval: BillingIn
 function getAddonPricing(addon: AddonType, interval: BillingInterval): number {
   const pricing = ADDON_PRICING[addon];
   return interval === 'year' ? pricing[1] * 12 : pricing[0];
+}
+
+/**
+ * Backfill pending referral credits when a coach creates their first Stripe customer.
+ * This handles the case where Coach A referred Coach B, Coach B paid (generating credits),
+ * but Coach A was still on free trial with no Stripe customer ID at that time.
+ */
+async function backfillPendingReferralCredits(
+  coachId: string,
+  stripeCustomerId: string,
+  supabase: any,
+  stripe: Stripe
+) {
+  try {
+    // Find all referrals where this coach is the referrer AND credits are pending (not yet applied to Stripe)
+    const { data: pendingReferrals } = await supabase
+      .from('coach_referrals')
+      .select('id, referrer_credit_cents')
+      .eq('referrer_coach_id', coachId)
+      .eq('status', 'converted')
+      .is('referrer_credit_applied_at', null)
+      .gt('referrer_credit_cents', 0);
+
+    if (!pendingReferrals || pendingReferrals.length === 0) {
+      return;
+    }
+
+    // Apply each pending credit to Stripe
+    for (const referral of pendingReferrals) {
+      await stripe.customers.createBalanceTransaction(stripeCustomerId, {
+        amount: -referral.referrer_credit_cents, // Negative = credit
+        currency: 'usd',
+        description: 'Referral reward - Your referred coach subscribed!',
+      });
+
+      // Mark as applied
+      await supabase
+        .from('coach_referrals')
+        .update({ referrer_credit_applied_at: new Date().toISOString() })
+        .eq('id', referral.id);
+
+      logger.info(
+        { coachId, referralId: referral.id, creditCents: referral.referrer_credit_cents },
+        'Backfilled pending referral credit to new Stripe customer'
+      );
+    }
+
+    // Also check if this coach was referred and their credit is pending
+    const { data: referredByRecord } = await supabase
+      .from('coach_referrals')
+      .select('id, referred_credit_cents')
+      .eq('referred_coach_id', coachId)
+      .eq('status', 'converted')
+      .is('referred_credit_applied_at', null)
+      .gt('referred_credit_cents', 0)
+      .maybeSingle();
+
+    if (referredByRecord) {
+      await stripe.customers.createBalanceTransaction(stripeCustomerId, {
+        amount: -referredByRecord.referred_credit_cents, // Negative = credit
+        currency: 'usd',
+        description: 'Referral bonus - $20 credit for your next invoice!',
+      });
+
+      await supabase
+        .from('coach_referrals')
+        .update({ referred_credit_applied_at: new Date().toISOString() })
+        .eq('id', referredByRecord.id);
+
+      logger.info(
+        { coachId, referralId: referredByRecord.id, creditCents: referredByRecord.referred_credit_cents },
+        'Backfilled pending referred credit to new Stripe customer'
+      );
+    }
+  } catch (err: any) {
+    // Don't fail checkout if backfill fails - credits are still tracked in DB
+    logger.warn({ err: err.message, coachId }, 'Failed to backfill pending referral credits');
+  }
 }
 
 // ─── Controller ───────────────────────────────────────────────
@@ -190,6 +272,304 @@ export const billingController = {
     res.json({ data, total: count });
   },
 
+  // ─── Get Referrals and Credit Stats ─────────────────────────
+
+  getReferrals: async (req: Request, res: Response) => {
+    const stripe = getStripeClient();
+    const supabase = getSupabaseClient();
+    const coachId = (req as any).user.id;
+
+    try {
+      // Get all referrals made by this coach (people they referred)
+      const { data: referrals, error: referralsError } = await supabase
+        .from('coach_referrals')
+        .select(`
+          id,
+          referred_coach_id,
+          status,
+          referrer_credit_cents,
+          trial_started_at,
+          trial_ended_at,
+          converted_at,
+          created_at
+        `)
+        .eq('referrer_coach_id', coachId)
+        .order('created_at', { ascending: false });
+
+      if (referralsError) {
+        logger.error({ err: referralsError.message }, 'Failed to get referrals');
+        res.status(500).json({ error: 'Failed to get referrals' });
+        return;
+      }
+
+      // Check if this coach was referred by someone (to show in their history)
+      const { data: referredBy } = await supabase
+        .from('coach_referrals')
+        .select(`
+          id,
+          referrer_coach_id,
+          status,
+          referred_credit_cents,
+          referred_credit_applied_at,
+          converted_at,
+          created_at
+        `)
+        .eq('referred_coach_id', coachId)
+        .maybeSingle() as { data: {
+          id: string;
+          referrer_coach_id: string;
+          status: string;
+          referred_credit_cents: number;
+          referred_credit_applied_at: string | null;
+          converted_at: string | null;
+          created_at: string;
+        } | null };
+
+      // Get referred coach names
+      const referredCoachIds = referrals?.map(r => r.referred_coach_id) || [];
+      // Also get the referrer's name if this coach was referred
+      if (referredBy?.referrer_coach_id) {
+        referredCoachIds.push(referredBy.referrer_coach_id);
+      }
+
+      let coachProfiles: Record<string, { name: string; profile_picture_url: string | null }> = {};
+
+      if (referredCoachIds.length > 0) {
+        const { data: coaches } = await supabase
+          .from('user_profiles')
+          .select('id, name, email, profile_picture_url')
+          .in('id', referredCoachIds);
+
+        if (coaches) {
+          coachProfiles = coaches.reduce((acc, c) => {
+            acc[c.id] = {
+              name: c.name || c.email || 'Unknown',
+              profile_picture_url: c.profile_picture_url || null,
+            };
+            return acc;
+          }, {} as Record<string, { name: string; profile_picture_url: string | null }>);
+        }
+      }
+
+      // Calculate total credits earned from referrals made
+      const totalEarnedFromReferrals = referrals?.reduce((sum, r) => sum + (r.referrer_credit_cents || 0), 0) || 0;
+      // Add credit received from being referred
+      const totalReceivedFromReferrer = referredBy?.referred_credit_cents || 0;
+      const totalEarnedCents = totalEarnedFromReferrals + totalReceivedFromReferrer;
+
+      // Get current Stripe balance (active credits)
+      let stripeActiveCredits = 0;
+      const { data: subscription } = await supabase
+        .from('platform_subscriptions')
+        .select('stripe_customer_id')
+        .eq('coach_id', coachId)
+        .maybeSingle();
+
+      if (subscription?.stripe_customer_id) {
+        try {
+          const customer = await stripe.customers.retrieve(subscription.stripe_customer_id);
+          if (customer && !customer.deleted) {
+            // Stripe balance: negative = credit available
+            stripeActiveCredits = Math.abs(Math.min(0, customer.balance));
+          }
+        } catch (stripeErr: any) {
+          logger.warn({ err: stripeErr.message }, 'Failed to get Stripe customer balance');
+        }
+      }
+
+      // If no Stripe customer, check for pending (unapplied) credits in the DB
+      // These will be applied when the coach eventually subscribes
+      let pendingCredits = 0;
+      if (!subscription?.stripe_customer_id) {
+        // Sum credits where applied_at is null
+        const { data: pendingReferrals } = await supabase
+          .from('coach_referrals')
+          .select('referrer_credit_cents')
+          .eq('referrer_coach_id', coachId)
+          .eq('status', 'converted')
+          .is('referrer_credit_applied_at', null)
+          .gt('referrer_credit_cents', 0);
+
+        pendingCredits += pendingReferrals?.reduce((sum: number, r: { referrer_credit_cents: number }) => sum + r.referrer_credit_cents, 0) || 0;
+
+        // Also check if they have pending "referred by" credits
+        if (referredBy && referredBy.referred_credit_cents > 0 && !referredBy.referred_credit_applied_at) {
+          pendingCredits += referredBy.referred_credit_cents;
+        }
+      }
+
+      // Active credits = Stripe balance + pending DB credits
+      const activeCredits = stripeActiveCredits + pendingCredits;
+
+      // Used credits = total earned - active (what's left)
+      const usedCredits = Math.max(0, totalEarnedCents - activeCredits);
+
+      // Map referrals with coach profiles (people this coach referred)
+      const mappedReferrals = referrals?.map(r => ({
+        id: r.id,
+        coach_name: coachProfiles[r.referred_coach_id]?.name || 'Unknown',
+        profile_picture_url: coachProfiles[r.referred_coach_id]?.profile_picture_url || null,
+        status: r.status,
+        credit_earned_cents: r.referrer_credit_cents || 0,
+        trial_started_at: r.trial_started_at,
+        trial_ended_at: r.trial_ended_at,
+        converted_at: r.converted_at,
+        created_at: r.created_at,
+      })) || [];
+
+      // Build referredBy info if this coach was referred and has converted (paid)
+      // Show once status is 'converted', regardless of whether credit was applied to Stripe yet
+      let referredByInfo = null;
+      if (referredBy && referredBy.status === 'converted') {
+        referredByInfo = {
+          id: referredBy.id,
+          coach_name: coachProfiles[referredBy.referrer_coach_id]?.name || 'Unknown',
+          profile_picture_url: coachProfiles[referredBy.referrer_coach_id]?.profile_picture_url || null,
+          status: 'credit_received' as const,
+          credit_earned_cents: referredBy.referred_credit_cents || 0,
+          converted_at: referredBy.converted_at,
+          created_at: referredBy.created_at,
+        };
+      }
+
+      res.json({
+        referrals: mappedReferrals,
+        referred_by: referredByInfo,
+        credits: {
+          total_earned_cents: totalEarnedCents,
+          active_cents: activeCredits,
+          used_cents: usedCredits,
+        },
+      });
+    } catch (err: any) {
+      logger.error({ err: err.message }, 'Failed to get referrals');
+      res.status(500).json({ error: 'Failed to get referrals' });
+    }
+  },
+
+  // ─── Send Referral Invite Email ─────────────────────────────
+
+  sendReferralInvite: async (req: Request, res: Response) => {
+    const supabase = getSupabaseClient();
+    const coachId = (req as any).user.id;
+    const { email } = req.body as { email: string };
+
+    if (!email || !email.includes('@')) {
+      res.status(400).json({ error: 'Valid email is required' });
+      return;
+    }
+
+    try {
+      // Get coach's info for the invite
+      const { data: coach } = await supabase
+        .from('user_profiles')
+        .select('name, email')
+        .eq('id', coachId)
+        .single();
+
+      // Get coach's referral code from coach_unique_codes table
+      const { data: coachCode } = await supabase
+        .from('coach_unique_codes')
+        .select('code')
+        .eq('coach_id', coachId)
+        .is('onboarding_id', null)
+        .maybeSingle();
+
+      // TODO: Integrate with Resend to send actual email
+      // For now, just log and return success
+      logger.info({
+        coachId,
+        coachName: coach?.name,
+        inviteeEmail: email,
+        referralCode: coachCode?.code,
+      }, 'Referral invite requested (email not sent - Resend integration pending)');
+
+      res.json({ success: true });
+    } catch (err: any) {
+      logger.error({ err: err.message }, 'Failed to send referral invite');
+      res.status(500).json({ error: 'Failed to send invite' });
+    }
+  },
+
+  // ─── Apply Referral Code ───────────────────────────────────────
+
+  applyReferralCode: async (req: Request, res: Response) => {
+    const supabase = getSupabaseClient();
+    const coachId = (req as any).user.id;
+    const { code } = req.body as { code: string };
+
+    if (!code || code.trim().length === 0) {
+      res.status(400).json({ error: 'Referral code is required' });
+      return;
+    }
+
+    try {
+      // Check if current coach already has a referrer
+      const { data: currentCoach } = await supabase
+        .from('coach_profiles')
+        .select('referrer_coach_id')
+        .eq('id', coachId)
+        .single();
+
+      if (currentCoach?.referrer_coach_id) {
+        res.status(400).json({ error: 'You have already been referred by another coach' });
+        return;
+      }
+
+      // Find the coach with this referral code from coach_unique_codes table
+      const { data: codeRecord } = await supabase
+        .from('coach_unique_codes')
+        .select('coach_id')
+        .eq('code', code.trim().toUpperCase())
+        .is('onboarding_id', null)
+        .maybeSingle();
+
+      if (!codeRecord) {
+        res.status(200).json({ success: false, error: 'Invalid referral code' });
+        return;
+      }
+
+      const referrer = { id: codeRecord.coach_id };
+
+      // Can't refer yourself
+      if (referrer.id === coachId) {
+        res.status(400).json({ error: 'You cannot use your own referral code' });
+        return;
+      }
+
+      // Get referrer's name
+      const { data: referrerProfile } = await supabase
+        .from('user_profiles')
+        .select('name')
+        .eq('id', referrer.id)
+        .eq('user_type', 'coach')
+        .single();
+
+      // Set the referrer on the current coach's profile
+      // This triggers handle_coach_referral which creates the referral record
+      const { error: updateError } = await supabase
+        .from('coach_profiles')
+        .update({ referrer_coach_id: referrer.id })
+        .eq('id', coachId);
+
+      if (updateError) {
+        logger.error({ err: updateError.message, coachId, code }, 'Failed to apply referral code');
+        res.status(500).json({ error: 'Failed to apply referral code' });
+        return;
+      }
+
+      logger.info({ coachId, referrerId: referrer.id, code }, 'Referral code applied successfully');
+
+      res.json({
+        success: true,
+        referrerName: referrerProfile?.name || null,
+      });
+    } catch (err: any) {
+      logger.error({ err: err.message, coachId, code }, 'Failed to apply referral code');
+      res.status(500).json({ error: 'Failed to apply referral code' });
+    }
+  },
+
   // ─── Get Invoices from Stripe ────────────────────────────────
 
   getInvoices: async (req: Request, res: Response) => {
@@ -215,21 +595,31 @@ export const billingController = {
       const invoices = await stripe.invoices.list({
         customer: subscription.stripe_customer_id,
         limit: limit,
+        expand: ['data.lines'],
       });
 
       // Map to a cleaner format
-      const mappedInvoices = invoices.data.map((invoice) => ({
-        id: invoice.id,
-        number: invoice.number,
-        amount_paid: invoice.amount_paid,
-        currency: invoice.currency,
-        status: invoice.status,
-        created: invoice.created,
-        period_start: invoice.period_start,
-        period_end: invoice.period_end,
-        hosted_invoice_url: invoice.hosted_invoice_url,
-        invoice_pdf: invoice.invoice_pdf,
-      }));
+      // Note: period_start/end on invoice is invoice creation date, not billing period
+      // The actual billing period is on the line items
+      const mappedInvoices = invoices.data.map((invoice) => {
+        // Get the billing period from the first line item (subscription item)
+        const firstLine = invoice.lines?.data?.[0];
+        const periodStart = firstLine?.period?.start || invoice.period_start;
+        const periodEnd = firstLine?.period?.end || invoice.period_end;
+
+        return {
+          id: invoice.id,
+          number: invoice.number,
+          amount_paid: invoice.amount_paid,
+          currency: invoice.currency,
+          status: invoice.status,
+          created: invoice.created,
+          period_start: periodStart,
+          period_end: periodEnd,
+          hosted_invoice_url: invoice.hosted_invoice_url,
+          invoice_pdf: invoice.invoice_pdf,
+        };
+      });
 
       res.json({
         invoices: mappedInvoices,
@@ -303,25 +693,34 @@ export const billingController = {
         client_limit: 5,
         status: 'active',
       });
+
+      // Backfill any pending referral credits that couldn't be applied earlier
+      // (e.g., this coach referred someone who paid while this coach was still on free trial)
+      await backfillPendingReferralCredits(coachId, stripeCustomerId, supabase, stripe);
     }
 
-    // Build line items
+    // Build line items with inline pricing to show client count in product name
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
 
-    // Main plan
-    const planPrice = getPlanPricing(plan, clientLimit, interval);
+    // Calculate plan price
+    const planPricing = plan === 'pro' ? PRO_PRICING : MAX_PRICING;
+    const planTier = planPricing[clientLimit];
+    const planPriceCents = planTier
+      ? (interval === 'year' ? planTier[1] * 12 * 100 : planTier[0] * 100)
+      : 0;
+
+    // Plan names for display
+    const planDisplayName = plan === 'pro' ? 'Athli Pro Plan' : 'Athli Max Plan';
+
+    // Main plan with client count in description
     lineItems.push({
       price_data: {
         currency: 'usd',
         product_data: {
-          name: `Athli ${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`,
-          description: `${clientLimit} clients - ${interval === 'year' ? 'Annual' : 'Monthly'} billing`,
-          metadata: {
-            athli_plan_type: plan,
-            athli_client_limit: clientLimit.toString(),
-          },
+          name: planDisplayName,
+          description: `Up to ${clientLimit} clients • Cancel anytime`,
         },
-        unit_amount: planPrice * 100, // Convert to cents
+        unit_amount: planPriceCents,
         recurring: {
           interval: interval,
         },
@@ -331,24 +730,31 @@ export const billingController = {
 
     // Add-ons
     if (addons && addons.length > 0) {
+      const addonNames: Record<AddonType, string> = {
+        automations: 'Athli Automations Add-on',
+        ai_assistant: 'Athli AI Assistant Add-on',
+        payments: 'Athli Payments Add-on',
+      };
+
       for (const addon of addons) {
-        const addonPrice = getAddonPricing(addon, interval);
-        const addonNames: Record<AddonType, string> = {
-          automations: 'Automations',
-          ai_assistant: 'AI Assistant (Lyra)',
-          payments: 'Payments',
-        };
+        const addonConfig = ADDONS.find(a =>
+          (addon === 'automations' && a.key === 'automations') ||
+          (addon === 'ai_assistant' && a.key === 'aiAssistant') ||
+          (addon === 'payments' && a.key === 'payments')
+        );
+
+        const addonPriceCents = addonConfig
+          ? (interval === 'year' ? addonConfig.annualPrice * 12 * 100 : addonConfig.monthlyPrice * 100)
+          : 0;
 
         lineItems.push({
           price_data: {
             currency: 'usd',
             product_data: {
-              name: `Athli ${addonNames[addon]} Add-on`,
-              metadata: {
-                athli_addon_type: addon,
-              },
+              name: addonNames[addon],
+              description: 'Cancel anytime',
             },
-            unit_amount: addonPrice * 100,
+            unit_amount: addonPriceCents,
             recurring: {
               interval: interval,
             },
@@ -681,7 +1087,7 @@ export const billingController = {
 
     // Idempotency check
     const { data: existingEvent } = await supabase
-      .from('stripe_webhook_events')
+      .from('stripe_billing_webhook_events')
       .select('id')
       .eq('id', event.id)
       .maybeSingle();
@@ -691,14 +1097,40 @@ export const billingController = {
       return;
     }
 
+    // Extract coach_id from the event object (varies by event type)
+    let coachId: string | null = null;
+    const eventObject = event.data.object as any;
+
+    // Try to get coach_id from various places depending on event type
+    if (eventObject.metadata?.coach_id) {
+      coachId = eventObject.metadata.coach_id;
+    } else if (eventObject.subscription) {
+      // For invoice events, look up the subscription to get coach_id
+      const { data: sub } = await supabase
+        .from('platform_subscriptions')
+        .select('coach_id')
+        .eq('stripe_subscription_id', eventObject.subscription)
+        .maybeSingle();
+      coachId = sub?.coach_id || null;
+    } else if (eventObject.customer) {
+      // Fallback: look up by customer ID
+      const { data: sub } = await supabase
+        .from('platform_subscriptions')
+        .select('coach_id')
+        .eq('stripe_customer_id', eventObject.customer)
+        .maybeSingle();
+      coachId = sub?.coach_id || null;
+    }
+
     try {
       await handlePlatformWebhookEvent(event, supabase, stripe);
 
-      // Record event for idempotency
-      await supabase.from('stripe_webhook_events').insert({
+      // Record event for idempotency (with coach_id if found)
+      await supabase.from('stripe_billing_webhook_events').insert({
         id: event.id,
         type: event.type,
         payload: event as any,
+        coach_id: coachId,
       });
     } catch (err: any) {
       logger.error({ err: err.message, eventType: event.type, eventId: event.id }, 'Platform webhook processing error');
@@ -762,6 +1194,73 @@ export const billingController = {
     } catch (err: any) {
       logger.error({ err: err.message }, 'Error checking AI prompt limit');
       res.status(500).json({ error: 'Failed to check AI prompt limit' });
+    }
+  },
+
+  // ─── Public: Lookup Referral Code Info ─────────────────────────
+  // No auth required - used on the referral landing page
+
+  lookupReferralCode: async (req: Request, res: Response) => {
+    const supabase = getSupabaseClient();
+    const { code } = req.params;
+
+    if (!code || code.trim().length === 0) {
+      res.status(400).json({ error: 'Referral code is required' });
+      return;
+    }
+
+    try {
+      let coachId: string | null = null;
+
+      // 1. Try coach_unique_codes table first (exact match)
+      const { data: codeRecord } = await supabase
+        .from('coach_unique_codes')
+        .select('coach_id')
+        .eq('code', code)
+        .maybeSingle();
+
+      if (codeRecord) {
+        coachId = codeRecord.coach_id;
+      }
+
+      // 2. Fallback: try with uppercase code
+      if (!coachId) {
+        const { data: codeRecordUpper } = await supabase
+          .from('coach_unique_codes')
+          .select('coach_id')
+          .eq('code', code.toUpperCase())
+          .is('onboarding_id', null)
+          .maybeSingle();
+
+        if (codeRecordUpper) {
+          coachId = codeRecordUpper.coach_id;
+        }
+      }
+
+      if (!coachId) {
+        res.status(404).json({ error: 'Invalid referral code' });
+        return;
+      }
+
+      // Get referrer's profile info
+      const { data: referrerProfile } = await supabase
+        .from('coach_profiles_full')
+        .select('name, profile_picture_url')
+        .eq('id', coachId)
+        .single();
+
+      if (!referrerProfile) {
+        res.status(404).json({ error: 'Referrer not found' });
+        return;
+      }
+
+      res.json({
+        name: referrerProfile.name || 'A coach',
+        profilePictureUrl: referrerProfile.profile_picture_url || null,
+      });
+    } catch (err: any) {
+      logger.error({ err: err.message, code }, 'Failed to lookup referral code');
+      res.status(500).json({ error: 'Failed to lookup referral code' });
     }
   },
 };
@@ -853,33 +1352,54 @@ async function handleSubscriptionCreated(event: Stripe.Event, supabase: any) {
       billing_interval: billingInterval,
       current_price_cents: totalAmount,
       status: subscription.status === 'trialing' ? 'trialing' : 'active',
-      current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-      current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+      current_period_start: subscription.current_period_start
+        ? new Date(subscription.current_period_start * 1000).toISOString()
+        : null,
+      current_period_end: subscription.current_period_end
+        ? new Date(subscription.current_period_end * 1000).toISOString()
+        : null,
       trial_ends_at: subscription.trial_end
         ? new Date(subscription.trial_end * 1000).toISOString()
         : null,
       stripe_price_id: subscription.items.data[0]?.price.id,
     }, { onConflict: 'coach_id' });
 
-  // Update addons
-  for (const item of subscription.items.data) {
-    const product = item.price.product as Stripe.Product;
-    const addonType = product.metadata?.athli_addon_type as AddonType;
+  // Update addons from metadata (product metadata isn't expanded in webhooks)
+  // Map addon types to expected prices (cents) for matching subscription items
+  const addonPriceMap: Record<AddonType, number> = {
+    ai_assistant: 2500,
+    automations: 2000,
+    payments: 1000,
+  };
 
-    if (addonType) {
-      await supabase.from('platform_addons').upsert({
-        coach_id: coachId,
-        addon_type: addonType,
-        stripe_subscription_item_id: item.id,
-        stripe_price_id: item.price.id,
-        price_cents: item.price.unit_amount || 0,
-        billing_interval: billingInterval,
-        is_active: true,
-        current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-        current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
-      }, { onConflict: 'coach_id,addon_type' });
-    }
+  for (const addon of addons) {
+    // Try to find the matching subscription item by price
+    const matchingItem = subscription.items.data.find(
+      item => item.price.unit_amount === addonPriceMap[addon]
+    );
+
+    await supabase.from('platform_addons').upsert({
+      coach_id: coachId,
+      addon_type: addon,
+      stripe_subscription_item_id: matchingItem?.id || null,
+      stripe_price_id: matchingItem?.price.id || null,
+      price_cents: matchingItem?.price.unit_amount || addonPriceMap[addon] || 0,
+      billing_interval: billingInterval,
+      is_active: true,
+      current_period_start: subscription.current_period_start
+        ? new Date(subscription.current_period_start * 1000).toISOString()
+        : null,
+      current_period_end: subscription.current_period_end
+        ? new Date(subscription.current_period_end * 1000).toISOString()
+        : null,
+    }, { onConflict: 'coach_id,addon_type' });
   }
+
+  // Mark free trial as complete since they now have a paid subscription
+  await supabase
+    .from('coach_profiles')
+    .update({ free_trial_completed: true })
+    .eq('id', coachId);
 
   // Log activity
   await logPlatformBillingActivity(supabase, {
@@ -903,6 +1423,7 @@ async function handleSubscriptionUpdated(event: Stripe.Event, supabase: any) {
   const planType = (subscription.metadata?.plan_type || 'starter') as PlanType;
   const clientLimit = parseInt(subscription.metadata?.client_limit || '5');
   const billingInterval = subscription.metadata?.billing_interval as BillingInterval;
+  const addons = subscription.metadata?.addons?.split(',').filter(Boolean) as AddonType[] || [];
 
   // Map Stripe status to our status
   const statusMap: Record<string, string> = {
@@ -930,8 +1451,12 @@ async function handleSubscriptionUpdated(event: Stripe.Event, supabase: any) {
       billing_interval: billingInterval,
       current_price_cents: totalAmount,
       status: status,
-      current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-      current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+      current_period_start: subscription.current_period_start
+        ? new Date(subscription.current_period_start * 1000).toISOString()
+        : null,
+      current_period_end: subscription.current_period_end
+        ? new Date(subscription.current_period_end * 1000).toISOString()
+        : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
       cancelled_at: subscription.canceled_at
         ? new Date(subscription.canceled_at * 1000).toISOString()
@@ -939,29 +1464,40 @@ async function handleSubscriptionUpdated(event: Stripe.Event, supabase: any) {
     })
     .eq('coach_id', coachId);
 
-  // Update addons - mark all inactive first, then activate current ones
+  // Update addons - mark all inactive first, then activate current ones from metadata
   await supabase
     .from('platform_addons')
     .update({ is_active: false })
     .eq('coach_id', coachId);
 
-  for (const item of subscription.items.data) {
-    const product = item.price.product as Stripe.Product;
-    const addonType = product.metadata?.athli_addon_type as AddonType;
+  // Map addon types to expected prices (cents) for matching subscription items
+  const addonPriceMap: Record<AddonType, number> = {
+    ai_assistant: 2500,
+    automations: 2000,
+    payments: 1000,
+  };
 
-    if (addonType) {
-      await supabase.from('platform_addons').upsert({
-        coach_id: coachId,
-        addon_type: addonType,
-        stripe_subscription_item_id: item.id,
-        stripe_price_id: item.price.id,
-        price_cents: item.price.unit_amount || 0,
-        billing_interval: billingInterval,
-        is_active: true,
-        current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-        current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
-      }, { onConflict: 'coach_id,addon_type' });
-    }
+  for (const addon of addons) {
+    // Try to find the matching subscription item by price
+    const matchingItem = subscription.items.data.find(
+      item => item.price.unit_amount === addonPriceMap[addon]
+    );
+
+    await supabase.from('platform_addons').upsert({
+      coach_id: coachId,
+      addon_type: addon,
+      stripe_subscription_item_id: matchingItem?.id || null,
+      stripe_price_id: matchingItem?.price.id || null,
+      price_cents: matchingItem?.price.unit_amount || addonPriceMap[addon] || 0,
+      billing_interval: billingInterval,
+      is_active: true,
+      current_period_start: subscription.current_period_start
+        ? new Date(subscription.current_period_start * 1000).toISOString()
+        : null,
+      current_period_end: subscription.current_period_end
+        ? new Date(subscription.current_period_end * 1000).toISOString()
+        : null,
+    }, { onConflict: 'coach_id,addon_type' });
   }
 
   // Log activity for status changes
@@ -1013,23 +1549,43 @@ async function handleSubscriptionDeleted(event: Stripe.Event, supabase: any) {
 }
 
 async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
+  const stripe = getStripeClient();
   const invoice = event.data.object as Stripe.Invoice;
-  const subscription = (invoice as any).subscription as string;
+  const subscriptionId = (invoice as any).subscription as string;
 
-  if (!subscription) return;
+  if (!subscriptionId) return;
 
-  // Get coach_id from subscription
-  const { data: sub } = await supabase
-    .from('platform_subscriptions')
-    .select('coach_id')
-    .eq('stripe_subscription_id', subscription)
-    .maybeSingle();
+  // Get coach_id from invoice's subscription metadata (more reliable than DB lookup)
+  // invoice.paid can fire before customer.subscription.created, so DB record may not exist yet
+  const subscriptionMetadata = (invoice as any).parent?.subscription_details?.metadata;
+  const invoiceLineMetadata = invoice.lines?.data?.[0]?.metadata;
 
-  if (!sub) return;
+  // Try multiple sources for coach_id
+  let coachId = subscriptionMetadata?.coach_id || invoiceLineMetadata?.coach_id;
+  let stripeCustomerId = invoice.customer as string;
+
+  // Fallback: try to get from DB if metadata doesn't have it
+  if (!coachId) {
+    const { data: sub } = await supabase
+      .from('platform_subscriptions')
+      .select('coach_id, stripe_customer_id')
+      .eq('stripe_subscription_id', subscriptionId)
+      .maybeSingle();
+
+    if (sub) {
+      coachId = sub.coach_id;
+      stripeCustomerId = sub.stripe_customer_id || stripeCustomerId;
+    }
+  }
+
+  if (!coachId) {
+    logger.warn({ subscriptionId, invoiceId: invoice.id }, 'Could not find coach_id for invoice.paid');
+    return;
+  }
 
   // Log payment
   await logPlatformBillingActivity(supabase, {
-    coach_id: sub.coach_id,
+    coach_id: coachId,
     event_type: 'payment_succeeded',
     description: `Payment successful - $${(invoice.amount_paid / 100).toFixed(2)}`,
     amount_cents: invoice.amount_paid,
@@ -1038,7 +1594,106 @@ async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
     metadata: { invoice_id: invoice.id },
   });
 
-  logger.info({ coachId: sub.coach_id, amount: invoice.amount_paid }, 'Platform invoice paid');
+  // Handle referral credits (only on first payment)
+  // Check if this is the first invoice (subscription creation)
+  if ((invoice as any).billing_reason === 'subscription_create') {
+    try {
+      // Check if this coach was referred and credits haven't been applied yet
+      const { data: referral } = await supabase
+        .from('coach_referrals')
+        .select('id, referrer_coach_id, referrer_credit_applied_at, referred_credit_applied_at')
+        .eq('referred_coach_id', coachId)
+        .maybeSingle();
+
+      if (referral && !referral.referrer_credit_applied_at) {
+        // Track whether credits were actually applied to Stripe
+        let referrerCreditApplied = false;
+        let referredCreditApplied = false;
+
+        // Get the referrer's Stripe customer ID
+        const { data: referrerSub } = await supabase
+          .from('platform_subscriptions')
+          .select('stripe_customer_id')
+          .eq('coach_id', referral.referrer_coach_id)
+          .maybeSingle();
+
+        if (referrerSub?.stripe_customer_id) {
+          // Apply credit to the referrer's Stripe balance (for their next invoice)
+          await stripe.customers.createBalanceTransaction(referrerSub.stripe_customer_id, {
+            amount: -REFERRAL_CREDIT_CENTS, // Negative = credit
+            currency: 'usd',
+            description: 'Referral reward - Your referred coach subscribed!',
+          });
+          referrerCreditApplied = true;
+
+          logger.info(
+            { referrerCoachId: referral.referrer_coach_id, creditCents: REFERRAL_CREDIT_CENTS },
+            'Applied referral credit to referrer'
+          );
+        } else {
+          // Referrer doesn't have Stripe customer yet - credit will be applied when they subscribe
+          logger.info(
+            { referrerCoachId: referral.referrer_coach_id, creditCents: REFERRAL_CREDIT_CENTS },
+            'Referrer credit pending - no Stripe customer yet'
+          );
+        }
+
+        // Apply credit to the referred coach (Coach B) for their next invoice
+        if (stripeCustomerId) {
+          await stripe.customers.createBalanceTransaction(stripeCustomerId, {
+            amount: -REFERRAL_CREDIT_CENTS, // Negative = credit
+            currency: 'usd',
+            description: 'Referral bonus - $20 credit for your next invoice!',
+          });
+          referredCreditApplied = true;
+
+          logger.info(
+            { referredCoachId: coachId, creditCents: REFERRAL_CREDIT_CENTS },
+            'Applied referral credit to referred coach'
+          );
+        }
+
+        // Update referral status to converted
+        // Only mark credits as "applied" if they were actually applied to Stripe
+        await supabase
+          .from('coach_referrals')
+          .update({
+            status: 'converted',
+            converted_at: new Date().toISOString(),
+            referrer_credit_cents: REFERRAL_CREDIT_CENTS,
+            referrer_credit_applied_at: referrerCreditApplied ? new Date().toISOString() : null,
+            referred_credit_cents: REFERRAL_CREDIT_CENTS,
+            referred_credit_applied_at: referredCreditApplied ? new Date().toISOString() : null,
+          })
+          .eq('id', referral.id);
+
+        // Log referral conversion for referrer
+        await logPlatformBillingActivity(supabase, {
+          coach_id: referral.referrer_coach_id,
+          event_type: 'referral_converted',
+          description: `Referral converted - $${(REFERRAL_CREDIT_CENTS / 100).toFixed(2)} credit earned`,
+          amount_cents: REFERRAL_CREDIT_CENTS,
+          stripe_event_id: event.id,
+          metadata: { referred_coach_id: coachId },
+        });
+
+        // Log credit earned for referred coach
+        await logPlatformBillingActivity(supabase, {
+          coach_id: coachId,
+          event_type: 'referral_credit_received',
+          description: `Referral bonus - $${(REFERRAL_CREDIT_CENTS / 100).toFixed(2)} credit received`,
+          amount_cents: REFERRAL_CREDIT_CENTS,
+          stripe_event_id: event.id,
+          metadata: { referrer_coach_id: referral.referrer_coach_id },
+        });
+      }
+    } catch (referralError: any) {
+      // Don't fail the webhook if referral credit fails
+      logger.warn({ err: referralError.message, coachId }, 'Failed to process referral credits');
+    }
+  }
+
+  logger.info({ coachId, amount: invoice.amount_paid }, 'Platform invoice paid');
 }
 
 async function handleInvoicePaymentFailed(event: Stripe.Event, supabase: any) {

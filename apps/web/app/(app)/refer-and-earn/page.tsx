@@ -1,45 +1,196 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Copy, Check } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Copy, Check, Link, Loader2, UserPlus, CreditCard, Gift, ChevronRight, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
-import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { useGlobalData } from '@/providers/global-data-provider';
 import { toast } from 'sonner';
+import { sendReferralInvite, type Referral, type ReferralStatus, type ReferredBy } from '@/api/billing/billing-service';
+import { useReferrals } from '@/hooks/use-referrals';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import Lottie from 'lottie-react';
+import { motion } from 'motion/react';
 
-type ReferralData = {
-  id: string;
-  coach: string;
-  date: Date;
-  status: 'Signed up' | 'Free trial' | 'Paid Plan';
-};
+// HowItWorks component with SVG path animation
+function HowItWorks({ title }: { title: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
 
-// Mock data - replace with actual data from API
-const mockReferrals: ReferralData[] = [
-  {
-    id: '1',
-    coach: 'John Smith',
-    date: new Date('2025-02-26'),
-    status: 'Paid Plan',
-  },
-  {
-    id: '2',
-    coach: 'Jane Doe',
-    date: new Date('2025-02-20'),
-    status: 'Free trial',
-  },
-  {
-    id: '3',
-    coach: 'Mike Johnson',
-    date: new Date('2025-02-15'),
-    status: 'Signed up',
-  },
-];
+  const steps = [
+    {
+      number: '1',
+      title: 'Sign up',
+      description: 'Your friend signs up using your referral link or code',
+      icon: UserPlus,
+    },
+    {
+      number: '2',
+      title: 'Subscribe',
+      description: 'They pay for a monthly or annual subscription',
+      icon: CreditCard,
+    },
+    {
+      number: '3',
+      title: 'Receive credit',
+      description: 'You both get $20 added to your balance',
+      icon: Gift,
+    },
+  ];
 
-const formatDate = (date: Date): string => {
+  // Measure container
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(() => {
+      const rect = el.getBoundingClientRect();
+      setDims({ w: rect.width, h: rect.height });
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { w } = dims;
+  const r = 28; // circle radius
+  const circleY = 50; // Y position of circle centers
+  const svgHeight = 200;
+
+  // Circle X positions - evenly spaced
+  const x1 = 100;
+  const x2 = w / 2;
+  const x3 = w - 100;
+
+  // Build path that traces through all circles
+  const path = w > 0 ? [
+    // Start at circle 1, 3 o'clock (right side)
+    `M ${x1 + r} ${circleY}`,
+    // Circle 1: full clockwise loop (3→6→9→12→3)
+    `A ${r} ${r} 0 0 1 ${x1} ${circleY + r}`,
+    `A ${r} ${r} 0 0 1 ${x1 - r} ${circleY}`,
+    `A ${r} ${r} 0 0 1 ${x1} ${circleY - r}`,
+    `A ${r} ${r} 0 0 1 ${x1 + r} ${circleY}`,
+    // Line to circle 2 (9 o'clock)
+    `L ${x2 - r} ${circleY}`,
+    // Circle 2: 1.5 loops (9→12→3→6→9→12→3)
+    `A ${r} ${r} 0 0 1 ${x2} ${circleY - r}`,
+    `A ${r} ${r} 0 0 1 ${x2 + r} ${circleY}`,
+    `A ${r} ${r} 0 0 1 ${x2} ${circleY + r}`,
+    `A ${r} ${r} 0 0 1 ${x2 - r} ${circleY}`,
+    `A ${r} ${r} 0 0 1 ${x2} ${circleY - r}`,
+    `A ${r} ${r} 0 0 1 ${x2 + r} ${circleY}`,
+    // Line to circle 3 (9 o'clock)
+    `L ${x3 - r} ${circleY}`,
+    // Circle 3: full clockwise loop back to 9 o'clock
+    `A ${r} ${r} 0 0 1 ${x3} ${circleY - r}`,
+    `A ${r} ${r} 0 0 1 ${x3 + r} ${circleY}`,
+    `A ${r} ${r} 0 0 1 ${x3} ${circleY + r}`,
+    `A ${r} ${r} 0 0 1 ${x3 - r} ${circleY}`,
+  ].join(' ') : '';
+
+  return (
+    <div className="flex flex-col items-center justify-center flex-1 min-h-0">
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        <p className="text-sm text-muted-foreground mt-1">Three simple steps</p>
+      </div>
+      <div
+        ref={containerRef}
+        className="relative w-full max-w-3xl"
+        style={{ height: svgHeight }}
+      >
+        {w > 0 && (
+          <svg
+            className="absolute inset-0"
+            width={w}
+            height={svgHeight}
+            fill="none"
+          >
+            <defs>
+              <linearGradient id="trail-grad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="rgb(168,85,247)" />
+                <stop offset="100%" stopColor="rgb(59,130,246)" />
+              </linearGradient>
+            </defs>
+
+            {/* Circle fills first (no stroke) - these create the white interior */}
+            <circle cx={x1} cy={circleY} r={r - 1} fill="white" />
+            <circle cx={x2} cy={circleY} r={r - 1} fill="white" />
+            <circle cx={x3} cy={circleY} r={r - 1} fill="white" />
+
+            {/* Static background path - this IS the circle borders + connecting lines */}
+            <path
+              d={path}
+              stroke="#d4d4d4"
+              strokeWidth={3}
+              strokeLinecap="round"
+              fill="none"
+            />
+
+            {/* Animated trail on top */}
+            <motion.path
+              d={path}
+              pathLength={1}
+              stroke="url(#trail-grad)"
+              strokeWidth={3.5}
+              strokeLinecap="round"
+              fill="none"
+              strokeDasharray="0.12 0.88"
+              animate={{ strokeDashoffset: [0, -1] }}
+              transition={{
+                duration: 3.5,
+                repeat: Infinity,
+                ease: 'linear',
+              }}
+            />
+          </svg>
+        )}
+
+        {/* Icons and labels */}
+        {w > 0 && steps.map((step, index) => {
+          const xPos = index === 0 ? x1 : index === 1 ? x2 : x3;
+          const Icon = step.icon;
+          return (
+            <div
+              key={step.number}
+              className="absolute flex flex-col items-center text-center"
+              style={{
+                left: xPos,
+                top: circleY - r,
+                transform: 'translateX(-50%)',
+                width: 180,
+              }}
+            >
+              {/* Icon */}
+              <div
+                className="flex items-center justify-center z-10"
+                style={{ width: r * 2, height: r * 2 }}
+              >
+                <Icon className="size-5 text-zinc-700" />
+              </div>
+              {/* Step label */}
+              <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase mt-3">
+                Step {step.number}
+              </p>
+              {/* Title */}
+              <p className="text-base font-semibold mt-1">{step.title}</p>
+              {/* Description */}
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                {step.description}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const formatDate = (dateString: string | null): string => {
+  if (!dateString) return '--';
+  const date = new Date(dateString);
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const day = date.getDate();
   const month = months[date.getMonth()];
@@ -47,66 +198,74 @@ const formatDate = (date: Date): string => {
   return `${day} ${month}, ${year}`;
 };
 
+const formatCurrency = (cents: number): string => {
+  if (cents === 0) return '$0';
+  return `$${(cents / 100).toFixed(2)}`;
+};
+
+// Email validation regex - checks for valid format with @ and domain
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  return emailRegex.test(email.trim());
+};
+
 const ReferAndEarnPage = () => {
   const t = useTranslations('referAndEarn');
-  const { user } = useSupabaseAuth();
   const { uniqueCode } = useGlobalData();
-  const [isCopied, setIsCopied] = useState(false);
+  const [isLinkCopied, setIsLinkCopied] = useState(false);
+  const [isCodeCopied, setIsCodeCopied] = useState(false);
+  const [animationData, setAnimationData] = useState<object | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
+  const [referralsDialogOpen, setReferralsDialogOpen] = useState(false);
 
-  const steps = [
-    {
-      title: t('steps.referFriends.title'),
-      description: t('steps.referFriends.description'),
-    },
-    {
-      title: t('steps.friendSignsUp.title'),
-      description: t('steps.friendSignsUp.description'),
-    },
-    {
-      title: t('steps.coachJoinsPaidPlan.title'),
-      description: t('steps.coachJoinsPaidPlan.description'),
-    },
-    {
-      title: t('steps.rewardGifted.title'),
-      description: t('steps.rewardGifted.description'),
-    },
-    {
-      title: t('steps.referMoreCoaches.title'),
-      description: t('steps.referMoreCoaches.description'),
-    },
-  ];
+  // Load the animation
+  useEffect(() => {
+    fetch('/animations/referral-animation.json')
+      .then(res => res.json())
+      .then(data => setAnimationData(data))
+      .catch(() => {});
+  }, []);
 
-  const handleCopyReferralLink = async () => {
-    if (!uniqueCode) {
-      toast.error('Unable to generate referral link. Please try again.');
-      return;
+  const { referrals, referredBy, credits, isLoading } = useReferrals();
+
+  // Combine referrals made and credit received from being referred into one list
+  const allReferralItems = useMemo(() => {
+    const items: Referral[] = [...referrals];
+    // Add the "referred by" entry if it exists (credit was received)
+    if (referredBy) {
+      items.push({
+        id: referredBy.id,
+        coach_name: referredBy.coach_name,
+        profile_picture_url: referredBy.profile_picture_url,
+        status: 'credit_received',
+        credit_earned_cents: referredBy.credit_earned_cents,
+        converted_at: referredBy.converted_at,
+        created_at: referredBy.created_at,
+      });
     }
+    return items;
+  }, [referrals, referredBy]);
 
-    const referralLink = `${window.location.origin}/referral/${uniqueCode}`;
+  const hasReferrals = allReferralItems.length > 0 || credits.active_cents > 0;
 
+  const copyToClipboard = async (text: string, onSuccess: () => void, successMessage: string) => {
     try {
-      await navigator.clipboard.writeText(referralLink);
-      setIsCopied(true);
-      toast.success(t('referralLinkCopied'));
-
-      setTimeout(() => {
-        setIsCopied(false);
-      }, 2000);
+      await navigator.clipboard.writeText(text);
+      onSuccess();
+      toast.success(successMessage);
     } catch (err) {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
-      textArea.value = referralLink;
+      textArea.value = text;
       textArea.style.position = 'fixed';
       textArea.style.opacity = '0';
       document.body.appendChild(textArea);
       textArea.select();
       try {
         document.execCommand('copy');
-        setIsCopied(true);
-        toast.success(t('referralLinkCopied'));
-        setTimeout(() => {
-          setIsCopied(false);
-        }, 2000);
+        onSuccess();
+        toast.success(successMessage);
       } catch (fallbackErr) {
         toast.error(t('copyFailed'));
       }
@@ -114,124 +273,329 @@ const ReferAndEarnPage = () => {
     }
   };
 
-  const getStatusTranslation = (status: ReferralData['status']): string => {
+  const handleCopyReferralLink = async () => {
+    if (!uniqueCode) {
+      toast.error('Unable to generate referral link. Please try again.');
+      return;
+    }
+    const referralLink = `${window.location.origin}/referral/${uniqueCode}`;
+    await copyToClipboard(referralLink, () => {
+      setIsLinkCopied(true);
+      setTimeout(() => setIsLinkCopied(false), 2000);
+    }, t('referralLinkCopied'));
+  };
+
+  const handleCopyReferralCode = async () => {
+    if (!uniqueCode) {
+      toast.error('Unable to generate referral code. Please try again.');
+      return;
+    }
+    await copyToClipboard(uniqueCode, () => {
+      setIsCodeCopied(true);
+      setTimeout(() => setIsCodeCopied(false), 2000);
+    }, t('referralCodeCopied'));
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInviteEmail(e.target.value);
+    if (emailError) {
+      setEmailError('');
+    }
+  };
+
+  const handleSendInvite = async () => {
+    const email = inviteEmail.trim();
+
+    if (!email) {
+      setEmailError(t('enterEmail'));
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setEmailError(t('invalidEmail'));
+      return;
+    }
+
+    setEmailError('');
+    setIsSendingInvite(true);
+    try {
+      await sendReferralInvite(email);
+      toast.success(t('inviteSent'));
+      setInviteEmail('');
+    } catch (err) {
+      toast.error(t('inviteFailed'));
+    } finally {
+      setIsSendingInvite(false);
+    }
+  };
+
+  const getStatusLabel = (status: ReferralStatus): string => {
     switch (status) {
-      case 'Signed up':
-        return t('status.signedUp');
-      case 'Free trial':
-        return t('status.freeTrial');
-      case 'Paid Plan':
-        return t('status.paidPlan');
+      case 'trial_started':
+        return t('status.trialStarted');
+      case 'trial_ended':
+        return t('status.trialEnded');
+      case 'converted':
+        return t('status.converted');
+      case 'credit_received':
+        return t('status.creditReceived');
       default:
         return status;
     }
   };
 
-  const columns: ColumnDefinition<ReferralData>[] = [
+  const getStatusPillClasses = (status: ReferralStatus): string => {
+    switch (status) {
+      case 'trial_started':
+        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300';
+      case 'trial_ended':
+        return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+      case 'converted':
+        return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300';
+      case 'credit_received':
+        return 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300';
+      default:
+        return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    }
+  };
+
+  const getEventDate = (referral: Referral): string => {
+    switch (referral.status) {
+      case 'converted':
+      case 'credit_received':
+        return formatDate(referral.converted_at ?? null);
+      case 'trial_ended':
+        return formatDate(referral.trial_ended_at ?? null);
+      case 'trial_started':
+      default:
+        return formatDate(referral.trial_started_at ?? null);
+    }
+  };
+
+  const columns: ColumnDefinition<Referral>[] = [
     {
       id: 'coach',
       label: t('columns.coach'),
-      width: { class: 'w-[200px]', pixel: '200px' },
+      width: { class: 'flex-1', pixel: 'auto' },
       sortable: true,
-      getSortValue: (row) => row.coach,
+      getSortValue: (row) => row.coach_name.toLowerCase(),
       renderCell: (row) => (
-        <div className="flex items-center w-full">
-          <span className="text-sm">{row.coach}</span>
-        </div>
-      ),
-    },
-    {
-      id: 'date',
-      label: t('columns.date'),
-      width: { class: 'w-[150px]', pixel: '150px' },
-      sortable: true,
-      getSortValue: (row) => row.date.getTime(),
-      renderCell: (row) => (
-        <div className="flex items-center w-full">
-          <span className="text-sm">{formatDate(row.date)}</span>
+        <div className="flex items-center gap-3 w-full">
+          <Avatar className="size-8">
+            {row.profile_picture_url ? (
+              <AvatarImage src={row.profile_picture_url} alt={row.coach_name} />
+            ) : null}
+            <AvatarFallback className="text-sm font-medium">
+              {row.coach_name.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm font-medium">{row.coach_name}</span>
         </div>
       ),
     },
     {
       id: 'status',
       label: t('columns.status'),
-      width: { class: 'w-[150px]', pixel: '150px' },
+      width: { class: 'w-[140px]', pixel: '140px' },
       sortable: true,
       getSortValue: (row) => row.status,
       renderCell: (row) => (
         <div className="flex items-center w-full">
-          <span className="text-sm">{getStatusTranslation(row.status)}</span>
+          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getStatusPillClasses(row.status)}`}>
+            {getStatusLabel(row.status)}
+          </span>
+        </div>
+      ),
+    },
+    {
+      id: 'date',
+      label: t('columns.date'),
+      width: { class: 'w-[120px]', pixel: '120px' },
+      sortable: true,
+      getSortValue: (row) => new Date(row.created_at).getTime(),
+      renderCell: (row) => (
+        <div className="flex items-center w-full justify-end">
+          <span className="text-sm text-muted-foreground">{getEventDate(row)}</span>
         </div>
       ),
     },
   ];
 
   return (
-    <div className="h-full w-full flex flex-col bg-background overflow-auto">
-      <div className="w-full relative flex-shrink-0">
-        <div className="px-4 flex items-start justify-between gap-4 mb-2 mt-2">
-          <div className="flex flex-col gap-1 flex-1 min-w-0">
-            <h1 className="text-[22px] font-semibold">{t('title')}</h1>
-            <p className="text-sm text-muted-foreground -mt-[6px]">
-              {t('subtitle')}
-            </p>
-          </div>
-          <Button
-            onClick={handleCopyReferralLink}
-            className="flex-shrink-0 gap-2"
-            variant="default"
-          >
-            {isCopied ? (
-              <Check className="size-4" />
-            ) : (
-              <Copy className="size-4" />
-            )}
-            <span>{t('copyReferralLink')}</span>
-          </Button>
+    <div className="relative h-full w-full overflow-hidden flex flex-col">
+      {/* Hero Section with decorative bubbles */}
+      <div className="relative flex-shrink-0">
+        {/* Background Decorative Bubbles - hidden in dark mode */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden dark:hidden">
+          <div className="absolute -left-[10%] -top-[10%] h-[500px] w-[500px] rounded-full bg-primary/[0.08] blur-[100px]" />
+          <div className="absolute -right-[5%] top-[20%] h-[400px] w-[400px] rounded-full bg-primary/[0.08] blur-[100px]" />
+          <div className="absolute bottom-[10%] left-[20%] h-[600px] w-[600px] rounded-full bg-primary/[0.08] blur-[100px]" />
         </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
-      </div>
-      <div className="w-full flex-1 px-4 py-4 flex gap-4">
-        {/* Left side - Timeline */}
-        <div className="w-1/2 flex-shrink-0 h-full flex justify-center">
-          <div className="relative ml-6 h-full flex flex-col justify-between">
-            {steps.map(({ title, description }, index) => {
-              return (
-                <div key={index} className="relative pl-10 flex-1 flex flex-col justify-center">
-                  {/* Timeline Icon */}
-                  <div className="absolute left-px -translate-x-1/2 top-1/2 -translate-y-1/2 h-9 w-9 flex items-center justify-center rounded-full bg-primary ring-8 ring-background z-10">
-                    <span className="font-semibold text-lg text-primary-foreground">{index + 1}</span>
+
+        <div className="relative z-10 p-6 pb-12">
+          <div className="flex justify-center">
+            <div className="w-full max-w-5xl">
+              <div className="flex items-center gap-12">
+                {/* Left Column - Content */}
+                <div className="flex-1 max-w-md">
+                  <h1 className="text-balance text-3xl font-semibold md:text-4xl lg:text-5xl mb-4">
+                    {t('hero.title')}
+                  </h1>
+                  <p className="text-lg text-muted-foreground mb-6">
+                    {t('hero.description')}
+                  </p>
+
+                  {/* Email Invite Input */}
+                  <div className="mb-3">
+                    <div className="relative">
+                      <Input
+                        type="email"
+                        placeholder={t('emailPlaceholder')}
+                        value={inviteEmail}
+                        onChange={handleEmailChange}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSendInvite()}
+                        className={`h-12 pr-28 text-base ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      />
+                      <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                        {inviteEmail.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setInviteEmail('');
+                              setEmailError('');
+                            }}
+                            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <X className="size-4" />
+                          </button>
+                        )}
+                        <Button
+                          onClick={handleSendInvite}
+                          disabled={isSendingInvite}
+                          className="h-9 px-4"
+                        >
+                          {isSendingInvite ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            t('invite')
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    {emailError && (
+                      <p className="text-sm text-red-500 mt-1.5">{emailError}</p>
+                    )}
                   </div>
 
-                  {/* Content */}
-                  <div className="space-y-2">
-                    <h3 className="text-l font-semibold tracking-[-0.01em]">
-                      {title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">{description}</p>
+                  {/* Copy Buttons */}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleCopyReferralLink}
+                      variant="outline"
+                      className="flex-1 h-11 gap-2"
+                    >
+                      {isLinkCopied ? (
+                        <Check className="size-4" />
+                      ) : (
+                        <Link className="size-4" />
+                      )}
+                      <span>{t('copyLink')}</span>
+                    </Button>
+                    <Button
+                      onClick={handleCopyReferralCode}
+                      variant="outline"
+                      className="flex-1 h-11 gap-2"
+                    >
+                      {isCodeCopied ? (
+                        <Check className="size-4" />
+                      ) : (
+                        <Copy className="size-4" />
+                      )}
+                      <span>{t('copyCode')}</span>
+                    </Button>
+                    {hasReferrals && (
+                      <Button
+                        onClick={() => setReferralsDialogOpen(true)}
+                        variant="outline"
+                        className="flex-1 h-11 gap-2"
+                      >
+                        <span>View Referrals</span>
+                        <ChevronRight className="size-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
-              );
-            })}
+
+                {/* Right Column - Animation */}
+                <div className="flex-1 flex justify-center items-center">
+                  {animationData && (
+                    <Lottie
+                      animationData={animationData}
+                      loop
+                      autoplay
+                      className="w-[350px] h-[350px]"
+                      rendererSettings={{
+                        preserveAspectRatio: 'xMidYMid slice',
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Right side - DataGrid */}
-        <div className="w-1/2 flex-shrink-0 px-4">
-          <DataGrid
-            data={mockReferrals}
-            columns={columns}
-            getRowId={(row) => row.id}
-            gridKey="referrals"
-            enableSearch={false}
-            showPagination={false}
-            gridPadding={false}
-          />
+      {/* Bottom Section */}
+      <div className="bg-background border-t p-6 flex-1 min-h-0 flex flex-col overflow-auto">
+        <div className="flex justify-center flex-1 min-h-0">
+          <div className="w-full max-w-5xl flex flex-col min-h-0">
+            <HowItWorks title={t('howItWorks.title')} />
+          </div>
         </div>
       </div>
+
+      {/* Referrals Dialog */}
+      <Dialog open={referralsDialogOpen} onOpenChange={setReferralsDialogOpen}>
+        <DialogContent className="w-[750px] h-[500px] !max-w-none flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{t('yourReferrals')}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col flex-1 min-h-0 mt-4">
+            {/* Credit Stats Cards */}
+            <div className="grid grid-cols-3 gap-4 mb-6 flex-shrink-0">
+              <div className="border rounded-lg p-4 text-center">
+                <p className="text-sm text-muted-foreground">{t('credits.totalEarned')}</p>
+                <p className="text-2xl font-bold mt-1">{formatCurrency(credits.total_earned_cents)}</p>
+              </div>
+              <div className="border rounded-lg p-4 text-center">
+                <p className="text-sm text-muted-foreground">{t('credits.active')}</p>
+                <p className="text-2xl font-bold mt-1">{formatCurrency(credits.active_cents)}</p>
+              </div>
+              <div className="border rounded-lg p-4 text-center">
+                <p className="text-sm text-muted-foreground">{t('credits.used')}</p>
+                <p className="text-2xl font-bold mt-1">{formatCurrency(credits.used_cents)}</p>
+              </div>
+            </div>
+
+            {/* Referrals Grid */}
+            <div className="flex-1 min-h-0 overflow-auto">
+              <DataGrid
+                data={allReferralItems}
+                columns={columns}
+                getRowId={(row) => row.id}
+                gridKey="referrals-dialog"
+                enableSearch={false}
+                showPagination={false}
+                gridPadding={false}
+                emptyMessage={t('noReferrals')}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default ReferAndEarnPage;
-
