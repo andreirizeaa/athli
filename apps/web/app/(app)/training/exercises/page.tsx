@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useTerminology } from '@/hooks/use-terminology';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useFeatureAccess } from '@/lib/permissions/feature-gate';
@@ -85,6 +86,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
 
 const ExercisesPage = () => {
   const t = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { exercises: contextExercises, isLoadingExercises, refreshExercises } = useTrainingData();
@@ -702,13 +704,13 @@ const ExercisesPage = () => {
                     }
                   }}
                   className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label="Assign exercise to client"
+                  aria-label={`Assign exercise to ${terminology.singularLower}`}
                 >
                   <User className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Assign to Client</p>
+                <p>{terminology.assignToSingular}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -1076,7 +1078,7 @@ const ExercisesPage = () => {
 
       {/* Upgrade Dialog */}
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Upgrade to Pro</DialogTitle>
             <DialogDescription>

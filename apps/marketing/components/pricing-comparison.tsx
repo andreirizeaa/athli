@@ -25,7 +25,7 @@ const availability: Record<Tier, FeatureValue[]> = {
         // Advanced Features
         false, false, false,  // AI Workout Builder, Custom Exercises, Custom Sections
         // Client Management
-        false, false, false, false,  // Questionnaires, Check-ins, Habits, Metrics
+        false, false, false, false, false, false,  // Questionnaires, Check-ins, Habits, Metrics, Photo Tracking, Exercise History
         // Storage & Support
         false, false, false, false,  // Files, AI Todo, Broadcast, Priority Support
     ],
@@ -37,7 +37,7 @@ const availability: Record<Tier, FeatureValue[]> = {
         // Advanced Features
         true, true, true,  // AI Workout Builder, Custom Exercises, Custom Sections
         // Client Management
-        true, true, true, true,  // Questionnaires, Check-ins, Habits, Metrics
+        true, true, true, true, true, true,  // Questionnaires, Check-ins, Habits, Metrics, Photo Tracking, Exercise History
         // Storage & Support
         '5GB', false, false, false,  // Files (5GB), AI Todo, Broadcast, Priority Support
     ],
@@ -49,7 +49,7 @@ const availability: Record<Tier, FeatureValue[]> = {
         // Advanced Features
         true, true, true,  // AI Workout Builder, Custom Exercises, Custom Sections
         // Client Management
-        true, true, true, true,  // Questionnaires, Check-ins, Habits, Metrics
+        true, true, true, true, true, true,  // Questionnaires, Check-ins, Habits, Metrics, Photo Tracking, Exercise History
         // Storage & Support
         true, true, true, true,  // Files (Unlimited), AI Todo, Broadcast, Priority Support
     ],

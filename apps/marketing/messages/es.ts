@@ -231,7 +231,7 @@ const messages = {
     popular: 'Más Popular',
     monthly: 'Mensual',
     annual: 'Anual',
-    twoMonthsFree: '2 meses gratis con facturación anual',
+    twoMonthsFree: 'Ahorra 17% con facturación anual',
     month: 'mes',
     year: 'año',
     plan: 'plan',
@@ -268,7 +268,7 @@ const messages = {
     },
     pro: {
       name: 'Pro',
-      priceShort: 'Desde $15/mes',
+      priceShort: 'Desde $20/mes',
       description: 'Todo lo que necesitas para hacer crecer tu negocio de coaching',
       features: [
         'App Móvil de Entrenador (iOS y Android)',
@@ -290,7 +290,7 @@ const messages = {
     },
     max: {
       name: 'Max',
-      priceShort: 'Desde $95/mes',
+      priceShort: 'Desde $99/mes',
       description: 'Para entrenadores establecidos que necesitan capacidad ilimitada',
       features: [
         'App Móvil de Entrenador (iOS y Android)',
@@ -394,7 +394,7 @@ const messages = {
       },
       {
         title: 'Gestión de Clientes',
-        features: ['Cuestionarios', 'Check-ins', 'Seguimiento de Hábitos', 'Seguimiento de Métricas'],
+        features: ['Cuestionarios', 'Check-ins', 'Seguimiento de Hábitos', 'Seguimiento de Métricas', 'Seguimiento de Fotos', 'Historial de Ejercicios'],
       },
       {
         title: 'Almacenamiento y Soporte',
@@ -460,10 +460,22 @@ const messages = {
         highlights: ['Datos centralizados del cliente', 'Actualizaciones de métricas en tiempo real', 'Fotos de progreso e historial'],
       },
       habits: {
-        label: 'Hábitos y Métricas',
+        label: 'Hábitos',
         headline: 'Crea responsabilidad más allá del gimnasio',
-        description: 'Asigna hábitos diarios, registra métricas personalizadas y monitorea el cumplimiento desde cualquier lugar. Ya sea hidratación, sueño, peso corporal o niveles de energía, verás quién es constante y quién necesita un empujón.',
-        highlights: ['Asigna cualquier hábito diario', 'Registra métricas personalizadas', 'Detecta patrones a tiempo'],
+        description: 'Asigna hábitos diarios y monitorea el cumplimiento desde cualquier lugar. Ya sea hidratación, sueño u objetivos de movimiento, verás quién es constante y quién necesita un empujón. Construye cambios de comportamiento duraderos un hábito a la vez.',
+        highlights: ['Asigna cualquier hábito diario', 'Registra rachas y constancia', 'Detecta patrones a tiempo'],
+      },
+      metrics: {
+        label: 'Métricas',
+        headline: 'Registra lo que más importa',
+        description: 'Monitorea métricas personalizadas para cada cliente, desde peso corporal hasta niveles de energía y puntuaciones de recuperación. Observa tendencias a lo largo del tiempo, detecta cambios temprano y toma decisiones basadas en datos que mantienen a los clientes progresando.',
+        highlights: ['Seguimiento de métricas personalizadas', 'Análisis visual de tendencias', 'Comparaciones históricas'],
+      },
+      'progress-photos': {
+        label: 'Fotos de Progreso',
+        headline: 'Observa la transformación desarrollarse',
+        description: 'Revisa las fotos de progreso de los clientes lado a lado y rastrea los cambios visuales a lo largo del tiempo. A veces la báscula no cuenta toda la historia, las fotos de progreso muestran los verdaderos resultados del esfuerzo constante.',
+        highlights: ['Comparaciones lado a lado', 'Línea de tiempo organizada de fotos', 'Seguimiento visual del progreso'],
       },
       'exercise-history': {
         label: 'Historial de Ejercicios',
@@ -511,10 +523,22 @@ const messages = {
         highlights: ['Línea de tiempo completa de rendimiento', 'Gráficos visuales de progresión', 'Récords personales registrados'],
       },
       habits: {
-        label: 'Hábitos y Métricas',
+        label: 'Hábitos',
         headline: 'Pequeñas victorias diarias, cambios duraderos',
-        description: 'Registra los hábitos diarios y las métricas que te asigna tu entrenador y crea rachas que perduran. Ya sea beber agua, registrar tu peso o dormir lo suficiente, la constancia es donde nacen los verdaderos resultados.',
-        highlights: ['Seguimiento de hábitos diarios', 'Registro de métricas personalizadas', 'Motivación basada en rachas'],
+        description: 'Registra los hábitos diarios que te asigna tu entrenador y crea rachas que perduran. Ya sea beber agua, estirar o dormir lo suficiente, la constancia es donde nacen los verdaderos resultados.',
+        highlights: ['Seguimiento de hábitos diarios', 'Crea rachas duraderas', 'Motivación basada en rachas'],
+      },
+      metrics: {
+        label: 'Métricas',
+        headline: 'Registra lo que más importa',
+        description: 'Registra las métricas personalizadas que te asigna tu entrenador, desde peso corporal hasta niveles de energía. Observa tus tendencias a lo largo del tiempo y mantente motivado viendo cómo tus números avanzan en la dirección correcta.',
+        highlights: ['Registro de métricas personalizadas', 'Seguimiento visual de tendencias', 'Comparaciones históricas'],
+      },
+      'progress-photos': {
+        label: 'Fotos de Progreso',
+        headline: 'Observa tu transformación desarrollarse',
+        description: 'Captura y compara fotos de progreso a lo largo del tiempo. A veces la báscula no cuenta toda la historia, las fotos de progreso muestran los verdaderos resultados del esfuerzo constante.',
+        highlights: ['Comparaciones lado a lado', 'Línea de tiempo organizada de fotos', 'Seguimiento visual del progreso'],
       },
       forms: {
         label: 'Formularios',

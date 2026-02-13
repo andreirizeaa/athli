@@ -441,11 +441,6 @@ export async function scheduleSessionMocked(
     // would POST to:
     const endpoint = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
 
-    console.log('--- GOOGLE READY PAYLOAD ---');
-    console.log('token:', googleToken);
-    console.log('endpoint:', endpoint);
-    console.log(JSON.stringify(googlePayload, null, 2));
-
     result.google = {
       wouldSendToEndpoint: endpoint,
       payload: googlePayload,
@@ -471,11 +466,6 @@ export async function scheduleSessionMocked(
     // would POST to:
     const endpoint = 'https://graph.microsoft.com/v1.0/me/events';
 
-    console.log('--- OUTLOOK READY PAYLOAD(S) ---');
-    console.log('token:', outlookToken);
-    console.log('endpoint:', endpoint);
-    console.log(JSON.stringify(outlookPayloads, null, 2));
-
     result.outlook = {
       wouldSendToEndpoint: endpoint,
       payloads: outlookPayloads,
@@ -499,10 +489,4 @@ export const scheduleSession = async (data: ScheduleSessionData): Promise<void> 
   // 2. Load provider tokens from Supabase
   // 3. Make actual fetch() calls to Google/Outlook APIs
   // 4. Store the created event IDs in your database
-
-  console.log('Session scheduling result:', {
-    normalized: result.normalized,
-    googleEventId: result.google?.mockEventId,
-    outlookEventIds: result.outlook?.mockEventIds,
-  });
 };

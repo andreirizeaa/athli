@@ -10,8 +10,9 @@ import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useCoachProfileStore } from '@/stores';
+import { useThemePreference, useCoachProfileStore, useEntitlements } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useTerminology } from '@/hooks/useTerminology';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
@@ -20,15 +21,24 @@ import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dro
 import { getAllMetrics, deleteMetric, duplicateMetric } from '@/services/coach/coach-metric-service';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Dialog } from '@/components/ui/dialog';
+import { UpgradeDialog } from '@/components/permissions/upgrade-dialog';
 
 export const MetricsTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
+
+  // Feature access
+  const { hasFeature } = useEntitlements();
+  const hasMetricsAccess = hasFeature('habits_metrics');
+
+  // Upgrade dialog state
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   // Error dialog state
   const [showErrorDialog, setShowErrorDialog] = useState(false);
@@ -38,9 +48,7 @@ export const MetricsTab = () => {
   const { data: metrics = [], refetch } = useQuery({
     queryKey: ['metrics'],
     queryFn: async () => {
-      console.log('[MetricsTab] Fetching metrics...');
       const data = await getAllMetrics();
-      console.log('[MetricsTab] Received metrics:', data.length, 'items');
       return data;
     },
     enabled: isAuthenticated,
@@ -64,13 +72,6 @@ export const MetricsTab = () => {
       metric.description?.toLowerCase().includes(lowerQuery)
     );
   }, [metrics, searchQuery]);
-
-  console.log('[MetricsTab] Render:', {
-    isAuthenticated,
-    totalMetrics: metrics.length,
-    filteredMetrics: filteredMetrics.length,
-    searchQuery
-  });
 
   // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
@@ -129,9 +130,6 @@ export const MetricsTab = () => {
       return;
     }
 
-    console.log('[MetricsTab] 📝 Opening metric for edit:', JSON.stringify(item, null, 2));
-    console.log('[MetricsTab] 📋 schedule_config:', item.schedule_config);
-
     closeOpenRow();
     router.push({
       pathname: '/modals/library/add-metric-modal',
@@ -149,6 +147,12 @@ export const MetricsTab = () => {
     // If a row is open, just close it and prevent navigation
     if (isRowOpen) {
       closeOpenRow();
+      return;
+    }
+
+    // Feature gate: show upgrade dialog if no access
+    if (!hasMetricsAccess) {
+      setShowUpgradeDialog(true);
       return;
     }
 
@@ -171,7 +175,7 @@ export const MetricsTab = () => {
 
     const dropdownOptions: DropdownMenuOption[] = [
       {
-        label: t('general.assign'),
+        label: terminology.assignToPlural,
         icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
         onPress: () => handleAssign(item),
       },
@@ -264,6 +268,13 @@ export const MetricsTab = () => {
         message={errorMessage}
         showCloseIcon={false}
         buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+
+      <UpgradeDialog
+        visible={showUpgradeDialog}
+        onClose={() => setShowUpgradeDialog(false)}
+        feature={t('library.tabs.metrics')}
+        featureKey="metrics"
       />
     </>
   );

@@ -87,14 +87,14 @@ export function UserMenu({
     const newTheme = overrides.theme || theme || 'system';
     const newLanguage = overrides.language || currentLanguage;
     const newColorPreset = overrides.colorPreset || themeConfig.preset;
-    const currentUnits = preferences?.units || 'metric';
+    const currentTerminology = preferences?.client_terminology || 'athlete';
 
     try {
       await updatePreferences({
         theme: newTheme as 'light' | 'dark' | 'system',
         language: newLanguage,
-        units: currentUnits,
-        color_preset: newColorPreset
+        color_preset: newColorPreset,
+        client_terminology: currentTerminology as 'athlete' | 'client' | 'member'
       });
     } catch (error) {
       console.error('Failed to sync preferences:', error);

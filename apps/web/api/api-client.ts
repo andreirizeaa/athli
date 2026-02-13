@@ -90,7 +90,7 @@ export async function apiFetch<T = any>(
         if (error.response && error.response.data) {
             // If the server returned an error message, throw that
             const serverError = error.response.data;
-            throw new Error(serverError.message || `API Error: ${error.response.status}`);
+            throw new Error(serverError.message || serverError.error || `API Error: ${error.response.status}`);
         }
         throw error;
     }

@@ -155,35 +155,27 @@ export function useLibraryData(isAuthenticated: boolean = false) {
   // Sync to Zustand when data changes
   useEffect(() => {
     if (checkInsQuery.data) {
-      console.log('[useLibraryData] Syncing checkIns to store:', checkInsQuery.data.length, 'items');
       setCheckIns(checkInsQuery.data);
     }
     if (exercisesQuery.data) {
-      console.log('[useLibraryData] Syncing exercises to store:', exercisesQuery.data.length, 'items');
       setExercises(exercisesQuery.data);
     }
     if (habitsQuery.data) {
-      console.log('[useLibraryData] Syncing habits to store:', habitsQuery.data.length, 'items');
       setHabits(habitsQuery.data);
     }
     if (metricsQuery.data) {
-      console.log('[useLibraryData] Syncing metrics to store:', metricsQuery.data.length, 'items');
       setMetrics(metricsQuery.data);
     }
     if (questionnairesQuery.data) {
-      console.log('[useLibraryData] Syncing questionnaires to store:', questionnairesQuery.data.length, 'items');
       setQuestionnaires(questionnairesQuery.data);
     }
     if (sectionsQuery.data) {
-      console.log('[useLibraryData] Syncing sections to store:', sectionsQuery.data.length, 'items');
       setSections(sectionsQuery.data);
     }
     if (workoutsQuery.data) {
-      console.log('[useLibraryData] Syncing workouts to store:', workoutsQuery.data.length, 'items');
       setWorkouts(workoutsQuery.data);
     }
     if (filesQuery.data) {
-      console.log('[useLibraryData] Syncing files to store:', filesQuery.data.length, 'items');
       setFiles(filesQuery.data);
     }
     // Note: Zustand setters are stable and don't need to be in dependencies

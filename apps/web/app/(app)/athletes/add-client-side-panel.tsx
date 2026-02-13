@@ -44,9 +44,11 @@ import { addClient } from '@/api/coach/coach-client-service';
 import { Spinner } from '@/components/ui/spinner';
 import { useState } from 'react';
 import { useCoachOnboardings } from '@/hooks/use-coach-onboardings';
+import { useTerminology } from '@/hooks/use-terminology';
 
 export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelProps) => {
   const t = useTranslations();
+  const terminology = useTerminology();
   const queryClient = useQueryClient();
   const addAthleteSchema = z.object({
     fullName: z.string().min(1, t('athletes.addClient.fullNameRequiredError')),
@@ -111,7 +113,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
     <SidePanel
       open={open}
       onOpenChange={handleOpenChange}
-      title={t('athletes.addClient.title')}
+      title={terminology.addSingular}
       footer={
         <div className="flex w-full justify-end gap-2">
           <Button

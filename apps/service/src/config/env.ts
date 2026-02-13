@@ -30,6 +30,7 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_WEBHOOK_SECRET_ACCOUNT: z.string().optional(),
+  STRIPE_PLATFORM_WEBHOOK_SECRET: z.string().optional(),
   // Swagger docs protection
   SWAGGER_PASSWORD: z.string().optional(),
 });

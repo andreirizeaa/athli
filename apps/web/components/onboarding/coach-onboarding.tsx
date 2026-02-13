@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { AthliLogo } from '@/components/athli-logo';
@@ -15,7 +15,7 @@ import { WebsiteStep } from './steps/website-step';
 import { LinkedinStep } from './steps/linkedin-step';
 import { LogoStep } from './steps/logo-step';
 import { CompleteStep } from './steps/complete-step';
-import { updateCoachCompany, markOnboardingComplete } from '@/api/settings/coach/coach-company-service';
+import { getCoachCompany, updateCoachCompany, markOnboardingComplete } from '@/api/settings/coach/coach-company-service';
 import type { Country } from 'react-phone-number-input';
 
 export type OnboardingData = {
@@ -44,6 +44,33 @@ export function CoachOnboarding() {
     linkedin: '',
     logoUrl: null,
   });
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch existing coach data on mount to pre-populate fields
+  useEffect(() => {
+    const fetchExistingData = async () => {
+      try {
+        const response = await getCoachCompany();
+        if (response?.data) {
+          const existing = response.data;
+          setData({
+            companyName: existing.company_name || '',
+            country: (existing.location as Country) || undefined,
+            specialities: existing.specialities || [],
+            website: existing.website || '',
+            linkedin: existing.linkedin || '',
+            logoUrl: existing.logo_url || null,
+          });
+        }
+      } catch (error) {
+        console.error('[Onboarding] Failed to fetch existing data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchExistingData();
+  }, []);
 
   const updateData = useCallback((updates: Partial<OnboardingData>) => {
     setData(prev => ({ ...prev, ...updates }));

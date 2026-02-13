@@ -1,10 +1,10 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { StyleSheet, Text, View, Share, ActivityIndicator } from 'react-native';
 import { PressableScale } from 'pressto';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Forward } from 'lucide-react-native';
-import SquircleView from 'react-native-fast-squircle';
+
+import { Avatar } from '@/components/ui/avatar';
 
 import { useQuery } from '@tanstack/react-query';
 import { FlashList } from '@shopify/flash-list';
@@ -15,9 +15,10 @@ import { SelectInput } from '@/components/ui/form-inputs';
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { fuzzyMatch } from '@/utils/searchUtils';
-import { useThemePreference, useCoachProfileStore } from '@/stores';
+import { useThemePreference, useCoachProfileStore, useCoachDataStore } from '@/stores';
 import { useTranslations } from '@/stores';
-import { getClients, type Athlete } from '@/services/coach/coach-client-service';
+import { useTerminology } from '@/hooks/useTerminology';
+import { type Athlete } from '@/services/coach/coach-client-service';
 import { IconButton } from '@/components/ui/icon-button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { ScreenWrapper } from '@/components/ui/screen-wrapper';
@@ -48,25 +49,22 @@ const ClientListItem = React.memo(function ClientListItem({
       >
         <View style={styles.rowContent}>
           <View style={styles.avatarContainer}>
-            <SquircleView cornerSmoothing={1} style={styles.avatarCircle}>
-              {client.avatarUrl ? (
-                <Image
-                  source={{ uri: client.avatarUrl }}
-                  style={styles.avatarImage}
-                  contentFit="cover"
-                  contentPosition="center"
-                  cachePolicy="memory-disk"
-                />
-              ) : (
-                <View
-                  style={[
-                    styles.avatarImage,
-                    styles.avatarPlaceholder,
-                    { backgroundColor: themeColors.border },
-                  ]}
-                />
-              )}
-            </SquircleView>
+            <View style={styles.avatarCircle}>
+              <Avatar
+                uri={client.avatarUrl}
+                size={54}
+                borderRadius={27}
+                fallback={
+                  <View
+                    style={[
+                      styles.avatarImage,
+                      styles.avatarPlaceholder,
+                      { backgroundColor: themeColors.border },
+                    ]}
+                  />
+                }
+              />
+            </View>
           </View>
           <View style={styles.clientInfo}>
             <Text
@@ -102,6 +100,7 @@ export default function ClientsScreen() {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const terminology = useTerminology();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSharing, setIsSharing] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
@@ -118,18 +117,9 @@ export default function ClientsScreen() {
     enabled: isAuthenticated,
   });
 
-  // Fetch clients directly with TanStack Query
-  const { data: clients = [], isLoading } = useQuery({
-    queryKey: ['clients'],
-    queryFn: async () => {
-      const data = await getClients();
-      return data;
-    },
-    enabled: isAuthenticated,
-    staleTime: 5 * 60 * 1000, // 5 minutes - cache data to reduce API calls
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-  });
+  // Use clients from the store (loaded by (tabs)/_layout.tsx)
+  const clients = useCoachDataStore((state) => state.clients);
+  const isLoading = useCoachDataStore((state) => state.isLoading);
 
   // Filter clients based on search query
   const filteredClients = useMemo(() => {
@@ -234,58 +224,59 @@ export default function ClientsScreen() {
     })),
   [onboardings]);
 
+  const renderClientItem = useCallback(({ item: client, index }: { item: Athlete; index: number }) => (
+    <ClientListItem
+      client={client}
+      onPress={handleClientPress}
+      formatSubtitle={formatSubtitle}
+      isLastItem={index === filteredClients.length - 1}
+      themeColors={themeColors}
+      t={t}
+    />
+  ), [handleClientPress, formatSubtitle, filteredClients.length, themeColors, t]);
+
+  const renderEmptyComponent = useCallback(() => (
+    <EmptyState message={terminology.noPluralYet} />
+  ), [terminology.noPluralYet]);
+
   return (
-    <ScreenWrapper contentContainerStyle={styles.scrollContent}>
-      <View style={styles.headerSection}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.title, { color: themeColors.text }]}>{t('clients.title')}</Text>
-          <View style={styles.headerButtonContainer}>
-            <IconButton
-              icon={{ sf: 'arrowshape.turn.up.forward', IconComponent: Forward }}
-              onPress={handleShare}
-              size="md"
-              color={themeColors.text}
-              loading={isSharing}
+    <ScreenWrapper contentContainerStyle={styles.scrollViewContent}>
+      <View style={styles.container}>
+        <View style={styles.headerSection}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.title, { color: themeColors.text }]}>{terminology.plural}</Text>
+            <View style={styles.headerButtonContainer}>
+              <IconButton
+                icon={{ sf: 'arrowshape.turn.up.forward', IconComponent: Forward }}
+                onPress={handleShare}
+                size="md"
+                color={themeColors.text}
+                loading={isSharing}
+              />
+            </View>
+          </View>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('clients.searchPlaceholder')}
+          />
+        </View>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={themeColors.primary} />
+          </View>
+        ) : (
+          <View style={styles.clientListContainer}>
+            <FlashList
+              data={filteredClients}
+              renderItem={renderClientItem}
+              keyExtractor={(item) => item.id}
+              ListEmptyComponent={renderEmptyComponent}
+              estimatedItemSize={73}
             />
           </View>
-        </View>
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder={t('clients.searchPlaceholder')}
-        />
+        )}
       </View>
-
-      {/* Loading Overlay */}
-      {isLoading && clients.length === 0 && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={themeColors.primary} />
-        </View>
-      )}
-
-      {/* Client List */}
-      {!(isLoading && clients.length === 0) && (
-        <FlashList
-          data={filteredClients}
-          renderItem={({ item: client, index }) => (
-            <ClientListItem
-              client={client}
-              onPress={handleClientPress}
-              formatSubtitle={formatSubtitle}
-              isLastItem={index === filteredClients.length - 1}
-              themeColors={themeColors}
-              t={t}
-            />
-          )}
-          keyExtractor={(item) => item.id}
-          ListEmptyComponent={
-            <EmptyState
-              message={t('clients.empty')}
-            />
-          }
-          contentContainerStyle={styles.listContainer}
-        />
-      )}
 
       {/* Invite Link Dialog - Step 1: Ask */}
       {inviteDialogStep === 'ask' && (
@@ -344,16 +335,30 @@ export default function ClientsScreen() {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingBottom: 60,
+  scrollViewContent: {
+    paddingBottom: 120,
     paddingTop: 16,
+  },
+  container: {
   },
   headerSection: {
     paddingHorizontal: 16,
     marginBottom: 16,
   },
-  listContainer: {
-    paddingBottom: 16,
+  titleRow: {
+    position: 'relative',
+    marginBottom: 12,
+  },
+  title: {
+    ...typography.h1,
+    textAlign: 'left',
+    paddingRight: 52,
+  },
+  headerButtonContainer: {
+    position: 'absolute',
+    right: 0,
+    top: '50%',
+    transform: [{ translateY: -22 }],
   },
   rowWrapper: {
     width: '100%',
@@ -374,7 +379,7 @@ const styles = StyleSheet.create({
   avatarCircle: {
     width: 54,
     height: 54,
-    borderRadius: 8,
+    borderRadius: 27,
     overflow: 'hidden',
   },
   avatarImage: {
@@ -404,40 +409,12 @@ const styles = StyleSheet.create({
   separator: {
     height: 0.75,
   },
-  title: {
-    ...typography.h1,
-    textAlign: 'left',
-    paddingRight: 52,
+  clientListContainer: {
   },
-  titleRow: {
-    position: 'relative',
-    marginBottom: 12,
-  },
-  headerButtonContainer: {
-    position: 'absolute',
-    right: 0,
-    top: '50%',
-    transform: [{ translateY: -22 }],
-  },
-  centerContainer: {
-    flex: 1,
+  loadingContainer: {
+    minHeight: 400,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
-  },
-  loadingOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    ...typography.p2,
-    marginTop: 12,
-  },
-  errorText: {
-    ...typography.p2,
-    textAlign: 'center',
-    paddingHorizontal: 32,
+    paddingVertical: 60,
   },
 });
-

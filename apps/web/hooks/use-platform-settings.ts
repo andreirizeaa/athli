@@ -13,7 +13,11 @@ export function usePlatformSettings() {
     // --- PREFERENCES ---
     const preferencesQuery = useQuery({
         queryKey: ['coach-preferences', user?.id],
-        queryFn: getCoachPreferences,
+        queryFn: async () => {
+            const res = await getCoachPreferences();
+            // Handle both direct preferences and nested response structures
+            return res?.data?.preferences || res?.preferences || res;
+        },
         enabled: isEnabled,
         staleTime: 5 * 60 * 1000,
     });
@@ -21,9 +25,9 @@ export function usePlatformSettings() {
     const updatePreferencesMutation = useMutation({
         mutationFn: updateCoachPreferences,
         onSuccess: (data) => {
-            // Optimistically update or just allow refetch
-            queryClient.setQueryData(['coach-preferences', user?.id], data);
-            preferencesQuery.refetch();
+            // Extract preferences from response and update cache
+            const preferences = data?.data?.preferences || data?.preferences || data;
+            queryClient.setQueryData(['coach-preferences', user?.id], preferences);
         },
     });
 

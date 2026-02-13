@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
 import { useCoachFlows } from '@/hooks/use-coach-flows';
 import { useCoachChecklist } from '@/hooks/use-coach-checklist';
+import { useTerminology } from '@/hooks/use-terminology';
 
 interface AccordionCardProps {
   number: number;
@@ -229,7 +230,7 @@ const GetStartedPage = () => {
 
   return (
     <div className="relative h-full w-full overflow-auto bg-background p-6">
-      {/* Background Decorative Bubbles - hidden in dark mode for cleaner appearance */}
+      {/* Background Decorative Bubbles - hidden in dark mode */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden dark:hidden">
         <div className="absolute -left-[10%] -top-[10%] h-[500px] w-[500px] rounded-full bg-primary/[0.08] blur-[100px]" />
         <div className="absolute -right-[5%] top-[20%] h-[400px] w-[400px] rounded-full bg-primary/[0.08] blur-[100px]" />

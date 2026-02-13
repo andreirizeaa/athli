@@ -64,7 +64,6 @@ export const getClients = async (): Promise<Athlete[]> => {
       clientFor: clientForDays.toString(),
     };
   });
-  console.log('[coach-client-service] getClients returned:', clients.length, 'clients');
   return clients;
 };
 

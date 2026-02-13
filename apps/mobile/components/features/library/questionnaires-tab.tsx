@@ -10,8 +10,9 @@ import { FlashList } from '@shopify/flash-list';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
-import { useThemePreference, useCoachProfileStore } from '@/stores';
+import { useThemePreference, useCoachProfileStore, useEntitlements } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useTerminology } from '@/hooks/useTerminology';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { useLibraryTab } from '@/stores';
@@ -20,15 +21,24 @@ import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dro
 import { getQuestionnaires, deleteQuestionnaire, duplicateQuestionnaire } from '@/services/coach/coach-questionnaire-service';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Dialog } from '@/components/ui/dialog';
+import { UpgradeDialog } from '@/components/permissions/upgrade-dialog';
 
 export const QuestionnairesTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const terminology = useTerminology();
   const router = useRouter();
   const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
   const isAuthenticated = !!coachProfile;
+
+  // Feature access
+  const { hasFeature } = useEntitlements();
+  const hasQuestionnairesAccess = hasFeature('questionnaires');
+
+  // Upgrade dialog state
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   // Error dialog state
   const [showErrorDialog, setShowErrorDialog] = useState(false);
@@ -38,9 +48,7 @@ export const QuestionnairesTab = () => {
   const { data: questionnaires = [], refetch } = useQuery({
     queryKey: ['questionnaires'],
     queryFn: async () => {
-      console.log('[QuestionnairesTab] Fetching questionnaires...');
       const data = await getQuestionnaires();
-      console.log('[QuestionnairesTab] Received questionnaires:', data.length, 'items');
       return data;
     },
     enabled: isAuthenticated,
@@ -62,13 +70,6 @@ export const QuestionnairesTab = () => {
       questionnaire.name.toLowerCase().includes(lowerQuery)
     );
   }, [questionnaires, searchQuery]);
-
-  console.log('[QuestionnairesTab] Render:', {
-    isAuthenticated,
-    totalQuestionnaires: questionnaires.length,
-    filteredQuestionnaires: filteredQuestionnaires.length,
-    searchQuery
-  });
 
   // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
@@ -146,6 +147,12 @@ export const QuestionnairesTab = () => {
       return;
     }
 
+    // Feature gate: show upgrade dialog if no access
+    if (!hasQuestionnairesAccess) {
+      setShowUpgradeDialog(true);
+      return;
+    }
+
     router.push(`/modals/shared/assign-to-clients-modal?type=questionnaire&itemIds=${item.id}`);
   };
 
@@ -165,7 +172,7 @@ export const QuestionnairesTab = () => {
 
     const dropdownOptions: DropdownMenuOption[] = [
       {
-        label: t('general.assign'),
+        label: terminology.assignToPlural,
         icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
         onPress: () => handleAssign(item),
       },
@@ -261,6 +268,12 @@ export const QuestionnairesTab = () => {
         message={errorMessage}
         showCloseIcon={false}
         buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
+      />
+
+      <UpgradeDialog
+        visible={showUpgradeDialog}
+        onClose={() => setShowUpgradeDialog(false)}
+        feature={t('library.tabs.questionnaires')}
       />
     </>
   );

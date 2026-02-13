@@ -31,6 +31,16 @@ const ADDON_LABELS = {
   payments: 'Payments',
 };
 
+// Features that require Max plan
+const MAX_PLAN_ADDONS = ['ai_assistant'];
+
+function getRequiredPlanLabel(requiredAddon?: string): string {
+  if (requiredAddon && MAX_PLAN_ADDONS.includes(requiredAddon)) {
+    return 'Upgrade to Max';
+  }
+  return 'Upgrade to Pro';
+}
+
 const ADDON_SCREENSHOTS: Record<string, { light: string; dark: string }> = {
   payments: {
     light: '/app-screenshots/packages/light.png',
@@ -44,10 +54,12 @@ export function UpgradePrompt({
   requiredAddon,
   variant = 'card',
   className,
-  ctaText = 'Upgrade Plan',
+  ctaText,
   fullPage = false,
 }: UpgradePromptProps) {
   const router = useRouter();
+  const defaultCtaText = getRequiredPlanLabel(requiredAddon);
+  const buttonText = ctaText || defaultCtaText;
 
   const handleUpgrade = () => {
     router.push('/settings/billing/update');
@@ -90,7 +102,7 @@ export function UpgradePrompt({
         )}
         <Button onClick={handleUpgrade} className="gap-2">
           <Sparkles className="h-4 w-4" />
-          {ctaText}
+          {buttonText}
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
@@ -170,7 +182,7 @@ export function UpgradePrompt({
       )}
       <Button onClick={handleUpgrade} size="sm" className="gap-2">
         <Sparkles className="h-4 w-4" />
-        {ctaText}
+        {buttonText}
       </Button>
     </Card>
   );

@@ -5,7 +5,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableOpacity } from 'pressto';
 import { X, Check, ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
@@ -16,6 +15,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { InputBox, TextAreaInput, SelectInput, SelectionInput } from '@/components/ui/form-inputs';
 import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
+import { Avatar } from '@/components/ui/avatar';
 import { hexToRgba } from '@/utils/colorUtils';
 import { haptics } from '@/utils/haptics';
 import { useCoachOwnTodos } from '@/hooks/useCoachTodo';
@@ -224,19 +224,19 @@ export default function AddTodoModal() {
               </View>
               {selectedClient ? (
                 <View style={styles.clientRow}>
-                  {selectedClient.avatarUrl ? (
-                    <Image
-                      source={{ uri: selectedClient.avatarUrl }}
-                      style={styles.clientAvatar}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <View style={[styles.clientAvatarPlaceholder, { backgroundColor: themeColors.surfaceSecondary }]}>
-                      <Text style={[styles.clientAvatarInitial, { color: themeColors.text }]}>
-                        {selectedClient.name?.charAt(0).toUpperCase() || '?'}
-                      </Text>
-                    </View>
-                  )}
+                  <Avatar
+                    uri={selectedClient.avatarUrl}
+                    size={28}
+                    borderRadius={14}
+                    style={{ marginRight: 12 }}
+                    fallback={
+                      <View style={[styles.clientAvatarPlaceholder, { backgroundColor: themeColors.surfaceSecondary }]}>
+                        <Text style={[styles.clientAvatarInitial, { color: themeColors.text }]}>
+                          {selectedClient.name?.charAt(0).toUpperCase() || '?'}
+                        </Text>
+                      </View>
+                    }
+                  />
                   <Text style={[styles.clientName, { color: themeColors.text }]}>
                     {selectedClient.name}
                   </Text>

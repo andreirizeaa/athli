@@ -12,7 +12,7 @@ import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
 
-import { useColorScheme, useThemePreference, useCoachProfileStore, useCoachCompanyStore, useClientProfileStore, useAuthSessionStore, useAppInitStore, useChatsStore, useAppView, useAppViewStore } from '@/stores';
+import { useColorScheme, useThemePreference, useCoachProfileStore, useCoachCompanyStore, useCoachEntitlementsStore, useCoachPreferencesStore, useClientProfileStore, useAuthSessionStore, useAppInitStore, useChatsStore, useAppView, useAppViewStore } from '@/stores';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useTranslationsStore } from '@/stores/useTranslationsStore';
 import { useUnitsStore } from '@/stores/useUnitsStore';
@@ -34,6 +34,7 @@ import { ErrorBoundary as CustomErrorBoundary } from '@/components/ui/error-boun
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
 import { AppState } from 'react-native';
+import { preloadUpgradeScreenshots } from '@/components/permissions/upgrade-dialog';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -62,7 +63,6 @@ const lightBackground = require('../assets/backgrounds/light.png');
 const prefetchBackgroundImages = async () => {
   try {
     await Asset.loadAsync([darkBackground, lightBackground]);
-    console.log('[RootLayout] Background images preloaded');
   } catch (error) {
     console.warn('[RootLayout] Failed to preload background images:', error);
   }
@@ -84,10 +84,12 @@ export default function RootLayout() {
   // Prefetch background images and hide splash screen when fonts are loaded
   useEffect(() => {
     if (loaded) {
-      // Prefetch backgrounds before showing UI to prevent flash
+      // Prefetch backgrounds and upgrade screenshots before showing UI
       prefetchBackgroundImages().finally(() => {
         SplashScreen.hideAsync();
       });
+      // Preload upgrade dialog screenshots in background
+      preloadUpgradeScreenshots();
     }
   }, [loaded]);
 
@@ -152,6 +154,8 @@ function RootLayoutNav() {
     useBiometricStore.getState().initialize();
     useCoachProfileStore.getState().initialize();
     useCoachCompanyStore.getState().initialize();
+    useCoachEntitlementsStore.getState().initialize();
+    useCoachPreferencesStore.getState().initialize();
     useClientProfileStore.getState().initialize();
 
     // Set appView from cached profiles BEFORE first render to prevent tab flicker
@@ -175,30 +179,18 @@ function RootLayoutNav() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        console.log('[RootLayout] Starting app initialization...');
-
         // STEP 1: Initialize Supabase session BEFORE anything else
         // This ensures session is restored from MMKV storage and ready
         await useAuthSessionStore.getState().initializeSession();
-        console.log('[RootLayout] Session initialized');
 
         // STEP 2: Check if we have profiles in storage (already restored by initialize())
         const coachProfile = useCoachProfileStore.getState().profile;
         const clientProfile = useClientProfileStore.getState().profile;
-        console.log('[RootLayout] Profiles from storage:', {
-          hasCoach: !!coachProfile,
-          hasClient: !!clientProfile
-        });
 
         // STEP 3: Fetch profile from DB if we have a session
         // Always refresh to ensure we have the latest data (e.g., correct avatar URL)
         const session = useAuthSessionStore.getState().session;
         if (session) {
-          if (!coachProfile && !clientProfile) {
-            console.log('[RootLayout] No profile in storage, fetching from database...');
-          } else {
-            console.log('[RootLayout] Profile in storage, refreshing from database...');
-          }
           const authResult = await restoreSession();
           if (authResult && authResult.profile) {
             // Mark that we have a valid session (for distinguishing real sign-out later)
@@ -210,7 +202,6 @@ function RootLayoutNav() {
               setClientProfile(authResult.profile as ClientProfile);
               setAppView('athlete');
             }
-            console.log('[RootLayout] Profile fetched and stored');
           }
         }
 
@@ -223,13 +214,15 @@ function RootLayoutNav() {
             method: 'PATCH',
             body: JSON.stringify({ field: 'coach_app_demo' }),
           }).catch(() => {});
-          console.log('[RootLayout] Loading coach data...');
-          // Load company and chats in parallel
+          // Load company, chats, entitlements, and preferences in parallel
           await Promise.all([
             useCoachCompanyStore.getState().loadCompany(),
             useChatsStore.getState().loadChats(),
+            useCoachEntitlementsStore.getState().loadEntitlements(
+              finalCoachProfile.created_at
+            ),
+            useCoachPreferencesStore.getState().loadPreferences(),
           ]);
-          console.log('[RootLayout] Coach company and chats data loaded');
 
           // STEP 4b: Prefetch messages for top chats in background (don't block app ready)
           // This enables instant navigation to recent conversations
@@ -247,7 +240,6 @@ function RootLayoutNav() {
         // STEP 5: Mark app as ready - tabs can now safely render
         setIsAppReady(true);
         useAppInitStore.getState().setAppReady(true);
-        console.log('[RootLayout] App ready');
       } catch (error) {
         console.error('[RootLayout] Error initializing app:', error);
         // Still mark as ready even on error to prevent infinite splash screen
@@ -261,12 +253,8 @@ function RootLayoutNav() {
 
   // Listen to Supabase auth state changes
   useEffect(() => {
-    console.log('[RootLayout] Setting up auth state listener');
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[RootLayout] Auth state changed:', event);
-
         if (event === 'INITIAL_SESSION') {
           // Session loaded from storage - only update if we have a session
           // Don't clear an existing session (could be a race condition after sign-in)
@@ -288,10 +276,14 @@ function RootLayoutNav() {
                 method: 'PATCH',
                 body: JSON.stringify({ field: 'coach_app_demo' }),
               }).catch(() => {});
-              // Load company data and chats for coach
+              // Load company data, chats, entitlements, and preferences for coach
               await Promise.all([
                 useCoachCompanyStore.getState().loadCompany(),
                 useChatsStore.getState().loadChats(),
+                useCoachEntitlementsStore.getState().loadEntitlements(
+                  (authResult.profile as CoachProfile).created_at
+                ),
+                useCoachPreferencesStore.getState().loadPreferences(),
               ]);
               // Prefetch messages for top chats in background for faster navigation
               useChatsStore.getState().prefetchTopMessages(10).catch((error) => {
@@ -302,23 +294,22 @@ function RootLayoutNav() {
               setAppView('athlete');
             }
             // Navigate to tabs after successful sign-in
-            console.log('[RootLayout] Sign-in complete, navigating to tabs');
             router.replace('/(tabs)');
           }
         } else if (event === 'SIGNED_OUT') {
           // Only process sign-out if we actually had a session (ignore fresh app launch)
           if (!hadSessionRef.current) {
-            console.log('[RootLayout] SIGNED_OUT event on fresh launch - ignoring');
             return;
           }
           // User signed out or session expired - clear everything
-          console.log('[RootLayout] User signed out, clearing state');
           // Unregister push notifications before clearing session (only if we had a session)
           unregisterPushNotifications().catch(console.error);
           hadSessionRef.current = false;
           useAuthSessionStore.getState().clearSession();
           clearCoachProfile();
           useCoachCompanyStore.getState().clearCompany();
+          useCoachEntitlementsStore.getState().clearEntitlements();
+          useCoachPreferencesStore.getState().clearPreferences();
           useChatsStore.getState().clearChats();
           clearClientProfile();
           // Reset data stores
@@ -328,44 +319,36 @@ function RootLayoutNav() {
           router.replace('/welcome');
         } else if (event === 'TOKEN_REFRESHED') {
           // Token was refreshed in background - update session
-          console.log('[RootLayout] Token refreshed');
           useAuthSessionStore.getState().setSession(session);
         }
       }
     );
 
     return () => {
-      console.log('[RootLayout] Cleaning up auth state listener');
       subscription.unsubscribe();
     };
   }, [setCoachProfile, setClientProfile, clearCoachProfile, clearClientProfile, setAppView, router]);
 
   // Listen to app state changes for foreground refresh
   useEffect(() => {
-    console.log('[RootLayout] Setting up app state listener');
-
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
       if (nextAppState === 'active') {
         // Only refresh if there's an existing session
         const currentSession = useAuthSessionStore.getState().session;
         if (!currentSession) {
-          console.log('[RootLayout] App foregrounded, no session to refresh');
           return;
         }
 
-        console.log('[RootLayout] App foregrounded, refreshing session');
         const { data, error } = await supabase.auth.refreshSession();
         if (error) {
           console.error('[RootLayout] Foreground refresh failed:', error);
         } else if (data.session) {
-          console.log('[RootLayout] Session refreshed on foreground');
           useAuthSessionStore.getState().setSession(data.session);
         }
       }
     });
 
     return () => {
-      console.log('[RootLayout] Cleaning up app state listener');
       subscription.remove();
     };
   }, []);
@@ -462,6 +445,9 @@ function RootLayoutNav() {
           <Stack.Screen name="settings/notifications" options={{ headerShown: false }} />
           <Stack.Screen name="settings/notification-status" options={{ headerShown: false }} />
           <Stack.Screen name="settings/feature-requests" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/billing" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/billing-update" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/invoices" options={{ headerShown: false }} />
           <Stack.Screen
             name="settings/feature-request-detail"
             options={{

@@ -501,7 +501,7 @@ const CouponsPage = () => {
 
       {/* Upgrade Dialog */}
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {!hasPaymentsAddon ? 'Payments Add-on Required' : 'Connect Stripe First'}

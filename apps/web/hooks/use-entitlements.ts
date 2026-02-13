@@ -33,6 +33,8 @@ const DEFAULT_ENTITLEMENTS: Omit<CoachEntitlements, 'coach_id'> = {
   has_custom_exercises: false,
   has_questionnaires: false,
   has_habits_metrics: false,
+  has_photo_tracking: false,
+  has_exercise_history: false,
   storage_limit_gb: 0,
   has_broadcast_messaging: false,
   has_ai_todo_list: false,

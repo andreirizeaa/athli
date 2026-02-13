@@ -37,7 +37,6 @@ export const useCoachCompanyStore = create<CoachCompanyStore>((set, get) => ({
       if (savedCompany) {
         const company = JSON.parse(savedCompany) as CoachCompanyInfo;
         set({ company, error: null });
-        console.log('[CoachCompanyStore] Company restored from storage');
       }
     } catch (error) {
       console.error('[CoachCompanyStore] Failed to restore company from storage:', error);

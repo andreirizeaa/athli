@@ -12,6 +12,7 @@ import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
 import { useThemePreference, useCoachProfileStore } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useTerminology } from '@/hooks/useTerminology';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { useLibraryTab } from '@/stores';
 import { useLibraryTabList } from '@/hooks/use-library-tab-list';
@@ -25,6 +26,7 @@ export const WorkoutsTab = () => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const terminology = useTerminology();
   const { registerOpenRow } = useLibraryTab();
   const queryClient = useQueryClient();
   const coachProfile = useCoachProfileStore((state) => state.profile);
@@ -38,9 +40,7 @@ export const WorkoutsTab = () => {
   const { data: workouts = [], refetch } = useQuery({
     queryKey: ['workouts'],
     queryFn: async () => {
-      console.log('[WorkoutsTab] Fetching workouts...');
       const data = await getWorkouts();
-      console.log('[WorkoutsTab] Received workouts:', data.length, 'items');
       return data;
     },
     enabled: isAuthenticated,
@@ -64,13 +64,6 @@ export const WorkoutsTab = () => {
       workout.difficulty?.toLowerCase().includes(lowerQuery)
     );
   }, [workouts, searchQuery]);
-
-  console.log('[WorkoutsTab] Render:', {
-    isAuthenticated,
-    totalWorkouts: workouts.length,
-    filteredWorkouts: filteredWorkouts.length,
-    searchQuery
-  });
 
   // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
@@ -118,7 +111,6 @@ export const WorkoutsTab = () => {
       return;
     }
 
-    console.log('[WorkoutsTab] Opening workout - RAW DATA:', JSON.stringify(workout, null, 2));
     closeOpenRow();
     router.push({
       pathname: '/library/workout/[id]',
@@ -165,7 +157,7 @@ export const WorkoutsTab = () => {
 
           const dropdownOptions: DropdownMenuOption[] = [
             {
-              label: t('general.assign'),
+              label: terminology.assignToPlural,
               icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
               onPress: () => handleAssign(workout),
             },

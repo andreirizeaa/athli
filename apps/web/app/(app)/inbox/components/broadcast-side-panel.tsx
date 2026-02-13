@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
+import { useTerminology } from '@/hooks/use-terminology';
 import {
   X,
   Image as ImageIcon,
@@ -42,6 +43,7 @@ type BroadcastStep = 1 | 2 | 3 | 4;
 
 export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelProps) => {
   const t = useTranslations();
+  const terminology = useTerminology();
   const { hasAccess: hasBroadcastAccess } = useFeatureAccess('broadcast_messaging');
   const { clients, isLoading: isLoadingClients } = useCoachClients();
   const [step, setStep] = useState<BroadcastStep>(1);
@@ -419,7 +421,7 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
       <SidePanel open={open} onOpenChange={onOpenChange} title={t('messages.broadcastPanel.title')}>
         <UpgradePrompt
           feature="Broadcast Messaging"
-          description="Send messages to multiple clients at once. Available on the Max plan."
+          description={terminology.broadcastDescription}
           variant="card"
           className="mt-8"
         />
@@ -633,7 +635,7 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
                   ]}
                   getRowId={(row) => row.id}
                   gridKey="broadcast-select-clients"
-                  searchPlaceholder={t('messages.broadcastPanel.searchClients')}
+                  searchPlaceholder={terminology.searchPlural}
                   enableSearch={true}
                   enableEditColumns={false}
                   enableExport={false}

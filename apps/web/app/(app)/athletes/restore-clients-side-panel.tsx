@@ -18,12 +18,15 @@ interface RestoreClientsSidePanelProps {
     onClientRestored?: () => void;
 }
 
+import { useTerminology } from '@/hooks/use-terminology';
+
 export const RestoreClientsSidePanel = ({
     open,
     onOpenChange,
     onClientRestored,
 }: RestoreClientsSidePanelProps) => {
     const t = useTranslations();
+    const terminology = useTerminology();
     const queryClient = useQueryClient();
     const [archivedClients, setArchivedClients] = useState<Athlete[]>([]);
     const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
@@ -140,7 +143,7 @@ export const RestoreClientsSidePanel = ({
         <SidePanel
             open={open}
             onOpenChange={handleOpenChange}
-            title={t('athletes.restorePanel.title')}
+            title={terminology.restoreArchived}
             footer={
                 <div className="flex w-full justify-end gap-2">
                     <Button

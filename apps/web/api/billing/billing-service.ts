@@ -1,9 +1,17 @@
 import { apiFetch } from '../api-client';
 
+// Re-export shared types for convenience
+export type {
+  PlanType,
+  PlatformSubscriptionStatus,
+  CoachEntitlements,
+} from '@athli/shared-types/entitlements-schema';
+
+// Import for internal use
+import type { PlanType, PlatformSubscriptionStatus, CoachEntitlements } from '@athli/shared-types/entitlements-schema';
+
 // ─── Types ────────────────────────────────────────────────────
 
-export type PlanType = 'starter' | 'pro' | 'max';
-export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'cancelled' | 'paused' | 'unpaid';
 export type AddonType = 'automations' | 'ai_assistant' | 'payments';
 export type BillingInterval = 'month' | 'year';
 
@@ -17,7 +25,7 @@ export interface PlatformSubscription {
   billing_interval: BillingInterval | null;
   current_price_cents: number;
   currency: string;
-  status: SubscriptionStatus;
+  status: PlatformSubscriptionStatus;
   current_period_start: string | null;
   current_period_end: string | null;
   trial_ends_at: string | null;
@@ -38,29 +46,6 @@ export interface PlatformAddon {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-}
-
-export interface CoachEntitlements {
-  coach_id: string;
-  plan_type: PlanType;
-  client_limit: number;
-  // Plan features
-  has_ai_workout_builder: boolean;
-  has_custom_exercises: boolean;
-  has_questionnaires: boolean;
-  has_habits_metrics: boolean;
-  storage_limit_gb: number; // -1 = unlimited
-  has_broadcast_messaging: boolean;
-  has_ai_todo_list: boolean;
-  has_priority_support: boolean;
-  // Addon features
-  has_automations: boolean;
-  has_ai_assistant: boolean;
-  has_payments: boolean;
-  // Status
-  subscription_status: SubscriptionStatus;
-  is_trial: boolean;
-  trial_ends_at: string | null;
 }
 
 export interface BillingActivity {
@@ -181,7 +166,7 @@ export async function reactivateSubscription(): Promise<{ success: boolean }> {
 /**
  * Check if subscription is active (can use features)
  */
-export function isSubscriptionActive(status: SubscriptionStatus): boolean {
+export function isSubscriptionActive(status: PlatformSubscriptionStatus): boolean {
   return ['active', 'trialing'].includes(status);
 }
 
@@ -253,6 +238,85 @@ export function getAddonDisplayName(addon: AddonType): string {
     payments: 'Payments',
   };
   return names[addon];
+}
+
+// ─── Referrals ───────────────────────────────────────────────
+
+export type ReferralStatus = 'trial_started' | 'trial_ended' | 'converted' | 'credit_received';
+
+export interface Referral {
+  id: string;
+  coach_name: string;
+  profile_picture_url: string | null;
+  status: ReferralStatus;
+  credit_earned_cents: number;
+  trial_started_at?: string;
+  trial_ended_at?: string | null;
+  converted_at?: string | null;
+  created_at: string;
+}
+
+export interface ReferredBy {
+  id: string;
+  coach_name: string;
+  profile_picture_url: string | null;
+  status: 'credit_received';
+  credit_earned_cents: number;
+  converted_at: string | null;
+  created_at: string;
+}
+
+export interface ReferralCredits {
+  total_earned_cents: number;
+  active_cents: number;
+  used_cents: number;
+}
+
+export interface ReferralsResponse {
+  referrals: Referral[];
+  referred_by: ReferredBy | null;
+  credits: ReferralCredits;
+}
+
+/**
+ * Get referrals made by this coach and credit stats
+ */
+export async function getReferrals(): Promise<ReferralsResponse> {
+  return apiFetch('/billing/referrals');
+}
+
+/**
+ * Send a referral invite email to a friend
+ */
+export async function sendReferralInvite(email: string): Promise<{ success: boolean }> {
+  return apiFetch('/billing/referral-invite', {
+    method: 'POST',
+    body: { email },
+  });
+}
+
+/**
+ * Apply a referral code to the current coach's account
+ * This links them as being referred by the coach who owns the code
+ */
+export async function applyReferralCode(code: string): Promise<{ success: boolean; referrerName?: string; error?: string }> {
+  return apiFetch('/billing/apply-referral', {
+    method: 'POST',
+    body: { code },
+  });
+}
+
+/**
+ * Lookup referral code info (public - no auth required)
+ * Used on the referral landing page to show who invited the user
+ */
+export interface ReferrerInfo {
+  name: string;
+  profilePictureUrl: string | null;
+}
+
+export async function lookupReferralCode(code: string): Promise<ReferrerInfo> {
+  return apiFetch(`/billing/referral-lookup/${encodeURIComponent(code)}`);
 }
 
 // ─── AI Assistant Usage ──────────────────────────────────────

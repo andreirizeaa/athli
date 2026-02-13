@@ -48,7 +48,6 @@ export const useClientProfileStore = create<ClientProfileStore>((set, get) => ({
       if (savedProfile) {
         const profile = JSON.parse(savedProfile) as ClientProfile;
         set({ profile, error: null });
-        console.log('[ClientProfileStore] Profile restored from storage');
         // Load packages in background after restoring profile
         get().loadPackages();
       }
@@ -96,7 +95,6 @@ export const useClientProfileStore = create<ClientProfileStore>((set, get) => ({
     try {
       const packages = await getMyPackages();
       set({ packages, isLoadingPackages: false });
-      console.log('[ClientProfileStore] Packages loaded:', packages.length);
     } catch (error: any) {
       console.error('Error loading client packages:', error);
       set({ isLoadingPackages: false });

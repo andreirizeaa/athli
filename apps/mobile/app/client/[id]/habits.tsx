@@ -2,7 +2,7 @@ import React, { useRef, useCallback, useState, useMemo, useEffect } from 'react'
 import { StyleSheet, Text, View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Plus, ClipboardCheck, CheckCircle, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, Plus, ClipboardCheck, CheckCircle, ChevronRight, LayoutGrid } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 import SquircleView from 'react-native-fast-squircle';
 
@@ -125,6 +125,15 @@ export default function ClientHabitsScreen() {
     router.push(`/client/${id}/habit-detail?habitId=${habitId}` as any);
   }, [closeOpenRow, router, id]);
 
+  const handleViewAllPress = useCallback(() => {
+    router.push(`/client/${id}/all-habits` as any);
+  }, [router, id]);
+
+  // Check if there are habits with data
+  const hasHabitsWithData = useMemo(() => {
+    return habits.some((h) => h.logs && h.logs.length > 0);
+  }, [habits]);
+
   const handleDeleteHabit = async (habit: typeof habits[0]) => {
     if (!coachId) return;
     await deleteClientHabits({
@@ -190,6 +199,37 @@ export default function ClientHabitsScreen() {
           ) : (
             /* Habits list */
             <View>
+              {/* All Habits option */}
+              {hasHabitsWithData && !searchQuery.trim() && (
+                <>
+                  <PressableScale onPress={handleViewAllPress}>
+                    <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+                      <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                        <PlatformIcon
+                          sf="square.grid.2x2.fill"
+                          IconComponent={LayoutGrid}
+                          size={24}
+                          color={themeColors.text}
+                        />
+                      </SquircleView>
+                      <View style={styles.textContentCentered}>
+                        <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
+                          {t('clientDetail.sections.allHabits')}
+                        </Text>
+                      </View>
+                      <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+                    </View>
+                  </PressableScale>
+                  <View style={styles.separatorContainer}>
+                    <View
+                      style={[
+                        styles.separator,
+                        { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                      ]}
+                    />
+                  </View>
+                </>
+              )}
               {filteredHabits.map((habit, index) => {
                 const isLastItem = index === filteredHabits.length - 1;
                 return (
@@ -369,6 +409,11 @@ const styles = StyleSheet.create({
   textContent: {
     flex: 1,
     marginRight: 8,
+  },
+  textContentCentered: {
+    flex: 1,
+    marginRight: 8,
+    justifyContent: 'center',
   },
   name: {
     ...typography.p1,

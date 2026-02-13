@@ -6,7 +6,6 @@ import { X } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FlashList } from '@shopify/flash-list';
 import { PressableOpacity } from 'pressto';
-import { Image } from 'expo-image';
 import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
@@ -15,6 +14,7 @@ import { useTranslations } from '@/stores';
 import { useModalCallbacks } from '@/stores';
 import { SearchBar } from '@/components/ui/search-bar';
 import { Separator } from '@/components/ui/separator';
+import { Avatar } from '@/components/ui/avatar';
 import { getClients, type Client } from '@/services/client-service';
 import { IconButton } from '@/components/ui/icon-button';
 import { hexToRgba } from '@/utils/colorUtils';
@@ -83,23 +83,20 @@ export default function SearchClientModal() {
       >
         <View style={styles.avatarContainer}>
           <SquircleView cornerSmoothing={1} style={styles.avatarCircle}>
-            {item.avatarUrl ? (
-              <Image
-                source={{ uri: item.avatarUrl }}
-                style={styles.avatarImage}
-                contentFit="cover"
-                contentPosition="center"
-                cachePolicy="memory-disk"
-              />
-            ) : (
-              <View
-                style={[
-                  styles.avatarImage,
-                  styles.avatarPlaceholder,
-                  { backgroundColor: themeColors.border },
-                ]}
-              />
-            )}
+            <Avatar
+              uri={item.avatarUrl}
+              size={48}
+              borderRadius={8}
+              fallback={
+                <View
+                  style={[
+                    styles.avatarImage,
+                    styles.avatarPlaceholder,
+                    { backgroundColor: themeColors.border },
+                  ]}
+                />
+              }
+            />
           </SquircleView>
         </View>
         <View style={styles.clientInfo}>

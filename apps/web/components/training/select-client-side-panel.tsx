@@ -8,6 +8,7 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { SidePanel } from '@/components/app/side-panel';
 import { Spinner } from '@/components/ui/spinner';
 import { useCoachClients } from '@/hooks/use-coach-clients';
+import { useTerminology } from '@/hooks/use-terminology';
 import { Athlete } from '@/api/coach/coach-client-service';
 import { cn } from '@/lib/general/utils';
 
@@ -24,10 +25,12 @@ interface SelectClientSidePanelProps {
 export const SelectClientSidePanel = ({
     open,
     onOpenChange,
-    title = 'Select Client',
+    title,
 }: SelectClientSidePanelProps) => {
     const router = useRouter();
     const { clients, isLoading } = useCoachClients();
+    const terminology = useTerminology();
+    const panelTitle = title || terminology.selectSingular;
 
     const handleClientClick = (client: Athlete) => {
         onOpenChange(false);
@@ -47,7 +50,7 @@ export const SelectClientSidePanel = ({
     const columns: ColumnDefinition<Athlete>[] = [
         {
             id: 'name',
-            label: 'Athlete',
+            label: terminology.singular,
             icon: <UserPlus className="size-3" />,
             width: { class: 'w-full', pixel: '100%' },
             getSortValue: (row) => row.name.toLowerCase(),
@@ -75,7 +78,7 @@ export const SelectClientSidePanel = ({
         <SidePanel
             open={open}
             onOpenChange={onOpenChange}
-            title={title}
+            title={panelTitle}
         >
             <div className="flex flex-col gap-2 flex-1 min-h-0">
                 <div className="flex-1 min-h-0 overflow-hidden [&_.border-t]:border-t-0 pb-0.5">
@@ -89,14 +92,14 @@ export const SelectClientSidePanel = ({
                             columns={columns}
                             getRowId={(row) => row.id}
                             gridKey="select-client-for-training"
-                            searchPlaceholder="Search athletes..."
+                            searchPlaceholder={terminology.searchPlural}
                             enableSearch={true}
                             enableEditColumns={false}
                             enableExport={false}
                             enableRowSelection={false}
                             onRowClick={handleClientClick}
                             onRowKeyDown={handleRowKeyDown}
-                            emptyMessage="No athletes found."
+                            emptyMessage={terminology.noPluralFound}
                             rowHeight="54px"
                             compactMode={true}
                             showPagination={false}

@@ -17,7 +17,7 @@ import Link from 'next/link';
 // Forms are now split into check-ins and questionnaires services
 import { type Habit } from '@/api/coach/coach-habit-service';
 import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
-import { Search, X, ChevronRight, UserPlus, CalendarX, Activity, CheckCircle, MessageSquare, FileText, ClipboardCheck, FilePlus, Sprout, ArrowLeft, Clock, RotateCw, BarChart3, Loader2, UserX } from 'lucide-react';
+import { Search, X, ChevronRight, UserPlus, CalendarX, Activity, CheckCircle, CheckCircle2, MessageSquare, FileText, ClipboardCheck, FilePlus, Sprout, ArrowLeft, Clock, RotateCw, BarChart3, Loader2, UserX } from 'lucide-react';
 
 const CHECKABLE_TRIGGERS = ['missed-check-in', 'missed-habit-log', 'missed-metric-log'];
 const CHECK_LABELS: Record<string, string> = {
@@ -41,6 +41,11 @@ export type ActionOption = {
 };
 
 export const TRIGGER_OPTIONS: TriggerOption[] = [
+  {
+    id: 'checkin-complete',
+    name: 'Check-in completed',
+    icon: CheckCircle2,
+  },
   {
     id: 'missed-workout',
     name: 'Missed workout',

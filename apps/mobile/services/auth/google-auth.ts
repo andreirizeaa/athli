@@ -21,19 +21,14 @@ export interface GoogleAuthResult {
  */
 export async function signInWithGoogle(): Promise<GoogleAuthResult> {
   try {
-    console.log('🔵 [Google Auth] Starting Google Sign-In...');
-
     // Check if device supports Google Play Services (Android only)
     await GoogleSignin.hasPlayServices();
-    console.log('🔵 [Google Auth] Play Services check passed');
 
     // Sign in with Google using native UI
     const userInfo = await GoogleSignin.signIn();
-    console.log('🔵 [Google Auth] Google Sign-In successful, user:', userInfo.data?.user?.email);
 
     // Check if user cancelled (signIn may return undefined data on cancel)
     if (!userInfo.data) {
-      console.log('🟡 [Google Auth] User cancelled sign-in (no data)');
       return {
         userId: '',
         error: 'Google Sign-In was cancelled',
@@ -41,11 +36,8 @@ export async function signInWithGoogle(): Promise<GoogleAuthResult> {
     }
 
     if (!userInfo.data.idToken) {
-      console.log('🔴 [Google Auth] No ID token received from Google');
       throw new Error('No ID token received from Google');
     }
-
-    console.log('🔵 [Google Auth] ID token received, authenticating with Supabase...');
 
     // Sign in to Supabase with the Google ID token
     const { data, error } = await supabase.auth.signInWithIdToken({
@@ -54,16 +46,12 @@ export async function signInWithGoogle(): Promise<GoogleAuthResult> {
     });
 
     if (error) {
-      console.log('🔴 [Google Auth] Supabase auth error:', error);
       throw error;
     }
 
     if (!data.user) {
-      console.log('🔴 [Google Auth] No user returned from Supabase');
       throw new Error('No user returned from Google sign-in');
     }
-
-    console.log('🟢 [Google Auth] Authentication successful! User ID:', data.user.id);
 
     // Set timezone in user metadata (not available during OAuth token exchange)
     await supabase.auth.updateUser({
@@ -74,11 +62,8 @@ export async function signInWithGoogle(): Promise<GoogleAuthResult> {
       userId: data.user.id,
     };
   } catch (error: any) {
-    console.log('🔴 [Google Auth] Error:', error);
-
     // Handle specific error cases
     if (error.code === 'SIGN_IN_CANCELLED') {
-      console.log('🟡 [Google Auth] User cancelled sign-in');
       return {
         userId: '',
         error: 'Google Sign-In was cancelled',
@@ -86,7 +71,6 @@ export async function signInWithGoogle(): Promise<GoogleAuthResult> {
     }
 
     if (error.code === 'IN_PROGRESS') {
-      console.log('🟡 [Google Auth] Sign-in already in progress');
       return {
         userId: '',
         error: 'Google Sign-In is already in progress',
@@ -94,7 +78,6 @@ export async function signInWithGoogle(): Promise<GoogleAuthResult> {
     }
 
     if (error.code === 'PLAY_SERVICES_NOT_AVAILABLE') {
-      console.log('🟡 [Google Auth] Play Services not available');
       return {
         userId: '',
         error: 'Google Play Services is not available',

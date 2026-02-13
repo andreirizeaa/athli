@@ -30,6 +30,7 @@ export async function syncPackageToStripe(pkg: {
   free_trial_days: number;
   features?: string[];
   image_url?: string | null;
+  is_active?: boolean;
 }): Promise<{ stripe_product_id: string; stripe_price_id: string } | null> {
   try {
     const stripeAccountId = await getCoachStripeAccountId(pkg.coach_id);
@@ -38,12 +39,15 @@ export async function syncPackageToStripe(pkg: {
     const stripe = getStripeClient();
     const opts = { stripeAccount: stripeAccountId };
 
+    // Create product with active status matching package is_active
+    // Defaults to true if not specified (backwards compatible)
     const product = await stripe.products.create({
       name: pkg.name,
       description: pkg.description || undefined,
       metadata: { athli_package_id: pkg.id },
       marketing_features: (pkg.features || []).map(name => ({ name })),
       images: pkg.image_url ? [pkg.image_url] : undefined,
+      active: pkg.is_active !== false, // Active unless explicitly archived
     }, opts);
 
     const priceData: any = {

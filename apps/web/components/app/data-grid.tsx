@@ -186,6 +186,8 @@ export type DataGridProps<T = any> = {
   gridPadding?: boolean;
   compactPagination?: boolean;
   filterBarActions?: React.ReactNode;
+  /** Content rendered before the filters (right side of toolbar, left of filters) */
+  filterBarPrefix?: React.ReactNode;
   /** Content rendered right next to the search bar (left side of toolbar) */
   searchBarExtra?: React.ReactNode;
   showLastColumnDivider?: boolean;
@@ -388,6 +390,7 @@ export function DataGrid<T extends Record<string, any>>({
   gridPadding = false,
   compactPagination = false,
   filterBarActions,
+  filterBarPrefix,
   searchBarExtra,
   showLastColumnDivider = false,
   enableRowReordering = false,
@@ -1143,6 +1146,7 @@ export function DataGrid<T extends Record<string, any>>({
               {searchBarExtra}
             </div>
             <div className="flex items-center gap-2 flex-1 justify-end">
+              {filterBarPrefix}
               {filters.map((filter) => {
                 const filterValue = filterValues[filter.id];
                 const filterValueStr = Array.isArray(filterValue)
