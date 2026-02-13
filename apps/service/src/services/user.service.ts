@@ -775,7 +775,9 @@ class UserService {
       .maybeSingle();
 
     if (coachProfile) {
-      // IMPORTANT: Cancel any Stripe subscription FIRST before deleting account
+      const stripe = getStripeClient();
+
+      // IMPORTANT: Cancel coach's platform subscription FIRST
       // This ensures no future charges occur even if subscription was set to cancel at period end
       try {
         const { data: subscription } = await supabase
@@ -785,16 +787,97 @@ class UserService {
           .maybeSingle();
 
         if (subscription?.stripe_subscription_id) {
-          const stripe = getStripeClient();
-          // Cancel immediately - don't wait for period end since account is being deleted
           await stripe.subscriptions.cancel(subscription.stripe_subscription_id, {
-            prorate: false, // Don't issue prorated refund - they chose to delete early
+            prorate: false,
           });
-          console.log(`[AccountDeletion] Cancelled Stripe subscription ${subscription.stripe_subscription_id} for coach ${userId}`);
+          console.log(`[AccountDeletion] Cancelled platform subscription ${subscription.stripe_subscription_id} for coach ${userId}`);
         }
       } catch (stripeError: any) {
-        // Log but don't fail - subscription may already be cancelled or not exist
-        console.error(`[AccountDeletion] Error cancelling Stripe subscription for coach ${userId}:`, stripeError.message);
+        console.error(`[AccountDeletion] Error cancelling platform subscription for coach ${userId}:`, stripeError.message);
+      }
+
+      // IMPORTANT: Cancel ALL client subscriptions (payments from clients to this coach)
+      // This ensures clients are not charged for a coach that no longer exists
+      try {
+        const { data: stripeAccount } = await supabase
+          .from('coach_stripe_accounts')
+          .select('stripe_account_id')
+          .eq('coach_id', userId)
+          .maybeSingle();
+
+        if (stripeAccount?.stripe_account_id) {
+          const { data: clientSubscriptions } = await supabase
+            .from('client_subscriptions')
+            .select('stripe_subscription_id')
+            .eq('coach_id', userId)
+            .in('status', ['active', 'trialing', 'past_due']);
+
+          if (clientSubscriptions && clientSubscriptions.length > 0) {
+            for (const sub of clientSubscriptions) {
+              try {
+                await stripe.subscriptions.cancel(sub.stripe_subscription_id, {
+                  prorate: false,
+                }, { stripeAccount: stripeAccount.stripe_account_id });
+                console.log(`[AccountDeletion] Cancelled client subscription ${sub.stripe_subscription_id} for coach ${userId}`);
+              } catch (subErr: any) {
+                console.error(`[AccountDeletion] Error cancelling client subscription ${sub.stripe_subscription_id}:`, subErr.message);
+              }
+            }
+          }
+        }
+      } catch (clientSubError: any) {
+        console.error(`[AccountDeletion] Error cancelling client subscriptions for coach ${userId}:`, clientSubError.message);
+      }
+
+      // Update referral status to 'trial_cancelled' if this coach was referred
+      // and is still in trial (hasn't converted to paid)
+      // Also create an event in coach_referral_events for the activity timeline
+      try {
+        // First, get the referral record with the coach's stored info
+        const { data: referral } = await supabase
+          .from('coach_referrals')
+          .select('id, referrer_coach_id, referred_coach_name, referred_coach_profile_picture_url')
+          .eq('referred_coach_id', userId)
+          .eq('status', 'trial_started')
+          .maybeSingle();
+
+        if (referral) {
+          const now = new Date().toISOString();
+
+          // Update the referral status
+          const { error: referralError } = await supabase
+            .from('coach_referrals')
+            .update({
+              status: 'trial_cancelled',
+              trial_cancelled_at: now,
+            })
+            .eq('id', referral.id);
+
+          if (!referralError) {
+            console.log(`[AccountDeletion] Updated referral status to trial_cancelled for coach ${userId}`);
+
+            // Create the trial_cancelled event for the activity timeline
+            const { error: eventError } = await supabase
+              .from('coach_referral_events')
+              .insert({
+                referral_id: referral.id,
+                referrer_coach_id: referral.referrer_coach_id,
+                event_type: 'trial_cancelled',
+                referred_coach_name: referral.referred_coach_name || 'Unknown',
+                referred_coach_profile_picture_url: referral.referred_coach_profile_picture_url,
+                created_at: now,
+              });
+
+            if (eventError) {
+              console.error(`[AccountDeletion] Error creating trial_cancelled event:`, eventError.message);
+            } else {
+              console.log(`[AccountDeletion] Created trial_cancelled event for referral ${referral.id}`);
+            }
+          }
+        }
+      } catch (referralError: any) {
+        // Non-critical - log but don't fail
+        console.error(`[AccountDeletion] Error updating referral status for coach ${userId}:`, referralError.message);
       }
 
       // Delete coach_profiles - triggers handle storage and cascade cleanup

@@ -60,6 +60,11 @@ const LibraryLayoutContent = ({ children }: LibraryLayoutProps) => {
     { id: 'metrics', href: '/library/metrics', labelKey: 'sidebar.links.metrics' },
     { id: 'habits', href: '/library/habits', labelKey: 'sidebar.links.habits' },
     { id: 'files', href: '/library/files', labelKey: 'sidebar.links.files' },
+    // Nutrition section
+    { id: 'nutrition', href: '/library/nutrition/recipes', labelKey: 'sidebar.links.nutrition' },
+    { id: 'recipes', href: '/library/nutrition/recipes', labelKey: 'nutrition.tabs.recipes', indent: true },
+    { id: 'recipeBooks', href: '/library/nutrition/recipe-books', labelKey: 'nutrition.tabs.recipeBooks', indent: true },
+    { id: 'ingredients', href: '/library/nutrition/ingredients', labelKey: 'nutrition.tabs.ingredients', indent: true },
   ];
 
   // Check if a path is active
@@ -67,8 +72,8 @@ const LibraryLayoutContent = ({ children }: LibraryLayoutProps) => {
     return pathname === href || pathname.startsWith(href + '/');
   };
 
-  // Section headers (Training, Forms) shouldn't be highlighted as links
-  const sectionHeaders = ['training', 'forms'];
+  // Section headers (Training, Nutrition, Forms) shouldn't be highlighted as links
+  const sectionHeaders = ['training', 'nutrition', 'forms'];
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -89,41 +94,86 @@ const LibraryLayoutContent = ({ children }: LibraryLayoutProps) => {
             </div>
 
               <div className="flex flex-col gap-0.5 px-3">
-                {navItems.map((item) => {
-                  const isActive = isPathActive(item.href);
-                  const isSectionHeader = sectionHeaders.includes(item.id);
+                {(() => {
+                  const elements: React.ReactNode[] = [];
+                  let i = 0;
 
-                  // Section headers are not clickable
-                  if (isSectionHeader) {
-                    return (
-                      <div
-                        key={item.id}
-                        className="text-left rounded-md py-2 h-9 text-sm font-semibold text-foreground/70 mt-2 first:mt-0"
-                      >
-                        {t(item.labelKey)}
-                      </div>
-                    );
+                  while (i < navItems.length) {
+                    const item = navItems[i];
+                    const isSectionHeader = sectionHeaders.includes(item.id);
+
+                    if (isSectionHeader) {
+                      // Render section header
+                      elements.push(
+                        <div
+                          key={item.id}
+                          className="text-left rounded-md p-2 h-9 text-sm font-medium text-foreground"
+                        >
+                          {t(item.labelKey)}
+                        </div>
+                      );
+                      i++;
+
+                      // Collect all indented items following this header
+                      const indentedItems: NavItem[] = [];
+                      while (i < navItems.length && navItems[i].indent) {
+                        indentedItems.push(navItems[i]);
+                        i++;
+                      }
+
+                      // Render indented items with left border
+                      if (indentedItems.length > 0) {
+                        elements.push(
+                          <div key={`${item.id}-group`} className="ml-2.5 border-l border-border pl-1.5">
+                            {indentedItems.map((indentedItem) => {
+                              const isActive = isPathActive(indentedItem.href);
+                              return (
+                                <Link
+                                  key={indentedItem.id}
+                                  href={indentedItem.href}
+                                  className={cn(
+                                    'text-left rounded-md p-2 h-9 text-sm transition-colors font-medium block',
+                                    'hover:bg-accent hover:text-accent-foreground',
+                                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                    isActive && 'bg-accent text-accent-foreground',
+                                    !isActive && 'text-foreground'
+                                  )}
+                                  aria-label={t(indentedItem.labelKey)}
+                                  aria-current={isActive ? 'page' : undefined}
+                                >
+                                  {t(indentedItem.labelKey)}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+                    } else {
+                      // Regular top-level item
+                      const isActive = isPathActive(item.href);
+                      elements.push(
+                        <Link
+                          key={item.id}
+                          href={item.href}
+                          className={cn(
+                            'text-left rounded-md p-2 h-9 text-sm transition-colors font-medium',
+                            'hover:bg-accent hover:text-accent-foreground',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                            isActive && 'bg-accent text-accent-foreground',
+                            !isActive && 'text-foreground'
+                          )}
+                          aria-label={t(item.labelKey)}
+                          aria-current={isActive ? 'page' : undefined}
+                        >
+                          {t(item.labelKey)}
+                        </Link>
+                      );
+                      i++;
+                    }
                   }
 
-                  return (
-                    <Link
-                      key={item.id}
-                      href={item.href}
-                      className={cn(
-                        'text-left rounded-md p-2 h-9 text-sm transition-colors font-medium',
-                        'hover:bg-accent hover:text-accent-foreground',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                        isActive && 'bg-accent text-accent-foreground',
-                        !isActive && 'text-foreground',
-                        item.indent && 'ml-4'
-                      )}
-                      aria-label={t(item.labelKey)}
-                      aria-current={isActive ? 'page' : undefined}
-                    >
-                      {t(item.labelKey)}
-                    </Link>
-                  );
-                })}
+                  return elements;
+                })()}
               </div>
             </div>
           </div>

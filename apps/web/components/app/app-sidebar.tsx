@@ -115,36 +115,37 @@ export function AppSidebar() {
       id: 'training',
       labelKey: 'sidebar.links.training',
       href: '/library/training/workouts',
-      subItems: [
-        { value: 'workouts', labelKey: 'library.workouts', href: '/library/training/workouts' },
-        { value: 'sections', labelKey: 'library.sections.title', href: '/library/training/sections' },
-        { value: 'programs', labelKey: 'library.programs', href: '/library/training/programs' },
-        { value: 'exercises', labelKey: 'library.exercises', href: '/library/training/exercises' },
-      ],
+      matchPath: '/library/training',
     },
     {
       id: 'forms',
       labelKey: 'sidebar.links.forms',
       href: '/library/forms/check-ins',
-      subItems: [
-        { value: 'check-ins', labelKey: 'forms.tabs.checkIns', href: '/library/forms/check-ins' },
-        { value: 'questionnaires', labelKey: 'forms.tabs.questionnaires', href: '/library/forms/questionnaires' },
-      ],
+      matchPath: '/library/forms',
     },
     {
       id: 'metrics',
       labelKey: 'sidebar.links.metrics',
       href: '/library/metrics',
+      matchPath: '/library/metrics',
     },
     {
       id: 'habits',
       labelKey: 'sidebar.links.habits',
       href: '/library/habits',
+      matchPath: '/library/habits',
     },
     {
       id: 'files',
       labelKey: 'sidebar.links.files',
       href: '/library/files',
+      matchPath: '/library/files',
+    },
+    {
+      id: 'nutrition',
+      labelKey: 'sidebar.links.nutrition',
+      href: '/library/nutrition/recipes',
+      matchPath: '/library/nutrition',
     },
   ] as const;
 
@@ -358,35 +359,7 @@ export function AppSidebar() {
                     </div>
                     <div className="h-px w-full bg-background/20 mb-1" />
                     {librarySections.map((section) => {
-                      const hasSubItems = 'subItems' in section && section.subItems;
-
-                      if (hasSubItems) {
-                        return (
-                          <div key={section.id} className="flex flex-col">
-                            <span className="mx-1.5 px-2 py-1 text-[15px] text-background/70 font-medium">
-                              {t(section.labelKey)}
-                            </span>
-                            {section.subItems.map((subItem) => {
-                              const isSubActive = activePath === subItem.href || activePath.startsWith(`${subItem.href}/`);
-                              return (
-                                <Link
-                                  key={subItem.value}
-                                  href={subItem.href}
-                                  className={cn(
-                                    'mx-1.5 ml-5 px-2 py-1 text-[15px] rounded transition-colors',
-                                    'hover:bg-background/20',
-                                    isSubActive && 'bg-background/20 font-medium'
-                                  )}
-                                >
-                                  {t(subItem.labelKey)}
-                                </Link>
-                              );
-                            })}
-                          </div>
-                        );
-                      }
-
-                      const isSectionActive = activePath === section.href || activePath.startsWith(`${section.href}/`);
+                      const isSectionActive = activePath.startsWith(section.matchPath);
                       return (
                         <Link
                           key={section.id}

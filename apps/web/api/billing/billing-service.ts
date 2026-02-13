@@ -32,6 +32,9 @@ export interface PlatformSubscription {
   cancel_at_period_end: boolean;
   cancelled_at: string | null;
   addons: PlatformAddon[];
+  // Scheduled changes (for downgrades)
+  scheduled_plan_type: PlanType | null;
+  scheduled_client_limit: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -118,12 +121,14 @@ export async function createPortalSession(returnUrl?: string): Promise<{ url: st
 
 /**
  * Update plan (upgrade/downgrade)
+ * - Upgrades: Charged immediately, new features available immediately
+ * - Downgrades: No refund, keeps current features until next billing period
  */
 export async function updatePlan(options: {
   plan: PlanType;
   clientLimit: number;
   interval: BillingInterval;
-}): Promise<{ success: boolean }> {
+}): Promise<{ success: boolean; isUpgrade: boolean }> {
   return apiFetch('/billing/plan', {
     method: 'PATCH',
     body: options,
@@ -132,11 +137,43 @@ export async function updatePlan(options: {
 
 /**
  * Update addons (add/remove)
+ * - Adding: Charged immediately, feature available immediately
+ * - Removing: No refund, keeps feature until next billing period
  */
-export async function updateAddons(addons: AddonType[]): Promise<{ success: boolean }> {
+export async function updateAddons(addons: AddonType[]): Promise<{
+  success: boolean;
+  addedImmediately: AddonType[];
+  scheduledForRemoval: AddonType[];
+}> {
   return apiFetch('/billing/addons', {
     method: 'PATCH',
     body: { addons },
+  });
+}
+
+/**
+ * Update subscription (unified plan + addons with single invoice)
+ * Creates a single invoice when both plan and addons change together
+ * - Upgrades: Charged immediately with single invoice, new features available immediately
+ * - Downgrades: No refund, keeps current features until next billing period
+ */
+export async function updateSubscription(options: {
+  plan?: PlanType;
+  clientLimit?: number;
+  interval?: BillingInterval;
+  addons?: AddonType[];
+}): Promise<{
+  success: boolean;
+  planUpdated: boolean;
+  isPlanUpgrade: boolean;
+  isPlanDowngrade: boolean;
+  addonsAdded: AddonType[];
+  addonsScheduledForRemoval: AddonType[];
+  totalChargedCents: number;
+}> {
+  return apiFetch('/billing/subscription', {
+    method: 'PATCH',
+    body: options,
   });
 }
 
@@ -261,7 +298,7 @@ export function getAddonDisplayName(addon: AddonType): string {
 
 // ─── Referrals ───────────────────────────────────────────────
 
-export type ReferralStatus = 'trial_started' | 'trial_ended' | 'converted' | 'credit_received';
+export type ReferralStatus = 'trial_started' | 'trial_ended' | 'trial_cancelled' | 'converted' | 'credit_received' | 'accepted';
 
 export interface Referral {
   id: string;
@@ -271,6 +308,7 @@ export interface Referral {
   credit_earned_cents: number;
   trial_started_at?: string;
   trial_ended_at?: string | null;
+  trial_cancelled_at?: string | null;
   converted_at?: string | null;
   created_at: string;
 }
@@ -279,7 +317,7 @@ export interface ReferredBy {
   id: string;
   coach_name: string;
   profile_picture_url: string | null;
-  status: 'credit_received';
+  status: 'credit_received' | 'accepted';
   credit_earned_cents: number;
   converted_at: string | null;
   created_at: string;

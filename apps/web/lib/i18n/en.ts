@@ -92,7 +92,13 @@ export const enMessages = {
     liveChat: {
       title: 'Live Chat Support',
       description:
-        "Connect with our team in real-time. Whether you have questions about features, need technical assistance, or want to raise concerns, we're here to help you succeed.",
+        "Questions, concerns, bugs, feature requests, or feedback? Our team is here to help you succeed. Chat with us in real-time.",
+    },
+    referAndEarn: {
+      title: 'Share Athli, get $20',
+      description:
+        'Invite your coaching friends to Athli. When they subscribe, you both get $20 credit.',
+      giftWaiting: 'A gift is waiting',
     },
   },
   home: {
@@ -497,6 +503,10 @@ export const enMessages = {
       activeSubscription: 'Active Subscription',
       cancelPlanFirst: 'You have an active subscription. Please cancel your plan first before deleting your account.',
       goToBilling: 'Go to Billing',
+      // Active client subscriptions dialog
+      activeClientSubscriptions: 'Active Client Subscriptions',
+      cancelClientSubscriptionsFirst: 'You have {count} active client subscription(s). Please cancel all client subscriptions in your packages before deleting your account.',
+      goToPayments: 'Go to Payments',
     },
     information: {
       accountInformation: 'Account Information',
@@ -600,6 +610,34 @@ export const enMessages = {
     },
     billing: {
       title: 'Billing',
+      invoices: {
+        title: 'Invoices',
+        columns: {
+          date: 'Date',
+          period: 'Period',
+          amount: 'Amount',
+          status: 'Status',
+          type: 'Type',
+          invoice: 'Invoice',
+        },
+        status: {
+          paid: 'Paid',
+          open: 'Open',
+          draft: 'Draft',
+          void: 'Void',
+          uncollectible: 'Uncollectible',
+        },
+        type: {
+          subscription: 'Subscription',
+          upgrade: 'Upgrade',
+        },
+        actions: {
+          view: 'View',
+          pdf: 'PDF',
+        },
+        empty: 'No invoices yet',
+        error: 'Failed to load invoices',
+      },
     },
   },
   sidebar: {
@@ -2689,6 +2727,26 @@ export const enMessages = {
       },
     },
   },
+  nutrition: {
+    title: 'Nutrition',
+    tabs: {
+      recipes: 'Recipes',
+      recipeBooks: 'Recipe Books',
+      ingredients: 'Ingredients',
+    },
+    recipes: {
+      title: 'Recipes',
+      comingSoon: 'Recipes coming soon',
+    },
+    recipeBooks: {
+      title: 'Recipe Books',
+      comingSoon: 'Recipe books coming soon',
+    },
+    ingredients: {
+      title: 'Ingredients',
+      comingSoon: 'Ingredients coming soon',
+    },
+  },
   flows: {
     title: 'Flows',
     addFlow: 'Add flow',
@@ -2883,6 +2941,7 @@ export const enMessages = {
     invalidEmail: 'Please enter a valid email address',
     inviteSent: 'Invite sent successfully!',
     inviteFailed: 'Failed to send invite',
+    viewReferrals: 'View Referrals',
     yourReferrals: 'Your Referrals',
     noReferrals: 'No referrals yet',
     noReferralsSubtitle: 'Share your referral link to start earning credits.',
@@ -2891,18 +2950,22 @@ export const enMessages = {
       date: 'Date',
       status: 'Status',
       credit: 'Credit',
+      credits: 'Credits',
     },
     status: {
-      trialStarted: 'Trial started',
-      trialEnded: 'Trial ended',
-      converted: 'Subscribed',
-      creditReceived: 'Credit received',
+      trialStarted: 'Trial Started',
+      trialEnded: 'Trial Ended',
+      trialCancelled: 'Trial Cancelled',
+      converted: 'Converted',
+      creditReceived: 'Credit Received',
+      accepted: 'Accepted Referral',
     },
+    referrer: 'Referrer',
     credits: {
       totalEarned: 'Total Earned',
       active: 'Active Credits',
       activeDescription: 'Applied to your next invoice',
-      used: 'Credits Used',
+      used: 'Total Savings',
     },
     howItWorks: {
       title: 'How it works',

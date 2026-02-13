@@ -43,6 +43,9 @@ billingRouter.patch('/plan', supabaseAuthenticate, billingController.updatePlan)
 // Coach: Update addons (add/remove)
 billingRouter.patch('/addons', supabaseAuthenticate, billingController.updateAddons);
 
+// Coach: Update subscription (unified plan + addons with single invoice)
+billingRouter.patch('/subscription', supabaseAuthenticate, billingController.updateSubscription);
+
 // Coach: Cancel addon (schedule for end of period)
 billingRouter.post('/addons/:addonType/cancel', supabaseAuthenticate, billingController.cancelAddon);
 
