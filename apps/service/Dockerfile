@@ -37,6 +37,9 @@ WORKDIR /app/apps/service
 RUN sed -i 's/"@athli\/shared-types": "[^"]*"/"@athli\/shared-types": "file:..\/..\/packages\/shared-types"/g' package.json && \
     rm -f package-lock.json
 
+# Copy .npmrc if present (ensures legacy-peer-deps and other settings match local)
+COPY .npmrc* /app/apps/service/
+
 # Install ALL dependencies (including devDependencies for tsc)
 RUN npm install
 

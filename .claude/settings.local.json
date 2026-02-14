@@ -183,7 +183,8 @@
       "Bash(pnpm turbo build:*)",
       "Bash(npm info:*)",
       "WebFetch(domain:bxgbbpiswmauqdqkkaha.supabase.co)",
-      "Bash(npx turbo run build:*)"
+      "Bash(npx turbo run build:*)",
+      "Bash(pkill:*)"
     ]
   }
 }

@@ -675,64 +675,137 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
                     </motion.div>
                 </div>
 
-                {/* Add-ons Section - Full Width Cards */}
+                {/* Add-ons Section */}
                 {!hideAddons && (
-                    <div className="mt-12 space-y-4">
+                    <div className="mt-12">
                         <h2 className="text-2xl font-semibold text-center mb-6">{t('addons.afterTrial')}</h2>
-                        {ADDONS.map((addon, index) => {
-                            const addonFeatures = t.raw(`addons.${addon.key}.features`) as string[]
 
-                            return (
-                                <motion.div
-                                    key={addon.key}
-                                    initial={{ opacity: 0, y: 12 }}
-                                    whileInView={{ opacity: 1, y: 0 }}
-                                    viewport={{ once: true }}
-                                    transition={{ duration: 0.4, delay: 0.1 * index }}
-                                >
-                                    <Card className="relative p-6">
-                                        {/* Price - right side, vertically centered */}
-                                        <div className="absolute right-6 top-1/2 -translate-y-1/2">
-                                            <div className="text-right">
-                                                <span className="text-3xl font-bold">${getAddonPrice(addon)}</span>
-                                                <span className="text-muted-foreground">/{t('month')}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex gap-4 pr-32">
-                                            {/* Icon */}
-                                            <div className="shrink-0 pt-0.5">
-                                                <AddonIcon type={addon.icon} animationData={addon.icon === 'ai' ? aiAnimationData ?? undefined : undefined} />
-                                            </div>
-
-                                            {/* Content */}
-                                            <div className="flex-1 min-w-0">
-                                                {/* Title row */}
-                                                <div className="flex items-center gap-3">
-                                                    <h3 className="text-xl font-semibold">
-                                                        {t(`addons.${addon.key}.name`)}
-                                                    </h3>
-                                                    <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-muted text-muted-foreground">
-                                                        {t('addon')}
-                                                    </span>
+                        {/* Mobile: Carousel */}
+                        <div className="md:hidden -mx-6 overflow-x-auto addons-scroll" style={{
+                            scrollSnapType: 'x mandatory',
+                            scrollbarWidth: 'none',
+                            msOverflowStyle: 'none',
+                            WebkitOverflowScrolling: 'touch',
+                        }}>
+                            <style jsx>{`
+                                .addons-scroll::-webkit-scrollbar {
+                                    display: none;
+                                }
+                            `}</style>
+                            <div className="flex pb-4">
+                                {ADDONS.map((addon, index) => {
+                                    const addonFeatures = t.raw(`addons.${addon.key}.features`) as string[]
+                                    return (
+                                        <div
+                                            key={addon.key}
+                                            className={cn(
+                                                'flex-shrink-0 w-[75%] pt-2',
+                                                index === 0 ? 'pl-6 pr-2' : 'pr-2',
+                                                index === ADDONS.length - 1 && 'pr-6'
+                                            )}
+                                            style={{ scrollSnapAlign: index === ADDONS.length - 1 ? 'end' : 'start' }}
+                                        >
+                                            <Card className="relative p-4 h-full flex flex-col">
+                                                {/* Header with title */}
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <h3 className="text-lg font-semibold">
+                                                                {t(`addons.${addon.key}.name`)}
+                                                            </h3>
+                                                            <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-muted text-muted-foreground">
+                                                                {t('addon')}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <p className="text-sm text-muted-foreground mt-1">
+
+                                                {/* Description */}
+                                                <p className="text-sm text-muted-foreground mb-3">
                                                     {t(`addons.${addon.key}.description`)}
                                                 </p>
-                                                <ul className="mt-4 space-y-2">
-                                                    {addonFeatures.map((feature, idx) => (
-                                                        <li key={idx} className="flex items-center gap-2 text-sm">
-                                                            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500"><Check className="size-3 text-white" /></span>
-                                                            {feature}
+
+                                                {/* Features */}
+                                                <ul className="space-y-1.5 mb-4 flex-1">
+                                                    {addonFeatures.slice(0, 3).map((feature, idx) => (
+                                                        <li key={idx} className="flex items-center gap-2 text-xs">
+                                                            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-500">
+                                                                <Check className="size-2.5 text-white" />
+                                                            </span>
+                                                            <span className="text-muted-foreground">{feature}</span>
                                                         </li>
                                                     ))}
                                                 </ul>
-                                            </div>
+
+                                                {/* Price at bottom */}
+                                                <div className="mt-auto pt-2 border-t">
+                                                    <span className="text-2xl font-bold">${getAddonPrice(addon)}</span>
+                                                    <span className="text-sm text-muted-foreground">/{t('month')}</span>
+                                                </div>
+                                            </Card>
                                         </div>
-                                    </Card>
-                                </motion.div>
-                            )
-                        })}
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Desktop: Stacked cards */}
+                        <div className="hidden md:block space-y-4">
+                            {ADDONS.map((addon, index) => {
+                                const addonFeatures = t.raw(`addons.${addon.key}.features`) as string[]
+
+                                return (
+                                    <motion.div
+                                        key={addon.key}
+                                        initial={{ opacity: 0, y: 12 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ duration: 0.4, delay: 0.1 * index }}
+                                    >
+                                        <Card className="relative p-6">
+                                            {/* Price - right side, vertically centered */}
+                                            <div className="absolute right-6 top-1/2 -translate-y-1/2">
+                                                <div className="text-right">
+                                                    <span className="text-3xl font-bold">${getAddonPrice(addon)}</span>
+                                                    <span className="text-muted-foreground">/{t('month')}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-4 pr-32">
+                                                {/* Icon */}
+                                                <div className="shrink-0 pt-0.5">
+                                                    <AddonIcon type={addon.icon} animationData={addon.icon === 'ai' ? aiAnimationData ?? undefined : undefined} />
+                                                </div>
+
+                                                {/* Content */}
+                                                <div className="flex-1 min-w-0">
+                                                    {/* Title row */}
+                                                    <div className="flex items-center gap-3">
+                                                        <h3 className="text-xl font-semibold">
+                                                            {t(`addons.${addon.key}.name`)}
+                                                        </h3>
+                                                        <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-muted text-muted-foreground">
+                                                            {t('addon')}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-sm text-muted-foreground mt-1">
+                                                        {t(`addons.${addon.key}.description`)}
+                                                    </p>
+                                                    <ul className="mt-4 space-y-2">
+                                                        {addonFeatures.map((feature, idx) => (
+                                                            <li key={idx} className="flex items-center gap-2 text-sm">
+                                                                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500"><Check className="size-3 text-white" /></span>
+                                                                {feature}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    </motion.div>
+                                )
+                            })}
+                        </div>
                     </div>
                 )}
             </div>
