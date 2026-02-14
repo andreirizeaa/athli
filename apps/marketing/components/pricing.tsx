@@ -286,8 +286,201 @@ export default function Pricing({ hideHeader = false, hideAddons = false }: { hi
                     </AnimatePresence>
                 </div>
 
-                {/* Plan Cards */}
-                <div className="mt-8 grid gap-6 md:grid-cols-3">
+                {/* Plan Cards - Mobile Carousel */}
+                <div className="mt-8 md:hidden -mx-6 overflow-x-auto pricing-scroll" style={{
+                    scrollSnapType: 'x mandatory',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                    WebkitOverflowScrolling: 'touch',
+                }}>
+                    <style jsx>{`
+                        .pricing-scroll::-webkit-scrollbar {
+                            display: none;
+                        }
+                    `}</style>
+                    <div className="flex pb-4">
+                        {/* Starter Plan */}
+                        <div className="flex-shrink-0 w-[85%] pl-6 pr-3 pt-4" style={{ scrollSnapAlign: 'start' }}>
+                            <Card className="relative flex flex-col h-full p-6">
+                                <div>
+                                    <h3 className="text-2xl font-semibold">{t('starter.name')}</h3>
+                                    <p className="text-base text-muted-foreground mt-2">{t('starter.description')}</p>
+
+                                    <div className="mt-4">
+                                        <span className="text-4xl font-bold">{t('starter.name')}</span>
+                                    </div>
+
+                                    <div className="flex items-center h-10 mt-6">
+                                        <p className="text-sm text-muted-foreground">
+                                            {t('trainUpTo')} 5 {t('clients')}
+                                        </p>
+                                    </div>
+
+                                    <Button asChild variant="outline" size="lg" className="w-full mt-4 rounded-xl text-base">
+                                        <NextLink href={`${APP_URL}/auth/register`}>
+                                            <span className="text-nowrap">{t('startTraining')}</span>
+                                            <ArrowRight className="size-4" />
+                                        </NextLink>
+                                    </Button>
+                                    <p className="text-xs text-muted-foreground text-center mt-2">{t('noCreditCard')}</p>
+
+                                    <hr className="border-border mt-4" />
+                                </div>
+
+                                <ul className="mt-4 space-y-3 flex-1">
+                                    {getAllFeaturesForPlan('starter').map((feature, idx) => (
+                                        <li key={idx} className="flex items-center gap-2 text-sm">
+                                            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500"><Check className="size-3 text-white" /></span>
+                                            <span className={feature.isNew ? 'font-bold text-foreground' : 'text-muted-foreground'}>
+                                                {feature.text}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </Card>
+                        </div>
+
+                        {/* Pro Plan */}
+                        <div className="flex-shrink-0 w-[85%] px-3 pt-4" style={{ scrollSnapAlign: 'start' }}>
+                            <ChasingBorder className="h-full">
+                                <Card className="relative flex flex-col h-full p-6 rounded-2xl">
+                                    {/* Recommended badge */}
+                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
+                                        <span className="bg-background border border-foreground text-foreground px-3 py-1 text-xs font-medium rounded-full">
+                                            {t('popular')}
+                                        </span>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-2xl font-semibold">{t('pro.name')}</h3>
+                                        <p className="text-base text-muted-foreground mt-2">{t('pro.description')}</p>
+
+                                        <div className="mt-4">
+                                            <span className="text-4xl font-bold">${getProPrice()}</span>
+                                            <span className="text-muted-foreground">/{t('month')}</span>
+                                        </div>
+
+                                        {/* Client dropdown */}
+                                        <div className="mt-6">
+                                            <Select
+                                                value={proClients.toString()}
+                                                onValueChange={(value) => setProClients(parseInt(value))}
+                                            >
+                                                <SelectTrigger className="w-full h-10 px-3 text-sm rounded-xl focus-visible:ring-0 focus-visible:border-input">
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span>{proClients} {t('clients')}</span>
+                                                        <span className="text-muted-foreground">${getProPricePerClient()}/{t('client')}</span>
+                                                    </div>
+                                                </SelectTrigger>
+                                                <SelectContent className="w-[--radix-select-trigger-width]">
+                                                    {PRO_CLIENT_OPTIONS.map((num) => {
+                                                        const pricing = PRO_PRICING[num]
+                                                        const price = pricing ? (billingInterval === 'annual' ? pricing[1] : pricing[0]) : 0
+                                                        const perClient = (price / num).toFixed(2)
+                                                        return (
+                                                            <SelectItem key={num} value={num.toString()}>
+                                                                <span>{num} {t('clients')}</span>
+                                                                <span className="text-muted-foreground tabular-nums ml-auto">${perClient}/{t('client')}</span>
+                                                            </SelectItem>
+                                                        )
+                                                    })}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <Button asChild size="lg" className="w-full mt-4 rounded-xl text-base">
+                                            <NextLink href={`${APP_URL}/auth/register`}>
+                                                <span className="text-nowrap">{t('summary.cta')}</span>
+                                                <ArrowRight className="size-4" />
+                                            </NextLink>
+                                        </Button>
+                                        <p className="text-xs text-muted-foreground text-center mt-2">{t('noCreditCard')}</p>
+
+                                        <hr className="border-border mt-4" />
+                                    </div>
+
+                                    <ul className="mt-4 space-y-3 flex-1">
+                                        {getAllFeaturesForPlan('pro').map((feature, idx) => (
+                                            <li key={idx} className="flex items-center gap-2 text-sm">
+                                                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500"><Check className="size-3 text-white" /></span>
+                                                <span className={feature.isNew ? 'font-bold text-foreground' : 'text-muted-foreground'}>
+                                                    {feature.text}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </Card>
+                            </ChasingBorder>
+                        </div>
+
+                        {/* Max Plan */}
+                        <div className="flex-shrink-0 w-[85%] pl-3 pr-6 pt-4" style={{ scrollSnapAlign: 'start' }}>
+                            <Card className="relative flex flex-col h-full p-6">
+                                <div>
+                                    <h3 className="text-2xl font-semibold">{t('max.name')}</h3>
+                                    <p className="text-base text-muted-foreground mt-2">{t('max.description')}</p>
+
+                                    <div className="mt-4">
+                                        <span className="text-4xl font-bold">${getMaxPrice()}</span>
+                                        <span className="text-muted-foreground">/{t('month')}</span>
+                                    </div>
+
+                                    {/* Client dropdown */}
+                                    <div className="mt-6">
+                                        <Select
+                                            value={maxClients.toString()}
+                                            onValueChange={(value) => setMaxClients(parseInt(value))}
+                                        >
+                                            <SelectTrigger className="w-full h-10 px-3 text-sm rounded-xl focus-visible:ring-0 focus-visible:border-input">
+                                                <div className="flex items-center justify-between w-full">
+                                                    <span>{maxClients} {t('clients')}</span>
+                                                    <span className="text-muted-foreground">${getMaxPricePerClient()}/{t('client')}</span>
+                                                </div>
+                                            </SelectTrigger>
+                                            <SelectContent className="w-[--radix-select-trigger-width]">
+                                                {MAX_CLIENT_OPTIONS.map((num) => {
+                                                    const pricing = MAX_PRICING[num]
+                                                    const price = pricing ? (billingInterval === 'annual' ? pricing[1] : pricing[0]) : 0
+                                                    const perClient = (price / num).toFixed(2)
+                                                    return (
+                                                        <SelectItem key={num} value={num.toString()}>
+                                                            <span>{num} {t('clients')}</span>
+                                                            <span className="text-muted-foreground tabular-nums ml-auto">${perClient}/{t('client')}</span>
+                                                        </SelectItem>
+                                                    )
+                                                })}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <Button asChild variant="outline" size="lg" className="w-full mt-4 rounded-xl text-base">
+                                        <NextLink href={`${APP_URL}/auth/register`}>
+                                            <span className="text-nowrap">{t('summary.cta')}</span>
+                                            <ArrowRight className="size-4" />
+                                        </NextLink>
+                                    </Button>
+                                    <p className="text-xs text-muted-foreground text-center mt-2">{t('noCreditCard')}</p>
+
+                                    <hr className="border-border mt-4" />
+                                </div>
+
+                                <ul className="mt-4 space-y-3 flex-1">
+                                    {getAllFeaturesForPlan('max').map((feature, idx) => (
+                                        <li key={idx} className="flex items-center gap-2 text-sm">
+                                            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500"><Check className="size-3 text-white" /></span>
+                                            <span className={feature.isNew ? 'font-bold text-foreground' : 'text-muted-foreground'}>
+                                                {feature.text}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </Card>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Plan Cards - Desktop Grid */}
+                <div className="mt-8 hidden md:grid gap-6 md:grid-cols-3">
                     {/* Starter Plan */}
                     <motion.div
                         initial={{ opacity: 0, y: 12 }}

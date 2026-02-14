@@ -34,10 +34,11 @@ COPY apps/service/package.json apps/service/package-lock.json* ./apps/service/
 
 # Update shared-types reference to local path
 WORKDIR /app/apps/service
-RUN sed -i 's/"@athli\/shared-types": "[^"]*"/"@athli\/shared-types": "file:..\/..\/packages\/shared-types"/g' package.json
+RUN sed -i 's/"@athli\/shared-types": "[^"]*"/"@athli\/shared-types": "file:..\/..\/packages\/shared-types"/g' package.json && \
+    rm -f package-lock.json
 
 # Install ALL dependencies (including devDependencies for tsc)
-RUN npm install --include=dev
+RUN npm install
 
 # Copy source code
 COPY apps/service/tsconfig.json ./
