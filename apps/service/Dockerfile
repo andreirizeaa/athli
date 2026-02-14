@@ -14,6 +14,11 @@ COPY packages/shared-types/ ./
 # Build shared-types to JavaScript
 RUN npm run build
 
+# Update package.json exports to point to dist/ instead of src/
+# This makes the compiled JS files available at runtime
+RUN sed -i 's|"./src/|"./dist/|g' package.json && \
+    sed -i 's|\.ts"|\.js"|g' package.json
+
 # ──────────────────────────────────────────────
 # Stage 2: Build service
 # ──────────────────────────────────────────────
@@ -21,7 +26,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy built shared-types
+# Copy built shared-types (with modified package.json)
 COPY --from=shared-builder /app/packages/shared-types ./packages/shared-types
 
 # Copy service package files
@@ -52,7 +57,7 @@ RUN addgroup -g 1001 -S athli && \
 
 WORKDIR /app
 
-# Copy built shared-types (only dist needed at runtime)
+# Copy built shared-types (package.json + dist/)
 COPY --from=shared-builder /app/packages/shared-types/package.json ./packages/shared-types/
 COPY --from=shared-builder /app/packages/shared-types/dist ./packages/shared-types/dist
 

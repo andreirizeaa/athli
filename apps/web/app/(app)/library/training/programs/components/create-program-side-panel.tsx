@@ -36,7 +36,7 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
 
     const [newProgramName, setNewProgramName] = useState<string>('');
     const [newProgramType, setNewProgramType] = useState<string>('');
-    const [newProgramDifficulty, setNewProgramDifficulty] = useState<string>('all_levels');
+    const [newProgramDifficulty, setNewProgramDifficulty] = useState<string>('');
     const [newProgramWeeks, setNewProgramWeeks] = useState<string>('');
     const [newProgramDescription, setNewProgramDescription] = useState<string>('');
     const [newProgramError, setNewProgramError] = useState<string | null>(null);
@@ -47,7 +47,7 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
     const resetCreateProgramState = () => {
         setNewProgramName('');
         setNewProgramType('');
-        setNewProgramDifficulty(DIFFICULTY_LEVELS[0].value);
+        setNewProgramDifficulty('');
         setNewProgramWeeks('');
         setNewProgramDescription('');
         setNewProgramError(null);
@@ -167,7 +167,7 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
                         <Select
                             value={newProgramDifficulty}
                             onValueChange={(value) => {
-                                setNewProgramDifficulty(value);
+                                setNewProgramDifficulty(value === '__clear__' ? '' : value);
                                 if (newProgramDifficultyError) {
                                     setNewProgramDifficultyError(null);
                                 }
@@ -185,6 +185,11 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
                                 <SelectValue placeholder={t('general.select')} />
                             </SelectTrigger>
                             <SelectContent>
+                                {newProgramDifficulty && (
+                                    <SelectItem value="__clear__" className="text-muted-foreground">
+                                        {t('general.clear')}
+                                    </SelectItem>
+                                )}
                                 {DIFFICULTY_LEVELS.map((level) => (
                                     <SelectItem key={level.value} value={level.value}>
                                         {level.label}
@@ -203,7 +208,7 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
                         <Select
                             value={newProgramType}
                             onValueChange={(value) => {
-                                setNewProgramType(value);
+                                setNewProgramType(value === '__clear__' ? '' : value);
                                 if (newProgramTypeError) {
                                     setNewProgramTypeError(null);
                                 }
@@ -220,6 +225,11 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
                                 <SelectValue placeholder={t('general.select')} />
                             </SelectTrigger>
                             <SelectContent>
+                                {newProgramType && (
+                                    <SelectItem value="__clear__" className="text-muted-foreground">
+                                        {t('general.clear')}
+                                    </SelectItem>
+                                )}
                                 {PROGRAM_TYPES.map((type) => (
                                     <SelectItem key={type.value} value={type.value}>
                                         {type.label}

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useRouter, useSelectedLayoutSegments } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { PageTabs } from '@/components/page-tabs';
@@ -13,6 +13,10 @@ const TodoLayout = ({ children }: TodoLayoutProps) => {
   const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
+
+  useEffect(() => {
+    document.title = 'To-Do | Athli';
+  }, []);
 
   const tabs = [
     {

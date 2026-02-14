@@ -87,8 +87,8 @@ export const EditProgramDetailsSidePanel = ({
         difficulty !== originalValues.difficulty ||
         description !== originalValues.description;
 
-    // Check if form is valid (all required fields filled)
-    const isFormValid = name.trim() !== '' && difficulty.trim() !== '';
+    // Check if form is valid (all required fields filled - only name is required)
+    const isFormValid = name.trim() !== '';
 
     // Save button should be enabled only if there are changes AND form is valid
     const isSaveEnabled = hasChanges && isFormValid && !isSaving;
@@ -98,15 +98,7 @@ export const EditProgramDetailsSidePanel = ({
             setNameError(t('library.programNameRequired'));
             return;
         }
-        // Type is optional now
-        // if (!type.trim()) {
-        //     setTypeError(t('library.programTypeRequired'));
-        //     return;
-        // }
-        if (!difficulty.trim()) {
-            setDifficultyError(t('library.difficultyRequired'));
-            return;
-        }
+        // Type and difficulty are optional
 
         try {
             setIsSaving(true);
@@ -201,12 +193,12 @@ export const EditProgramDetailsSidePanel = ({
 
                         <div className="flex flex-col gap-2">
                             <label htmlFor="program-difficulty" className="text-sm font-medium">
-                                {t('programs.addProgram.difficulty')}<RequiredAsterisk />
+                                {t('programs.addProgram.difficulty')}
                             </label>
                             <Select
                                 value={difficulty}
                                 onValueChange={(value) => {
-                                    setDifficulty(value);
+                                    setDifficulty(value === '__clear__' ? '' : value);
                                     if (difficultyError) {
                                         setDifficultyError(null);
                                     }
@@ -223,6 +215,11 @@ export const EditProgramDetailsSidePanel = ({
                                     <SelectValue placeholder={t('programs.addProgram.difficultyPlaceholder')} />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    {difficulty && (
+                                        <SelectItem value="__clear__" className="text-muted-foreground">
+                                            {t('general.clear')}
+                                        </SelectItem>
+                                    )}
                                     {DIFFICULTY_LEVELS.map((level) => (
                                         <SelectItem key={level.value} value={level.value}>
                                             {level.label}
@@ -240,7 +237,7 @@ export const EditProgramDetailsSidePanel = ({
                             <Select
                                 value={type}
                                 onValueChange={(value) => {
-                                    setType(value);
+                                    setType(value === '__clear__' ? '' : value);
                                     if (typeError) {
                                         setTypeError(null);
                                     }
@@ -257,6 +254,11 @@ export const EditProgramDetailsSidePanel = ({
                                     <SelectValue placeholder={t('programs.addProgram.typePlaceholder')} />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    {type && (
+                                        <SelectItem value="__clear__" className="text-muted-foreground">
+                                            {t('general.clear')}
+                                        </SelectItem>
+                                    )}
                                     {PROGRAM_TYPES.map((programType) => (
                                         <SelectItem key={programType.value} value={programType.value}>
                                             {programType.label}

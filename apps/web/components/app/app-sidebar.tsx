@@ -157,12 +157,13 @@ export function AppSidebar() {
       href: '/library/files',
       matchPath: '/library/files',
     },
-    {
-      id: 'nutrition',
-      labelKey: 'sidebar.links.nutrition',
-      href: '/library/nutrition/recipes',
-      matchPath: '/library/nutrition',
-    },
+    // Nutrition hidden from sidebar but routes still exist
+    // {
+    //   id: 'nutrition',
+    //   labelKey: 'sidebar.links.nutrition',
+    //   href: '/library/nutrition/recipes',
+    //   matchPath: '/library/nutrition',
+    // },
   ] as const;
 
   const automationsNavItems = [

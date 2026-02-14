@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Athli',
-  description: 'Athli marketing and documentation site',
+  title: 'Athli | Supercharge Your Fitness Coaching',
+  description: 'The all-in-one platform for fitness coaches to manage clients, deliver programs, and grow their business.',
 };
 
 export function generateStaticParams() {

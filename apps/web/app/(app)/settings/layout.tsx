@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -240,6 +240,25 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
       resizeObserver.disconnect();
     };
   }, [children]);
+
+  // Set browser tab title based on current settings page
+  useEffect(() => {
+    const pathTitles: Record<string, string> = {
+      '/settings/account/profile': 'Settings | Profile',
+      '/settings/account/security': 'Settings | Security',
+      '/settings/account/information': 'Settings | Information',
+      '/settings/account/danger': 'Settings | Danger',
+      '/settings/profile/notifications': 'Settings | Notifications',
+      '/settings/billing': 'Settings | Billing',
+      '/settings/billing/update': 'Upgrade Plan',
+      '/settings/app/customisations': 'Settings | Customisations',
+      '/settings/business/company/information': 'Settings | Company Information',
+      '/settings/business/company/branding': 'Settings | Branding',
+      '/settings/business/company/team': 'Settings | Team',
+    };
+    const title = pathTitles[pathname] || 'Settings';
+    document.title = `${title} | Athli`;
+  }, [pathname]);
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (hasUnsavedChanges && pathname !== href) {

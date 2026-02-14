@@ -93,6 +93,13 @@ const OnboardingDetailPage = () => {
     fetchOnboarding();
   }, [onboardingId]);
 
+  // Set browser tab title
+  useEffect(() => {
+    if (onboarding?.name) {
+      document.title = `Onboarding | ${onboarding.name} | Athli`;
+    }
+  }, [onboarding?.name]);
+
   const handleBreadcrumbClick = (path: string) => {
     router.push(path);
   };
