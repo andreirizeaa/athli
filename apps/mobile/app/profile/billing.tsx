@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator, ScrollView, Linking } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, ScrollView } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Dialog } from '@/components/ui/dialog';
@@ -213,7 +214,11 @@ export default function BillingScreen() {
       setIsLoadingPortal(false);
 
       // Open the portal URL in the browser
-      await Linking.openURL(portalUrl);
+      await WebBrowser.openBrowserAsync(portalUrl, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        dismissButtonStyle: 'done',
+        showTitle: true,
+      });
     } catch (error) {
       console.error('Failed to create billing portal session:', error);
       setIsLoadingPortal(false);

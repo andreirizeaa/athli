@@ -61,7 +61,7 @@ const TimezoneCard = () => {
       <Separator className="w-full mt-[-8px]" />
       <CardContent className="px-0">
         <div className="space-y-0">
-          <div className="flex items-center justify-between w-full pb-2 border-b px-4 -mt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pb-2 border-b px-4 -mt-1 gap-2">
             <Label className="text-sm">Timezone</Label>
             <Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger asChild>
@@ -69,7 +69,7 @@ const TimezoneCard = () => {
                   variant="outline"
                   role="combobox"
                   aria-expanded={open}
-                  className="w-64 justify-between font-normal"
+                  className="w-full sm:w-64 justify-between font-normal"
                   disabled={isSaving}
                 >
                   <span className="truncate">
@@ -282,7 +282,7 @@ const ProfilePage = () => {
             <CardContent className="px-0">
               <div className="space-y-0">
                 {/* Profile Image */}
-                <div className="flex items-center justify-between w-full pb-2 border-b px-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pb-2 border-b px-4 gap-3">
                   <Label className="text-sm">{t('settings.profile.profilePicture')}</Label>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-16 w-16">
@@ -308,15 +308,15 @@ const ProfilePage = () => {
                 </div>
 
                 {/* Full Name */}
-                <div className="flex flex-col w-full pb-2 border-b pt-2 px-4">
-                  <div className="flex items-center justify-between">
+                <div className="flex flex-col w-full pb-2 border-b pt-2 px-4 gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <Label htmlFor="name" className="text-sm">Full Name</Label>
-                    <div className="flex flex-col items-end">
+                    <div className="flex flex-col sm:items-end w-full sm:w-auto">
                       <Input
                         id="name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className={cn("w-64", nameError && "border-destructive")}
+                        className={cn("w-full sm:w-64", nameError && "border-destructive")}
                         disabled={isSaving}
                         placeholder="Enter your full name"
                       />
@@ -328,9 +328,9 @@ const ProfilePage = () => {
                 </div>
 
                 {/* Email (Read-only) */}
-                <div className="flex items-center justify-between w-full pb-2 border-b pt-2 px-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pb-2 border-b pt-2 px-4 gap-1">
                   <Label className="text-sm">Email</Label>
-                  <span className="text-sm text-muted-foreground w-64 text-right">
+                  <span className="text-sm text-muted-foreground sm:w-64 sm:text-right break-all">
                     {user?.email || ''}
                   </span>
                 </div>

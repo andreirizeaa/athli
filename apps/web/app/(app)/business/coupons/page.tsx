@@ -398,7 +398,7 @@ const CouponsPage = () => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <>
       <DataGrid
         data={coupons}
         columns={columns}
@@ -532,7 +532,7 @@ const CouponsPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };
 

@@ -109,8 +109,8 @@ export const InvoicesCard = () => {
           </div>
         ) : invoices.length > 0 ? (
           <div className="flex flex-col">
-            {/* Header row */}
-            <div className="flex items-center px-4 py-2">
+            {/* Desktop Header row - hidden on mobile */}
+            <div className="hidden md:flex items-center px-4 py-2">
               <span className="text-xs text-muted-foreground uppercase font-semibold w-[18%] flex-shrink-0">{t('columns.type')}</span>
               <span className="text-xs text-muted-foreground uppercase font-semibold w-[14%] flex-shrink-0">{t('columns.amount')}</span>
               <span className="text-xs text-muted-foreground uppercase font-semibold w-[18%] flex-shrink-0">{t('columns.date')}</span>
@@ -121,7 +121,8 @@ export const InvoicesCard = () => {
             {invoices.map((invoice) => (
               <React.Fragment key={invoice.id}>
                 <Separator />
-                <div className="flex items-center px-4 py-3">
+                {/* Desktop row layout */}
+                <div className="hidden md:flex items-center px-4 py-3">
                   <span className="w-[18%] flex-shrink-0">
                     {getTypeBadge(getInvoiceType(invoice))}
                   </span>
@@ -163,6 +164,50 @@ export const InvoicesCard = () => {
                       <span className="text-xs text-muted-foreground">--</span>
                     )}
                   </span>
+                </div>
+                {/* Mobile card layout */}
+                <div className="flex md:hidden flex-col px-4 py-3 gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {getTypeBadge(getInvoiceType(invoice))}
+                      {getStatusBadge(invoice.status)}
+                    </div>
+                    <span className="text-sm font-semibold">
+                      {formatCurrency(invoice.status === 'open' ? invoice.amount_due : invoice.amount_paid, invoice.currency)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>{format(new Date(invoice.created * 1000), 'd MMM, yyyy')}</span>
+                    {formatPeriod(invoice) && (
+                      <span className="text-xs">{formatPeriod(invoice)}</span>
+                    )}
+                  </div>
+                  {(invoice.hosted_invoice_url || invoice.invoice_pdf) && (
+                    <div className="flex justify-end -mr-2">
+                      {invoice.hosted_invoice_url ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={() => window.open(invoice.hosted_invoice_url!, '_blank')}
+                        >
+                          {t('actions.view')}
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      ) : invoice.invoice_pdf ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={() => window.open(invoice.invoice_pdf!, '_blank')}
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          {t('actions.pdf')}
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
               </React.Fragment>
             ))}

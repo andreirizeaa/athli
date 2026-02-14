@@ -7,6 +7,7 @@ export interface Invoice {
   id: string;
   number: string | null;
   amount_paid: number;
+  amount_due: number;
   currency: string;
   status: 'draft' | 'open' | 'paid' | 'uncollectible' | 'void';
   created: number;
@@ -15,6 +16,8 @@ export interface Invoice {
   hosted_invoice_url: string | null;
   invoice_pdf: string | null;
 }
+
+export type InvoiceType = 'subscription' | 'upgrade';
 
 export interface InvoicesResponse {
   invoices: Invoice[];
@@ -62,4 +65,24 @@ export function getInvoiceStatusInfo(status: Invoice['status']): { label: string
     default:
       return { label: status, color: 'muted' };
   }
+}
+
+/**
+ * Determine invoice type based on period duration
+ * Upgrade invoices have very short periods (same day), subscription invoices span a month/year
+ */
+export function getInvoiceType(invoice: Invoice): InvoiceType {
+  const oneDayInSeconds = 86400;
+  const periodDiff = Math.abs(invoice.period_end - invoice.period_start);
+  return periodDiff <= oneDayInSeconds ? 'upgrade' : 'subscription';
+}
+
+/**
+ * Get invoice type display info
+ */
+export function getInvoiceTypeInfo(type: InvoiceType): { label: string; color: string } {
+  if (type === 'subscription') {
+    return { label: 'Subscription', color: 'blue' };
+  }
+  return { label: 'Upgrade', color: 'purple' };
 }

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, CheckCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import {
 import { useAccess } from '@/lib/permissions';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { useEntitlements, useSubscription } from '@/hooks/use-entitlements';
+import type { AddonType } from '@/api/billing/billing-service';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/api/api-client';
 import confetti from 'canvas-confetti';
@@ -78,7 +79,11 @@ const BillingPage = () => {
   } = useSubscription();
   const [showTrialWarning, setShowTrialWarning] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [showMobileSuccess, setShowMobileSuccess] = useState(false);
   const queryClient = useQueryClient();
+
+  // Get source parameter to determine if opened from mobile
+  const source = searchParams.get('source');
 
   // Fetch invoices to get period_end date (fallback when subscription.current_period_end is null)
   const { data: invoicesData } = useQuery({
@@ -109,6 +114,22 @@ const BillingPage = () => {
       // Remove success param from URL without reload
       router.replace('/settings/billing', { scroll: false });
 
+      // Check if opened from mobile app
+      if (source === 'mobile') {
+        // Show success dialog for mobile users
+        setShowMobileSuccess(true);
+
+        // Fire confetti centered for mobile
+        const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffa500', '#ff69b4'];
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { x: 0.5, y: 0.5 },
+          colors,
+        });
+        return;
+      }
+
       // Sidebar is ~256px, so offset the x origin to center in content area
       // Calculate x as: (sidebarWidth + contentWidth/2) / windowWidth
       const sidebarWidth = 256;
@@ -136,7 +157,7 @@ const BillingPage = () => {
         });
       }, 300);
     }
-  }, [searchParams, router, queryClient]);
+  }, [searchParams, router, queryClient, source]);
 
   const activeClientsCount = clients.length;
 
@@ -166,14 +187,16 @@ const BillingPage = () => {
       setShowTrialWarning(true);
     } else {
       setIsNavigating(true);
-      router.push('/settings/billing/update');
+      const updateUrl = source === 'mobile' ? '/settings/billing/update?source=mobile' : '/settings/billing/update';
+      router.push(updateUrl);
     }
   };
 
   const handleConfirmTrialEnd = () => {
     setShowTrialWarning(false);
     setIsNavigating(true);
-    router.push('/settings/billing/update');
+    const updateUrl = source === 'mobile' ? '/settings/billing/update?source=mobile' : '/settings/billing/update';
+    router.push(updateUrl);
   };
 
   return (
@@ -261,11 +284,11 @@ const BillingPage = () => {
                         <span className="font-medium">${scheduledPriceCents !== null ? (scheduledPriceCents / 100).toFixed(0) : 0}/{billingInterval === 'month' ? 'mo' : 'yr'}</span>
                       </div>
                       {/* Show remaining add-ons (those not being cancelled) */}
-                      {currentPlan.addons.filter(a => !cancellingAddons.includes(a.addonType)).length > 0 && (
+                      {currentPlan.addons.filter(a => !cancellingAddons.includes(a.addonType as AddonType)).length > 0 && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Add-ons:</span>
                           <span className="font-medium">
-                            {currentPlan.addons.filter(a => !cancellingAddons.includes(a.addonType)).map(a => a.name).join(', ')}
+                            {currentPlan.addons.filter(a => !cancellingAddons.includes(a.addonType as AddonType)).map(a => a.name).join(', ')}
                           </span>
                         </div>
                       )}
@@ -314,10 +337,10 @@ const BillingPage = () => {
                 </div>
               ) : (
                 /* Standard layout when no scheduled changes */
-                <div className="flex items-start justify-between gap-8">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-8">
                   {/* Left side - Plan details */}
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-xl font-semibold">{currentPlan.name}</h3>
                       {currentPlan.isTrial && (
                         <span className="px-2.5 py-0.5 text-sm font-medium rounded-sm border bg-[#dcfce7] text-[#14532d] border-[#bbf7d0] dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30">
@@ -356,17 +379,8 @@ const BillingPage = () => {
                   </div>
 
                   {/* Right side - Billing & Action */}
-                  <div className="flex flex-col items-end justify-between self-stretch">
-                    <Button onClick={handleChangePlan} disabled={isNavigating} className="gap-2 relative">
-                      <span className={isNavigating ? 'opacity-0' : ''}>
-                        {isCancelling && !currentPlan.isTrial ? "Don't Cancel" : 'Update Plan'}
-                      </span>
-                      {!isCancelling && <ArrowRight className={`size-4 ${isNavigating ? 'opacity-0' : ''}`} />}
-                      {isNavigating && (
-                        <Loader2 className="size-4 animate-spin absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
-                      )}
-                    </Button>
-                    <div className="text-right">
+                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-between md:self-stretch gap-4">
+                    <div className="text-left md:text-right order-1 md:order-2">
                       <p className="text-2xl font-bold">
                         ${currentPlan.price}
                         <span className="text-sm font-normal text-muted-foreground">/{currentPlan.billingInterval}</span>
@@ -375,6 +389,15 @@ const BillingPage = () => {
                         <p className="text-xs text-muted-foreground">Free during trial</p>
                       )}
                     </div>
+                    <Button onClick={handleChangePlan} disabled={isNavigating} className="gap-2 relative order-2 md:order-1">
+                      <span className={isNavigating ? 'opacity-0' : ''}>
+                        {isCancelling && !currentPlan.isTrial ? "Don't Cancel" : 'Update Plan'}
+                      </span>
+                      {!isCancelling && <ArrowRight className={`size-4 ${isNavigating ? 'opacity-0' : ''}`} />}
+                      {isNavigating && (
+                        <Loader2 className="size-4 animate-spin absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                      )}
+                    </Button>
                   </div>
                 </div>
               )}
@@ -456,6 +479,21 @@ const BillingPage = () => {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mobile Success Dialog */}
+      <Dialog open={showMobileSuccess} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+          <DialogHeader className="text-center sm:text-center">
+            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <CheckCircle className="h-10 w-10 text-emerald-500" />
+            </div>
+            <DialogTitle>{t('settings.billing.mobileSuccess.title')}</DialogTitle>
+            <DialogDescription>
+              {t('settings.billing.mobileSuccess.description')}
+            </DialogDescription>
+          </DialogHeader>
         </DialogContent>
       </Dialog>
     </>

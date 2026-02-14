@@ -11,9 +11,10 @@ interface ChatHeaderProps {
     selectedContact: Contact | null;
     isPowerViewOpen: boolean;
     onTogglePowerView: () => void;
+    hideToggle?: boolean;
 }
 
-export function ChatHeader({ selectedContact, isPowerViewOpen, onTogglePowerView }: ChatHeaderProps) {
+export function ChatHeader({ selectedContact, isPowerViewOpen, onTogglePowerView, hideToggle }: ChatHeaderProps) {
     const t = useTranslations();
 
     if (!selectedContact) return null;
@@ -39,25 +40,27 @@ export function ChatHeader({ selectedContact, isPowerViewOpen, onTogglePowerView
                     </h3>
                 </div>
             </div>
-            <div className="flex items-center gap-2 ">
-                <Button
-                    variant="ghost"
-                    onClick={onTogglePowerView}
-                    className="gap-2 w-auto font-normal text-foreground px-0 -mr-[4px]"
-                >
-                    {isPowerViewOpen ? (
-                        <>
-                            <ArrowRight className="h-4 w-4" />
-                            <span>{t('messages.hideAthlete')}</span>
-                        </>
-                    ) : (
-                        <>
-                            <ArrowLeft className="h-4 w-4" />
-                            <span>{t('messages.showAthlete')}</span>
-                        </>
-                    )}
-                </Button>
-            </div>
+            {!hideToggle && (
+                <div className="flex items-center gap-2 ">
+                    <Button
+                        variant="ghost"
+                        onClick={onTogglePowerView}
+                        className="gap-2 w-auto font-normal text-foreground px-0 -mr-[4px]"
+                    >
+                        {isPowerViewOpen ? (
+                            <>
+                                <ArrowRight className="h-4 w-4" />
+                                <span>{t('messages.hideAthlete')}</span>
+                            </>
+                        ) : (
+                            <>
+                                <ArrowLeft className="h-4 w-4" />
+                                <span>{t('messages.showAthlete')}</span>
+                            </>
+                        )}
+                    </Button>
+                </div>
+            )}
         </div>
     );
 }

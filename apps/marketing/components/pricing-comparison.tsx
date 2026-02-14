@@ -129,7 +129,7 @@ export default function PricingComparison() {
                     <table className="w-full border-separate" style={{ borderSpacing: 0 }}>
                         <thead>
                             <tr>
-                                <th className="sticky left-0 z-10 min-w-[200px] border-b bg-background p-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                <th className="sticky left-0 z-10 min-w-[140px] border-b bg-background p-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground md:shadow-none shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                     {t('featuresHeader')}
                                 </th>
                                 {tiers.map((tier) => (
@@ -149,7 +149,7 @@ export default function PricingComparison() {
                         <tbody>
                             {/* Client Limits Row */}
                             <tr>
-                                <td className="sticky left-0 z-10 border-b bg-background p-4 text-sm font-medium">
+                                <td className="sticky left-0 z-10 border-b bg-background p-4 text-sm font-medium md:shadow-none shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                     {t('clientsIncluded')}
                                 </td>
                                 <td className="border-b p-4 text-center">
@@ -167,10 +167,13 @@ export default function PricingComparison() {
 
                             {sections.map((section) => (
                                 <React.Fragment key={section.title}>
-                                    <tr>
-                                        <td className="bg-muted/50 px-4 py-3 text-sm font-semibold">
+                                    <tr className="bg-muted/50">
+                                        <th
+                                            scope="row"
+                                            className="sticky left-0 z-10 min-w-[140px] bg-muted/50 px-4 py-3 text-left text-sm font-semibold md:shadow-none shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                                        >
                                             {section.title}
-                                        </td>
+                                        </th>
                                         {tiers.map((tier) => (
                                             <td
                                                 key={tier.key}
@@ -184,7 +187,7 @@ export default function PricingComparison() {
                                         const isLast = idx === totalFeatures - 1
                                         return (
                                             <tr key={feature}>
-                                                <td className="sticky left-0 z-10 border-b bg-background p-4 text-sm font-medium">
+                                                <td className="sticky left-0 z-10 border-b bg-background p-4 text-sm font-medium md:shadow-none shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                                     {feature}
                                                 </td>
                                                 {tiers.map((tier) => (

@@ -205,66 +205,64 @@ const SequencesPage = () => {
   ];
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <div className="flex-1 w-full overflow-hidden">
-        {isLoading ? (
-          <div className="h-full w-full flex items-center justify-center">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <DataGrid
-            data={optimisticSequences}
-            columns={columns}
-            getRowId={(row) => row.id}
-            gridKey="sequences"
-            searchPlaceholder={t('business.sequences.searchPlaceholder')}
-            enableSearch={true}
-            searchFields={['name', 'description']}
-            enableEditColumns={false}
-            enableExport={false}
-            enableRowSelection={false}
-            showPagination={false}
-            gridPadding={true}
-            compactPagination={true}
-            emptyMessage={t('business.sequences.emptyMessage')}
-            emptyState={
-              <EmptyGridState
-                title={t('business.sequences.emptyState.title')}
-                subtitle={t('business.sequences.emptyState.subtitle')}
-                action={
-                  <Button onClick={() => setIsAddPanelOpen(true)} className="gap-2">
-                    <Plus className="size-4" />
-                    <span>{t('business.sequences.addSequence')}</span>
-                  </Button>
-                }
-              />
+    <>
+      {isLoading ? (
+        <div className="h-full w-full flex items-center justify-center">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <DataGrid
+          data={optimisticSequences}
+          columns={columns}
+          getRowId={(row) => row.id}
+          gridKey="sequences"
+          searchPlaceholder={t('business.sequences.searchPlaceholder')}
+          enableSearch={true}
+          searchFields={['name', 'description']}
+          enableEditColumns={false}
+          enableExport={false}
+          enableRowSelection={false}
+          showPagination={false}
+          gridPadding={true}
+          compactPagination={true}
+          emptyMessage={t('business.sequences.emptyMessage')}
+          emptyState={
+            <EmptyGridState
+              title={t('business.sequences.emptyState.title')}
+              subtitle={t('business.sequences.emptyState.subtitle')}
+              action={
+                <Button onClick={() => setIsAddPanelOpen(true)} className="gap-2">
+                  <Plus className="size-4" />
+                  <span>{t('business.sequences.addSequence')}</span>
+                </Button>
+              }
+            />
+          }
+          filterBarActions={
+            <Button onClick={() => setIsAddPanelOpen(true)} className="gap-2">
+              <Plus className="size-4" />
+              <span>{t('business.sequences.addSequence')}</span>
+            </Button>
+          }
+          onRowClick={(row, event) => {
+            const targetElement = event.target as HTMLElement;
+            if (targetElement.closest('[data-no-row-link="true"]')) {
+              return;
             }
-            filterBarActions={
-              <Button onClick={() => setIsAddPanelOpen(true)} className="gap-2">
-                <Plus className="size-4" />
-                <span>{t('business.sequences.addSequence')}</span>
-              </Button>
-            }
-            onRowClick={(row, event) => {
+            router.push(`/business/sequences/${row.id}`);
+          }}
+          onRowKeyDown={(row, event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
               const targetElement = event.target as HTMLElement;
               if (targetElement.closest('[data-no-row-link="true"]')) {
                 return;
               }
+              event.preventDefault();
               router.push(`/business/sequences/${row.id}`);
-            }}
-            onRowKeyDown={(row, event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                const targetElement = event.target as HTMLElement;
-                if (targetElement.closest('[data-no-row-link="true"]')) {
-                  return;
-                }
-                event.preventDefault();
-                router.push(`/business/sequences/${row.id}`);
-              }
-            }}
-          />
-        )}
-      </div>
+            }
+          }}
+        />
+      )}
 
       <SidePanel
         open={isAddPanelOpen}
@@ -342,7 +340,7 @@ const SequencesPage = () => {
         itemType="sequence"
       />
 
-    </div>
+    </>
   );
 };
 

@@ -987,14 +987,15 @@ export const billingController = {
         const newPlanName = formatPlanName(plan, clientLimit);
         // For upgrades, period should be from today to end of billing cycle
         const now = Math.floor(Date.now() / 1000);
-        const upgradePeriod = stripeSubscription.current_period_end
-          ? { start: now, end: stripeSubscription.current_period_end }
+        const periodEnd = (stripeSubscription as unknown as { current_period_end?: number }).current_period_end;
+        const upgradePeriod = periodEnd
+          ? { start: now, end: periodEnd }
           : undefined;
 
         logger.info({
           coachId,
           periodStart: now,
-          periodEnd: stripeSubscription.current_period_end,
+          periodEnd,
         }, 'updatePlan: Creating upgrade invoice with period');
 
         await stripe.invoiceItems.create({
@@ -1232,14 +1233,15 @@ export const billingController = {
         // Add the addon charge to the invoice
         // For upgrades, period should be from today to end of billing cycle
         const now = Math.floor(Date.now() / 1000);
-        const addonPeriod = stripeSubscription.current_period_end
-          ? { start: now, end: stripeSubscription.current_period_end }
+        const addonPeriodEnd = (stripeSubscription as unknown as { current_period_end?: number }).current_period_end;
+        const addonPeriod = addonPeriodEnd
+          ? { start: now, end: addonPeriodEnd }
           : undefined;
 
         logger.info({
           coachId,
           periodStart: now,
-          periodEnd: stripeSubscription.current_period_end,
+          periodEnd: addonPeriodEnd,
         }, 'updateAddons: Creating addon invoice with period');
 
         await stripe.invoiceItems.create({
@@ -1662,10 +1664,11 @@ export const billingController = {
       // Include the billing period so invoices display correctly
       // For upgrades, period should be from today to end of billing cycle
       const now = Math.floor(Date.now() / 1000);
-      const billingPeriod = stripeSubscription.current_period_end
+      const upgradePeriodEnd = (stripeSubscription as unknown as { current_period_end?: number }).current_period_end;
+      const billingPeriod = upgradePeriodEnd
         ? {
             start: now,
-            end: stripeSubscription.current_period_end,
+            end: upgradePeriodEnd,
           }
         : undefined;
 
@@ -1673,7 +1676,7 @@ export const billingController = {
         coachId,
         billingPeriod,
         periodStart: now,
-        periodEnd: stripeSubscription.current_period_end,
+        periodEnd: upgradePeriodEnd,
       }, 'Creating upgrade invoice with billing period');
 
       if (planPriceDifferenceCents > 0) {
@@ -2127,7 +2130,8 @@ export const billingController = {
 
   lookupReferralCode: async (req: Request, res: Response) => {
     const supabase = getSupabaseClient();
-    const { code } = req.params;
+    const codeParam = req.params.code;
+    const code = Array.isArray(codeParam) ? codeParam[0] : codeParam;
 
     if (!code || code.trim().length === 0) {
       res.status(400).json({ error: 'Referral code is required' });
@@ -2249,8 +2253,14 @@ async function handleCheckoutCompleted(event: Stripe.Event, supabase: any) {
   logger.info({ coachId, sessionId: session.id }, 'Platform checkout session completed');
 }
 
+// Extended Stripe Subscription type with period fields that exist at runtime but not in SDK v20+ types
+type SubscriptionWithPeriod = Stripe.Subscription & {
+  current_period_start?: number;
+  current_period_end?: number;
+};
+
 async function handleSubscriptionCreated(event: Stripe.Event, supabase: any) {
-  const subscription = event.data.object as Stripe.Subscription;
+  const subscription = event.data.object as SubscriptionWithPeriod;
   const coachId = subscription.metadata?.coach_id;
 
   if (!coachId) {
@@ -2345,7 +2355,7 @@ async function handleSubscriptionCreated(event: Stripe.Event, supabase: any) {
     coach_id: coachId,
     event_type: 'subscription_created',
     description: `Subscribed to ${planType.charAt(0).toUpperCase() + planType.slice(1)} plan with ${clientLimit} clients`,
-    amount_cents: totalAmount,
+    amount_cents: planPriceCents,
     stripe_event_id: event.id,
     metadata: { plan_type: planType, client_limit: clientLimit, addons },
   });
@@ -2354,7 +2364,7 @@ async function handleSubscriptionCreated(event: Stripe.Event, supabase: any) {
 }
 
 async function handleSubscriptionUpdated(event: Stripe.Event, supabase: any) {
-  const subscription = event.data.object as Stripe.Subscription;
+  const subscription = event.data.object as SubscriptionWithPeriod;
   const coachId = subscription.metadata?.coach_id;
 
   if (!coachId) return;
@@ -2876,7 +2886,7 @@ async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
             .eq('coach_id', coachId);
         }
 
-        logger.info({ coachId, addons: addonsToRemove.map(a => a.addon_type) }, 'Applied scheduled addon removals at renewal');
+        logger.info({ coachId, addons: addonsToRemove.map((a: { addon_type: string }) => a.addon_type) }, 'Applied scheduled addon removals at renewal');
       }
     } catch (err: any) {
       logger.warn({ err: err.message, coachId }, 'Failed to apply scheduled downgrades at renewal');

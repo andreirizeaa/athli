@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight, Receipt, CreditCard, Users } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 import { useQuery } from '@tanstack/react-query';
+import * as WebBrowser from 'expo-web-browser';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
@@ -27,6 +28,7 @@ export default function BillingScreen() {
   const entitlements = useCoachEntitlementsStore((state) => state.entitlements);
   const isOnTrial = useCoachEntitlementsStore((state) => state.isOnTrial);
   const isLoadingEntitlements = useCoachEntitlementsStore((state) => state.isLoading);
+  const loadEntitlements = useCoachEntitlementsStore((state) => state.loadEntitlements);
 
   // Get coach profile for created_at
   const coachProfile = useCoachProfileStore((state) => state.profile);
@@ -43,6 +45,14 @@ export default function BillingScreen() {
   const clientPercentage = Math.min((activeClientsCount / clientsLimit) * 100, 100);
   const isAtLimit = activeClientsCount >= clientsLimit;
   const isNearLimit = clientPercentage >= 80;
+
+  // Warm up the browser for faster opening
+  React.useEffect(() => {
+    WebBrowser.warmUpAsync();
+    return () => {
+      WebBrowser.coolDownAsync();
+    };
+  }, []);
 
   // Calculate trial days remaining (30 days from coach profile created_at)
   const trialDaysRemaining = React.useMemo(() => {
@@ -88,19 +98,38 @@ export default function BillingScreen() {
 
   const [showTrialWarning, setShowTrialWarning] = useState(false);
 
-  const handleUpdatePlan = () => {
+  const openWebBilling = React.useCallback(async () => {
+    const webAppUrl = process.env.EXPO_PUBLIC_WEB_APP_URL || 'https://app.athli.io';
+    const billingUrl = `${webAppUrl}/settings/billing?source=mobile`;
+    try {
+      await WebBrowser.openBrowserAsync(billingUrl, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        dismissButtonStyle: 'done',
+        showTitle: true,
+      });
+      // Refetch entitlements when browser closes (user dismissed or completed)
+      await loadEntitlements(coachProfile?.created_at);
+    } catch (err) {
+      console.error('Failed to open billing URL:', err);
+    }
+  }, [coachProfile?.created_at, loadEntitlements]);
+
+  const handleUpdatePlan = React.useCallback(() => {
     haptics.medium();
     if (isOnTrial) {
       setShowTrialWarning(true);
     } else {
-      router.push('/settings/billing-update');
+      openWebBilling();
     }
-  };
+  }, [isOnTrial, openWebBilling]);
 
-  const handleConfirmTrialEnd = () => {
+  const handleConfirmTrialEnd = React.useCallback(() => {
     setShowTrialWarning(false);
-    router.push('/settings/billing-update');
-  };
+    // Small delay to let the dialog close first
+    setTimeout(() => {
+      openWebBilling();
+    }, 100);
+  }, [openWebBilling]);
 
   const iconColor = themeColors.text;
   const iconSize = iconSizes.tabBarIcons;

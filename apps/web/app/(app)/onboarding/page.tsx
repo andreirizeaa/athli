@@ -120,8 +120,8 @@ const OnboardingPage = () => {
       await updateOnboardingStatus(onboarding.id, checked);
       toast.success(
         checked
-          ? t('onboarding.activated', { name: onboarding.name })
-          : t('onboarding.deactivated', { name: onboarding.name })
+          ? t('onboarding.activated', { name: onboarding.name ?? '' })
+          : t('onboarding.deactivated', { name: onboarding.name ?? '' })
       );
       queryClient.invalidateQueries({ queryKey: ['coach-onboardings'] });
     } catch (error) {
@@ -272,70 +272,70 @@ const OnboardingPage = () => {
   ];
 
   return (
-    <div className="h-full w-full flex flex-col bg-background overflow-auto">
-      <PageHeader
-        title={t('onboarding.title')}
-        action={
-          <Button onClick={() => setIsAddPanelOpen(true)} className="gap-2">
-            <Plus className="size-4" />
-            <span>{t('onboarding.addOnboarding')}</span>
-          </Button>
-        }
-      />
-
-      <div className="flex-1 w-full overflow-hidden">
-        {isLoading ? (
-          <div className="h-full w-full flex items-center justify-center">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <DataGrid
-            data={optimisticOnboardings}
-            columns={columns}
-            getRowId={(row) => row.id}
-            gridKey="onboardings"
-            searchPlaceholder={t('onboarding.searchPlaceholder')}
-            enableSearch={true}
-            searchFields={['name', 'description']}
-            enableEditColumns={false}
-            enableExport={false}
-            enableRowSelection={false}
-            showPagination={false}
-            gridPadding={true}
-            compactPagination={true}
-            emptyMessage={t('onboarding.emptyMessage')}
-            emptyState={
-              <EmptyGridState
-                title={t('onboarding.emptyState.title')}
-                subtitle={t('onboarding.emptyState.subtitle')}
-                action={
-                  <Button onClick={() => setIsAddPanelOpen(true)} className="gap-2">
-                    <Plus className="size-4" />
-                    <span>{t('onboarding.addOnboarding')}</span>
-                  </Button>
-                }
-              />
+    <div className="h-full w-full flex flex-col">
+      <div className="flex flex-1 min-h-0">
+        <div className="flex-1 flex flex-col">
+          <PageHeader
+            title={t('onboarding.title')}
+            action={
+              <Button onClick={() => setIsAddPanelOpen(true)} className="gap-2">
+                <Plus className="size-4" />
+                <span>{t('onboarding.addOnboarding')}</span>
+              </Button>
             }
-            onRowClick={(row, event) => {
+          />
+
+          {isLoading ? (
+        <div className="h-full w-full flex items-center justify-center">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <DataGrid
+          data={optimisticOnboardings}
+          columns={columns}
+          getRowId={(row) => row.id}
+          gridKey="onboardings"
+          searchPlaceholder={t('onboarding.searchPlaceholder')}
+          enableSearch={true}
+          searchFields={['name', 'description']}
+          enableEditColumns={false}
+          enableExport={false}
+          enableRowSelection={false}
+          showPagination={false}
+          gridPadding={true}
+          compactPagination={true}
+          emptyMessage={t('onboarding.emptyMessage')}
+          emptyState={
+            <EmptyGridState
+              title={t('onboarding.emptyState.title')}
+              subtitle={t('onboarding.emptyState.subtitle')}
+              action={
+                <Button onClick={() => setIsAddPanelOpen(true)} className="gap-2">
+                  <Plus className="size-4" />
+                  <span>{t('onboarding.addOnboarding')}</span>
+                </Button>
+              }
+            />
+          }
+          onRowClick={(row, event) => {
+            const targetElement = event.target as HTMLElement;
+            if (targetElement.closest('[data-no-row-link="true"]')) {
+              return;
+            }
+            router.push(`/onboarding/${row.id}`);
+          }}
+          onRowKeyDown={(row, event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
               const targetElement = event.target as HTMLElement;
               if (targetElement.closest('[data-no-row-link="true"]')) {
                 return;
               }
+              event.preventDefault();
               router.push(`/onboarding/${row.id}`);
-            }}
-            onRowKeyDown={(row, event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                const targetElement = event.target as HTMLElement;
-                if (targetElement.closest('[data-no-row-link="true"]')) {
-                  return;
-                }
-                event.preventDefault();
-                router.push(`/onboarding/${row.id}`);
-              }
-            }}
-          />
-        )}
-      </div>
+            }
+          }}
+        />
+      )}
 
       <SidePanel
         open={isAddPanelOpen}
@@ -423,6 +423,8 @@ const OnboardingPage = () => {
           alt: 'Onboarding feature preview',
         }}
       />
+        </div>
+      </div>
     </div>
   );
 };

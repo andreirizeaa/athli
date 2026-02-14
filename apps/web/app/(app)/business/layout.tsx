@@ -137,10 +137,6 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
 
   const tabs = [
     {
-      value: 'activity',
-      label: t('business.tabs.activity'),
-    },
-    {
       value: 'packages',
       label: t('business.tabs.packages'),
     },
@@ -155,8 +151,9 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
   ];
 
   const validTabValues = tabs.map((tab) => tab.value);
-  const activeTab = segments.find((segment) => validTabValues.includes(segment)) || 'activity';
+  const activeTab = segments.find((segment) => validTabValues.includes(segment)) || 'packages';
 
+  // Show header only for packages/coupons/sequences, not activity
   const shouldShowHeader = segments.length === 1 && validTabValues.includes(segments[0]);
 
   // Handle Stripe onboarding return
@@ -273,25 +270,29 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col bg-background overflow-auto">
-      {shouldShowHeader && (
-        <div className="w-full relative flex-shrink-0">
-          <div className="pl-4 pr-4 flex items-center justify-between h-[38px] mt-2">
-            <h1 className="text-[22px] font-semibold">{t('business.title')}</h1>
-            {headerActions}
-          </div>
-          <div className="px-4">
-            <PageTabs
-              tabs={tabs}
-              value={activeTab}
-              onValueChange={handleTabChange}
-              className="mt-1"
-            />
-          </div>
-          <Separator className="absolute bottom-[-1px] left-0 right-0" />
+    <div className="h-full w-full flex flex-col">
+      <div className="flex flex-1 min-h-0">
+        <div className="flex-1 flex flex-col">
+          {shouldShowHeader && (
+            <div className="w-full relative flex-shrink-0 bg-background">
+              <div className="pl-4 pr-4 flex items-center justify-between h-[38px] mt-2">
+                <h1 className="text-[22px] font-semibold">{t('business.title')}</h1>
+                {headerActions}
+              </div>
+              <div className="px-4">
+                <PageTabs
+                  tabs={tabs}
+                  value={activeTab}
+                  onValueChange={handleTabChange}
+                  className="mt-1"
+                />
+              </div>
+              <Separator className="absolute bottom-[-1px] left-0 right-0" />
+            </div>
+          )}
+          {children}
         </div>
-      )}
-      <div className="w-full flex-1 overflow-auto relative">{children}</div>
+      </div>
 
       <Dialog open={isDisconnectOpen} onOpenChange={(open) => !isDisconnecting && setIsDisconnectOpen(open)}>
         <DialogContent className="border-[#635BFF] bg-[#635BFF]/5">

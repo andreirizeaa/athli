@@ -10,6 +10,7 @@ import {
     GlobeIcon,
     MicIcon,
     Paperclip,
+    PanelLeftIcon,
     SquareIcon,
     ThumbsDownIcon,
     ThumbsUpIcon,
@@ -17,6 +18,7 @@ import {
     X
 } from "lucide-react";
 import { CodeIcon, CopyIcon } from "@radix-ui/react-icons";
+import { useAssistantSidebar } from "../assistant-sidebar-context";
 import Lottie from "lottie-react";
 
 import {
@@ -70,6 +72,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
     const [selectedClient, setSelectedClient] = useState<Athlete | null>(null);
     const [clientSelectorOpen, setClientSelectorOpen] = useState(false);
 
+    const { toggle, isOpen, isMobile } = useAssistantSidebar();
     const { clients, isLoading: isLoadingClients } = useCoachClients();
     const terminology = useTerminology();
     const { isOnTrial } = useEntitlements();
@@ -232,7 +235,25 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
     const showCategorySuggestions = activeCategory !== "";
 
     return (
-        <div className="mx-auto flex h-full w-full max-w-4xl flex-col items-center justify-center space-y-4 lg:p-4">
+        <div className="flex h-full w-full flex-col">
+            {/* Header with sidebar toggle */}
+            <div className="flex items-center gap-2 px-4 py-2 border-b flex-shrink-0">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggle}
+                    className="size-8"
+                    title={isMobile ? "Open chats" : (isOpen ? "Hide sidebar" : "Show sidebar")}
+                >
+                    <PanelLeftIcon className="size-4" />
+                </Button>
+                <span className="text-sm font-medium text-muted-foreground">
+                    Lyra
+                </span>
+            </div>
+
+            {/* Main chat area */}
+            <div className="mx-auto flex flex-1 w-full max-w-4xl flex-col items-center justify-center space-y-4 lg:p-4 overflow-hidden">
             <ChatContainer
                 className={cn("relative w-full flex-1 space-y-4 pe-2 pt-10 md:pt-0", {
                     hidden: !isFirstResponse
@@ -508,6 +529,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }

@@ -25,6 +25,7 @@ import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-selec
 import { cn } from '@/lib/general/utils';
 import { exportToCSV } from '@/lib/general/csv-export';
 import { EditColumnsSidebar } from '@/components/app/edit-columns-sidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Search,
   X,
@@ -405,6 +406,7 @@ export function DataGrid<T extends Record<string, any>>({
   isLoading = false,
 }: DataGridProps<T>) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -802,6 +804,20 @@ export function DataGrid<T extends Record<string, any>>({
     }
     return visibleColumns.has(colId);
   });
+
+  // Calculate total minimum width for all columns (for maintaining width when empty)
+  const totalColumnsMinWidth = useMemo(() => {
+    let total = 0;
+    if (hasPinned) {
+      total += parseInt(pinnedWidth, 10) || 350;
+    }
+    filteredColumnOrder.forEach((columnId) => {
+      const column = columns.find((col) => col.id === columnId);
+      const width = column?.width?.pixel || '130px';
+      total += parseInt(width, 10) || 130;
+    });
+    return total;
+  }, [filteredColumnOrder, columns, hasPinned, pinnedWidth]);
 
   const handleSort = (columnId: string, direction: 'asc' | 'desc') => {
     setSortColumn(columnId);
@@ -1469,11 +1485,10 @@ export function DataGrid<T extends Record<string, any>>({
 
           >
             <div
-              className={cn(
-                'flex-1 relative overflow-auto',
-                paginatedData.length === 0 ? 'overflow-y-auto overflow-x-hidden' : ''
-              )}
+              className="flex-1 relative overflow-y-auto"
             >
+              {/* Inner wrapper to maintain column width even when empty */}
+              <div style={{ minWidth: `${totalColumnsMinWidth}px` }}>
               {isLoading && (
                 <div
                   className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 pointer-events-none"
@@ -2424,6 +2439,7 @@ export function DataGrid<T extends Record<string, any>>({
                   )
                 );
               })()}
+              </div>
             </div>
             {showPagination && (
               <div

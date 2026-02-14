@@ -412,7 +412,15 @@ const ActivityPage = () => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <>
+      {/* Page Header */}
+      <div className="w-full relative flex-shrink-0 bg-background">
+        <div className="pl-4 pr-4 flex items-center justify-between h-[38px] mt-2">
+          <h1 className="text-[22px] font-semibold">{t('business.tabs.activity')}</h1>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-border" />
+      </div>
+
       {/* Stat Cards - only show when connected */}
       {isConnected && (
         <div className="grid grid-cols-4 gap-4 px-4 pt-4 flex-shrink-0">
@@ -448,8 +456,7 @@ const ActivityPage = () => {
       )}
 
       {/* Activity Table */}
-      <div className="flex-1 min-h-0">
-        <DataGrid
+      <DataGrid
           data={filteredActivity}
           columns={columns}
           getRowId={(row) => row.id}
@@ -552,7 +559,6 @@ const ActivityPage = () => {
             </div>
           }
         />
-      </div>
 
       {/* Upgrade Dialog */}
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
@@ -583,7 +589,7 @@ const ActivityPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };
 
