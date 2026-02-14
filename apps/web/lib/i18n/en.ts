@@ -638,6 +638,10 @@ export const enMessages = {
         empty: 'No invoices yet',
         error: 'Failed to load invoices',
       },
+      mobileSuccess: {
+        title: 'Subscription Complete!',
+        description: 'Your subscription has been updated successfully. Tap Done above to return to the app.',
+      },
     },
   },
   sidebar: {
@@ -2354,9 +2358,6 @@ export const enMessages = {
       description: 'Are you sure you want to delete this photo? This action cannot be undone.',
     },
   },
-  nutrition: {
-    comingSoon: 'Coming soon',
-  },
   files: {
     title: 'Files',
     addFile: 'Add file',
@@ -3273,6 +3274,7 @@ export const enMessages = {
     addToMyPlan: 'Add to my plan',
     showFeatures: 'Show all features',
     hideFeatures: 'Hide features',
+    addonsSection: 'Supercharge with Add-ons',
     chooseClients: {
       title: 'I want to coach',
       subtitle: 'On {plan}, {clients} clients',
@@ -3317,7 +3319,7 @@ export const enMessages = {
     max: {
       name: 'Max',
       priceShort: 'From $99/mo',
-      description: 'For established coaches who need unlimited capacity',
+      description: 'For established coaches managing larger client bases',
       features: [
         'Coach Mobile App (iOS & Android)',
         'Client Mobile App (iOS & Android)',

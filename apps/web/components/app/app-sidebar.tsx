@@ -244,7 +244,7 @@ export function AppSidebar() {
         <SidebarGroup className="pb-0">
           <div className="flex h-6 items-center px-2">
             {isCollapsed ? (
-              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
+              <div className="mx-auto w-8 border-t-[1.5px] border-sidebar-foreground/70" />
             ) : (
               <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
                 {t('sidebar.group.main')}
@@ -305,7 +305,7 @@ export function AppSidebar() {
         <SidebarGroup className="pb-0">
           <div className="flex h-6 items-center px-2">
             {isCollapsed ? (
-              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
+              <div className="mx-auto w-8 border-t-[1.5px] border-sidebar-foreground/70" />
             ) : (
               <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
                 {t('sidebar.group.library')}
@@ -342,7 +342,7 @@ export function AppSidebar() {
                       <span className="text-xs font-semibold text-background/70 uppercase">
                         {t('sidebar.links.library')}
                       </span>
-                      <Library className="size-3.5 text-background/70" />
+                      <Library className="size-4 text-background/70" />
                     </div>
                     <div className="h-px w-full bg-background/20 mb-1" />
                     {librarySections.map((section) => {
@@ -353,7 +353,7 @@ export function AppSidebar() {
                           href={section.href}
                           onClick={handleMobileNavClick}
                           className={cn(
-                            'mx-1.5 px-2 py-1 text-[15px] rounded transition-colors',
+                            'mx-1.5 px-2 py-2 text-[15px] rounded transition-colors',
                             'hover:bg-background/20',
                             isSectionActive && 'bg-background/20 font-medium'
                           )}
@@ -371,7 +371,7 @@ export function AppSidebar() {
         <SidebarGroup className="pb-0">
           <div className="flex h-6 items-center px-2">
             {isCollapsed ? (
-              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
+              <div className="mx-auto w-8 border-t-[1.5px] border-sidebar-foreground/70" />
             ) : (
               <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
                 {t('sidebar.group.business')}
@@ -420,7 +420,7 @@ export function AppSidebar() {
         <SidebarGroup className="pb-0">
           <div className="flex h-6 items-center px-2">
             {isCollapsed ? (
-              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
+              <div className="mx-auto w-8 border-t-[1.5px] border-sidebar-foreground/70" />
             ) : (
               <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
                 {t('sidebar.group.automations')}

@@ -1,7 +1,8 @@
-import { StyleSheet, View, Text, Linking } from 'react-native';
+import { StyleSheet, View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PressableScale } from 'pressto';
 import Constants from 'expo-constants';
+import * as WebBrowser from 'expo-web-browser';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations } from '@/stores';
@@ -11,13 +12,17 @@ export default function DeleteAccountModal() {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
 
-  const handleGoToDashboard = () => {
+  const handleGoToDashboard = async () => {
     const webAppUrl = process.env.EXPO_PUBLIC_WEB_APP_URL ||
       Constants.expoConfig?.extra?.EXPO_PUBLIC_WEB_APP_URL ||
       'http://localhost:3001';
 
-    Linking.openURL(`${webAppUrl}/settings/account`);
     router.back();
+    await WebBrowser.openBrowserAsync(`${webAppUrl}/settings/account`, {
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+      dismissButtonStyle: 'done',
+      showTitle: true,
+    });
   };
 
   const handleCancel = () => {

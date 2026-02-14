@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { StyleSheet, Text, View, ScrollView, Linking } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Building2, ChevronLeft, ChevronRight, Lock, Mail, User } from 'lucide-react-native';
@@ -168,12 +169,20 @@ export default function EditProfileScreen() {
     });
   };
 
-  const handleManageGoogle = useCallback(() => {
-    Linking.openURL('https://myaccount.google.com/security');
+  const handleManageGoogle = useCallback(async () => {
+    await WebBrowser.openBrowserAsync('https://myaccount.google.com/security', {
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+      dismissButtonStyle: 'done',
+      showTitle: true,
+    });
   }, []);
 
-  const handleManageApple = useCallback(() => {
-    Linking.openURL('https://appleid.apple.com/account/manage');
+  const handleManageApple = useCallback(async () => {
+    await WebBrowser.openBrowserAsync('https://appleid.apple.com/account/manage', {
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+      dismissButtonStyle: 'done',
+      showTitle: true,
+    });
   }, []);
 
   const handleChangeEmail = useCallback(() => {

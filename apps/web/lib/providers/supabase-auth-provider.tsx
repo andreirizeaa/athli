@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient, clearCachedSession } from '@/supabase/client';
-import type { User } from '@supabase/supabase-js';
+import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { UserProfile, getUserProfileSafe } from '@/api/user/user-service';
 import {
@@ -82,7 +82,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }: { data: { session: Session | null }; error: Error | null }) => {
       if (error?.message?.includes('Refresh Token') || error?.message?.includes('refresh_token')) {
         // Only show dialog on protected routes
         if (isOnProtectedRoute()) {
@@ -99,7 +99,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       // Skip state updates when signing out to keep the loading overlay visible
       if (isSigningOutRef.current) return;
 

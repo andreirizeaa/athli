@@ -91,7 +91,7 @@ export function SidebarMenuItemWithTabs({
             <span className="text-xs font-semibold text-background/70 uppercase">
               {label}
             </span>
-            <Icon className="size-3.5 text-background/70" />
+            <Icon className="size-4 text-background/70" />
           </div>
           <div className="h-px w-full bg-background/20 mb-1" />
           {tabs.map((tab) => {
@@ -116,7 +116,7 @@ export function SidebarMenuItemWithTabs({
                 href={tabHref}
                 onClick={onNavigate}
                 className={cn(
-                  'mx-1.5 px-2 py-1 text-[15px] rounded transition-colors',
+                  'mx-1.5 px-2 py-2 text-[15px] rounded transition-colors',
                   'hover:bg-background/20',
                   isTabActive && 'bg-background/20 font-medium'
                 )}

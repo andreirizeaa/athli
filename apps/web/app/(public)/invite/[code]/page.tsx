@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { createClient } from '@/supabase/client';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { getCoachByCode } from '@/api/coach/coach-public-service';
 import { AuthErrorAlert } from '@/components/auth/auth-error-alert';
 import { AuthLayout } from '@/components/auth/auth-layout';
@@ -73,7 +74,7 @@ export default function ClientInvitePage() {
   useEffect(() => {
     if (isLoadingCoach || !coachId) return;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       if (session?.user) {
         // User is already signed in, check if they need to create client profile
         handleExistingUser(session.user.id);
@@ -81,7 +82,7 @@ export default function ClientInvitePage() {
     });
 
     // Listen for auth state changes (e.g., OAuth callback)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       if (session?.user && _event === 'SIGNED_IN') {
         // User just signed in (e.g., from OAuth), ensure client profile exists
         handleExistingUser(session.user.id);

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PressableOpacity } from 'pressto';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 
 import { Dialog } from '@/components/ui/dialog';
 import { FilledButton } from '@/components/ui/buttons/filled-button';
@@ -138,12 +139,20 @@ export default function WelcomeScreen() {
     router.push('/auth/email-sign-in');
   };
 
-  const handleTermsOfServicePress = () => {
-    // TODO: Navigate to Terms of Service
+  const handleTermsOfServicePress = async () => {
+    await WebBrowser.openBrowserAsync('https://app.tryathli.com/', {
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+      dismissButtonStyle: 'done',
+      showTitle: true,
+    });
   };
 
-  const handlePrivacyPolicyPress = () => {
-    // TODO: Navigate to Privacy Policy
+  const handlePrivacyPolicyPress = async () => {
+    await WebBrowser.openBrowserAsync('https://app.tryathli.com/', {
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+      dismissButtonStyle: 'done',
+      showTitle: true,
+    });
   };
 
   return (

@@ -19,23 +19,27 @@ interface ExerciseHistoryChartDialogProps {
 }
 
 /**
- * Parse a value that may be a range like "8-10" and return the midpoint,
- * or a Heart Rate Zone like "Zone 1" and return the zone number
+ * Parse a value that may be a range like "8-10" or "7-10-12" and return the average (rounded up),
+ * or a Heart Rate Zone like "Zone 1" and return the zone number unchanged.
+ * Handles any number of hyphen-separated values (e.g., "7-10", "7-10-12", etc.)
  */
 const parseNumericValue = (val: any): number => {
     if (typeof val === 'number') return val;
     if (val == null) return 0;
     const str = String(val).trim();
     // Check for Heart Rate Zone format like "Zone 1", "Zone 2", etc.
+    // Return the zone number unchanged (no rounding needed for zones)
     const zoneMatch = str.match(/^Zone\s*(\d+)$/i);
     if (zoneMatch) {
         return parseInt(zoneMatch[1], 10);
     }
-    // Check for range format like "8-10"
+    // Check for range format like "8-10" or "7-10-12"
+    // Calculate average of all parts and round up
     if (str.includes('-')) {
-        const parts = str.split('-').map(p => parseFloat(p.trim()));
-        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-            return (parts[0] + parts[1]) / 2;
+        const parts = str.split('-').map(p => parseFloat(p.trim())).filter(n => !isNaN(n));
+        if (parts.length >= 2) {
+            const avg = parts.reduce((sum, n) => sum + n, 0) / parts.length;
+            return Math.ceil(avg);
         }
     }
     return Number(str) || 0;

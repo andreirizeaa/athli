@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Platform, StyleSheet, Text, View, Linking, ActivityIndicator, InteractionManager, Alert } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { PressableScale } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -146,8 +147,16 @@ export default function SettingsScreen() {
     router.push('/settings/edit-profile');
   };
 
-  const handleOpenWebURL = (url: string) => {
-    Linking.openURL(url).catch((err) => console.error('Failed to open URL:', err));
+  const handleOpenWebURL = async (url: string) => {
+    try {
+      await WebBrowser.openBrowserAsync(url, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        dismissButtonStyle: 'done',
+        showTitle: true,
+      });
+    } catch (err) {
+      console.error('Failed to open URL:', err);
+    }
   };
 
   const handleOpenTermsOfService = () => {
