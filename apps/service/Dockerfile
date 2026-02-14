@@ -69,7 +69,7 @@ COPY --from=shared-builder /app/packages/shared-types/dist ./packages/shared-typ
 COPY apps/service/package.json apps/service/package-lock.json* ./
 
 # Update shared-types reference to local path
-RUN sed -i 's/"@athli\/shared-types": "[^"]*"/"@athli\/shared-types": "file:..\/packages\/shared-types"/g' package.json
+RUN sed -i 's/"@athli\/shared-types": "[^"]*"/"@athli\/shared-types": "file:\.\/packages\/shared-types"/g' package.json
 
 # Install production dependencies only
 RUN npm install --omit=dev && npm cache clean --force
