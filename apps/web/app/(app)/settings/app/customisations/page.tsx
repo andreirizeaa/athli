@@ -135,7 +135,7 @@ const CustomisationsPage = () => {
                     <RadioGroup
                       value={isMounted ? (theme || 'system') : 'system'}
                       onValueChange={handleThemeChange}
-                      className="flex gap-6 justify-center"
+                      className="flex flex-wrap gap-4 md:gap-6 justify-center"
                     >
                       <div className="flex flex-col">
                         <Label
@@ -243,12 +243,12 @@ const CustomisationsPage = () => {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-[1fr_auto] gap-4 pt-2 pb-2 px-4 border-b items-center -mt-0.5">
+              <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto] gap-4 pt-2 pb-2 px-4 border-b items-center -mt-0.5">
                 <label htmlFor="language" className="text-sm">
                   {t('settings.customisations.preferences.language.label')}
                 </label>
                 <Select value={locale} onValueChange={handleLanguageChange}>
-                  <SelectTrigger id="language" className="w-[180px]">
+                  <SelectTrigger id="language" className="w-full sm:w-[180px]">
                     <SelectValue>
                       <div className="flex items-center gap-2">
                         <span>
@@ -270,7 +270,7 @@ const CustomisationsPage = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-[1fr_auto] gap-4 py-2 px-4 border-b items-center">
+              <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto] gap-4 py-2 px-4 border-b items-center">
                 <label htmlFor="colorTheme" className="text-sm">
                   {t('settings.customisations.preferences.color.label')}
                 </label>
@@ -278,7 +278,7 @@ const CustomisationsPage = () => {
                   value={themeConfig.preset}
                   onValueChange={handleColorPresetChange}
                 >
-                  <SelectTrigger id="colorTheme" className="w-[180px]">
+                  <SelectTrigger id="colorTheme" className="w-full sm:w-[180px]">
                     <SelectValue>
                       <div className="flex items-center gap-2">
                         <div
@@ -310,12 +310,12 @@ const CustomisationsPage = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-[1fr_auto] gap-4 pt-2 px-4 items-center">
+              <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto] gap-4 pt-2 px-4 items-center">
                 <label htmlFor="terminology" className="text-sm">
                   {t('settings.customisations.preferences.terminology.label')}
                 </label>
                 <Select value={clientTerminology} onValueChange={handleTerminologyChange}>
-                  <SelectTrigger id="terminology" className="w-[180px]">
+                  <SelectTrigger id="terminology" className="w-full sm:w-[180px]">
                     <SelectValue>
                       {clientTerminology === 'athlete'
                         ? t('settings.customisations.preferences.terminology.athlete')

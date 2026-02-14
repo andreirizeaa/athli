@@ -299,10 +299,12 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
       : '?';
 
   return (
-    <div className="h-full w-full flex flex-col overflow-auto relative">
+    <div className="h-full w-full flex flex-col relative">
       {showSectionLoading && <SectionLoader subtitle="Pulling up the good stuff..." />}
-      <div className="w-full relative flex-shrink-0">
-        <div className="px-4 flex flex-col gap-1 mb-2 mt-2">
+      <div className="flex flex-1 min-h-0">
+        <div className="flex-1 flex flex-col">
+          <div className="w-full relative flex-shrink-0">
+            <div className="px-4 flex flex-col gap-1 mb-2 mt-2">
           {!hideBreadcrumb && (
             <Breadcrumb>
               <BreadcrumbList className="text-xs gap-1">
@@ -451,7 +453,9 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 min-h-0">{children}</div>
+          <div className="w-full flex-1 min-h-0">{children}</div>
+        </div>
+      </div>
       <EditClientDetailsSidePanel
         open={isEditDetailsOpen}
         onOpenChange={setIsEditDetailsOpen}

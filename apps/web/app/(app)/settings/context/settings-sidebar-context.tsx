@@ -4,19 +4,17 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 
 const MOBILE_BREAKPOINT = 900;
 
-interface LibrarySidebarContextType {
+interface SettingsSidebarContextType {
   isOpen: boolean;
   isMobileOpen: boolean;
   isMobile: boolean;
   toggle: () => void;
-  open: () => void;
-  close: () => void;
   setMobileOpen: (open: boolean) => void;
 }
 
-const LibrarySidebarContext = createContext<LibrarySidebarContextType | undefined>(undefined);
+const SettingsSidebarContext = createContext<SettingsSidebarContextType | undefined>(undefined);
 
-export function LibrarySidebarProvider({ children }: { children: ReactNode }) {
+export function SettingsSidebarProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -39,20 +37,17 @@ export function LibrarySidebarProvider({ children }: { children: ReactNode }) {
     }
   }, [isMobile]);
 
-  const open = () => setIsOpen(true);
-  const close = () => setIsOpen(false);
-
   return (
-    <LibrarySidebarContext.Provider value={{ isOpen, isMobileOpen, isMobile, toggle, open, close, setMobileOpen: setIsMobileOpen }}>
+    <SettingsSidebarContext.Provider value={{ isOpen, isMobileOpen, isMobile, toggle, setMobileOpen: setIsMobileOpen }}>
       {children}
-    </LibrarySidebarContext.Provider>
+    </SettingsSidebarContext.Provider>
   );
 }
 
-export function useLibrarySidebar() {
-  const context = useContext(LibrarySidebarContext);
+export function useSettingsSidebar() {
+  const context = useContext(SettingsSidebarContext);
   if (context === undefined) {
-    throw new Error('useLibrarySidebar must be used within a LibrarySidebarProvider');
+    throw new Error('useSettingsSidebar must be used within a SettingsSidebarProvider');
   }
   return context;
 }

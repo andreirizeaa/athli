@@ -47,7 +47,11 @@ const mockChats: ChatSession[] = [
     }
 ];
 
-export function AssistantSidebar() {
+interface AssistantSidebarProps {
+    onChatClick?: () => void;
+}
+
+export function AssistantSidebar({ onChatClick }: AssistantSidebarProps) {
     const router = useRouter();
     const pathname = usePathname();
     const [searchQuery, setSearchQuery] = useState("");
@@ -60,10 +64,12 @@ export function AssistantSidebar() {
 
     const handleNewChat = () => {
         router.push("/assistant");
+        onChatClick?.();
     };
 
     const handleChatClick = (id: string) => {
         router.push(`/assistant/${id}`);
+        onChatClick?.();
     };
 
     const isActiveChat = (id: string) => {

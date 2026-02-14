@@ -8,6 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Calendar, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { WorkoutCard } from './workout-card';
@@ -16,10 +23,12 @@ import { getClientWorkoutInstance } from '@/api/client/client-training-service';
 import { ClientTrainingDaySummary } from '@/app/(app)/athletes/[clientId]/training/client-training-day-summary';
 import { WorkoutPreviewDialog } from '@/app/(app)/athletes/[clientId]/training/workout-preview-dialog';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export const CompletedWorkoutsCard = () => {
   const t = useTranslations();
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [workoutType, setWorkoutType] = useState<'completed' | 'in_progress' | 'missed'>('completed');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
@@ -174,73 +183,129 @@ export const CompletedWorkoutsCard = () => {
       {/* Top Nav Card with border */}
       <Card className="flex-shrink-0 bg-muted/40 backdrop-blur-sm border-border/50 shadow-sm">
         <CardContent className="px-4">
-          <div className="flex items-center justify-between">
-            {/* Tab Toggle - styled like add-metric-side-panel */}
-            <Tabs
-              value={workoutType}
-              onValueChange={(value) => setWorkoutType(value as any)}
-              className="w-auto"
-            >
-              <TabsList className="w-auto">
-                <TabsTrigger
-                  value="completed"
-                  className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+          {isMobile ? (
+            /* Mobile Layout - Stacked controls */
+            <div className="flex flex-col gap-3">
+              {/* Workout Type Dropdown */}
+              <Select value={workoutType} onValueChange={(value) => setWorkoutType(value as any)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="completed">{t('home.completedWorkouts')}</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="missed">{t('home.missedWorkouts')}</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Date controls row */}
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleYesterdayClick}
+                  className="h-8 text-xs font-medium px-3 border-primary text-primary hover:bg-primary/5"
                 >
-                  {t('home.completedWorkouts')}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="in_progress"
-                  className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                >
-                  In Progress
-                </TabsTrigger>
-                <TabsTrigger
-                  value="missed"
-                  className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                >
-                  {t('home.missedWorkouts')}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <div className="flex items-center gap-2">
-              {/* Yesterday button - primary outlined style */}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleYesterdayClick}
-                className="h-8 text-xs font-medium px-3 border-primary text-primary hover:bg-primary/5"
-              >
-                {t('home.yesterday')}
-              </Button>
-              {/* Date selector - styled like training page (text, not button) */}
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <div className="flex items-center justify-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors">
-                    <Calendar className="size-4 text-muted-foreground" />
-                    <span className="font-medium text-sm">{dateText}</span>
-                  </div>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <CalendarComponent
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={handleDateSelect}
-                    captionLayout="dropdown"
-                    fromYear={2020}
-                    toYear={2030}
-                    disabled={(date) => {
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const d = new Date(date);
-                      d.setHours(0, 0, 0, 0);
-                      return d > today; // Disable future dates for history
-                    }}
-                  />
-                </PopoverContent>
-              </Popover>
+                  {t('home.yesterday')}
+                </Button>
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <div className="flex items-center justify-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors">
+                      <Calendar className="size-4 text-muted-foreground" />
+                      <span className="font-medium text-sm">{dateText}</span>
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <CalendarComponent
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={handleDateSelect}
+                      captionLayout="dropdown"
+                      fromYear={2020}
+                      toYear={2030}
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const d = new Date(date);
+                        d.setHours(0, 0, 0, 0);
+                        return d > today;
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Desktop Layout - Side by side */
+            <div className="flex items-center justify-between">
+              {/* Tab Toggle - styled like add-metric-side-panel */}
+              <Tabs
+                value={workoutType}
+                onValueChange={(value) => setWorkoutType(value as any)}
+                className="w-auto"
+              >
+                <TabsList className="w-auto">
+                  <TabsTrigger
+                    value="completed"
+                    className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                  >
+                    {t('home.completedWorkouts')}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="in_progress"
+                    className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                  >
+                    In Progress
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="missed"
+                    className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                  >
+                    {t('home.missedWorkouts')}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <div className="flex items-center gap-2">
+                {/* Yesterday button - primary outlined style */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleYesterdayClick}
+                  className="h-8 text-xs font-medium px-3 border-primary text-primary hover:bg-primary/5"
+                >
+                  {t('home.yesterday')}
+                </Button>
+                {/* Date selector - styled like training page (text, not button) */}
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <div className="flex items-center justify-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors">
+                      <Calendar className="size-4 text-muted-foreground" />
+                      <span className="font-medium text-sm">{dateText}</span>
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <CalendarComponent
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={handleDateSelect}
+                      captionLayout="dropdown"
+                      fromYear={2020}
+                      toYear={2030}
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const d = new Date(date);
+                        d.setHours(0, 0, 0, 0);
+                        return d > today; // Disable future dates for history
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

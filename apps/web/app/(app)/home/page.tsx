@@ -8,12 +8,14 @@ import { Separator } from '@/components/ui/separator';
 import { CompletedWorkoutsCard } from './components/completed-workouts-card';
 import { AtRiskClientsCard } from './components/at-risk-clients-card';
 import { SummaryCards } from './components/summary-cards';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const HomePage = () => {
   const { user, refreshUser } = useSupabaseAuth();
   const t = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile();
 
   // Check if user needs to be refreshed after email change
   useEffect(() => {
@@ -84,23 +86,39 @@ const HomePage = () => {
 
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-auto">
+      {/* Header */}
       <div className="w-full relative flex-shrink-0">
-        <div className="pl-4 pr-4 flex items-baseline gap-2">
-          <h1 className="text-[22px] font-semibold mb-2 mt-2">{greeting}</h1>
-          <p className="text-sm text-foreground mb-2 mt-2">{dateString}</p>
+        <div className="pl-4 pr-4 flex flex-col md:flex-row md:items-baseline gap-0 md:gap-2">
+          <h1 className="text-[22px] font-semibold mt-2 md:mb-2">{greeting}</h1>
+          <p className="text-sm text-muted-foreground md:text-foreground mb-2 md:mt-2">{dateString}</p>
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
+
+      {/* Content */}
       <div className="w-full flex-1 px-4 py-4 overflow-hidden">
-        <div className="w-full h-full flex gap-6">
-          <div className="flex flex-col h-full" style={{ width: '65%' }}>
-            <CompletedWorkoutsCard />
-          </div>
-          <div className="flex flex-col gap-4" style={{ width: '35%' }}>
+        {isMobile ? (
+          /* Mobile Layout - Stacked */
+          <div className="flex flex-col gap-4 h-full">
+            {/* Summary Cards at top */}
             <SummaryCards />
-            <AtRiskClientsCard />
+            {/* Workouts Card takes remaining space */}
+            <div className="flex-1 min-h-0">
+              <CompletedWorkoutsCard />
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Desktop Layout - Two columns */
+          <div className="w-full h-full flex gap-6">
+            <div className="flex flex-col h-full" style={{ width: '65%' }}>
+              <CompletedWorkoutsCard />
+            </div>
+            <div className="flex flex-col gap-4" style={{ width: '35%' }}>
+              <SummaryCards />
+              <AtRiskClientsCard />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

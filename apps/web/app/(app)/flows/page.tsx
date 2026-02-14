@@ -209,68 +209,68 @@ const FlowsPage = () => {
   ];
 
   return (
-    <div className="h-full w-full flex flex-col bg-background overflow-auto">
-      <div className="w-full relative flex-shrink-0">
-        <div className="pl-4 pr-4 flex items-center justify-between mb-2 mt-2">
-          <h1 className="text-[22px] font-semibold">{t('flows.title')}</h1>
-          <Button
-            onClick={() => router.push('/features')}
-            className="gap-2"
-          >
-            <Plus className="size-4" />
-            <span>Request a new flow</span>
-          </Button>
-        </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
-      </div>
-
-      <div className="flex-1 w-full overflow-hidden">
-        {isLoading ? (
-          <div className="h-full w-full flex items-center justify-center">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+    <div className="h-full w-full flex flex-col">
+      <div className="flex flex-1 min-h-0">
+        <div className="flex-1 flex flex-col">
+          <div className="w-full relative flex-shrink-0 bg-background">
+            <div className="pl-4 pr-4 flex items-center justify-between mb-2 mt-2">
+              <h1 className="text-[22px] font-semibold">{t('flows.title')}</h1>
+              <Button
+                onClick={() => router.push('/features')}
+                className="gap-2"
+              >
+                <Plus className="size-4" />
+                <span>Request a new flow</span>
+              </Button>
+            </div>
+            <Separator className="absolute bottom-[-1px] left-0 right-0" />
           </div>
-        ) : (
-          <DataGrid
-            data={optimisticFlows}
-            columns={columns}
-            getRowId={(row) => row.id}
-            gridKey="flows"
-            searchPlaceholder={t('flows.searchPlaceholder')}
-            enableSearch={true}
-            searchFields={['name', 'description']}
-            enableEditColumns={false}
-            enableExport={false}
-            enableRowSelection={false}
-            showPagination={false}
-            gridPadding={true}
-            compactPagination={true}
-            emptyMessage={t('flows.emptyMessage')}
-            emptyState={
-              <EmptyGridState
-                title="No flows found"
-                subtitle="The default system flows seem to be missing."
-              />
+
+          {isLoading ? (
+        <div className="h-full w-full flex items-center justify-center">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <DataGrid
+          data={optimisticFlows}
+          columns={columns}
+          getRowId={(row) => row.id}
+          gridKey="flows"
+          searchPlaceholder={t('flows.searchPlaceholder')}
+          enableSearch={true}
+          searchFields={['name', 'description']}
+          enableEditColumns={false}
+          enableExport={false}
+          enableRowSelection={false}
+          showPagination={false}
+          gridPadding={true}
+          compactPagination={true}
+          emptyMessage={t('flows.emptyMessage')}
+          emptyState={
+            <EmptyGridState
+              title="No flows found"
+              subtitle="The default system flows seem to be missing."
+            />
+          }
+          onRowClick={(row, event) => {
+            const targetElement = event.target as HTMLElement;
+            if (targetElement.closest('[data-no-row-link="true"]')) {
+              return;
             }
-            onRowClick={(row, event) => {
+            router.push(`/flows/${row.id}`);
+          }}
+          onRowKeyDown={(row, event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
               const targetElement = event.target as HTMLElement;
               if (targetElement.closest('[data-no-row-link="true"]')) {
                 return;
               }
+              event.preventDefault();
               router.push(`/flows/${row.id}`);
-            }}
-            onRowKeyDown={(row, event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                const targetElement = event.target as HTMLElement;
-                if (targetElement.closest('[data-no-row-link="true"]')) {
-                  return;
-                }
-                event.preventDefault();
-                router.push(`/flows/${row.id}`);
-              }
-            }}
-          />
-        )}
-      </div>
+            }
+          }}
+        />
+      )}
 
       <ConfirmPublishDialog
         open={!!publishDialogFlow}
@@ -295,6 +295,8 @@ const FlowsPage = () => {
           alt: 'Flows feature preview',
         }}
       />
+        </div>
+      </div>
     </div>
   );
 };

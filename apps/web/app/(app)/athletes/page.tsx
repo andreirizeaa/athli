@@ -1228,9 +1228,11 @@ const AthletesPage = () => {
   };
   return (
     <div className="h-full w-full flex flex-col">
-      <PageHeader
-        title={`${terminology.plural} (${filteredCount})`}
-        action={
+      <div className="flex flex-1 min-h-0">
+        <div className="flex-1 flex flex-col">
+          <PageHeader
+            title={`${terminology.plural} (${filteredCount})`}
+            action={
           <div className="flex items-center gap-2">
             <div className="flex items-center px-3 py-1.5 rounded-md border border-primary text-primary text-sm font-medium">
               {activeClientCount}/{clientLimit} {terminology.pluralLower}
@@ -1571,6 +1573,8 @@ const AthletesPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </div>
+      </div>
     </div>
   );
 };

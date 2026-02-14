@@ -452,7 +452,7 @@ const PackagesPage = () => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <>
       <DataGrid
         data={filteredPackages}
         columns={columns}
@@ -586,7 +586,7 @@ const PackagesPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };
 
