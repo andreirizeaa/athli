@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
@@ -13,10 +13,14 @@ import { useEntitlements, useSubscription } from '@/hooks/use-entitlements';
 
 export default function UpdatePlanPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   const { activeClientCount, isLoading: isLoadingClients } = useCoachClients();
   const { isLoading: isLoadingEntitlements } = useEntitlements();
   const { isLoading: isLoadingSubscription } = useSubscription();
+
+  // Get source parameter to pass through to pricing plans
+  const source = searchParams.get('source');
 
   // Wait for all data to load before showing pricing
   const isLoading = isLoadingEntitlements || isLoadingSubscription || isLoadingClients;
@@ -31,7 +35,8 @@ export default function UpdatePlanPage() {
   }, []);
 
   const handleBack = () => {
-    router.push('/settings/billing');
+    const backUrl = source === 'mobile' ? '/settings/billing?source=mobile' : '/settings/billing';
+    router.push(backUrl);
   };
 
   if (!mounted) return null;
@@ -88,6 +93,7 @@ export default function UpdatePlanPage() {
               hideHeader
               isUpdateMode
               minClientCount={activeClientCount}
+              source={source}
             />
 
             <PricingComparison />

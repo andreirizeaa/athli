@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
-import { StyleSheet, Text, View, ScrollView, ActivityIndicator, Linking } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight, FileText } from 'lucide-react-native';
@@ -14,7 +15,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { EmptyState } from '@/components/ui/empty-state';
-import { getCoachInvoices, formatCurrency, getInvoiceStatusInfo, type Invoice } from '@/services/coach/coach-billing-service';
+import { getCoachInvoices, formatCurrency, getInvoiceStatusInfo, getInvoiceType, getInvoiceTypeInfo, type Invoice } from '@/services/coach/coach-billing-service';
 
 // Format date for display
 const formatDate = (timestamp: number): string => {
@@ -52,13 +53,19 @@ export default function InvoicesScreen() {
     router.back();
   };
 
-  const handleInvoicePress = useCallback((invoice: Invoice) => {
+  const handleInvoicePress = useCallback(async (invoice: Invoice) => {
     haptics.medium();
     const url = invoice.hosted_invoice_url || invoice.invoice_pdf;
     if (url) {
-      Linking.openURL(url).catch((err) => {
+      try {
+        await WebBrowser.openBrowserAsync(url, {
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+          dismissButtonStyle: 'done',
+          showTitle: true,
+        });
+      } catch (err) {
         console.error('Failed to open invoice URL:', err);
-      });
+      }
     }
   }, []);
 
@@ -76,11 +83,28 @@ export default function InvoicesScreen() {
     }
   }, [themeColors]);
 
+  const getTypeColor = useCallback((type: 'subscription' | 'upgrade') => {
+    const info = getInvoiceTypeInfo(type);
+    switch (info.color) {
+      case 'blue':
+        return '#3b82f6';
+      case 'purple':
+        return '#a855f7';
+      default:
+        return themeColors.mutedText;
+    }
+  }, [themeColors]);
+
   const renderInvoice = useCallback(
     ({ item, isLastItem }: { item: Invoice; isLastItem: boolean }) => {
       const statusInfo = getInvoiceStatusInfo(item.status);
       const statusColor = getStatusColor(item.status);
+      const invoiceType = getInvoiceType(item);
+      const typeInfo = getInvoiceTypeInfo(invoiceType);
+      const typeColor = getTypeColor(invoiceType);
       const hasUrl = item.hosted_invoice_url || item.invoice_pdf;
+      // Show amount_due for open invoices, amount_paid for paid ones
+      const displayAmount = item.status === 'open' ? (item.amount_due || item.amount_paid) : item.amount_paid;
 
       return (
         <View>
@@ -99,9 +123,19 @@ export default function InvoicesScreen() {
                   {formatDate(item.created)}
                 </Text>
                 <View style={styles.metaRow}>
+                  <View
+                    style={[
+                      styles.pill,
+                      { borderColor: typeColor, backgroundColor: typeColor + '15' },
+                    ]}
+                  >
+                    <Text style={[styles.pillText, { color: typeColor }]}>
+                      {typeInfo.label}
+                    </Text>
+                  </View>
                   <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
                     <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
-                      {formatCurrency(item.amount_paid, item.currency)}
+                      {formatCurrency(displayAmount, item.currency)}
                     </Text>
                   </View>
                   <View
@@ -115,9 +149,11 @@ export default function InvoicesScreen() {
                     </Text>
                   </View>
                 </View>
-                <Text style={[styles.periodText, { color: themeColors.mutedText }]} numberOfLines={1}>
-                  {formatPeriod(item.period_start, item.period_end)}
-                </Text>
+                {invoiceType === 'subscription' && (
+                  <Text style={[styles.periodText, { color: themeColors.mutedText }]} numberOfLines={1}>
+                    {formatPeriod(item.period_start, item.period_end)}
+                  </Text>
+                )}
               </View>
               {hasUrl && <ChevronRight size={16} color={themeColors.mutedText} />}
             </View>
@@ -136,7 +172,7 @@ export default function InvoicesScreen() {
         </View>
       );
     },
-    [themeColors, handleInvoicePress, getStatusColor]
+    [themeColors, handleInvoicePress, getStatusColor, getTypeColor]
   );
 
   const iconColor = themeColors.text;

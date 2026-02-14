@@ -9,7 +9,8 @@ export const coachPublicController = {
      * Public endpoint
      */
     getCoachByCode: async (req: Request, res: Response) => {
-        const { code } = req.params;
+        const codeParam = req.params.code;
+        const code = Array.isArray(codeParam) ? codeParam[0] : codeParam;
 
         if (!code) {
             return res.status(400).json({ success: false, message: 'Code is required' });

@@ -24,11 +24,19 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useTranslations } from 'next-intl';
 import Lottie from 'lottie-react';
 import { useCoachFlows } from '@/hooks/use-coach-flows';
 import { useCoachChecklist } from '@/hooks/use-coach-checklist';
 import { useTerminology } from '@/hooks/use-terminology';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface AccordionCardProps {
   number: number;
@@ -137,6 +145,7 @@ const GetStartedPage = () => {
   const t = useTranslations('getStarted');
   const { flows } = useCoachFlows();
   const { data: checklist } = useCoachChecklist();
+  const isMobile = useIsMobile();
 
   // Load the gift animation
   useEffect(() => {
@@ -247,9 +256,9 @@ const GetStartedPage = () => {
         <div className="absolute bottom-[10%] left-[20%] h-[600px] w-[600px] rounded-full bg-primary/[0.08] blur-[100px]" />
       </div>
 
-      {/* Welcome Section - Centered at 50% */}
+      {/* Welcome Section - Centered at 50% on desktop, full width on mobile */}
       <div className="relative z-10 flex justify-center mb-8">
-        <div className="w-[50%] min-w-[400px]">
+        <div className="w-full md:w-[50%] md:min-w-[400px]">
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-foreground mb-2 flex items-center justify-center gap-2">
@@ -291,74 +300,49 @@ const GetStartedPage = () => {
               totalItems={9}
               exploredLabel={t('explored', { count: featuresProgress, total: 9 })}
             >
-              <div className="flex items-stretch gap-6 min-h-[400px]">
-                {/* Left Side - Checklist Items */}
-                <div className="flex-1 flex flex-col gap-1">
-                  {[
-                    { icon: Bot, key: 'workoutAi', route: '/library/training' },
-                    { icon: Copy, key: 'programTemplates', route: '/library/training' },
-                    { icon: Dumbbell, key: 'customExercises', route: '/library/training' },
-                    { icon: Zap, key: 'automateOnboardings', route: '/flows' },
-                    { icon: FileCheck, key: 'checkInsForms', route: '/library/forms' },
-                    { icon: Workflow, key: 'powerfulFlows', route: '/flows' },
-                    { icon: Sprout, key: 'lifestyleHabits', route: '/library/habits' },
-                    { icon: BarChart3, key: 'trackMetrics', route: '/library/metrics' },
-                    { icon: File, key: 'onDemandResources', route: '/library/files' },
-                  ].map((item) => {
-                    const isCompleted = isChecklistItemCompleted(item.key);
-                    return (
-                      <div
-                        key={item.key}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedChecklistItem(item.key);
-                        }}
-                        className={cn(
-                          'flex items-center gap-3 py-3 px-2 rounded-lg cursor-pointer transition-all border border-transparent',
-                          selectedChecklistItem === item.key
-                            ? 'bg-primary/10 border-primary/20'
-                            : 'hover:bg-accent hover:border-border'
-                        )}
-                      >
-                        <item.icon className={cn(
-                          'h-4 w-4 shrink-0',
-                          selectedChecklistItem === item.key ? 'text-primary' : 'text-muted-foreground'
-                        )} />
-                        <span className={cn(
-                          'flex-1 text-sm font-medium',
-                          selectedChecklistItem === item.key ? 'text-foreground' : 'text-muted-foreground'
-                        )}>
-                          {t(`checklist.${item.key}`)}
-                        </span>
-                        <div className={cn(
-                          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
-                          isCompleted
-                            ? 'border-primary bg-primary'
-                            : 'border-muted-foreground/30'
-                        )}>
-                          {isCompleted && <Check className="h-3 w-3 text-primary-foreground" />}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* Mobile Layout - Dropdown + Content stacked */}
+              {isMobile ? (
+                <div className="flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
+                  {/* Feature Selector Dropdown */}
+                  <Select value={selectedChecklistItem} onValueChange={setSelectedChecklistItem}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
+                        { icon: Bot, key: 'workoutAi' },
+                        { icon: Copy, key: 'programTemplates' },
+                        { icon: Dumbbell, key: 'customExercises' },
+                        { icon: Zap, key: 'automateOnboardings' },
+                        { icon: FileCheck, key: 'checkInsForms' },
+                        { icon: Workflow, key: 'powerfulFlows' },
+                        { icon: Sprout, key: 'lifestyleHabits' },
+                        { icon: BarChart3, key: 'trackMetrics' },
+                        { icon: File, key: 'onDemandResources' },
+                      ].map((item) => {
+                        const isCompleted = isChecklistItemCompleted(item.key);
+                        return (
+                          <SelectItem key={item.key} value={item.key}>
+                            <div className="flex items-center gap-2">
+                              <item.icon className="h-4 w-4 text-muted-foreground" />
+                              <span>{t(`checklist.${item.key}`)}</span>
+                              {isCompleted && <Check className="h-3 w-3 text-primary ml-auto" />}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
 
-                {/* Vertical Divider */}
-                <div className="w-px bg-border self-stretch" />
-
-                {/* Right Side - Dynamic Content + Explore Button */}
-                <div className="flex-1 flex flex-col justify-between">
-                  <div />
-                  <div className="mb-4">
+                  {/* Content */}
+                  <div>
                     <h3 className="text-lg font-semibold text-foreground mb-1">
                       {t(`checklist.details.${selectedChecklistItem}.title`)}
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mb-4">
                       {t(`checklist.details.${selectedChecklistItem}.subtitle`)}
                     </p>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button variant="default" onClick={(e) => { e.stopPropagation(); handleExploreClick(); }} disabled={isNavigating}>
+                    <Button variant="default" className="w-full" onClick={handleExploreClick} disabled={isNavigating}>
                       {t('checklist.explore')}
                       {isNavigating ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -368,7 +352,87 @@ const GetStartedPage = () => {
                     </Button>
                   </div>
                 </div>
-              </div>
+              ) : (
+                /* Desktop Layout - Side by side */
+                <div className="flex items-stretch gap-6 min-h-[400px]">
+                  {/* Left Side - Checklist Items */}
+                  <div className="flex-1 flex flex-col gap-1">
+                    {[
+                      { icon: Bot, key: 'workoutAi', route: '/library/training' },
+                      { icon: Copy, key: 'programTemplates', route: '/library/training' },
+                      { icon: Dumbbell, key: 'customExercises', route: '/library/training' },
+                      { icon: Zap, key: 'automateOnboardings', route: '/flows' },
+                      { icon: FileCheck, key: 'checkInsForms', route: '/library/forms' },
+                      { icon: Workflow, key: 'powerfulFlows', route: '/flows' },
+                      { icon: Sprout, key: 'lifestyleHabits', route: '/library/habits' },
+                      { icon: BarChart3, key: 'trackMetrics', route: '/library/metrics' },
+                      { icon: File, key: 'onDemandResources', route: '/library/files' },
+                    ].map((item) => {
+                      const isCompleted = isChecklistItemCompleted(item.key);
+                      return (
+                        <div
+                          key={item.key}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedChecklistItem(item.key);
+                          }}
+                          className={cn(
+                            'flex items-center gap-3 py-3 px-2 rounded-lg cursor-pointer transition-all border border-transparent',
+                            selectedChecklistItem === item.key
+                              ? 'bg-primary/10 border-primary/20'
+                              : 'hover:bg-accent hover:border-border'
+                          )}
+                        >
+                          <item.icon className={cn(
+                            'h-4 w-4 shrink-0',
+                            selectedChecklistItem === item.key ? 'text-primary' : 'text-muted-foreground'
+                          )} />
+                          <span className={cn(
+                            'flex-1 text-sm font-medium',
+                            selectedChecklistItem === item.key ? 'text-foreground' : 'text-muted-foreground'
+                          )}>
+                            {t(`checklist.${item.key}`)}
+                          </span>
+                          <div className={cn(
+                            'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                            isCompleted
+                              ? 'border-primary bg-primary'
+                              : 'border-muted-foreground/30'
+                          )}>
+                            {isCompleted && <Check className="h-3 w-3 text-primary-foreground" />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Vertical Divider */}
+                  <div className="w-px bg-border self-stretch" />
+
+                  {/* Right Side - Dynamic Content + Explore Button */}
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div />
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-foreground mb-1">
+                        {t(`checklist.details.${selectedChecklistItem}.title`)}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {t(`checklist.details.${selectedChecklistItem}.subtitle`)}
+                      </p>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button variant="default" onClick={(e) => { e.stopPropagation(); handleExploreClick(); }} disabled={isNavigating}>
+                        {t('checklist.explore')}
+                        {isNavigating ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ArrowUpRight className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </AccordionCard>
 
             <AccordionCard
@@ -395,24 +459,24 @@ const GetStartedPage = () => {
         </div>
       </div>
 
-      {/* Live Chat & Referral Section - Centered at 50% */}
+      {/* Live Chat & Referral Section - Centered at 50% on desktop, full width on mobile */}
       <div className="relative z-10 flex justify-center mb-8">
-        <div className="w-[50%] min-w-[400px]">
-          <div className="flex gap-4">
+        <div className="w-full md:w-[50%] md:min-w-[400px]">
+          <div className="flex flex-col md:flex-row gap-4">
             {/* Live Chat Card */}
             <div
               className="group relative flex flex-1 h-[140px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:shadow-md cursor-pointer"
               onClick={() => { }}
             >
-              <div className="relative w-[140px] shrink-0 overflow-hidden">
+              <div className="relative w-[100px] md:w-[140px] shrink-0 overflow-hidden">
                 <img
                   src="/images/live-chat.png"
                   alt={t('liveChat.title')}
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
               </div>
-              <div className="flex flex-1 flex-col justify-center p-6">
-                <h2 className="text-xl font-bold text-foreground mb-1 flex items-center gap-2">
+              <div className="flex flex-1 flex-col justify-center p-4 md:p-6">
+                <h2 className="text-lg md:text-xl font-bold text-foreground mb-1 flex items-center gap-2">
                   {t('liveChat.title')}
                 </h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
@@ -421,9 +485,9 @@ const GetStartedPage = () => {
               </div>
             </div>
 
-            {/* Refer & Earn Card */}
+            {/* Refer & Earn Card - Full width rectangle on mobile, square on desktop */}
             <div
-              className="group relative flex flex-col items-center justify-center h-[140px] w-[140px] shrink-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:shadow-md cursor-pointer"
+              className="group relative flex items-center justify-center h-[100px] md:h-[140px] md:w-[140px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:shadow-md cursor-pointer"
               onClick={() => router.push('/refer-and-earn')}
             >
               {giftAnimationData && (
@@ -431,7 +495,7 @@ const GetStartedPage = () => {
                   animationData={giftAnimationData}
                   loop
                   autoplay
-                  className="w-[140px] h-[140px] transition-transform duration-500 group-hover:scale-[1.15]"
+                  className="w-[100px] h-[100px] md:w-[140px] md:h-[140px] transition-transform duration-500 group-hover:scale-[1.15]"
                 />
               )}
             </div>
@@ -439,12 +503,12 @@ const GetStartedPage = () => {
         </div>
       </div>
 
-      {/* Product Guides Section - Full width with 2 columns */}
+      {/* Product Guides Section - Full width with 2 columns on desktop, stacked on mobile */}
       <div className="relative z-10 flex justify-center">
-        <div className="w-[50%] min-w-[400px]">
+        <div className="w-full md:w-[50%] md:min-w-[400px]">
           <h2 className="text-lg font-bold text-foreground mb-6">{t('productGuides')}</h2>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="flex flex-col md:grid md:grid-cols-2 gap-6">
             {/* Demo Video Card */}
             <div className="rounded-xl bg-card border border-border shadow-sm overflow-hidden">
               <div className="relative aspect-video bg-muted">

@@ -56,11 +56,11 @@ const ReadinessIcon = ({
             <TooltipTrigger asChild>
                 <div className="flex items-center gap-2">
                     <div
-                        className={`p-2.5 rounded-xl ${!hasValue ? 'bg-muted/50' : ''}`}
+                        className={`p-2 md:p-2.5 rounded-xl ${!hasValue ? 'bg-muted/50' : ''}`}
                         style={hasValue ? { backgroundColor: `${color}15` } : undefined}
                     >
                         <Icon
-                            className={`size-6 ${!hasValue ? 'text-muted-foreground/30' : ''}`}
+                            className={`size-5 md:size-6 ${!hasValue ? 'text-muted-foreground/30' : ''}`}
                             style={hasValue ? { color } : undefined}
                         />
                     </div>
@@ -96,7 +96,7 @@ export const WorkoutMetricsRow = ({
                 <span className="text-[10px] text-muted-foreground/70 uppercase tracking-[0.15em] font-bold text-center">
                     Readiness
                 </span>
-                <div className="flex items-center justify-center gap-5">
+                <div className="flex flex-wrap items-center justify-center gap-3 md:gap-5">
                     <ReadinessIcon value={readiness.sleep} icon={Moon} label="Sleep" />
                     <ReadinessIcon value={readiness.mood} icon={Sun} label="Mood" />
                     <ReadinessIcon value={readiness.energy} icon={Zap} label="Energy" />
@@ -110,15 +110,15 @@ export const WorkoutMetricsRow = ({
                 <span className="text-[10px] text-muted-foreground/70 uppercase tracking-[0.15em] font-bold text-center">
                     Summary
                 </span>
-                <div className="flex items-center justify-center gap-5">
+                <div className="flex flex-wrap items-center justify-center gap-3 md:gap-5">
                     {/* Intensity */}
                     <div className="flex items-center gap-2">
                         <div
-                            className="p-2.5 rounded-xl"
+                            className="p-2 md:p-2.5 rounded-xl"
                             style={{ backgroundColor: intensity > 0 ? `${getRatingColor(intensity)}15` : 'var(--muted)' }}
                         >
                             <Gauge
-                                className="size-6"
+                                className="size-5 md:size-6"
                                 style={{ color: intensity > 0 ? getRatingColor(intensity) : 'var(--muted-foreground)' }}
                             />
                         </div>
@@ -131,12 +131,12 @@ export const WorkoutMetricsRow = ({
                     {/* Rating */}
                     <div className="flex items-center gap-2">
                         <div
-                            className="p-2.5 rounded-xl"
+                            className="p-2 md:p-2.5 rounded-xl"
                             style={{ backgroundColor: rating > 0 ? `${getRatingColor(rating)}15` : 'var(--muted)' }}
                         >
-                            <div className="relative size-6">
+                            <div className="relative size-5 md:size-6">
                                 <Star
-                                    className="size-6"
+                                    className="size-5 md:size-6"
                                     style={{ color: rating > 0 ? getRatingColor(rating) : 'var(--muted-foreground)' }}
                                     strokeWidth={2}
                                 />
@@ -146,7 +146,7 @@ export const WorkoutMetricsRow = ({
                                         style={{ width: `${(rating / 5) * 100}%` }}
                                     >
                                         <Star
-                                            className="size-6"
+                                            className="size-5 md:size-6"
                                             style={{ color: getRatingColor(rating), fill: getRatingColor(rating) }}
                                             strokeWidth={2}
                                         />
@@ -162,8 +162,8 @@ export const WorkoutMetricsRow = ({
 
                     {/* Exercises */}
                     <div className="flex items-center gap-2">
-                        <div className="p-2.5 rounded-xl bg-primary/10">
-                            <CircleCheck className="size-6 text-primary" />
+                        <div className="p-2 md:p-2.5 rounded-xl bg-primary/10">
+                            <CircleCheck className="size-5 md:size-6 text-primary" />
                         </div>
                         <div className="flex flex-col">
                             <span className="text-sm font-bold tabular-nums">{exercisesCompleted}/{exercisesTotal}</span>
@@ -173,8 +173,8 @@ export const WorkoutMetricsRow = ({
 
                     {/* Duration */}
                     <div className="flex items-center gap-2">
-                        <div className="p-2.5 rounded-xl bg-primary/10">
-                            <Clock className="size-6 text-primary" />
+                        <div className="p-2 md:p-2.5 rounded-xl bg-primary/10">
+                            <Clock className="size-5 md:size-6 text-primary" />
                         </div>
                         <div className="flex flex-col">
                             <span className="text-sm font-bold tabular-nums">{minutes} min</span>

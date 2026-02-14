@@ -183,7 +183,7 @@ export const useRealtimeMessages = ({
 
       // Subscribe to broadcast events from database trigger
       newChannel
-        .on('broadcast', { event: 'message_change' }, (payload) => {
+        .on('broadcast', { event: 'message_change' }, (payload: { payload: Record<string, unknown> }) => {
           const data = payload.payload as Record<string, unknown>;
           const eventType = data.type as string;
 
@@ -255,7 +255,7 @@ export const useRealtimeMessages = ({
             onMessageDeletedRef.current?.(deletedId);
           }
         })
-        .subscribe((status) => {
+        .subscribe((status: string) => {
           if (status === 'SUBSCRIBED') {
             setIsSubscribed(true);
           }
@@ -320,7 +320,7 @@ export const useRealtimeReadReceipts = ({
         }
 
         if (data && data.length > 0) {
-          const receipts: ReadReceipt[] = data.map((r) => ({
+          const receipts: ReadReceipt[] = data.map((r: { last_read_at: string; updated_at: string; [key: string]: unknown }) => ({
             ...r,
             last_read_at: new Date(r.last_read_at),
             updated_at: new Date(r.updated_at),
@@ -591,7 +591,7 @@ export const useSyncReadReceipt = ({
           { conversation_id: conversationId, user_id: userId, last_active_at: new Date().toISOString() },
           { onConflict: 'conversation_id,user_id' },
         )
-        .then(({ error }) => {
+        .then(({ error }: { error: Error | null }) => {
           if (error) console.error('[Presence] upsert error:', error.message);
         });
     };
@@ -608,7 +608,7 @@ export const useSyncReadReceipt = ({
         .delete()
         .eq('conversation_id', conversationId)
         .eq('user_id', userId)
-        .then(({ error }) => {
+        .then(({ error }: { error: Error | null }) => {
           if (error) console.error('[Presence] delete error:', error.message);
         });
     };

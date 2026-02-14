@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, Keyboard, TouchableWithoutFeedback, Linking } from 'react-native';
+import { StyleSheet, View, Text, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { Image } from 'expo-image';
+import * as WebBrowser from 'expo-web-browser';
 
 import { Dialog } from '@/components/ui/dialog';
 import { useRouter } from 'expo-router';
@@ -192,7 +193,7 @@ export default function EmailSignInScreen() {
         }
     };
 
-    const handleForgotPassword = () => {
+    const handleForgotPassword = async () => {
         // Open the web app's forgot password page directly
         const webAppUrl = process.env.EXPO_PUBLIC_WEB_APP_URL ||
             Constants.expoConfig?.extra?.EXPO_PUBLIC_WEB_APP_URL ||
@@ -202,7 +203,11 @@ export default function EmailSignInScreen() {
             ? `${webAppUrl}/auth/forgot-password?email=${encodeURIComponent(email.trim())}`
             : `${webAppUrl}/auth/forgot-password`;
 
-        Linking.openURL(forgotPasswordUrl);
+        await WebBrowser.openBrowserAsync(forgotPasswordUrl, {
+            presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+            dismissButtonStyle: 'done',
+            showTitle: true,
+        });
     };
 
     return (

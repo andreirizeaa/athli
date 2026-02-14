@@ -1,5 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr';
-import type { Session } from '@supabase/supabase-js';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 // Singleton client instance - Supabase recommends one client per app
 let client: ReturnType<typeof createBrowserClient> | null = null;
@@ -16,7 +16,7 @@ export function createClient() {
     );
 
     // Set up auth state listener to keep session cache in sync
-    client.auth.onAuthStateChange((_event, session) => {
+    client.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       cachedSession = session;
     });
   }
@@ -46,7 +46,7 @@ export async function getCachedAccessToken(): Promise<string | null> {
 
   // No cached session or it's expired - fetch fresh session
   const supabase = createClient();
-  sessionPromise = supabase.auth.getSession().then(({ data: { session } }) => {
+  sessionPromise = supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
     cachedSession = session;
     sessionPromise = null;
     return session;

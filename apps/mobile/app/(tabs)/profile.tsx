@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Linking, InteractionManager, ActivityIndicator } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -112,8 +113,16 @@ export default function ProfileTabScreen() {
     router.push({ pathname: '/settings/preferences' });
   };
 
-  const handleOpenWebURL = (url: string) => {
-    Linking.openURL(url).catch((err) => console.error('Failed to open URL:', err));
+  const handleOpenWebURL = async (url: string) => {
+    try {
+      await WebBrowser.openBrowserAsync(url, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        dismissButtonStyle: 'done',
+        showTitle: true,
+      });
+    } catch (err) {
+      console.error('Failed to open URL:', err);
+    }
   };
 
   const handleOpenProfileDetails = () => {
@@ -191,12 +200,20 @@ export default function ProfileTabScreen() {
     setShowDeletionDialog(false);
   };
 
-  const handleManageGoogle = useCallback(() => {
-    Linking.openURL('https://myaccount.google.com/security');
+  const handleManageGoogle = useCallback(async () => {
+    await WebBrowser.openBrowserAsync('https://myaccount.google.com/security', {
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+      dismissButtonStyle: 'done',
+      showTitle: true,
+    });
   }, []);
 
-  const handleManageApple = useCallback(() => {
-    Linking.openURL('https://appleid.apple.com/account/manage');
+  const handleManageApple = useCallback(async () => {
+    await WebBrowser.openBrowserAsync('https://appleid.apple.com/account/manage', {
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+      dismissButtonStyle: 'done',
+      showTitle: true,
+    });
   }, []);
 
   const handleChangeEmail = useCallback(() => {

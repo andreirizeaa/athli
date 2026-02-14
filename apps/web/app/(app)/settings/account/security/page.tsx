@@ -253,14 +253,14 @@ const SecurityPage = () => {
               <form onSubmit={(e) => { e.preventDefault(); handleSavePassword(); }}>
                 <div className="space-y-0">
                   {/* New Password */}
-                  <div className="flex items-center justify-between w-full pb-2 border-b px-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pb-2 border-b px-4 gap-2">
                     <div>
                       <Label htmlFor="newPassword" className="text-sm block mb-1">{t('settings.security.newPassword')}</Label>
                       <p className="text-xs text-muted-foreground">
                         {t('settings.security.passwordRequirements')}
                       </p>
                     </div>
-                    <div className="relative w-64">
+                    <div className="relative w-full sm:w-64">
                       <Input
                         id="newPassword"
                         type={showNewPassword ? 'text' : 'password'}
@@ -287,9 +287,9 @@ const SecurityPage = () => {
                   </div>
 
                   {/* Confirm Password */}
-                  <div className="flex items-center justify-between w-full pb-2 border-b pt-2 px-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pb-2 border-b pt-2 px-4 gap-2">
                     <Label htmlFor="confirmPassword" className="text-sm">{t('settings.security.confirmPassword')}</Label>
-                    <div className="relative w-64">
+                    <div className="relative w-full sm:w-64">
                       <Input
                         id="confirmPassword"
                         type={showConfirmPassword ? 'text' : 'password'}

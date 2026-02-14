@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel'
+import { useIsMobile } from '@/hooks/use-mobile'
 import {
     Dialog,
     DialogContent,
@@ -38,6 +40,7 @@ import {
 } from '@athli/shared-types/pricing-constants'
 import { createCheckoutSession, updateSubscription, cancelSubscription, reactivateSubscription, cancelAddon, reactivateAddon, createPortalSession, type AddonType } from '@/api/billing/billing-service'
 import { useEntitlements, useSubscription } from '@/hooks/use-entitlements'
+import { useAccess } from '@/lib/permissions'
 
 function AddonIcon({ type, animationData }: { type: AddonConfig['icon']; animationData?: object }) {
     const iconClass = "w-8 h-8 text-muted-foreground"
@@ -64,15 +67,19 @@ interface PricingPlansProps {
     isUpdateMode?: boolean;
     /** Minimum number of clients required (based on active client count) */
     minClientCount?: number;
+    /** Source parameter (e.g., 'mobile') to pass through checkout URLs */
+    source?: string | null;
 }
 
 export default function PricingPlans({
     hideHeader = false,
     isUpdateMode = false,
     minClientCount = 0,
+    source,
 }: PricingPlansProps) {
     const t = useTranslations('pricing')
     const router = useRouter()
+    const isMobile = useIsMobile()
 
     // Fetch entitlements directly when in update mode
     const {
@@ -87,13 +94,24 @@ export default function PricingPlans({
     const { billingInterval: currentBillingInterval, isCancelling: isSubscriptionCancelling, cancellingAddons, nextBillingDate, scheduledPlan, scheduledClientLimit, hasScheduledChanges, isLoading: isLoadingSubscription } = useSubscription()
 
     // Build current addons from entitlements
+    // During trial, include addons that are part of the trial tier
     const currentAddons = useMemo(() => {
         const addons: string[] = []
         if (hasAutomations) addons.push('automations')
         if (hasAiAssistant) addons.push('ai_assistant')
         if (hasPayments) addons.push('payments')
+
+        // During trial on pro/max, ensure trial addons are included
+        if (isTrial) {
+            if ((currentPlan === 'pro' || currentPlan === 'max') && !addons.includes('ai_assistant')) {
+                addons.push('ai_assistant')
+            }
+            if (currentPlan === 'max' && !addons.includes('automations')) {
+                addons.push('automations')
+            }
+        }
         return addons
-    }, [hasAutomations, hasAiAssistant, hasPayments])
+    }, [hasAutomations, hasAiAssistant, hasPayments, isTrial, currentPlan])
 
     // Can cancel if on paid plan (pro or max, not trial)
     const canCancel = isUpdateMode && !isTrial && (currentPlan === 'pro' || currentPlan === 'max')
@@ -117,6 +135,13 @@ export default function PricingPlans({
     const [showUpdateConfirm, setShowUpdateConfirm] = useState(false)
     const [updateConfirmStep, setUpdateConfirmStep] = useState<1 | 2>(1)
     const [updateConfirmButtonDisabled, setUpdateConfirmButtonDisabled] = useState(false)
+    // Trial warning dialog state (for trial users starting subscription)
+    const [showTrialWarning, setShowTrialWarning] = useState(false)
+    // Charges summary dialog state (shown after trial warning)
+    const [showChargesSummary, setShowChargesSummary] = useState(false)
+
+    // Get trial days remaining
+    const { trialDaysRemaining } = useAccess()
 
     // Enable confirm button after 1 second delay when step 2 is reached
     useEffect(() => {
@@ -273,7 +298,7 @@ export default function PricingPlans({
         // Wait for both entitlements and subscription to be fully loaded
         // For paid plans, wait for billing interval data; for starter/trial, proceed without it
         const isPaidPlan = currentPlan === 'pro' || currentPlan === 'max'
-        const hasSubscriptionData = !isPaidPlan || (currentBillingInterval !== null && currentBillingInterval !== undefined)
+        const hasSubscriptionData = isTrial || !isPaidPlan || (currentBillingInterval !== null && currentBillingInterval !== undefined)
         if (isUpdateMode && !isLoadingEntitlements && !isLoadingSubscription && !isInitialized && hasSubscriptionData) {
             // Set billing interval from current subscription (default to monthly for starter)
             if (currentBillingInterval) {
@@ -310,7 +335,7 @@ export default function PricingPlans({
 
             setIsInitialized(true)
         }
-    }, [isUpdateMode, isLoadingEntitlements, isLoadingSubscription, isInitialized, currentPlan, currentClientLimit, currentBillingInterval, currentAddons, minClientCount, scheduledPlan, scheduledClientLimit, cancellingAddons])
+    }, [isUpdateMode, isLoadingEntitlements, isLoadingSubscription, isInitialized, currentPlan, currentClientLimit, currentBillingInterval, currentAddons, minClientCount, scheduledPlan, scheduledClientLimit, cancellingAddons, isTrial])
 
     // Check if anything has changed from the scheduled subscription (in update mode)
     // Compare against scheduled values if there's a pending downgrade, otherwise compare against current values
@@ -728,12 +753,30 @@ export default function PricingPlans({
             return
         }
 
+        // For trial users, show trial warning first
+        if (isTrial) {
+            setShowTrialWarning(true)
+            return
+        }
+
         if (hasExistingPaidSubscription && hasChanges) {
             setUpdateConfirmStep(1)
             setShowUpdateConfirm(true)
         } else {
             handleCheckout()
         }
+    }
+
+    // Handle confirmation of trial warning - show charges summary next
+    const handleTrialWarningConfirm = () => {
+        setShowTrialWarning(false)
+        setShowChargesSummary(true)
+    }
+
+    // Handle confirmation of charges summary - proceed to checkout
+    const handleChargesSummaryConfirm = () => {
+        setShowChargesSummary(false)
+        handleCheckout()
     }
 
     // Handle checkout for new subscribers (trial/starter users)
@@ -758,13 +801,19 @@ export default function PricingPlans({
                 clientLimit: totalClients,
                 interval: billingInterval === 'annual' ? 'year' : 'month',
                 addons: mappedAddons.length > 0 ? mappedAddons : undefined,
-                successUrl: `${window.location.origin}/settings/billing?success=true`,
-                cancelUrl: `${window.location.origin}/settings/billing/update`,
+                successUrl: `${window.location.origin}/settings/billing?success=true${source === 'mobile' ? '&source=mobile' : ''}`,
+                cancelUrl: `${window.location.origin}/settings/billing/update${source === 'mobile' ? '?source=mobile' : ''}`,
             })
 
-            // Open Stripe checkout in new tab
+            // Open Stripe checkout
             if (url) {
-                window.open(url, '_blank')
+                if (source === 'mobile') {
+                    // Navigate in same window for mobile WebBrowser
+                    window.location.href = url
+                } else {
+                    // Open in new tab for web
+                    window.open(url, '_blank')
+                }
             }
             setIsCheckoutLoading(false)
         } catch (error: any) {
@@ -919,18 +968,11 @@ export default function PricingPlans({
                     {/* Left Side: Plans, Clients, Add-ons */}
                     <div className="flex-1 space-y-6">
                         {/* Plan Cards */}
-                        <div className="grid gap-4 md:grid-cols-3">
-                            {/* Starter Plan */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 12 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ duration: 0.4, delay: 0 }}
-                            >
-                                {/* Starter is unavailable if they have more than 5 active clients */}
-                                {(() => {
-                                    const starterUnavailable = minClientCount > PLANS.starter.baseClients
-                                    return (
+                        {(() => {
+                            const starterUnavailable = minClientCount > PLANS.starter.baseClients
+
+                            // Starter Plan Card
+                            const StarterCard = (
                                 <Card
                                     className={cn(
                                         'relative flex flex-col h-full min-h-[280px] p-6 transition-all',
@@ -1013,17 +1055,10 @@ export default function PricingPlans({
                                         )}
                                     </div>
                                 </Card>
-                                    )
-                                })()}
-                            </motion.div>
+                            )
 
-                            {/* Pro Plan */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 12 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ duration: 0.4, delay: 0.1 }}
-                            >
+                            // Pro Plan Card
+                            const ProCard = (
                                 <Card
                                     className={cn(
                                         'relative flex flex-col h-full min-h-[280px] p-6 cursor-pointer transition-all hover:shadow-md',
@@ -1120,15 +1155,10 @@ export default function PricingPlans({
                                         </p>
                                     </div>
                                 </Card>
-                            </motion.div>
+                            )
 
-                            {/* Max Plan */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 12 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ duration: 0.4, delay: 0.2 }}
-                            >
+                            // Max Plan Card
+                            const MaxCard = (
                                 <Card
                                     className={cn(
                                         'relative flex flex-col h-full min-h-[280px] p-6 cursor-pointer transition-all hover:shadow-md',
@@ -1216,8 +1246,78 @@ export default function PricingPlans({
                                         </p>
                                     </div>
                                 </Card>
-                            </motion.div>
-                        </div>
+                            )
+
+                            // Mobile: Horizontal scroll with CSS scroll-snap for edge-to-edge cards
+                            if (isMobile) {
+                                // Determine which plan to scroll to (current plan or trial plan)
+                                const activePlanIndex = currentPlan === 'max' ? 2 : currentPlan === 'pro' ? 1 : 0
+
+                                return (
+                                    <>
+                                        <style>{`.pricing-scroll::-webkit-scrollbar { display: none; }`}</style>
+                                        <div
+                                            className="-mx-6 overflow-x-auto pricing-scroll"
+                                            style={{
+                                                scrollSnapType: 'x mandatory',
+                                                scrollbarWidth: 'none',
+                                                msOverflowStyle: 'none',
+                                                WebkitOverflowScrolling: 'touch',
+                                            }}
+                                            ref={(el) => {
+                                                // Auto-scroll to active plan on mount
+                                                if (el && activePlanIndex > 0) {
+                                                    const cardWidth = el.offsetWidth * 0.85
+                                                    el.scrollLeft = cardWidth * activePlanIndex
+                                                }
+                                            }}
+                                        >
+                                            <div className="flex pb-4">
+                                                <div className="flex-shrink-0 w-[85%] pl-6 pr-3 pt-4" style={{ scrollSnapAlign: 'start' }}>
+                                                    {StarterCard}
+                                                </div>
+                                                <div className="flex-shrink-0 w-[85%] pr-3 pt-4" style={{ scrollSnapAlign: 'start' }}>
+                                                    {ProCard}
+                                                </div>
+                                                <div className="flex-shrink-0 w-[85%] pr-6 pt-4" style={{ scrollSnapAlign: 'end' }}>
+                                                    {MaxCard}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                )
+                            }
+
+                            // Desktop: Grid layout
+                            return (
+                                <div className="grid gap-4 md:grid-cols-3">
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 12 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ duration: 0.4, delay: 0 }}
+                                    >
+                                        {StarterCard}
+                                    </motion.div>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 12 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ duration: 0.4, delay: 0.1 }}
+                                    >
+                                        {ProCard}
+                                    </motion.div>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 12 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ duration: 0.4, delay: 0.2 }}
+                                    >
+                                        {MaxCard}
+                                    </motion.div>
+                                </div>
+                            )
+                        })()}
 
                         {/* Client Selection Card - Only show for paid plans */}
                         {selectedPlan !== 'starter' && (
@@ -1256,8 +1356,8 @@ export default function PricingPlans({
                                             {t('chooseClients.growBusiness', { limit: PLANS[selectedPlan].maxClients })}
                                         </p>
 
-                                        {/* Slider - snaps to specific values */}
-                                        <div className="pt-4 pb-2">
+                                        {/* Slider - snaps to specific values (hidden on mobile) */}
+                                        <div className="pt-4 pb-2 hidden md:block">
                                             <Slider
                                                 value={[Math.max(0, availableClientOptions.indexOf(totalClients))]}
                                                 onValueChange={([index]) => {
@@ -1291,37 +1391,86 @@ export default function PricingPlans({
                             </motion.div>
                         )}
 
-                        {/* Add-ons - Full Width Cards - Only show for paid plans */}
-                        {selectedPlan !== 'starter' && (
-                            <div className="space-y-4">
-                                {ADDONS.map((addon, index) => {
-                                    const isSelected = selectedAddons.includes(addon.key)
-                                    const addonFeatures = t.raw(`addons.${addon.key}.features`) as string[]
+                        {/* Add-ons - Only show for paid plans */}
+                        {selectedPlan !== 'starter' && (() => {
+                            const addonTypeToKey: Record<string, string> = {
+                                automations: 'automations',
+                                ai_assistant: 'aiAssistant',
+                                payments: 'payments',
+                            }
+                            const currentAddonKeys = (currentAddons || []).map(type => addonTypeToKey[type] || type)
 
-                                    // Check if this addon is currently subscribed (in update mode)
-                                    const addonTypeToKey: Record<string, string> = {
-                                        automations: 'automations',
-                                        ai_assistant: 'aiAssistant',
-                                        payments: 'payments',
-                                    }
-                                    const currentAddonKeys = (currentAddons || []).map(type => addonTypeToKey[type] || type)
-                                    const isCurrentlySubscribed = isUpdateMode && currentAddonKeys.includes(addon.key)
+                            // Render a single addon card
+                            const renderAddonCard = (addon: typeof ADDONS[number], forMobile: boolean) => {
+                                const isSelected = selectedAddons.includes(addon.key)
+                                const addonFeatures = t.raw(`addons.${addon.key}.features`) as string[]
+                                const isCurrentlySubscribed = isUpdateMode && currentAddonKeys.includes(addon.key)
+                                const isTrialAddon = isTrial && isSelected
 
-                                    return (
-                                        <motion.div
-                                            key={addon.key}
-                                            initial={{ opacity: 0, y: 12 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.4, delay: 0.1 * index }}
-                                        >
-                                            <Card
-                                                className={cn(
-                                                    'relative p-6 transition-all bg-card',
-                                                    (!isCurrentlySubscribed || isTrial) && 'cursor-pointer hover:shadow-md',
-                                                    isSelected && 'ring-2 ring-primary'
-                                                )}
-                                                onClick={() => (!isCurrentlySubscribed || isTrial) && toggleAddon(addon.key)}
-                                            >
+                                return (
+                                    <Card
+                                        className={cn(
+                                            'relative transition-all bg-card h-full',
+                                            forMobile ? 'p-4' : 'p-6',
+                                            (!isCurrentlySubscribed || isTrial) && 'cursor-pointer hover:shadow-md',
+                                            isSelected && 'ring-2 ring-primary'
+                                        )}
+                                        onClick={() => (!isCurrentlySubscribed || isTrial) && toggleAddon(addon.key)}
+                                    >
+                                        {forMobile ? (
+                                            /* Mobile Layout - Simplified */
+                                            <div className="flex flex-col h-full">
+                                                {/* Header with title and pills */}
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <h3 className="text-lg font-semibold">
+                                                                {t(`addons.${addon.key}.name`)}
+                                                            </h3>
+                                                            {isCurrentlySubscribed && (
+                                                                <span className="px-2 py-0.5 text-xs font-medium rounded-sm border bg-[#dcfce7] text-[#14532d] border-[#bbf7d0] dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30">
+                                                                    {isTrial ? 'Free Trial' : 'Active'}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {/* Checkbox - always show */}
+                                                    <div className={cn(
+                                                        'h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0',
+                                                        isSelected ? 'border-primary' : 'border-muted-foreground/30'
+                                                    )}>
+                                                        {isSelected && (
+                                                            <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Description */}
+                                                <p className="text-sm text-muted-foreground mb-3">
+                                                    {t(`addons.${addon.key}.description`)}
+                                                </p>
+
+                                                {/* Features */}
+                                                <ul className="space-y-1.5 mb-4 flex-1">
+                                                    {addonFeatures.slice(0, 3).map((feature, idx) => (
+                                                        <li key={idx} className="flex items-center gap-2 text-xs">
+                                                            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-500">
+                                                                <Check className="size-2.5 text-white" />
+                                                            </span>
+                                                            <span className="text-muted-foreground">{feature}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+
+                                                {/* Price at bottom */}
+                                                <div className="mt-auto pt-2 border-t">
+                                                    <span className="text-2xl font-bold">${getAddonPrice(addon)}</span>
+                                                    <span className="text-sm text-muted-foreground">/{t('month')}</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            /* Desktop Layout - Original */
+                                            <>
                                                 {/* Top right: Cancel/Reactivate button for subscribed addons (not during trial), checkbox for others */}
                                                 <div className="absolute top-4 right-6">
                                                     {isCurrentlySubscribed && !isTrial ? (
@@ -1330,7 +1479,6 @@ export default function PricingPlans({
                                                             className="border-primary text-primary hover:bg-primary/10"
                                                             onClick={(e) => {
                                                                 e.stopPropagation()
-                                                                // If subscription is being cancelled, addon will be cancelled too - show alert to reinstate subscription first
                                                                 if (isSubscriptionCancelling) {
                                                                     setShowReinstateAddonAlert(true)
                                                                 } else if (isAddonCancelling(addon.key)) {
@@ -1382,7 +1530,6 @@ export default function PricingPlans({
                                                             <h3 className="text-xl font-semibold">
                                                                 {t(`addons.${addon.key}.name`)}
                                                             </h3>
-                                                            {/* Add-on pill - always shown */}
                                                             <span className={cn(
                                                                 'px-2.5 py-0.5 text-sm font-medium rounded-sm border',
                                                                 isSelected
@@ -1391,7 +1538,6 @@ export default function PricingPlans({
                                                             )}>
                                                                 {t('addon')}
                                                             </span>
-                                                            {/* Active/Free Trial pill - shown when subscribed */}
                                                             {isCurrentlySubscribed && (
                                                                 <span className="px-2.5 py-0.5 text-sm font-medium rounded-sm border bg-[#dcfce7] text-[#14532d] border-[#bbf7d0] dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30">
                                                                     {isTrial ? 'Free Trial' : 'Active'}
@@ -1411,12 +1557,63 @@ export default function PricingPlans({
                                                         </ul>
                                                     </div>
                                                 </div>
-                                            </Card>
+                                            </>
+                                        )}
+                                    </Card>
+                                )
+                            }
+
+                            // Mobile: Carousel layout
+                            if (isMobile) {
+                                return (
+                                    <>
+                                        <h3 className="text-lg font-semibold mb-3">{t('addonsSection')}</h3>
+                                        <style>{`.addons-scroll::-webkit-scrollbar { display: none; }`}</style>
+                                        <div
+                                            className="-mx-6 overflow-x-auto addons-scroll"
+                                            style={{
+                                                scrollSnapType: 'x mandatory',
+                                                scrollbarWidth: 'none',
+                                                msOverflowStyle: 'none',
+                                                WebkitOverflowScrolling: 'touch',
+                                            }}
+                                        >
+                                            <div className="flex pb-4">
+                                                {ADDONS.map((addon, index) => (
+                                                    <div
+                                                        key={addon.key}
+                                                        className={cn(
+                                                            'flex-shrink-0 w-[75%] pt-2',
+                                                            index === 0 ? 'pl-6 pr-2' : 'pr-2',
+                                                            index === ADDONS.length - 1 && 'pr-6'
+                                                        )}
+                                                        style={{ scrollSnapAlign: index === ADDONS.length - 1 ? 'end' : 'start' }}
+                                                    >
+                                                        {renderAddonCard(addon, true)}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </>
+                                )
+                            }
+
+                            // Desktop: Stacked cards
+                            return (
+                                <div className="space-y-4">
+                                    {ADDONS.map((addon, index) => (
+                                        <motion.div
+                                            key={addon.key}
+                                            initial={{ opacity: 0, y: 12 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.4, delay: 0.1 * index }}
+                                        >
+                                            {renderAddonCard(addon, false)}
                                         </motion.div>
-                                    )
-                                })}
-                            </div>
-                        )}
+                                    ))}
+                                </div>
+                            )
+                        })()}
                     </div>
 
                     {/* Right Side: Plan Summary (Sticky) */}
@@ -2068,6 +2265,97 @@ export default function PricingPlans({
                             disabled={updateConfirmStep === 2 && updateConfirmButtonDisabled}
                         >
                             {updateConfirmStep === 1 ? 'Continue' : (updateConfirmButtonDisabled ? 'Please wait...' : 'Confirm Update')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Trial Warning Dialog */}
+            <Dialog open={showTrialWarning} onOpenChange={setShowTrialWarning}>
+                <DialogContent className="z-[10000]" overlayClassName="z-[10000]">
+                    <DialogHeader>
+                        <DialogTitle>You're on a Free Trial</DialogTitle>
+                        <DialogDescription>
+                            You currently have {trialDaysRemaining} days left on your free trial. If you proceed to purchase a plan, your free trial will end and billing will start immediately.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowTrialWarning(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleTrialWarningConfirm}>
+                            Continue
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Charges Summary Dialog */}
+            <Dialog open={showChargesSummary} onOpenChange={setShowChargesSummary}>
+                <DialogContent className="z-[10000]" overlayClassName="z-[10000]">
+                    <DialogHeader>
+                        <DialogTitle>Confirm Your Subscription</DialogTitle>
+                        <DialogDescription asChild>
+                            <div className="space-y-4 pt-2">
+                                <p className="text-sm text-muted-foreground">
+                                    You're about to start a subscription. Here's a summary of your charges:
+                                </p>
+                                <div className="border rounded-lg p-4 space-y-2 bg-muted/50">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Plan:</span>
+                                        <span className="font-medium">{t(`${selectedPlan}.name`)} ({totalClients} clients)</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Billing:</span>
+                                        <span className="font-medium">{billingInterval === 'annual' ? 'Annual' : 'Monthly'}</span>
+                                    </div>
+                                    {selectedAddons.length > 0 && (
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">Add-ons:</span>
+                                            <span className="font-medium">
+                                                {selectedAddons.map(key => {
+                                                    const names: Record<string, string> = {
+                                                        automations: 'Automations',
+                                                        aiAssistant: 'AI Assistant',
+                                                        payments: 'Payments',
+                                                    }
+                                                    return names[key] || key
+                                                }).join(', ')}
+                                            </span>
+                                        </div>
+                                    )}
+                                    <hr className="border-border my-2" />
+                                    <div className="flex justify-between text-base font-semibold">
+                                        <span>Total:</span>
+                                        <span>
+                                            ${priceBreakdown.total}
+                                            <span className="text-sm font-normal text-muted-foreground">
+                                                /{billingInterval === 'annual' ? 'year' : 'month'}
+                                            </span>
+                                        </span>
+                                    </div>
+                                    {billingInterval === 'annual' && (
+                                        <p className="text-xs text-muted-foreground text-right">
+                                            (${Math.round(priceBreakdown.total / 12)}/month)
+                                        </p>
+                                    )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    You'll be redirected to Stripe to complete your payment securely.
+                                </p>
+                            </div>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowChargesSummary(false)}>
+                            Back
+                        </Button>
+                        <Button onClick={handleChargesSummaryConfirm} disabled={isCheckoutLoading}>
+                            {isCheckoutLoading ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                                'Proceed to Payment'
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
