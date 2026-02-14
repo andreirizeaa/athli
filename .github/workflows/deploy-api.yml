@@ -64,9 +64,9 @@ jobs:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          cd apps/service
-
+          # Build from monorepo root so Docker can access shared-types
           docker build --platform linux/amd64 \
+            -f apps/service/Dockerfile \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
             .
