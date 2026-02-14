@@ -1,12 +1,28 @@
 # ──────────────────────────────────────────────
-# Stage 1: Install dependencies & build
+# Stage 1: Build shared-types
+# ──────────────────────────────────────────────
+FROM node:20-alpine AS shared-builder
+
+WORKDIR /app/packages/shared-types
+
+# Copy shared-types package
+COPY packages/shared-types/package.json packages/shared-types/package-lock.json* ./
+RUN npm install
+
+COPY packages/shared-types/ ./
+
+# Build shared-types to JavaScript
+RUN npm run build
+
+# ──────────────────────────────────────────────
+# Stage 2: Build service
 # ──────────────────────────────────────────────
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy shared-types package first
-COPY packages/shared-types ./packages/shared-types
+# Copy built shared-types
+COPY --from=shared-builder /app/packages/shared-types ./packages/shared-types
 
 # Copy service package files
 COPY apps/service/package.json apps/service/package-lock.json* ./apps/service/
@@ -26,7 +42,7 @@ COPY apps/service/src ./src
 RUN npm run build
 
 # ──────────────────────────────────────────────
-# Stage 2: Production image
+# Stage 3: Production image
 # ──────────────────────────────────────────────
 FROM node:20-alpine AS production
 
@@ -36,8 +52,9 @@ RUN addgroup -g 1001 -S athli && \
 
 WORKDIR /app
 
-# Copy shared-types package
-COPY packages/shared-types ./packages/shared-types
+# Copy built shared-types (only dist needed at runtime)
+COPY --from=shared-builder /app/packages/shared-types/package.json ./packages/shared-types/
+COPY --from=shared-builder /app/packages/shared-types/dist ./packages/shared-types/dist
 
 # Copy service package files
 COPY apps/service/package.json apps/service/package-lock.json* ./
