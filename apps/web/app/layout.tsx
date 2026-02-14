@@ -29,9 +29,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: {
     default: 'Athli',
-    template: '%s - Athli',
+    template: '%s | Athli',
   },
-  description: 'Athli application',
+  description: 'The all-in-one platform for fitness coaches to manage clients, deliver programs, and grow their business.',
 };
 
 export default async function RootLayout({

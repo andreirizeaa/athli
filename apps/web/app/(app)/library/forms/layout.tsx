@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useRouter, useSelectedLayoutSegments } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { PageTabs } from '@/components/page-tabs';
@@ -15,6 +15,16 @@ const FormsLayout = ({ children }: FormsLayoutProps) => {
   const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
+
+  // Set browser tab title based on active tab
+  useEffect(() => {
+    const tabTitles: Record<string, string> = {
+      'check-ins': 'Check-ins',
+      questionnaires: 'Questionnaires',
+    };
+    const activeTab = segments.find((s) => tabTitles[s]) || 'check-ins';
+    document.title = `${tabTitles[activeTab] || 'Forms'} | Athli`;
+  }, [segments]);
 
   const tabs = [
     {

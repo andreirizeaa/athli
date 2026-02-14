@@ -2,109 +2,34 @@
   "name": "@athli/shared-types",
   "version": "1.0.0",
   "description": "Shared TypeScript types for Athli workout schema - ensures web and mobile apps stay in sync",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./schemas": {
-      "types": "./dist/schemas/index.d.ts",
-      "default": "./dist/schemas/index.js"
-    },
-    "./functions": {
-      "types": "./dist/functions/index.d.ts",
-      "default": "./dist/functions/index.js"
-    },
-    "./constants": {
-      "types": "./dist/constants/index.d.ts",
-      "default": "./dist/constants/index.js"
-    },
-    "./workout-schema": {
-      "types": "./dist/schemas/workout-schema.d.ts",
-      "default": "./dist/schemas/workout-schema.js"
-    },
-    "./payload-builder": {
-      "types": "./dist/functions/payload-builder.d.ts",
-      "default": "./dist/functions/payload-builder.js"
-    },
-    "./payload-converter": {
-      "types": "./dist/functions/payload-converter.d.ts",
-      "default": "./dist/functions/payload-converter.js"
-    },
-    "./form-schema": {
-      "types": "./dist/schemas/form-schema.d.ts",
-      "default": "./dist/schemas/form-schema.js"
-    },
-    "./metric-schema": {
-      "types": "./dist/schemas/metric-schema.d.ts",
-      "default": "./dist/schemas/metric-schema.js"
-    },
-    "./habit-schema": {
-      "types": "./dist/schemas/habit-schema.d.ts",
-      "default": "./dist/schemas/habit-schema.js"
-    },
-    "./todo-schema": {
-      "types": "./dist/schemas/todo-schema.d.ts",
-      "default": "./dist/schemas/todo-schema.js"
-    },
-    "./file-schema": {
-      "types": "./dist/schemas/file-schema.d.ts",
-      "default": "./dist/schemas/file-schema.js"
-    },
-    "./client-schema": {
-      "types": "./dist/schemas/client-schema.d.ts",
-      "default": "./dist/schemas/client-schema.js"
-    },
-    "./messaging-schema": {
-      "types": "./dist/schemas/messaging-schema.d.ts",
-      "default": "./dist/schemas/messaging-schema.js"
-    },
-    "./messaging-constants": {
-      "types": "./dist/constants/messaging-constants.d.ts",
-      "default": "./dist/constants/messaging-constants.js"
-    },
-    "./messaging-utils": {
-      "types": "./dist/functions/messaging-utils.d.ts",
-      "default": "./dist/functions/messaging-utils.js"
-    },
-    "./training-constants": {
-      "types": "./dist/constants/training-constants.d.ts",
-      "default": "./dist/constants/training-constants.js"
-    },
-    "./pdf-template": {
-      "types": "./dist/functions/pdf-template.d.ts",
-      "default": "./dist/functions/pdf-template.js"
-    },
-    "./src/functions/pdf-template": {
-      "types": "./dist/functions/pdf-template.d.ts",
-      "default": "./dist/functions/pdf-template.js"
-    },
-    "./notification-constants": {
-      "types": "./dist/constants/notification-constants.d.ts",
-      "default": "./dist/constants/notification-constants.js"
-    },
-    "./src/constants/notification-constants": {
-      "types": "./dist/constants/notification-constants.d.ts",
-      "default": "./dist/constants/notification-constants.js"
-    },
-    "./pricing-constants": {
-      "types": "./dist/constants/pricing-constants.d.ts",
-      "default": "./dist/constants/pricing-constants.js"
-    },
-    "./src/constants/pricing-constants": {
-      "types": "./dist/constants/pricing-constants.d.ts",
-      "default": "./dist/constants/pricing-constants.js"
-    },
-    "./entitlements-schema": {
-      "types": "./dist/schemas/entitlements-schema.d.ts",
-      "default": "./dist/schemas/entitlements-schema.js"
-    },
-    "./src/schemas/entitlements-schema": {
-      "types": "./dist/schemas/entitlements-schema.d.ts",
-      "default": "./dist/schemas/entitlements-schema.js"
-    }
+    ".": "./src/index.ts",
+    "./schemas": "./src/schemas/index.ts",
+    "./functions": "./src/functions/index.ts",
+    "./constants": "./src/constants/index.ts",
+    "./workout-schema": "./src/schemas/workout-schema.ts",
+    "./payload-builder": "./src/functions/payload-builder.ts",
+    "./payload-converter": "./src/functions/payload-converter.ts",
+    "./form-schema": "./src/schemas/form-schema.ts",
+    "./metric-schema": "./src/schemas/metric-schema.ts",
+    "./habit-schema": "./src/schemas/habit-schema.ts",
+    "./todo-schema": "./src/schemas/todo-schema.ts",
+    "./file-schema": "./src/schemas/file-schema.ts",
+    "./client-schema": "./src/schemas/client-schema.ts",
+    "./messaging-schema": "./src/schemas/messaging-schema.ts",
+    "./messaging-constants": "./src/constants/messaging-constants.ts",
+    "./messaging-utils": "./src/functions/messaging-utils.ts",
+    "./training-constants": "./src/constants/training-constants.ts",
+    "./pdf-template": "./src/functions/pdf-template.ts",
+    "./src/functions/pdf-template": "./src/functions/pdf-template.ts",
+    "./notification-constants": "./src/constants/notification-constants.ts",
+    "./src/constants/notification-constants": "./src/constants/notification-constants.ts",
+    "./pricing-constants": "./src/constants/pricing-constants.ts",
+    "./src/constants/pricing-constants": "./src/constants/pricing-constants.ts",
+    "./entitlements-schema": "./src/schemas/entitlements-schema.ts",
+    "./src/schemas/entitlements-schema": "./src/schemas/entitlements-schema.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

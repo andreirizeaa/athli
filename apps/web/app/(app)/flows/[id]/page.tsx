@@ -51,6 +51,13 @@ const FlowDetailPage = () => {
     fetchFlow();
   }, [flowId]);
 
+  // Set browser tab title
+  useEffect(() => {
+    if (flow?.name) {
+      document.title = `Flow | ${flow.name} | Athli`;
+    }
+  }, [flow?.name]);
+
   const handleBreadcrumbClick = (path: string) => {
     router.push(path);
   };

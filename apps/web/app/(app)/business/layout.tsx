@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter, useSelectedLayoutSegments, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Loader2, ChevronDown, Unplug, ExternalLink } from 'lucide-react';
@@ -155,6 +155,18 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
 
   // Show header only for packages/coupons/sequences, not activity
   const shouldShowHeader = segments.length === 1 && validTabValues.includes(segments[0]);
+
+  // Set browser tab title based on active segment
+  useEffect(() => {
+    const tabTitles: Record<string, string> = {
+      activity: 'Activity',
+      packages: 'Packages',
+      coupons: 'Coupons',
+      sequences: 'Sequences',
+    };
+    const activeSegment = segments[0] || 'packages';
+    document.title = `${tabTitles[activeSegment] || 'Business'} | Athli`;
+  }, [segments]);
 
   // Handle Stripe onboarding return
   useEffect(() => {

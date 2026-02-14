@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Features',
+  title: 'Feature Requests',
 };
 
 export default function FeaturesLayout({
