@@ -99,28 +99,7 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ secrets.EC2_EU_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=[
-              "set -e",
-              "cd /opt/athli",
-              "echo ==> Generating .env from Parameter Store...",
-              "echo NODE_ENV=production > .env",
-              "echo PORT=3000 >> .env",
-              "echo LOG_LEVEL=info >> .env",
-              "aws ssm get-parameters-by-path --path /athli/production/ --with-decryption --recursive --query Parameters[*].[Name,Value] --output text --region eu-west-1 | while IFS=$'\"'\\t'\"' read -r name value; do echo \"$(basename $name)=$value\" >> .env; done",
-              "chmod 600 .env",
-              "echo ==> Logging into ECR...",
-              "aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}",
-              "echo ==> Pulling latest image...",
-              "docker compose -f docker-compose.prod.yml pull",
-              "echo ==> Starting containers...",
-              "docker compose -f docker-compose.prod.yml up -d",
-              "echo ==> Waiting for health check...",
-              "sleep 10",
-              "curl -sfk https://localhost/health || { echo HEALTH CHECK FAILED; exit 1; }",
-              "echo ==> Cleaning up old images...",
-              "docker image prune -f",
-              "echo ==> Deploy complete!"
-            ]' \
+            --parameters commands='["set -e","cd /opt/athli","echo ==> Generating .env from Parameter Store...","bash /opt/athli/generate-env.sh","echo ==> Logging into ECR...","aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}","echo ==> Pulling latest image...","docker compose -f docker-compose.prod.yml pull","echo ==> Starting containers...","docker compose -f docker-compose.prod.yml up -d","echo ==> Waiting for health check...","sleep 10","curl -sfk https://localhost/health || { echo HEALTH CHECK FAILED; exit 1; }","echo ==> Cleaning up old images...","docker image prune -f","echo ==> Deploy complete!"]' \
             --query "Command.CommandId" \
             --output text)
 
