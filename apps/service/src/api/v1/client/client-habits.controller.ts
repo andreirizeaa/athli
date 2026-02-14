@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { success, unauthorized, created, noContent, notFound, forbidden } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
 import { createCoachNotification, resolveClientName } from '../../../services/notification.service';
-import { NOTIFICATION_TYPES, NOTIFICATION_TITLES } from '@athli/shared-types/src/constants/notification-constants';
+import { NOTIFICATION_TYPES, NOTIFICATION_TITLES } from '@athli/shared-types/notification-constants';
 
 export const clientHabitsController = {
     /**
