@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { AthliLogo, AthliIcon } from '@/components/athli-logo';
 import {
   // CalendarDays,
+  Activity,
   ChevronRight,
   File,
   Gift,
@@ -50,9 +51,17 @@ import { SidebarMenuItemWithTabs } from '@/components/app/sidebar-menu-item-with
 export function AppSidebar() {
   const t = useTranslations();
   const pathname = usePathname();
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
 
-  const isCollapsed = state === 'collapsed';
+  // On mobile, the sidebar Sheet is always fully expanded, so never show collapsed state
+  const isCollapsed = !isMobile && state === 'collapsed';
+
+  // Close mobile sidebar when navigating
+  const handleMobileNavClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
   const { data: checklist } = useCoachChecklist();
   const terminology = useTerminology();
 
@@ -105,8 +114,15 @@ export function AppSidebar() {
   const businessNavItems = [
     {
       href: '/business/activity',
+      labelKey: 'business.tabs.activity',
+      icon: Activity,
+      hasTabs: false,
+    },
+    {
+      href: '/business/packages',
       labelKey: 'sidebar.links.packages',
       icon: CreditCard,
+      hasTabs: true,
     },
   ] as const;
 
@@ -169,7 +185,6 @@ export function AppSidebar() {
   ];
 
   const businessTabs = [
-    { value: 'activity', labelKey: 'business.tabs.activity' },
     { value: 'packages', labelKey: 'business.tabs.packages' },
     { value: 'coupons', labelKey: 'business.tabs.coupons' },
     { value: 'sequences', labelKey: 'business.tabs.sequences' },
@@ -203,7 +218,7 @@ export function AppSidebar() {
                     tooltip={t('sidebar.links.getStarted')}
                     className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
                   >
-                    <Link href="/get-started">
+                    <Link href="/get-started" onClick={handleMobileNavClick}>
                       <Rocket className="shrink-0" />
                       <span>{t('sidebar.links.getStarted')}</span>
                     </Link>
@@ -217,7 +232,7 @@ export function AppSidebar() {
                   tooltip={t('sidebar.links.home')}
                   className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
                 >
-                  <Link href="/home">
+                  <Link href="/home" onClick={handleMobileNavClick}>
                     <Home className="shrink-0" />
                     <span>{t('sidebar.links.home')}</span>
                   </Link>
@@ -252,6 +267,7 @@ export function AppSidebar() {
                       icon={Icon}
                       basePath="/todo"
                       tabs={todoTabs}
+                      onNavigate={handleMobileNavClick}
                     />
                   );
                 }
@@ -275,41 +291,12 @@ export function AppSidebar() {
                       tooltip={label}
                       className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
                     >
-                      <Link href={item.href}>
+                      <Link href={item.href} onClick={handleMobileNavClick}>
                         <Icon className="shrink-0" />
                         <span>{label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup className="pb-0">
-          <div className="flex h-6 items-center px-2">
-            {isCollapsed ? (
-              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
-            ) : (
-              <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
-                {t('sidebar.group.business')}
-              </span>
-            )}
-          </div>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">
-              {businessNavItems.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <SidebarMenuItemWithTabs
-                    key={item.href}
-                    href={item.href}
-                    labelKey={item.labelKey}
-                    icon={Icon}
-                    basePath="/business"
-                    tabs={businessTabs}
-                  />
                 );
               })}
             </SidebarMenu>
@@ -336,7 +323,7 @@ export function AppSidebar() {
                       tooltip={isCollapsed ? t('sidebar.links.library') : undefined}
                       className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
                     >
-                      <Link href="/library/training/workouts">
+                      <Link href="/library/training/workouts" onClick={handleMobileNavClick}>
                         <Library className="shrink-0" />
                         <span className="flex-1">{t('sidebar.links.library')}</span>
                         {!isCollapsed && (
@@ -364,6 +351,7 @@ export function AppSidebar() {
                         <Link
                           key={section.id}
                           href={section.href}
+                          onClick={handleMobileNavClick}
                           className={cn(
                             'mx-1.5 px-2 py-1 text-[15px] rounded transition-colors',
                             'hover:bg-background/20',
@@ -377,6 +365,55 @@ export function AppSidebar() {
                   </TooltipContent>
                 </Tooltip>
               </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup className="pb-0">
+          <div className="flex h-6 items-center px-2">
+            {isCollapsed ? (
+              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
+            ) : (
+              <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
+                {t('sidebar.group.business')}
+              </span>
+            )}
+          </div>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5">
+              {businessNavItems.map((item) => {
+                const Icon = item.icon;
+
+                if (item.hasTabs) {
+                  return (
+                    <SidebarMenuItemWithTabs
+                      key={item.href}
+                      href={item.href}
+                      labelKey={item.labelKey}
+                      icon={Icon}
+                      basePath="/business"
+                      tabs={businessTabs}
+                      onNavigate={handleMobileNavClick}
+                    />
+                  );
+                }
+
+                const isActive = activePath === item.href || activePath.startsWith(`${item.href}/`);
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={t(item.labelKey)}
+                      className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
+                    >
+                      <Link href={item.href} onClick={handleMobileNavClick}>
+                        <Icon className="shrink-0" />
+                        <span>{t(item.labelKey)}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -409,7 +446,7 @@ export function AppSidebar() {
                       tooltip={label}
                       className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
                     >
-                      <Link href={item.href}>
+                      <Link href={item.href} onClick={handleMobileNavClick}>
                         <Icon className="shrink-0" />
                         <span>{label}</span>
                       </Link>
@@ -430,7 +467,7 @@ export function AppSidebar() {
               tooltip={t('sidebar.featureRequests.label')}
               className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
             >
-              <Link href="/features">
+              <Link href="/features" onClick={handleMobileNavClick}>
                 <Lightbulb className="shrink-0" />
                 <span>{t('sidebar.featureRequests.label')}</span>
               </Link>
@@ -443,7 +480,7 @@ export function AppSidebar() {
               tooltip={t('sidebar.links.referAndEarn')}
               className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
             >
-              <Link href="/refer-and-earn">
+              <Link href="/refer-and-earn" onClick={handleMobileNavClick}>
                 <Gift className="shrink-0" />
                 <span>{t('sidebar.links.referAndEarn')}</span>
               </Link>
@@ -456,6 +493,7 @@ export function AppSidebar() {
             basePath="/settings"
             tabs={settingsTabs}
             tooltipAlign="end"
+            onNavigate={handleMobileNavClick}
           />
         </SidebarMenu>
       </SidebarFooter>

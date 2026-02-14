@@ -314,10 +314,10 @@ const BillingPage = () => {
                 </div>
               ) : (
                 /* Standard layout when no scheduled changes */
-                <div className="flex items-start justify-between gap-8">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-8">
                   {/* Left side - Plan details */}
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-xl font-semibold">{currentPlan.name}</h3>
                       {currentPlan.isTrial && (
                         <span className="px-2.5 py-0.5 text-sm font-medium rounded-sm border bg-[#dcfce7] text-[#14532d] border-[#bbf7d0] dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30">
@@ -356,17 +356,8 @@ const BillingPage = () => {
                   </div>
 
                   {/* Right side - Billing & Action */}
-                  <div className="flex flex-col items-end justify-between self-stretch">
-                    <Button onClick={handleChangePlan} disabled={isNavigating} className="gap-2 relative">
-                      <span className={isNavigating ? 'opacity-0' : ''}>
-                        {isCancelling && !currentPlan.isTrial ? "Don't Cancel" : 'Update Plan'}
-                      </span>
-                      {!isCancelling && <ArrowRight className={`size-4 ${isNavigating ? 'opacity-0' : ''}`} />}
-                      {isNavigating && (
-                        <Loader2 className="size-4 animate-spin absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
-                      )}
-                    </Button>
-                    <div className="text-right">
+                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-between md:self-stretch gap-4">
+                    <div className="text-left md:text-right order-1 md:order-2">
                       <p className="text-2xl font-bold">
                         ${currentPlan.price}
                         <span className="text-sm font-normal text-muted-foreground">/{currentPlan.billingInterval}</span>
@@ -375,6 +366,15 @@ const BillingPage = () => {
                         <p className="text-xs text-muted-foreground">Free during trial</p>
                       )}
                     </div>
+                    <Button onClick={handleChangePlan} disabled={isNavigating} className="gap-2 relative order-2 md:order-1">
+                      <span className={isNavigating ? 'opacity-0' : ''}>
+                        {isCancelling && !currentPlan.isTrial ? "Don't Cancel" : 'Update Plan'}
+                      </span>
+                      {!isCancelling && <ArrowRight className={`size-4 ${isNavigating ? 'opacity-0' : ''}`} />}
+                      {isNavigating && (
+                        <Loader2 className="size-4 animate-spin absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                      )}
+                    </Button>
                   </div>
                 </div>
               )}

@@ -71,6 +71,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 type Note = {
@@ -168,6 +169,7 @@ const InboxPage = () => {
   const params = useParams();
   const contactIdFromPath = params?.contactId as string | undefined;
   const { user } = useUserProfile();
+  const isMobile = useIsMobile();
 
   // State-based tab management (no URL routing for tabs to avoid flicker)
   const [activeClientTab, setActiveClientTab] = React.useState('overview');
@@ -450,7 +452,14 @@ const InboxPage = () => {
   const [isBroadcastOpen, setIsBroadcastOpen] = React.useState(false);
   const [isBroadcastUpgradeOpen, setIsBroadcastUpgradeOpen] = React.useState(false);
   const { hasAccess: hasBroadcastAccess } = useFeatureAccess('broadcast_messaging');
-  const [isPowerViewOpen, setIsPowerViewOpen] = React.useState(true); // Power view (client profile panel) open by default
+  const [isPowerViewOpen, setIsPowerViewOpenInternal] = React.useState(true); // Power view (client profile panel) open by default
+  // On mobile, force power view to be closed
+  const effectiveIsPowerViewOpen = isMobile ? false : isPowerViewOpen;
+  const setIsPowerViewOpen = (value: boolean | ((prev: boolean) => boolean)) => {
+    if (!isMobile) {
+      setIsPowerViewOpenInternal(value);
+    }
+  };
   const [noteTitle, setNoteTitle] = React.useState('');
   const [noteContent, setNoteContent] = React.useState('');
   const [isNoteEmpty, setIsNoteEmpty] = React.useState(true);
@@ -2110,7 +2119,7 @@ const InboxPage = () => {
                     <div
                       className={cn(
                         "relative h-full transition-[width] duration-300 ease-in-out",
-                        isPowerViewOpen ? "w-[32.5%]" : "w-full"
+                        effectiveIsPowerViewOpen ? "w-[32.5%]" : "w-full"
                       )}
                       onDragEnter={handleDragEnter}
                       onDragOver={handleDragOver}
@@ -2148,9 +2157,10 @@ const InboxPage = () => {
                       <div className="h-full overflow-y-auto flex flex-col">
                         <ChatHeader
                           selectedContact={selectedContact!}
-                          isPowerViewOpen={isPowerViewOpen}
+                          isPowerViewOpen={effectiveIsPowerViewOpen}
+                          hideToggle={isMobile}
                           onTogglePowerView={() => {
-                            const newState = !isPowerViewOpen;
+                            const newState = !effectiveIsPowerViewOpen;
                             setIsPowerViewOpen(newState);
                             // Only auto-collapse sidebar if user hasn't manually opened it
                             if (!userManuallyOpenedSidebar || !newState) {
@@ -2175,7 +2185,7 @@ const InboxPage = () => {
                             loadMoreTriggerRef={loadMoreTriggerRef}
                             isLoadingMore={isLoadingMoreMessages}
                             hasMoreMessages={hasMoreMessages}
-                            isClientPanelOpen={isPowerViewOpen}
+                            isClientPanelOpen={effectiveIsPowerViewOpen}
                           />
 
                           <MessageInputWrapper contextRef={messageInputContextRef} selectedContact={selectedContact} />
@@ -2183,25 +2193,27 @@ const InboxPage = () => {
                       </div>
                     </div>
 
-                    {/* Client Profile Area (67.5% width, animates in/out based on power view state) */}
-                    <div
-                      className={cn(
-                        "h-full border-l overflow-y-auto transition-[width,opacity] duration-300 ease-in-out",
-                        isPowerViewOpen
-                          ? "w-[67.5%] opacity-100"
-                          : "w-0 opacity-0 overflow-hidden"
-                      )}
-                    >
-                      <ClientProfileLayoutContent
-                        hideBreadcrumb={true}
-                        activeTab={activeClientTab}
-                        onTabChange={setActiveClientTab}
-                        hideMessageButton={true}
-                        hideLoader={true}
+                    {/* Client Profile Area (67.5% width, animates in/out based on power view state) - hidden on mobile */}
+                    {!isMobile && (
+                      <div
+                        className={cn(
+                          "h-full border-l overflow-y-auto transition-[width,opacity] duration-300 ease-in-out",
+                          effectiveIsPowerViewOpen
+                            ? "w-[67.5%] opacity-100"
+                            : "w-0 opacity-0 overflow-hidden"
+                        )}
                       >
-                        <ClientProfileContent tab={activeClientTab} />
-                      </ClientProfileLayoutContent>
-                    </div>
+                        <ClientProfileLayoutContent
+                          hideBreadcrumb={true}
+                          activeTab={activeClientTab}
+                          onTabChange={setActiveClientTab}
+                          hideMessageButton={true}
+                          hideLoader={true}
+                        >
+                          <ClientProfileContent tab={activeClientTab} />
+                        </ClientProfileLayoutContent>
+                      </div>
+                    )}
                   </div>
                 </div>
               </ClientProfileProvider>

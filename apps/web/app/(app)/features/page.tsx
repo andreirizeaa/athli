@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Search, Plus, ChevronUp, MessageCircle, User, Trash2, ArrowUpDown, Loader2 } from 'lucide-react';
+import { Search, Plus, ChevronUp, MessageCircle, User, Trash2, ArrowUpDown, Loader2, ArrowLeft } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -46,6 +47,7 @@ const FILTER_OPTIONS: { label: string; value: SortOption }[] = [
 export default function FeaturesPage() {
   const t = useTranslations();
   const { user } = useGlobalData();
+  const isMobile = useIsMobile();
 
   // State
   const [requests, setRequests] = useState<FeatureRequest[]>([]);
@@ -270,344 +272,381 @@ export default function FeaturesPage() {
 
   const canDeleteRequest = selectedRequest?.userId === user?.id && selectedRequest?.status === null;
 
-  return (
-    <div className="h-full w-full flex">
-      {/* Left Sidebar - Feature Request List */}
-      <div className="w-[400px] border-r bg-background flex flex-col">
-        {/* Header */}
-        <div className="px-4 my-2 flex items-center justify-between">
-          <h2 className="text-[22px] font-semibold">Feature Requests</h2>
-          <Button size="sm" onClick={() => setIsAddRequestOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            New
-          </Button>
+  // Handle back button on mobile
+  const handleMobileBack = () => {
+    setSelectedRequest(null);
+    setReplies([]);
+  };
+
+  // Render the list view (sidebar content)
+  const renderList = () => (
+    <div className={cn(
+      'bg-background flex flex-col',
+      isMobile ? 'w-full h-full' : 'w-[400px] border-r'
+    )}>
+      {/* Header */}
+      <div className="px-4 my-2 flex items-center justify-between">
+        <h2 className="text-[22px] font-semibold">Feature Requests</h2>
+        <Button size="sm" onClick={() => setIsAddRequestOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" />
+          New
+        </Button>
+      </div>
+
+      {/* Search & Filters */}
+      <div className="px-4 pb-3 space-y-3 border-b">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search requests..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
         </div>
 
-        {/* Search & Filters */}
-        <div className="px-4 pb-3 space-y-3 border-b">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search requests..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-
-          {/* Filter Pills */}
-          <div className="flex flex-wrap gap-1.5">
-            {FILTER_OPTIONS.map((option) => (
-              <Button
-                key={option.value}
-                variant={sortBy === option.value ? 'default' : 'outline'}
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => setSortBy(option.value)}
-              >
-                {option.label}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Request List */}
-        <div className="flex-1 overflow-y-auto">
-          {isLoading ? (
-            <div className="p-4 space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                  <Skeleton className="h-3 w-1/4" />
-                </div>
-              ))}
-            </div>
-          ) : filteredRequests.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground text-sm">
-              {searchQuery ? 'No requests found' : 'No feature requests yet'}
-            </div>
-          ) : (
-            <div>
-              {filteredRequests.map((request) => (
-                <div
-                  key={request.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => loadRequestDetails(request.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      loadRequestDetails(request.id);
-                    }
-                  }}
-                  className={cn(
-                    'w-full text-left px-4 py-3 border-b transition-colors hover:bg-accent cursor-pointer',
-                    selectedRequest?.id === request.id && 'bg-accent'
-                  )}
-                >
-                  <div className="flex gap-3 items-start">
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      {/* User row */}
-                      <div className="flex items-center gap-2 mb-1">
-                        <Avatar className="h-5 w-5">
-                          {request.profilePictureUrl && (
-                            <AvatarImage src={request.profilePictureUrl} />
-                          )}
-                          <AvatarFallback className="text-[10px]">
-                            {request.userName.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs text-muted-foreground truncate">
-                          {request.userName}
-                        </span>
-                      </div>
-
-                      {/* Title */}
-                      <p className="text-sm font-medium line-clamp-2">
-                        {request.title}
-                      </p>
-
-                      {/* Description preview */}
-                      {request.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                          {request.description}
-                        </p>
-                      )}
-
-                      {/* Status pill (if exists) */}
-                      {request.status && (
-                        <div className="mt-2">
-                          {getStatusBadge(request.status)}
-                        </div>
-                      )}
-
-                      {/* Meta pills row */}
-                      <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                        <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-medium border-primary/50 text-primary">
-                          {request.userType === 'coach' ? 'Coach' : 'Client'}
-                        </Badge>
-                        <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-medium border-primary/50 text-primary flex items-center gap-1">
-                          <MessageCircle className="h-2.5 w-2.5" />
-                          {request.replyCount}
-                        </Badge>
-                        <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-medium border-primary/50 text-primary">
-                          {formatDate(request.createdAt)}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Upvote */}
-                    <button
-                      type="button"
-                      onClick={(e) => handleUpvote(request, e)}
-                      className={cn(
-                        'flex flex-col items-center px-3 py-1 rounded-md border shrink-0',
-                        request.hasUpvoted
-                          ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-muted-foreground/40 hover:border-primary/50'
-                      )}
-                    >
-                      <ChevronUp className={cn('h-4 w-4', request.hasUpvoted && 'stroke-[3px]')} />
-                      <span className="text-xs font-medium">{request.upvoteCount}</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        {/* Filter Pills */}
+        <div className="flex flex-wrap gap-1.5">
+          {FILTER_OPTIONS.map((option) => (
+            <Button
+              key={option.value}
+              variant={sortBy === option.value ? 'default' : 'outline'}
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setSortBy(option.value)}
+            >
+              {option.label}
+            </Button>
+          ))}
         </div>
       </div>
 
-      {/* Right Content - Request Details */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {selectedRequest ? (
-          <>
-            {/* Detail Header */}
-            <div className="px-4 py-2 border-b flex items-center justify-between">
-              <h2 className="text-lg font-semibold truncate">{selectedRequest.title}</h2>
-              <div className="flex items-center gap-2">
-                {canDeleteRequest && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeleteRequestId(selectedRequest.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button onClick={() => setIsAddReplyOpen(true)}>
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Reply
-                </Button>
+      {/* Request List */}
+      <div className="flex-1 overflow-y-auto">
+        {isLoading ? (
+          <div className="p-4 space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-3 w-1/4" />
               </div>
-            </div>
-
-            {/* Detail Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* Request Card */}
-              <Card>
-                <CardContent className="px-4">
-                  <div className="flex gap-4">
-                    {/* Content */}
-                    <div className="flex-1">
-                      {/* User row */}
-                      <div className="flex items-center gap-2 mb-3">
-                        <Avatar className="h-7 w-7">
-                          {selectedRequest.profilePictureUrl && (
-                            <AvatarImage src={selectedRequest.profilePictureUrl} />
-                          )}
-                          <AvatarFallback className="text-xs">
-                            {selectedRequest.userName.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-medium">
-                          {selectedRequest.userName}
-                        </span>
-                      </div>
-
-                      {/* Title */}
-                      <h3 className="text-base font-semibold">
-                        {selectedRequest.title}
-                      </h3>
-
-                      {/* Description */}
-                      {selectedRequest.description && (
-                        <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
-                          {selectedRequest.description}
-                        </p>
-                      )}
-
-                      {/* Status pill (if exists) */}
-                      {selectedRequest.status && (
-                        <div className="mt-3">
-                          {getStatusBadge(selectedRequest.status)}
-                        </div>
-                      )}
-
-                      {/* Meta pills row */}
-                      <div className="flex items-center gap-1.5 flex-wrap mt-3">
-                        <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary">
-                          {selectedRequest.userType === 'coach' ? 'Coach' : 'Client'}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary flex items-center gap-1">
-                          <MessageCircle className="h-3 w-3" />
-                          {selectedRequest.replyCount}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary">
-                          {formatDate(selectedRequest.createdAt)}
-                        </Badge>
-                      </div>
+            ))}
+          </div>
+        ) : filteredRequests.length === 0 ? (
+          <div className="p-4 text-center text-muted-foreground text-sm">
+            {searchQuery ? 'No requests found' : 'No feature requests yet'}
+          </div>
+        ) : (
+          <div>
+            {filteredRequests.map((request) => (
+              <div
+                key={request.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => loadRequestDetails(request.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    loadRequestDetails(request.id);
+                  }
+                }}
+                className={cn(
+                  'w-full text-left px-4 py-3 border-b transition-colors hover:bg-accent cursor-pointer',
+                  !isMobile && selectedRequest?.id === request.id && 'bg-accent'
+                )}
+              >
+                <div className="flex gap-3 items-start">
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    {/* User row */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <Avatar className="h-5 w-5">
+                        {request.profilePictureUrl && (
+                          <AvatarImage src={request.profilePictureUrl} />
+                        )}
+                        <AvatarFallback className="text-[10px]">
+                          {request.userName.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {request.userName}
+                      </span>
                     </div>
 
-                    {/* Upvote */}
-                    <button
-                      type="button"
-                      onClick={() => handleUpvote(selectedRequest)}
-                      className={cn(
-                        'flex flex-col items-center justify-center px-4 py-3 rounded-lg border self-start',
-                        selectedRequest.hasUpvoted
-                          ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-border hover:border-primary/50'
-                      )}
-                    >
-                      <ChevronUp className={cn('h-5 w-5', selectedRequest.hasUpvoted && 'stroke-[3px]')} />
-                      <span className="text-sm font-semibold">{selectedRequest.upvoteCount}</span>
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
+                    {/* Title */}
+                    <p className="text-sm font-medium line-clamp-2">
+                      {request.title}
+                    </p>
 
-              {/* Replies Section */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold">
-                    {replies.length === 0
-                      ? 'No replies yet'
-                      : replies.length === 1
-                      ? '1 Reply'
-                      : `${replies.length} Replies`}
-                  </h4>
-                  {replies.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSortRepliesAscending(!sortRepliesAscending)}
-                    >
-                      <ArrowUpDown className="h-4 w-4" />
-                    </Button>
-                  )}
+                    {/* Description preview */}
+                    {request.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                        {request.description}
+                      </p>
+                    )}
+
+                    {/* Status pill (if exists) */}
+                    {request.status && (
+                      <div className="mt-2">
+                        {getStatusBadge(request.status)}
+                      </div>
+                    )}
+
+                    {/* Meta pills row */}
+                    <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                      <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-medium border-primary/50 text-primary">
+                        {request.userType === 'coach' ? 'Coach' : 'Client'}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-medium border-primary/50 text-primary flex items-center gap-1">
+                        <MessageCircle className="h-2.5 w-2.5" />
+                        {request.replyCount}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-medium border-primary/50 text-primary">
+                        {formatDate(request.createdAt)}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Upvote */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleUpvote(request, e)}
+                    className={cn(
+                      'flex flex-col items-center px-3 py-1 rounded-md border shrink-0',
+                      request.hasUpvoted
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : 'border-muted-foreground/40 hover:border-primary/50'
+                    )}
+                  >
+                    <ChevronUp className={cn('h-4 w-4', request.hasUpvoted && 'stroke-[3px]')} />
+                    <span className="text-xs font-medium">{request.upvoteCount}</span>
+                  </button>
                 </div>
-
-                {isLoadingReplies ? (
-                  <div className="space-y-3">
-                    {[1, 2].map((i) => (
-                      <Skeleton key={i} className="h-20 w-full" />
-                    ))}
-                  </div>
-                ) : replies.length === 0 ? (
-                  <Card className="cursor-pointer hover:bg-accent/50" onClick={() => setIsAddReplyOpen(true)}>
-                    <CardContent className="p-4 text-center text-muted-foreground text-sm">
-                      Be the first to reply to this feature request!
-                    </CardContent>
-                  </Card>
-                ) : (
-                  sortedReplies.map((reply) => (
-                    <Card key={reply.id}>
-                      <CardContent className="px-4">
-                        {/* User row */}
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              {reply.profilePictureUrl && (
-                                <AvatarImage src={reply.profilePictureUrl} />
-                              )}
-                              <AvatarFallback className="text-[10px]">
-                                {reply.userName.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm font-medium">{reply.userName}</span>
-                          </div>
-                          {reply.userId === user?.id && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => setDeleteReplyId(reply.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                        <p className="text-sm whitespace-pre-wrap">{reply.message}</p>
-                        {/* Meta pills row */}
-                        <div className="flex items-center gap-1.5 flex-wrap mt-3">
-                          <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary">
-                            {reply.userType === 'coach' ? 'Coach' : 'Client'}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary">
-                            {formatDate(reply.createdAt)}
-                          </Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
               </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            <div className="text-center">
-              <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-20" />
-              <p>Select a feature request to view details</p>
-            </div>
+            ))}
           </div>
         )}
       </div>
+    </div>
+  );
+
+  // Render the detail view
+  const renderDetail = () => (
+    <div className={cn(
+      'flex flex-col overflow-hidden',
+      isMobile ? 'w-full h-full' : 'flex-1'
+    )}>
+      {selectedRequest ? (
+        <>
+          {/* Detail Header */}
+          <div className="px-4 py-2 border-b flex items-center justify-between gap-2">
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleMobileBack}
+                className="shrink-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <h2 className="text-lg font-semibold truncate flex-1">{selectedRequest.title}</h2>
+            <div className="flex items-center gap-2 shrink-0">
+              {canDeleteRequest && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setDeleteRequestId(selectedRequest.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+              <Button onClick={() => setIsAddReplyOpen(true)}>
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Reply
+              </Button>
+            </div>
+          </div>
+
+          {/* Detail Content */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Request Card */}
+            <Card>
+              <CardContent className="px-4">
+                <div className="flex gap-4">
+                  {/* Content */}
+                  <div className="flex-1">
+                    {/* User row */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <Avatar className="h-7 w-7">
+                        {selectedRequest.profilePictureUrl && (
+                          <AvatarImage src={selectedRequest.profilePictureUrl} />
+                        )}
+                        <AvatarFallback className="text-xs">
+                          {selectedRequest.userName.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">
+                        {selectedRequest.userName}
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-base font-semibold">
+                      {selectedRequest.title}
+                    </h3>
+
+                    {/* Description */}
+                    {selectedRequest.description && (
+                      <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
+                        {selectedRequest.description}
+                      </p>
+                    )}
+
+                    {/* Status pill (if exists) */}
+                    {selectedRequest.status && (
+                      <div className="mt-3">
+                        {getStatusBadge(selectedRequest.status)}
+                      </div>
+                    )}
+
+                    {/* Meta pills row */}
+                    <div className="flex items-center gap-1.5 flex-wrap mt-3">
+                      <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary">
+                        {selectedRequest.userType === 'coach' ? 'Coach' : 'Client'}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary flex items-center gap-1">
+                        <MessageCircle className="h-3 w-3" />
+                        {selectedRequest.replyCount}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary">
+                        {formatDate(selectedRequest.createdAt)}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Upvote */}
+                  <button
+                    type="button"
+                    onClick={() => handleUpvote(selectedRequest)}
+                    className={cn(
+                      'flex flex-col items-center justify-center px-4 py-3 rounded-lg border self-start',
+                      selectedRequest.hasUpvoted
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : 'border-border hover:border-primary/50'
+                    )}
+                  >
+                    <ChevronUp className={cn('h-5 w-5', selectedRequest.hasUpvoted && 'stroke-[3px]')} />
+                    <span className="text-sm font-semibold">{selectedRequest.upvoteCount}</span>
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Replies Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">
+                  {replies.length === 0
+                    ? 'No replies yet'
+                    : replies.length === 1
+                    ? '1 Reply'
+                    : `${replies.length} Replies`}
+                </h4>
+                {replies.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSortRepliesAscending(!sortRepliesAscending)}
+                  >
+                    <ArrowUpDown className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
+              {isLoadingReplies ? (
+                <div className="space-y-3">
+                  {[1, 2].map((i) => (
+                    <Skeleton key={i} className="h-20 w-full" />
+                  ))}
+                </div>
+              ) : replies.length === 0 ? (
+                <Card className="cursor-pointer hover:bg-accent/50" onClick={() => setIsAddReplyOpen(true)}>
+                  <CardContent className="p-4 text-center text-muted-foreground text-sm">
+                    Be the first to reply to this feature request!
+                  </CardContent>
+                </Card>
+              ) : (
+                sortedReplies.map((reply) => (
+                  <Card key={reply.id}>
+                    <CardContent className="px-4">
+                      {/* User row */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            {reply.profilePictureUrl && (
+                              <AvatarImage src={reply.profilePictureUrl} />
+                            )}
+                            <AvatarFallback className="text-[10px]">
+                              {reply.userName.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{reply.userName}</span>
+                        </div>
+                        {reply.userId === user?.id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setDeleteReplyId(reply.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{reply.message}</p>
+                      {/* Meta pills row */}
+                      <div className="flex items-center gap-1.5 flex-wrap mt-3">
+                        <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary">
+                          {reply.userType === 'coach' ? 'Coach' : 'Client'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs px-2 py-0 font-medium border-primary/50 text-primary">
+                          {formatDate(reply.createdAt)}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          <div className="text-center">
+            <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-20" />
+            <p>Select a feature request to view details</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="h-full w-full flex">
+      {isMobile ? (
+        // Mobile: Show list OR detail, not both
+        selectedRequest ? renderDetail() : renderList()
+      ) : (
+        // Desktop: Show list AND detail side by side
+        <>
+          {renderList()}
+          {renderDetail()}
+        </>
+      )}
 
       {/* Dialogs */}
       <AddFeatureRequestDialog
@@ -639,7 +678,7 @@ export default function FeaturesPage() {
             <AlertDialogAction
               onClick={handleDeleteRequest}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-white hover:bg-destructive/90"
             >
               {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Delete
@@ -662,7 +701,7 @@ export default function FeaturesPage() {
             <AlertDialogAction
               onClick={handleDeleteReply}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-white hover:bg-destructive/90"
             >
               {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Delete

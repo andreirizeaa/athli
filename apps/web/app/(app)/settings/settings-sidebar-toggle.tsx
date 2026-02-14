@@ -3,13 +3,13 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useLibrarySidebar } from './library-sidebar-context';
+import { useSettingsSidebar } from './context/settings-sidebar-context';
 
-export function LibrarySidebarToggle() {
-  const { isOpen, isMobile, toggle } = useLibrarySidebar();
+export function SettingsSidebarToggle() {
+  const { isOpen, isMobile, toggle } = useSettingsSidebar();
 
-  const closeLabel = 'Close library sidebar';
-  const openLabel = 'Open library sidebar';
+  const closeLabel = 'Close settings sidebar';
+  const openLabel = 'Open settings sidebar';
 
   // On mobile, sidebar is always "closed" (shown via sheet), so show open icon
   const showOpenIcon = isMobile || !isOpen;

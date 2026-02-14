@@ -29,6 +29,7 @@ type SidebarMenuItemWithTabsProps = {
   basePath: string;
   tabs: Tab[];
   tooltipAlign?: 'start' | 'center' | 'end';
+  onNavigate?: () => void;
 };
 
 export function SidebarMenuItemWithTabs({
@@ -38,14 +39,20 @@ export function SidebarMenuItemWithTabs({
   basePath,
   tabs,
   tooltipAlign = 'start',
+  onNavigate,
 }: SidebarMenuItemWithTabsProps) {
   const t = useTranslations();
   const pathname = usePathname();
   const { state, isMobile } = useSidebar();
 
   const normalizedPathname = pathname && pathname !== '/' ? pathname.replace(/\/$/, '') : pathname;
-  const isActive = normalizedPathname.startsWith(basePath);
-  const isCollapsed = state === 'collapsed';
+  // Check if current path matches any of the tabs (not just the basePath)
+  const isActive = tabs.some((tab) => {
+    const tabHref = `${basePath}/${tab.value}`;
+    return normalizedPathname === tabHref || normalizedPathname.startsWith(`${tabHref}/`);
+  });
+  // On mobile, the sidebar Sheet is always fully expanded, so never show collapsed state
+  const isCollapsed = !isMobile && state === 'collapsed';
   const label = t(labelKey);
 
   const menuButton = (
@@ -55,7 +62,7 @@ export function SidebarMenuItemWithTabs({
       tooltip={isCollapsed && !isMobile ? undefined : label}
       className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
     >
-      <Link href={href}>
+      <Link href={href} onClick={onNavigate}>
         <Icon className="shrink-0" />
         <span className="flex-1">{label}</span>
         {!isCollapsed && (
@@ -107,6 +114,7 @@ export function SidebarMenuItemWithTabs({
               <Link
                 key={tab.value}
                 href={tabHref}
+                onClick={onNavigate}
                 className={cn(
                   'mx-1.5 px-2 py-1 text-[15px] rounded transition-colors',
                   'hover:bg-background/20',

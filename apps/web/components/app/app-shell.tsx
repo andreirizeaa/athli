@@ -18,6 +18,7 @@ import { useThemeConfig } from '@/components/app/active-theme';
 import { PresetValue } from '@/lib/theme';
 import { AIPanelProvider, useAIPanel } from '@/lib/providers/ai-panel-provider';
 import { UnpaidInvoiceOverlay } from './unpaid-invoice-overlay';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Re-export types for backward compatibility
 export type {
@@ -63,8 +64,11 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
   const { isLoggingOut } = useLogout();
   const { preferences } = useGlobalData();
   const { theme: themeConfig, setTheme: setThemeConfig } = useThemeConfig();
+  const isMobile = useIsMobile();
 
   const isGetStartedPage = pathname === '/get-started';
+  // Show header on get-started page only on mobile (users need navigation)
+  const showHeader = !isGetStartedPage || isMobile;
 
   React.useEffect(() => {
     setIsThemeMounted(true);
@@ -89,7 +93,7 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
     >
       <AppSidebar />
       <SidebarInsetWithBorder>
-        {!isGetStartedPage && (
+        {showHeader && (
           <AppHeader
             isThemeMounted={isThemeMounted}
             currentLanguage={locale}
