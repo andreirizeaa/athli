@@ -1,0 +1,43 @@
+# Node modules (will be installed fresh in Docker)
+**/node_modules
+**/dist
+
+# Git
+.git
+.gitignore
+
+# Environment files
+**/.env
+**/.env.*
+
+# Logs
+**/*.log
+**/npm-debug.log*
+
+# Test files
+**/coverage
+**/.nyc_output
+**/tests
+**/vitest.config.ts
+
+# IDE/OS
+**/.DS_Store
+**/*.tsbuildinfo
+
+# Documentation
+**/README.md
+**/DEPLOYMENT.md
+**/*.md
+
+# Config files not needed in Docker
+**/.eslintrc*
+**/.prettierrc*
+**/render.yaml
+
+# Other apps (we only need service and shared-types)
+apps/web
+apps/mobile
+
+# Supabase local
+**/supabase
+**/migrations

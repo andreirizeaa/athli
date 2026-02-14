@@ -5,15 +5,22 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files first (better layer caching)
-COPY package.json package-lock.json* ./
+# Copy shared-types package first
+COPY packages/shared-types ./packages/shared-types
+
+# Copy service package files
+COPY apps/service/package.json apps/service/package-lock.json* ./apps/service/
+
+# Update shared-types reference to local path
+WORKDIR /app/apps/service
+RUN sed -i 's/"@athli\/shared-types": "[^"]*"/"@athli\/shared-types": "file:..\/..\/packages\/shared-types"/g' package.json
 
 # Install ALL dependencies (including devDependencies for tsc)
 RUN npm install
 
 # Copy source code
-COPY tsconfig.json ./
-COPY src ./src
+COPY apps/service/tsconfig.json ./
+COPY apps/service/src ./src
 
 # Build TypeScript → dist/
 RUN npm run build
@@ -29,14 +36,20 @@ RUN addgroup -g 1001 -S athli && \
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json* ./
+# Copy shared-types package
+COPY packages/shared-types ./packages/shared-types
+
+# Copy service package files
+COPY apps/service/package.json apps/service/package-lock.json* ./
+
+# Update shared-types reference to local path
+RUN sed -i 's/"@athli\/shared-types": "[^"]*"/"@athli\/shared-types": "file:..\/packages\/shared-types"/g' package.json
 
 # Install production dependencies only
 RUN npm install --omit=dev && npm cache clean --force
 
 # Copy compiled output from builder
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/apps/service/dist ./dist
 
 # Set ownership
 RUN chown -R athli:athli /app
