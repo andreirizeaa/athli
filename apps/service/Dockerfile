@@ -37,7 +37,7 @@ WORKDIR /app/apps/service
 RUN sed -i 's/"@athli\/shared-types": "[^"]*"/"@athli\/shared-types": "file:..\/..\/packages\/shared-types"/g' package.json
 
 # Install ALL dependencies (including devDependencies for tsc)
-RUN npm install
+RUN npm install --include=dev
 
 # Copy source code
 COPY apps/service/tsconfig.json ./
