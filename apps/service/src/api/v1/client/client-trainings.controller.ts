@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { success, unauthorized, notFound } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
 import { createCoachNotification, resolveCoachId, resolveClientName } from '../../../services/notification.service';
-import { NOTIFICATION_TYPES, NOTIFICATION_TITLES } from '@athli/shared-types/src/constants/notification-constants';
+import { NOTIFICATION_TYPES, NOTIFICATION_TITLES } from '@athli/shared-types/notification-constants';
 
 /**
  * Helper to normalize workout data structure:
