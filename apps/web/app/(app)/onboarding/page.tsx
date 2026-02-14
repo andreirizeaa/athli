@@ -120,8 +120,8 @@ const OnboardingPage = () => {
       await updateOnboardingStatus(onboarding.id, checked);
       toast.success(
         checked
-          ? t('onboarding.activated', { name: onboarding.name })
-          : t('onboarding.deactivated', { name: onboarding.name })
+          ? t('onboarding.activated', { name: onboarding.name ?? '' })
+          : t('onboarding.deactivated', { name: onboarding.name ?? '' })
       );
       queryClient.invalidateQueries({ queryKey: ['coach-onboardings'] });
     } catch (error) {

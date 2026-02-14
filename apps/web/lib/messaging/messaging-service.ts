@@ -82,7 +82,7 @@ export const getConversations = async ({
     if (receiptsError) throw receiptsError;
 
     // Get other user IDs (client if user is coach, coach if user is client)
-    const otherUserIds = conversations.map((conv) =>
+    const otherUserIds = conversations.map((conv: { coach_id: string; client_id: string }) =>
       conv.coach_id === coachId ? conv.client_id : conv.coach_id,
     );
 
@@ -95,13 +95,13 @@ export const getConversations = async ({
 
     // Transform and compute fields
     const result = await Promise.all(
-      conversations.map(async (conv) => {
+      conversations.map(async (conv: { id: string; coach_id: string; client_id: string; last_message_at: string | null; created_at: string; updated_at: string; [key: string]: unknown }) => {
         const isCoach = conv.coach_id === coachId;
         const otherUserId = isCoach ? conv.client_id : conv.coach_id;
 
         // Find participant settings
         const participantSettings = participants?.find(
-          (p) => p.conversation_id === conv.id,
+          (p: { conversation_id: string; is_archived?: boolean }) => p.conversation_id === conv.id,
         );
 
         // Skip if archived (unless includeArchived is true)
@@ -110,10 +110,10 @@ export const getConversations = async ({
         }
 
         // Find other user's profile
-        const otherProfile = profiles?.find((p) => p.id === otherUserId);
+        const otherProfile = profiles?.find((p: { id: string }) => p.id === otherUserId);
 
         // Calculate unread count
-        const receipt = readReceipts?.find((r) => r.conversation_id === conv.id);
+        const receipt = readReceipts?.find((r: { conversation_id: string }) => r.conversation_id === conv.id);
         const unreadCount = await getUnreadCount(conv.id, coachId, receipt);
 
         return {
@@ -240,14 +240,14 @@ export const getMessages = async ({
     if (!messages) return [];
 
     // Transform messages with correct Date types
-    return messages.map((msg) => ({
+    return messages.map((msg: { sent_at: string; read_at: string | null; edited_at: string | null; deleted_at: string | null; created_at: string; attachments?: { created_at: string }[]; reactions?: { created_at: string }[]; parent_message?: unknown; [key: string]: unknown }) => ({
       ...msg,
       sent_at: new Date(msg.sent_at),
       read_at: msg.read_at ? new Date(msg.read_at) : null,
       edited_at: msg.edited_at ? new Date(msg.edited_at) : null,
       deleted_at: msg.deleted_at ? new Date(msg.deleted_at) : null,
       created_at: new Date(msg.created_at),
-      attachments: msg.attachments?.map((att: any) => ({
+      attachments: msg.attachments?.map((att: { created_at: string }) => ({
         ...att,
         created_at: new Date(att.created_at),
       })),
@@ -255,10 +255,10 @@ export const getMessages = async ({
         ...react,
         created_at: new Date(react.created_at),
       })),
-      parent_message: msg.parent_message && !Array.isArray(msg.parent_message) && msg.parent_message.id
+      parent_message: msg.parent_message && !Array.isArray(msg.parent_message) && (msg.parent_message as { id?: string }).id
         ? {
-            ...msg.parent_message,
-            sent_at: new Date(msg.parent_message.sent_at),
+            ...(msg.parent_message as { id: string; sent_at: string }),
+            sent_at: new Date((msg.parent_message as { sent_at: string }).sent_at),
           }
         : null,
     })) as Message[];
@@ -480,7 +480,7 @@ export const markAllConversationsAsRead = async (
 
     // Mark each conversation as read
     await Promise.all(
-      conversations.map((conv) => markConversationAsRead(conv.id, userId)),
+      conversations.map((conv: { id: string }) => markConversationAsRead(conv.id, userId)),
     );
   } catch (error) {
     console.error('[MessagingService] Error marking all as read:', error);
@@ -620,7 +620,7 @@ export const deleteAllArchivedConversations = async (
     if (!participants) return;
 
     // Delete all conversations (CASCADE will handle messages)
-    const conversationIds = participants.map((p) => p.conversation_id);
+    const conversationIds = participants.map((p: { conversation_id: string }) => p.conversation_id);
     const { error: deleteError } = await supabase
       .from('conversations')
       .delete()

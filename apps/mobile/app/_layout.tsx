@@ -446,7 +446,6 @@ function RootLayoutNav() {
           <Stack.Screen name="settings/notification-status" options={{ headerShown: false }} />
           <Stack.Screen name="settings/feature-requests" options={{ headerShown: false }} />
           <Stack.Screen name="settings/billing" options={{ headerShown: false }} />
-          <Stack.Screen name="settings/billing-update" options={{ headerShown: false }} />
           <Stack.Screen name="settings/invoices" options={{ headerShown: false }} />
           <Stack.Screen
             name="settings/feature-request-detail"

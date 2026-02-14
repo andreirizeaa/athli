@@ -1682,7 +1682,8 @@ export const paymentsController = {
   // ─── Public Packages ──────────────────────────────────
 
   getPublicPackages: async (req: Request, res: Response) => {
-    const { coachCode } = req.params;
+    const coachCodeParam = req.params.coachCode;
+    const coachCode = Array.isArray(coachCodeParam) ? coachCodeParam[0] : coachCodeParam;
     const supabase = getSupabaseClient();
 
     try {
@@ -2789,8 +2790,19 @@ async function handleDisputeCreated(event: Stripe.Event, supabase: any) {
   }
 }
 
+// Extended Stripe types with properties that exist at runtime but not in SDK v20+ types
+type InvoiceWithExpanded = Stripe.Invoice & {
+  subscription?: string | Stripe.Subscription | null;
+  payment_intent?: string | Stripe.PaymentIntent | null;
+};
+
+type SubscriptionWithPeriod = Stripe.Subscription & {
+  current_period_start?: number;
+  current_period_end?: number;
+};
+
 async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
-  const invoice = event.data.object as Stripe.Invoice;
+  const invoice = event.data.object as InvoiceWithExpanded;
   const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : null;
 
   if (!subscriptionId) return;
@@ -2882,7 +2894,7 @@ async function handleInvoicePaid(event: Stripe.Event, supabase: any) {
 }
 
 async function handleInvoicePaymentFailed(event: Stripe.Event, supabase: any) {
-  const invoice = event.data.object as Stripe.Invoice;
+  const invoice = event.data.object as InvoiceWithExpanded;
   const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : null;
 
   if (subscriptionId) {
@@ -2923,7 +2935,7 @@ async function handleInvoicePaymentFailed(event: Stripe.Event, supabase: any) {
 }
 
 async function handleSubscriptionUpdated(event: Stripe.Event, supabase: any) {
-  const subscription = event.data.object as Stripe.Subscription;
+  const subscription = event.data.object as SubscriptionWithPeriod;
   const previousAttributes = (event.data as any).previous_attributes || {};
 
   const statusMap: Record<string, string> = {
