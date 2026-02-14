@@ -14,9 +14,9 @@ COPY packages/shared-types/ ./
 # Build shared-types to JavaScript
 RUN npm run build
 
-# Update package.json exports to point to dist/ instead of src/
-# This makes the compiled JS files available at runtime
-RUN sed -i 's|"./src/|"./dist/|g' package.json && \
+# Update package.json exports VALUES to point to dist/ instead of src/
+# Only replace values (after colon), not keys
+RUN sed -i 's|": "./src/|": "./dist/|g' package.json && \
     sed -i 's|\.ts"|\.js"|g' package.json
 
 # ──────────────────────────────────────────────
