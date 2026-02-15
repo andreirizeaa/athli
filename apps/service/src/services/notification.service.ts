@@ -12,12 +12,6 @@ export async function createCoachNotification(params: {
   description?: string;
   metadata?: Record<string, any>;
 }): Promise<void> {
-  console.log('[NotificationService] Creating notification:', {
-    coachId: params.coachId,
-    clientId: params.clientId,
-    notificationType: params.notificationType,
-    title: params.title,
-  });
   try {
     const supabase = getSupabaseClient();
     const { error } = await supabase.from('coach_notifications').insert({
@@ -30,7 +24,7 @@ export async function createCoachNotification(params: {
     });
 
     if (error) {
-      console.error('[NotificationService] Failed to create notification:', error.message);
+      console.error('[NotificationService] INSERT FAILED:', error.code, error.message);
     }
   } catch (err) {
     console.error('[NotificationService] Unexpected error:', err);
@@ -66,12 +60,13 @@ export async function resolveClientName(clientId: string): Promise<string | null
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('full_name')
+      .select('name')
       .eq('id', clientId)
+      .eq('user_type', 'client')
       .single();
 
     if (error || !data) return null;
-    return data.full_name;
+    return data.name;
   } catch {
     return null;
   }

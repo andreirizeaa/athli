@@ -71,6 +71,8 @@ export const useAthleteCoachEntitlementsStore = create<AthleteCoachEntitlementsS
         // Only consider coach on starter if not on trial
         const isOnStarter = entitlements.plan_type === 'starter' && !entitlements.is_trial;
 
+        console.log('[AthleteCoachEntitlementsStore] Coach entitlements loaded:', JSON.stringify(entitlements, null, 2));
+
         set({
           coachEntitlements: entitlements,
           isCoachOnStarter: isOnStarter,

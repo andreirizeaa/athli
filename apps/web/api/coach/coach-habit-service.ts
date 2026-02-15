@@ -33,8 +33,9 @@ const mapDBHabitToHabit = (dbHabit: DBHabit): Habit => {
     unit: dbHabit.schedule_config?.unit ?? '',
     period: dbHabit.schedule_type === 'weekly' ? 'weekly' : 'daily',
     duration: dbHabit.schedule_config?.duration,
-    reminderTime: dbHabit.times_of_day?.[0]?.substring(0, 5), // HH:mm
-    reminderMessage: dbHabit.schedule_config?.reminder_message,
+    // Use new reminder columns, fallback to legacy storage for backwards compatibility
+    reminderTime: dbHabit.reminder_time?.substring(0, 5) ?? dbHabit.times_of_day?.[0]?.substring(0, 5),
+    reminderMessage: dbHabit.reminder_message ?? dbHabit.schedule_config?.reminder_message,
     createdAt: new Date(dbHabit.created_at).getTime(),
     clientId: dbHabit.client_id ?? undefined,
     folderId: dbHabit.folder_id ?? undefined,
@@ -46,12 +47,14 @@ const mapHabitDataToDB = (data: AddHabitData) => {
     name: data.name,
     description: data.description,
     schedule_type: data.period,
-    times_of_day: data.reminderTime ? [data.reminderTime] : null,
+    // Use new reminder columns
+    reminder_enabled: !!data.reminderTime,
+    reminder_time: data.reminderTime || null,
+    reminder_message: data.reminderMessage || null,
     schedule_config: {
       amount: data.amount,
       unit: data.unit,
       duration: data.duration,
-      reminder_message: data.reminderMessage,
     },
     client_id: data.clientId,
   };

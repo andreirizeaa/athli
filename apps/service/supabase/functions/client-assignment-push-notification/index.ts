@@ -1,5 +1,5 @@
 /**
- * Supabase Edge Function: client-assignment-notification
+ * Supabase Edge Function: client-assignment-push-notification
  *
  * Sends batched push notifications to clients when a coach assigns new
  * items (habits, metrics, files, check-ins, questionnaires).

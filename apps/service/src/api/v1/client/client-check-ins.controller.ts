@@ -288,19 +288,20 @@ export const clientCheckInsController = {
 
         if (error) return res.status(500).json({ success: false, message: error.message });
 
-        // Send notification for client submissions only
-        if (!isCoach) {
+        // Send notification when the authenticated user is the client submitting their own check-in.
+        if (targetClientId === userId) {
             resolveClientName(targetClientId).then((clientName) => {
-                if (clientName) {
-                    createCoachNotification({
-                        coachId: assignmentDetails.coach_id,
-                        clientId: targetClientId,
-                        notificationType: NOTIFICATION_TYPES.checkin_completed,
-                        title: NOTIFICATION_TITLES.checkin_completed,
-                        description: `${clientName} completed a check-in`,
-                        metadata: { checkin_id: id, name: assignmentDetails.name },
-                    });
-                }
+                const firstName = clientName?.split(' ')[0] || 'Client';
+                createCoachNotification({
+                    coachId: assignmentDetails.coach_id,
+                    clientId: targetClientId,
+                    notificationType: NOTIFICATION_TYPES.checkin_completed,
+                    title: NOTIFICATION_TITLES.checkin_completed,
+                    description: `${firstName} completed a check-in`,
+                    metadata: { checkin_id: id, name: assignmentDetails.name },
+                });
+            }).catch((err) => {
+                console.error('[CheckInController] notification error:', err);
             });
         }
 

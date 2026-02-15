@@ -9,10 +9,13 @@ export const NOTIFICATION_TYPES = {
   workout_missed: 'workout_missed',
   // Forms
   checkin_completed: 'checkin_completed',
+  checkin_missed: 'checkin_missed',
   questionnaire_completed: 'questionnaire_completed',
   // Tracking
   metric_logged: 'metric_logged',
+  metric_missed: 'metric_missed',
   habit_logged: 'habit_logged',
+  habit_missed: 'habit_missed',
   photo_uploaded: 'photo_uploaded',
   // Profile
   client_connected: 'client_connected',
@@ -28,8 +31,8 @@ export type NotificationType = typeof NOTIFICATION_TYPES[keyof typeof NOTIFICATI
 
 export const NOTIFICATION_CATEGORIES = {
   training: [NOTIFICATION_TYPES.workout_completed, NOTIFICATION_TYPES.workout_missed],
-  forms: [NOTIFICATION_TYPES.checkin_completed, NOTIFICATION_TYPES.questionnaire_completed],
-  tracking: [NOTIFICATION_TYPES.metric_logged, NOTIFICATION_TYPES.habit_logged, NOTIFICATION_TYPES.photo_uploaded],
+  forms: [NOTIFICATION_TYPES.checkin_completed, NOTIFICATION_TYPES.checkin_missed, NOTIFICATION_TYPES.questionnaire_completed],
+  tracking: [NOTIFICATION_TYPES.metric_logged, NOTIFICATION_TYPES.metric_missed, NOTIFICATION_TYPES.habit_logged, NOTIFICATION_TYPES.habit_missed, NOTIFICATION_TYPES.photo_uploaded],
   profile: [
     NOTIFICATION_TYPES.client_connected,
     NOTIFICATION_TYPES.goal_added,
@@ -45,9 +48,12 @@ export const NOTIFICATION_TITLES: Record<NotificationType, string> = {
   workout_completed: 'Workout completed',
   workout_missed: 'Workout missed',
   checkin_completed: 'Check-in completed',
+  checkin_missed: 'Check-in missed',
   questionnaire_completed: 'Questionnaire completed',
   metric_logged: 'Metric logged',
+  metric_missed: 'Metric log missed',
   habit_logged: 'Habit logged',
+  habit_missed: 'Habit log missed',
   photo_uploaded: 'Progress photo uploaded',
   client_connected: 'Client connected',
   goal_added: 'Goal added',
