@@ -113,11 +113,8 @@ export const FormPreviewContainer = ({
 
       {/* Question title */}
       <div className="flex-shrink-0 px-4 pt-2 pb-2">
-        <h2 className="text-lg font-semibold leading-tight">
+        <h2 className="text-xl font-bold leading-tight">
           {currentQuestion.question}
-          {currentQuestion.required && (
-            <span className="text-destructive ml-1">*</span>
-          )}
         </h2>
       </div>
 
@@ -143,7 +140,7 @@ export const FormPreviewContainer = ({
         <div className="px-4">
           <Button
             onClick={handleContinue}
-            className="w-full h-11 rounded-[28px]"
+            className="w-full h-14 rounded-full"
           >
             {currentQuestionIndex < totalQuestions - 1 ? 'Continue' : 'Submit'}
           </Button>

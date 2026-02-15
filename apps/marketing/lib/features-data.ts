@@ -1,4 +1,4 @@
-export const featureKeys = ['flows', 'forms', 'inbox', 'metrics', 'progress', 'training', 'workouts'] as const;
+export const featureKeys = ['automations', 'forms', 'inbox', 'metrics', 'habits', 'exercise-history', 'progress-photos', 'client-training', 'workouts', 'packages'] as const;
 
 export type FeatureKey = (typeof featureKeys)[number];
 

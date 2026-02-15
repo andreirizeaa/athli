@@ -132,17 +132,17 @@ const messages = {
   features: {
     sectionTitle: 'Our features',
     sectionSubtitle: 'Keep your clients accountable and simplify your business',
-    flows: {
-      label: 'Flows',
+    automations: {
+      label: 'Automations',
       headline: 'Automated accountability, beyond just check-ins',
-      description: "Set up custom flows that trigger automatically when clients fall behind. Whether it's a missed session, an overdue check-in, or a stalled habit, predefined automations step in so nothing slips through the cracks.",
+      description: "Set up custom automations that trigger automatically when clients fall behind. Whether it's a missed session, an overdue check-in, or a stalled habit, predefined automations step in so nothing slips through the cracks.",
       highlights: ['Custom trigger conditions', 'Predefined automated sequences', 'Keeps clients on track without manual follow-up'],
-      pageTitle: 'Flows that Keep Clients Accountable',
+      pageTitle: 'Automations that Keep Clients Accountable',
       pageSubtitle: 'Automate follow-ups and nudges so no client falls through the cracks. Set conditions, define actions, and let Athli handle the rest.',
       benefits: [
         { title: 'Trigger on Any Condition', description: 'Missed a session? Skipped a check-in? Define the conditions that matter and Athli will automatically respond with the right action.' },
-        { title: 'Predefined Action Sequences', description: 'Build multi-step flows with messages, reminders, and tasks that fire in order, keeping your clients engaged without you lifting a finger.' },
-        { title: 'Scale Without Losing the Personal Touch', description: 'Manage 10 or 100 clients with the same level of care. Automated flows handle the follow-up so you can focus on coaching.' },
+        { title: 'Predefined Action Sequences', description: 'Build multi-step automations with messages, reminders, and tasks that fire in order, keeping your clients engaged without you lifting a finger.' },
+        { title: 'Scale Without Losing the Personal Touch', description: 'Manage 10 or 100 clients with the same level of care. Automations handle the follow-up so you can focus on coaching.' },
       ],
     },
     forms: {
@@ -184,8 +184,21 @@ const messages = {
         { title: 'Data-Driven Decisions', description: 'Stop guessing. Use real client data to inform your programming, nutrition advice, and coaching conversations.' },
       ],
     },
-    progress: {
-      label: 'Progress',
+    habits: {
+      label: 'Habits',
+      headline: 'Build consistency with daily habit tracking',
+      description: 'Assign daily habits to clients and track completion over time. From water intake to stretching routines, habits keep clients accountable to the small actions that drive big results.',
+      highlights: ['Customizable daily habits', 'Streak and completion tracking', 'Integrated with client profiles'],
+      pageTitle: 'Habits That Build Lasting Results',
+      pageSubtitle: 'Assign daily habits, track streaks, and keep clients accountable to the small actions that make the biggest difference.',
+      benefits: [
+        { title: 'Assign Any Habit', description: 'Create habits for anything: water intake, sleep, stretching, meal prep. If it matters to your coaching, you can track it.' },
+        { title: 'Streak Tracking', description: 'Clients see their streaks and completion rates, building momentum and motivation through visible consistency.' },
+        { title: 'Accountability Without Micromanaging', description: 'Habits run in the background. Clients check them off daily, and you see the data without having to chase anyone.' },
+      ],
+    },
+    'exercise-history': {
+      label: 'Exercise History',
       headline: 'Detailed tracking across every exercise and variant',
       description: "Every set, rep, and variation is tracked and clearly presented. See detailed performance data for all exercise types, compare progress across sessions, and identify trends so you and your clients always know what's improving.",
       highlights: ['Track all exercise types and variants', 'Session-by-session comparisons', 'Clear progress visualizations'],
@@ -197,8 +210,21 @@ const messages = {
         { title: 'Visual Progress Over Time', description: "Clear charts and timelines that make progress undeniable. Great for client motivation and showing the value of your coaching." },
       ],
     },
-    training: {
-      label: 'Training',
+    'progress-photos': {
+      label: 'Progress Photos',
+      headline: 'Visual progress your clients can see and feel',
+      description: "Track your clients' physique changes with structured progress photos. Front, back, and side shots taken consistently over time give you and your clients undeniable visual proof of their transformation.",
+      highlights: ['Structured photo captures', 'Side-by-side comparisons', 'Visual proof of progress'],
+      pageTitle: 'Progress Photos That Tell the Story',
+      pageSubtitle: "Capture structured progress photos, compare them side by side, and give your clients visual proof of their transformation.",
+      benefits: [
+        { title: 'Structured Photo Captures', description: 'Clients take front, back, and side photos in a consistent format. Every photo set is organized and easy to compare.' },
+        { title: 'Side-by-Side Comparisons', description: 'Place photos from different dates next to each other to see changes clearly. Nothing motivates clients like seeing their own transformation.' },
+        { title: 'Integrated With Check-Ins', description: 'Progress photos can be collected automatically through forms and check-ins, so you always have up-to-date visuals without chasing clients.' },
+      ],
+    },
+    'client-training': {
+      label: 'Client Training',
       headline: 'Plan everything from one calendar view',
       description: 'A clear, drag-and-drop calendar where you can plan, copy, and rearrange workouts with ease. View past sessions and future plans side by side, so programming an entire training block takes minutes, not hours.',
       highlights: ['Drag-and-drop calendar', 'Copy and reuse workouts across days', 'View past and future sessions in one place'],
@@ -221,6 +247,19 @@ const messages = {
         { title: '1,734 Exercises Built In', description: 'A comprehensive exercise library with videos, instructions, and muscle group tags. Find what you need instantly.' },
         { title: 'Every Section Type Supported', description: 'Build workouts with AMRAPs, EMOMs, tabatas, HIITs, circuits, supersets, and more. Structure sessions exactly how you coach.' },
         { title: 'Fully Customizable', description: 'Control every detail, sets, reps, rest, tempo, RPE, notes. Your workouts, your way, with no compromises.' },
+      ],
+    },
+    packages: {
+      label: 'Packages',
+      headline: 'Bundle your services into ready-to-sell packages',
+      description: 'Create coaching packages that bundle workouts, programs, forms, and more into a single product. Clients purchase a package and get everything they need, fully structured and ready to go from day one.',
+      highlights: ['Bundle any combination of services', 'Sell directly to clients', 'Automated delivery on purchase'],
+      pageTitle: 'Packages That Sell Your Coaching',
+      pageSubtitle: 'Bundle workouts, programs, forms, and habits into packages your clients can purchase. Structured, professional, and ready to deliver.',
+      benefits: [
+        { title: 'Bundle Anything', description: 'Combine workouts, programs, forms, habits, and more into a single package. Give clients a complete experience from the moment they sign up.' },
+        { title: 'Sell With Confidence', description: 'Create professional packages with clear descriptions and pricing. Clients see exactly what they get, making the purchase decision easy.' },
+        { title: 'Automated Delivery', description: 'When a client purchases a package, everything is delivered and assigned automatically. No manual setup, no delays.' },
       ],
     },
   },

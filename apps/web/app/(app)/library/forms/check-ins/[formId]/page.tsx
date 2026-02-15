@@ -17,6 +17,7 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
 import { ChevronRight, Plus, GripVertical, Edit, Loader2 } from 'lucide-react';
+import { LibrarySidebarToggle } from '../../../library-sidebar-toggle';
 import { type CheckIn as Form, addQuestion, reorderQuestions, getCheckIns } from '@/api/coach/coach-check-in-service';
 import { formTemplates } from '@/constants/forms';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
@@ -188,7 +189,10 @@ const CheckInFormDetailPage = () => {
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            <h1 className="text-[22px] font-semibold">{currentForm?.name}</h1>
+            <div className="flex items-center gap-2">
+              <LibrarySidebarToggle />
+              <h1 className="text-[22px] font-semibold">{currentForm?.name}</h1>
+            </div>
           </div>
           <ButtonGroup className="flex-shrink-0">
             <Button

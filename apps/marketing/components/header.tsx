@@ -3,7 +3,7 @@
 import React from 'react';
 import NextLink from 'next/link';
 import { Link } from '@/lib/i18n/navigation';
-import { ArrowRight, ChevronDown, GitBranch, FileText, Inbox, BarChart3, TrendingUp, Dumbbell, ClipboardList, Menu, X, Smartphone, Users } from 'lucide-react';
+import { ArrowRight, ChevronDown, Zap, FileText, Inbox, BarChart3, TrendingUp, Dumbbell, ClipboardList, Menu, X, Smartphone, Users, CalendarCheck, Package, Camera } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 
@@ -15,13 +15,16 @@ import { featureKeys } from '@/lib/features-data';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
 
 const featureIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  flows: GitBranch,
+  automations: Zap,
   forms: FileText,
   inbox: Inbox,
   metrics: BarChart3,
-  progress: TrendingUp,
-  training: Dumbbell,
+  habits: CalendarCheck,
+  'exercise-history': TrendingUp,
+  'progress-photos': Camera,
+  'client-training': Dumbbell,
   workouts: ClipboardList,
+  packages: Package,
 };
 
 export const HeroHeader = () => {

@@ -41,15 +41,10 @@ const navItems: NavItem[] = [
   { id: 'metrics', href: '/library/metrics', labelKey: 'sidebar.links.metrics' },
   { id: 'habits', href: '/library/habits', labelKey: 'sidebar.links.habits' },
   { id: 'files', href: '/library/files', labelKey: 'sidebar.links.files' },
-  // Nutrition section
-  { id: 'nutrition', href: '/library/nutrition/recipes', labelKey: 'sidebar.links.nutrition' },
-  { id: 'recipes', href: '/library/nutrition/recipes', labelKey: 'nutrition.tabs.recipes', indent: true },
-  { id: 'recipeBooks', href: '/library/nutrition/recipe-books', labelKey: 'nutrition.tabs.recipeBooks', indent: true },
-  { id: 'ingredients', href: '/library/nutrition/ingredients', labelKey: 'nutrition.tabs.ingredients', indent: true },
 ];
 
 // Section headers (Training, Nutrition, Forms) shouldn't be highlighted as links
-const sectionHeaders = ['training', 'nutrition', 'forms'];
+const sectionHeaders = ['training', 'forms'];
 
 // Sidebar content component to avoid duplication
 const LibrarySidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
