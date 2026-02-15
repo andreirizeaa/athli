@@ -27,6 +27,7 @@ import { archiveUser as archiveClient, type Athlete } from '@/api/coach/coach-cl
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { useTerminology } from '@/hooks/use-terminology';
 import { cn } from '@/lib/general/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { exportToCSV } from '@/lib/general/csv-export';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -167,6 +168,7 @@ const AthleteNameTooltip = ({ name }: { name: string }) => {
 const AthletesPage = () => {
   const t = useTranslations();
   const router = useRouter();
+  const isMobile = useIsMobile();
   const { uniqueCode } = useGlobalData();
   const [showArchivedClients, setShowArchivedClients] = useState<boolean>(false);
   const { clients: athletes, activeClientCount, isLoading, archiveClient, unarchiveClient } = useCoachClients({ includeArchived: showArchivedClients });
@@ -1228,8 +1230,8 @@ const AthletesPage = () => {
   };
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="flex flex-1 min-h-0">
-        <div className="flex-1 flex flex-col">
+      <div className={cn("flex flex-1 min-h-0", !isMobile && "overflow-hidden")}>
+        <div className={cn("flex-1 flex flex-col", !isMobile && "min-h-0 min-w-0")}>
           <PageHeader
             title={`${terminology.plural} (${filteredCount})`}
             action={

@@ -934,6 +934,11 @@ const InboxPage = () => {
     setUserManuallyOpenedSidebar(!collapsed);
   }, []);
 
+  // Handle back button on mobile - navigate back to contact list
+  const handleMobileBack = React.useCallback(() => {
+    router.push('/inbox');
+  }, [router]);
+
   // Handler for contact click in sidebar - shows loading immediately
   const handleContactClick = React.useCallback((contactId: string) => {
     setIsNavigating(true);
@@ -2076,150 +2081,172 @@ const InboxPage = () => {
   };
 
 
-  return (
-    <div className="h-full w-full flex flex-col">
-      <div className="w-full flex-1 overflow-hidden">
-        <div className="h-full w-full flex">
-          {/* Left Column - Inbox Sidebar (20% width, sticky) */}
-          <div className="flex-shrink-0 h-full z-10">
-            <InboxSidebar
-              isSidebarCollapsed={isSidebarCollapsed}
-              setIsSidebarCollapsed={handleManualSidebarToggle}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              filteredContacts={filteredContacts}
-              selectedContactId={selectedContactId}
-              showArchivedConversations={showArchivedConversations}
-              setShowArchivedConversations={setShowArchivedConversations}
-              isLoading={isLoadingConversations}
-              onOpenBroadcast={() => {
-                if (!hasBroadcastAccess) {
-                  setIsBroadcastUpgradeOpen(true);
-                  return;
-                }
-                setIsBroadcastOpen(true);
-              }}
-              onContactClick={handleContactClick}
-            />
-          </div>
-          {/* Scrollable content area for Chat + Client Profile */}
-          <div className="flex-1 h-full overflow-x-auto">
-            {!selectedContactId ? (
-              <div className="h-full w-full flex items-center justify-center">
-                <div className="text-center">
-                  <p className="text-muted-foreground text-sm">Select a client</p>
-                </div>
-              </div>
-            ) : (
-              <ClientProfileProvider clientId={selectedContactId}>
-                <div className="h-full w-full relative">
-                  <InboxUnifiedLoader isNavigating={isNavigating} />
-                  <div className="h-full flex w-full min-w-0">
-                    {/* Chat Area (32.5% when power view open, 100% otherwise) */}
-                    <div
-                      className={cn(
-                        "relative h-full transition-[width] duration-300 ease-in-out",
-                        effectiveIsPowerViewOpen ? "w-[32.5%]" : "w-full"
-                      )}
-                      onDragEnter={handleDragEnter}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                    >
-                      {/* Drag and Drop Overlay */}
-                      {isDraggingOver && selectedContactId && (
-                        <div className="absolute inset-0 z-50 bg-background border-2 border-dashed border-primary rounded-lg flex items-center justify-center">
-                          <div className="text-center px-8">
-                            <div className="flex flex-col items-center gap-4">
-                              <div className="flex items-center gap-2 text-primary">
-                                <FileText className="h-8 w-8" />
-                                <ImageIcon className="h-8 w-8" />
-                              </div>
-                              <div>
-                                <p className="text-lg font-semibold text-foreground">
-                                  {t('messages.dropFilesHere')}
-                                </p>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {t('messages.filesWillBeAdded')}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {/* Loading overlay - shows until messages are loaded and scrolled to bottom */}
-                      {!isMessageListReady && (
-                        <div className="absolute inset-0 z-40 bg-background flex flex-col items-center justify-center gap-3">
-                          <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                          <p className="text-sm text-muted-foreground">{t('messages.loadingMessages')}</p>
-                        </div>
-                      )}
-                      <div className="h-full overflow-y-auto flex flex-col">
-                        <ChatHeader
-                          selectedContact={selectedContact!}
-                          isPowerViewOpen={effectiveIsPowerViewOpen}
-                          hideToggle={isMobile}
-                          onTogglePowerView={() => {
-                            const newState = !effectiveIsPowerViewOpen;
-                            setIsPowerViewOpen(newState);
-                            // Only auto-collapse sidebar if user hasn't manually opened it
-                            if (!userManuallyOpenedSidebar || !newState) {
-                              setIsSidebarCollapsed(newState);
-                            }
-                          }}
-                        />
-
-                        <MessageInputProvider
-                          selectedContactId={selectedContactId}
-                          onSendMessage={handleSendMessageFromContext}
-                        >
-                          <MessageList
-                            messages={currentMessages}
-                            selectedContact={selectedContact!}
-                            onReply={(message) => {
-                              messageInputContextRef.current?.setReplyingToMessage(message);
-                            }}
-                            onDeleteMessage={handleDeleteMessage}
-                            onReaction={handleReaction}
-                            messagesEndRef={messagesEndRef}
-                            loadMoreTriggerRef={loadMoreTriggerRef}
-                            isLoadingMore={isLoadingMoreMessages}
-                            hasMoreMessages={hasMoreMessages}
-                            isClientPanelOpen={effectiveIsPowerViewOpen}
-                          />
-
-                          <MessageInputWrapper contextRef={messageInputContextRef} selectedContact={selectedContact} />
-                        </MessageInputProvider>
+  // Chat content rendered for both mobile and desktop
+  const renderChatContent = () => {
+    if (!selectedContactId) return null;
+    return (
+      <ClientProfileProvider clientId={selectedContactId}>
+        <div className="h-full w-full relative">
+          <InboxUnifiedLoader isNavigating={isNavigating} />
+          <div className="h-full flex w-full min-w-0">
+            {/* Chat Area (32.5% when power view open, 100% otherwise) */}
+            <div
+              className={cn(
+                "relative h-full transition-[width] duration-300 ease-in-out",
+                effectiveIsPowerViewOpen ? "w-[32.5%]" : "w-full"
+              )}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {/* Drag and Drop Overlay */}
+              {isDraggingOver && selectedContactId && (
+                <div className="absolute inset-0 z-50 bg-background border-2 border-dashed border-primary rounded-lg flex items-center justify-center">
+                  <div className="text-center px-8">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="flex items-center gap-2 text-primary">
+                        <FileText className="h-8 w-8" />
+                        <ImageIcon className="h-8 w-8" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-semibold text-foreground">
+                          {t('messages.dropFilesHere')}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {t('messages.filesWillBeAdded')}
+                        </p>
                       </div>
                     </div>
-
-                    {/* Client Profile Area (67.5% width, animates in/out based on power view state) - hidden on mobile */}
-                    {!isMobile && (
-                      <div
-                        className={cn(
-                          "h-full border-l overflow-y-auto transition-[width,opacity] duration-300 ease-in-out",
-                          effectiveIsPowerViewOpen
-                            ? "w-[67.5%] opacity-100"
-                            : "w-0 opacity-0 overflow-hidden"
-                        )}
-                      >
-                        <ClientProfileLayoutContent
-                          hideBreadcrumb={true}
-                          activeTab={activeClientTab}
-                          onTabChange={setActiveClientTab}
-                          hideMessageButton={true}
-                          hideLoader={true}
-                        >
-                          <ClientProfileContent tab={activeClientTab} />
-                        </ClientProfileLayoutContent>
-                      </div>
-                    )}
                   </div>
                 </div>
-              </ClientProfileProvider>
+              )}
+              {/* Loading overlay - shows until messages are loaded and scrolled to bottom */}
+              {!isMessageListReady && (
+                <div className="absolute inset-0 z-40 bg-background flex flex-col items-center justify-center gap-3">
+                  <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm text-muted-foreground">{t('messages.loadingMessages')}</p>
+                </div>
+              )}
+              <div className="h-full overflow-y-auto flex flex-col">
+                <ChatHeader
+                  selectedContact={selectedContact!}
+                  isPowerViewOpen={effectiveIsPowerViewOpen}
+                  hideToggle={isMobile}
+                  onBack={isMobile ? handleMobileBack : undefined}
+                  onTogglePowerView={() => {
+                    const newState = !effectiveIsPowerViewOpen;
+                    setIsPowerViewOpen(newState);
+                    // Only auto-collapse sidebar if user hasn't manually opened it
+                    if (!userManuallyOpenedSidebar || !newState) {
+                      setIsSidebarCollapsed(newState);
+                    }
+                  }}
+                />
+
+                <MessageInputProvider
+                  selectedContactId={selectedContactId}
+                  onSendMessage={handleSendMessageFromContext}
+                >
+                  <MessageList
+                    messages={currentMessages}
+                    selectedContact={selectedContact!}
+                    onReply={(message) => {
+                      messageInputContextRef.current?.setReplyingToMessage(message);
+                    }}
+                    onDeleteMessage={handleDeleteMessage}
+                    onReaction={handleReaction}
+                    messagesEndRef={messagesEndRef}
+                    loadMoreTriggerRef={loadMoreTriggerRef}
+                    isLoadingMore={isLoadingMoreMessages}
+                    hasMoreMessages={hasMoreMessages}
+                    isClientPanelOpen={effectiveIsPowerViewOpen}
+                  />
+
+                  <MessageInputWrapper contextRef={messageInputContextRef} selectedContact={selectedContact} />
+                </MessageInputProvider>
+              </div>
+            </div>
+
+            {/* Client Profile Area (67.5% width, animates in/out based on power view state) - hidden on mobile */}
+            {!isMobile && (
+              <div
+                className={cn(
+                  "h-full border-l overflow-y-auto transition-[width,opacity] duration-300 ease-in-out",
+                  effectiveIsPowerViewOpen
+                    ? "w-[67.5%] opacity-100"
+                    : "w-0 opacity-0 overflow-hidden"
+                )}
+              >
+                <ClientProfileLayoutContent
+                  hideBreadcrumb={true}
+                  activeTab={activeClientTab}
+                  onTabChange={setActiveClientTab}
+                  hideMessageButton={true}
+                  hideLoader={true}
+                >
+                  <ClientProfileContent tab={activeClientTab} />
+                </ClientProfileLayoutContent>
+              </div>
             )}
           </div>
         </div>
+      </ClientProfileProvider>
+    );
+  };
+
+  const renderSidebar = () => (
+    <InboxSidebar
+      isSidebarCollapsed={isSidebarCollapsed}
+      setIsSidebarCollapsed={handleManualSidebarToggle}
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
+      filteredContacts={filteredContacts}
+      selectedContactId={selectedContactId}
+      showArchivedConversations={showArchivedConversations}
+      setShowArchivedConversations={setShowArchivedConversations}
+      isLoading={isLoadingConversations}
+      isMobile={isMobile}
+      onOpenBroadcast={() => {
+        if (!hasBroadcastAccess) {
+          setIsBroadcastUpgradeOpen(true);
+          return;
+        }
+        setIsBroadcastOpen(true);
+      }}
+      onContactClick={handleContactClick}
+    />
+  );
+
+  return (
+    <div className="h-full w-full flex flex-col">
+      <div className="w-full flex-1 overflow-hidden">
+        {isMobile ? (
+          // Mobile: Show contact list OR chat, not both
+          <div className="h-full w-full">
+            {selectedContactId ? renderChatContent() : renderSidebar()}
+          </div>
+        ) : (
+          // Desktop: Show sidebar AND chat side by side
+          <div className="h-full w-full flex">
+            {/* Left Column - Inbox Sidebar */}
+            <div className="flex-shrink-0 h-full z-10">
+              {renderSidebar()}
+            </div>
+            {/* Scrollable content area for Chat + Client Profile */}
+            <div className="flex-1 h-full overflow-x-auto">
+              {!selectedContactId ? (
+                <div className="h-full w-full flex items-center justify-center">
+                  <div className="text-center">
+                    <p className="text-muted-foreground text-sm">Select a client</p>
+                  </div>
+                </div>
+              ) : (
+                renderChatContent()
+              )}
+            </div>
+          </div>
+        )}
       </div>
       <SidePanel
         open={isNewMessageOpen}

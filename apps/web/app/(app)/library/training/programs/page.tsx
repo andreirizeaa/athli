@@ -82,12 +82,12 @@ const PROGRAM_DIFFICULTY_LEVELS = DIFFICULTY_LEVELS.map(level => level.label);
 
 const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): string => {
   const widths: Record<ColumnId, { class: string; pixel: string }> = {
-    description: { class: 'min-w-[250px]', pixel: '250px' },
-    type: { class: 'min-w-[140px]', pixel: '140px' },
-    difficulty: { class: 'min-w-[140px]', pixel: '140px' },
-    length: { class: 'min-w-[130px]', pixel: '130px' },
-    totalWorkouts: { class: 'min-w-[120px]', pixel: '120px' },
-    actions: { class: 'w-[100px]', pixel: '100px' },
+    description: { class: 'min-w-[180px]', pixel: '180px' },
+    type: { class: 'min-w-[100px]', pixel: '100px' },
+    difficulty: { class: 'min-w-[100px]', pixel: '100px' },
+    length: { class: 'min-w-[100px]', pixel: '100px' },
+    totalWorkouts: { class: 'min-w-[100px]', pixel: '100px' },
+    actions: { class: 'w-[80px]', pixel: '80px' },
   };
 
   return widths[colId]?.[format] || (format === 'class' ? 'min-w-[130px]' : '130px');
@@ -842,7 +842,7 @@ const ProgramsPage = () => {
         }
         rowHeight="54px"
         stickyFirstColumn={true}
-        firstColumnWidth="320px"
+        firstColumnWidth="280px"
         firstColumnId="program"
         renderFirstColumn={renderFirstColumn}
         renderFirstColumnHeader={renderFirstColumnHeader}

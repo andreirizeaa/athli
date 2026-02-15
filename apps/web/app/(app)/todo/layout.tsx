@@ -44,20 +44,24 @@ const TodoLayout = ({ children }: TodoLayoutProps) => {
 
   return (
     <div className="h-full w-full flex flex-col">
-      {shouldShowHeader && (
-        <div className="w-full px-4">
-          <div className="flex items-center justify-between mb-2 mt-2">
-            <h1 className="text-[22px] font-semibold">{t('home.toDoList')}</h1>
-          </div>
-          <PageTabs
-            tabs={tabs}
-            value={activeTab}
-            onValueChange={handleTabChange}
-            className="mt-1"
-          />
+      <div className="flex flex-1 min-h-0">
+        <div className="flex-1 flex flex-col">
+          {shouldShowHeader && (
+            <div className="w-full px-4">
+              <div className="flex items-center justify-between mb-2 mt-2">
+                <h1 className="text-[22px] font-semibold">{t('home.toDoList')}</h1>
+              </div>
+              <PageTabs
+                tabs={tabs}
+                value={activeTab}
+                onValueChange={handleTabChange}
+                className="mt-1"
+              />
+            </div>
+          )}
+          {children}
         </div>
-      )}
-      <div className="w-full flex-1 overflow-auto relative">{children}</div>
+      </div>
     </div>
   );
 };

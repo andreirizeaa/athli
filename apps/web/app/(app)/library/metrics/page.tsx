@@ -35,12 +35,15 @@ import {
 import { ButtonGroup } from '@/components/ui/button-group';
 import { useFeatureAccess } from '@/lib/permissions/feature-gate';
 import { useTerminology } from '@/hooks/use-terminology';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/general/utils';
 
 const MetricsPage = () => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const t = useTranslations();
   const terminology = useTerminology();
+  const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const {
     metrics,
@@ -125,7 +128,7 @@ const MetricsPage = () => {
       label: t('metrics.columns.name'),
       icon: <FileText className="size-3" />,
       sortable: true,
-      width: { class: 'w-[350px]', pixel: '350px' },
+      width: { class: 'w-[280px]', pixel: '280px' },
       getSortValue: (row) => row.name.toLowerCase(),
       getSearchValue: (row) => row.name,
       renderHeader: ({ isAllSelected, onToggleAll }) => (
@@ -157,7 +160,7 @@ const MetricsPage = () => {
       label: t('metrics.columns.unit'),
       icon: <FileText className="size-3" />,
       sortable: true,
-      width: { class: 'w-[200px]', pixel: '200px' },
+      width: { class: 'w-[120px]', pixel: '120px' },
       getSortValue: (row) => row.unit.toLowerCase(),
       getSearchValue: (row) => row.unit,
       renderCell: (row) => (
@@ -169,7 +172,7 @@ const MetricsPage = () => {
       label: t('metrics.columns.description'),
       icon: <FileText className="size-3" />,
       sortable: true,
-      width: { class: 'w-[400px]', pixel: '400px' },
+      width: { class: 'w-[200px]', pixel: '200px' },
       getSortValue: (row) => row.description || '',
       getSearchValue: (row) => row.description || '',
       renderCell: (row) => (
@@ -183,7 +186,7 @@ const MetricsPage = () => {
       label: t('metrics.schedule.frequency.label'),
       icon: <FileText className="size-3" />,
       sortable: true,
-      width: { class: 'w-[200px]', pixel: '200px' },
+      width: { class: 'w-[150px]', pixel: '150px' },
       getSortValue: (row) => formatScheduleText(row).toLowerCase(),
       getSearchValue: (row) => formatScheduleText(row),
       renderCell: (row) => (
@@ -523,7 +526,7 @@ const MetricsPage = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-background overflow-auto">
+    <div className={cn("h-full w-full flex flex-col bg-background", !isMobile && "overflow-auto")}>
       <PageHeader
         title={t('metrics.title')}
         leading={<LibrarySidebarToggle />}

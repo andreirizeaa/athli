@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl';
 import { PageTabs } from '@/components/page-tabs';
 import { TrainingDataProvider } from './training-data-context';
 import { LibrarySidebarToggle } from '../library-sidebar-toggle';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/general/utils';
 
 type TrainingLayoutProps = {
   children: React.ReactNode;
@@ -15,6 +17,7 @@ const TrainingLayout = ({ children }: TrainingLayoutProps) => {
   const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
+  const isMobile = useIsMobile();
 
   // Set browser tab title based on active tab
   useEffect(() => {
@@ -78,7 +81,7 @@ const TrainingLayout = ({ children }: TrainingLayoutProps) => {
             />
           </div>
         )}
-        <div className="w-full flex-1 overflow-auto relative">{children}</div>
+        <div className={cn("w-full flex-1 relative", !isMobile && "overflow-auto")}>{children}</div>
       </div>
     </TrainingDataProvider>
   );

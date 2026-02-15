@@ -313,7 +313,7 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
       <div className="flex flex-1 min-h-0">
         {/* Left Sidebar - hidden on mobile */}
         {!isMobile && (
-          <div ref={sidebarRef} className="w-[14.285714%] flex flex-col border-r bg-background">
+          <div ref={sidebarRef} className="w-[240px] flex flex-col border-r bg-background">
             <SettingsSidebarContent
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}

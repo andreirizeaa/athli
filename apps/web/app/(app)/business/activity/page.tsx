@@ -486,7 +486,7 @@ const ActivityPage = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-9 justify-start px-2.5 font-normal"
+                    className="h-9 justify-start px-2.5"
                   >
                     <CalendarIcon className="size-4" />
                     {dateRange?.from ? (
@@ -528,7 +528,7 @@ const ActivityPage = () => {
               {/* Event type dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 px-2.5 font-normal">
+                  <Button variant="outline" size="sm" className="h-9 px-2.5">
                     {t('business.activity.columns.event')}
                     {selectedStatuses.length > 0 && (
                       <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">

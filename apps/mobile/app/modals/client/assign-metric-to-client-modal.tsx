@@ -5,8 +5,9 @@ import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check, Activity } from 'lucide-react-native';
+import { X, Check, Activity, Folder } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
+import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore } from '@/stores';
@@ -17,9 +18,15 @@ import { fuzzyMatch } from '@/utils/searchUtils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { getAllMetrics, type Metric } from '@/services/coach/coach-metric-service';
+import { getAllMetricFolders } from '@/services/coach/coach-metric-folder-service';
 import { assignMetric } from '@/services/client/client-metric-service';
 import { haptics } from '@/utils/haptics';
 import { Dialog } from '@/components/ui/dialog';
+import type { MetricFolder } from '@athli/shared-types';
+
+type ListItem =
+    | { type: 'folder'; data: MetricFolder }
+    | { type: 'metric'; data: Metric };
 
 export default function AssignMetricToClientModal() {
     const router = useRouter();
@@ -36,6 +43,7 @@ export default function AssignMetricToClientModal() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMetricIds, setSelectedMetricIds] = useState<Set<string>>(new Set());
+    const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
     const [showErrorDialog, setShowErrorDialog] = useState(false);
 
@@ -48,18 +56,48 @@ export default function AssignMetricToClientModal() {
         refetchOnWindowFocus: false,
     });
 
-    // Filter metrics based on search query
-    const filteredMetrics = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return metrics;
-        }
+    const { data: folders = [] } = useQuery({
+        queryKey: ['metric-folders'],
+        queryFn: getAllMetricFolders,
+        staleTime: Infinity,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+    });
 
-        const query = searchQuery.toLowerCase().trim();
-        return metrics.filter((metric) =>
-            fuzzyMatch(metric.name.toLowerCase(), query) ||
-            (metric.description && fuzzyMatch(metric.description.toLowerCase(), query))
-        );
-    }, [metrics, searchQuery]);
+    // Get metric IDs that belong to each folder
+    const folderMetricIds = useMemo(() => {
+        const map: Record<string, string[]> = {};
+        folders.forEach(f => {
+            map[f.id] = metrics.filter(m => m.folder_id === f.id).map(m => m.id);
+        });
+        return map;
+    }, [folders, metrics]);
+
+    // Build combined list: folders first, then unfiled metrics
+    const combinedList = useMemo(() => {
+        const lowerQuery = searchQuery.trim().toLowerCase();
+
+        const filteredFolders = lowerQuery
+            ? folders.filter(f => f.name.toLowerCase().includes(lowerQuery))
+            : folders;
+
+        // Only show folders that have items
+        const nonEmptyFolders = filteredFolders.filter(f => (folderMetricIds[f.id]?.length ?? 0) > 0);
+
+        const unfiledMetrics = metrics.filter(m => !m.folder_id);
+        const filteredMetrics = lowerQuery
+            ? unfiledMetrics.filter(m =>
+                fuzzyMatch(m.name.toLowerCase(), lowerQuery) ||
+                (m.description && fuzzyMatch(m.description.toLowerCase(), lowerQuery))
+            )
+            : unfiledMetrics;
+
+        const items: ListItem[] = [
+            ...nonEmptyFolders.map(f => ({ type: 'folder' as const, data: f })),
+            ...filteredMetrics.map(m => ({ type: 'metric' as const, data: m })),
+        ];
+        return items;
+    }, [metrics, folders, folderMetricIds, searchQuery]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -68,12 +106,18 @@ export default function AssignMetricToClientModal() {
     }, [router]);
 
     const handleSave = useCallback(async () => {
-        if (selectedMetricIds.size === 0 || !clientId || !coachId) return;
+        // Collect all individual metric IDs: directly selected + unpacked from folders
+        const allMetricIds = new Set(selectedMetricIds);
+        selectedFolderIds.forEach(folderId => {
+            folderMetricIds[folderId]?.forEach(id => allMetricIds.add(id));
+        });
+
+        if (allMetricIds.size === 0 || !clientId || !coachId) return;
 
         setIsSaving(true);
         try {
             await assignMetric({
-                metricIds: Array.from(selectedMetricIds),
+                metricIds: Array.from(allMetricIds),
                 clientId,
                 coachId,
             });
@@ -87,9 +131,9 @@ export default function AssignMetricToClientModal() {
         } finally {
             setIsSaving(false);
         }
-    }, [handleClose, selectedMetricIds, clientId, coachId, refreshSection, t]);
+    }, [handleClose, selectedMetricIds, selectedFolderIds, folderMetricIds, clientId, coachId, refreshSection]);
 
-    const canSave = selectedMetricIds.size > 0 && !isSaving;
+    const canSave = (selectedMetricIds.size > 0 || selectedFolderIds.size > 0) && !isSaving;
 
     const handleMetricToggle = useCallback((metricId: string) => {
         setSelectedMetricIds((prev) => {
@@ -98,6 +142,18 @@ export default function AssignMetricToClientModal() {
                 newSet.delete(metricId);
             } else {
                 newSet.add(metricId);
+            }
+            return newSet;
+        });
+    }, []);
+
+    const handleFolderToggle = useCallback((folderId: string) => {
+        setSelectedFolderIds((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(folderId)) {
+                newSet.delete(folderId);
+            } else {
+                newSet.add(folderId);
             }
             return newSet;
         });
@@ -161,16 +217,82 @@ export default function AssignMetricToClientModal() {
 
             <View style={styles.content}>
                 <FlashList
-                    data={filteredMetrics}
-                    keyExtractor={(item) => item.id}
+                    data={combinedList}
+                    keyExtractor={(item) => item.type === 'folder' ? `folder-${item.data.id}` : item.data.id}
                     renderItem={({ item, index }) => {
-                        const isSelected = selectedMetricIds.has(item.id);
-                        const isLastItem = index === filteredMetrics.length - 1;
+                        const isLastItem = index === combinedList.length - 1;
+
+                        if (item.type === 'folder') {
+                            const folder = item.data;
+                            const isSelected = selectedFolderIds.has(folder.id);
+                            const itemCount = folderMetricIds[folder.id]?.length ?? 0;
+                            const countLabel = itemCount === 1 ? '1 metric' : `${itemCount} metrics`;
+
+                            return (
+                                <View>
+                                    <PressableOpacity
+                                        onPress={() => handleFolderToggle(folder.id)}
+                                        style={styles.rowContent}
+                                    >
+                                        <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                                            <Folder {...({ size: 24, color: themeColors.text } as any)} />
+                                        </SquircleView>
+                                        <View style={styles.textContent}>
+                                            <Text
+                                                style={[styles.name, { color: themeColors.text }]}
+                                                numberOfLines={1}
+                                            >
+                                                {folder.name}
+                                            </Text>
+                                            <View style={styles.metaRow}>
+                                                <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                                                    <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                                        Folder
+                                                    </Text>
+                                                </View>
+                                                <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                                                    <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                                        {countLabel}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                        <View
+                                            style={[
+                                                styles.checkbox,
+                                                {
+                                                    backgroundColor: isSelected ? themeColors.primary : 'transparent',
+                                                    borderColor: isSelected ? themeColors.primary : themeColors.border,
+                                                },
+                                            ]}
+                                        >
+                                            {isSelected && (
+                                                <Check {...({ size: 16, color: themeColors.primaryForeground } as any)} />
+                                            )}
+                                        </View>
+                                    </PressableOpacity>
+
+                                    {!isLastItem && (
+                                        <View style={styles.separatorContainer}>
+                                            <View
+                                                style={[
+                                                    styles.separator,
+                                                    { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                                                ]}
+                                            />
+                                        </View>
+                                    )}
+                                </View>
+                            );
+                        }
+
+                        const metric = item.data;
+                        const isSelected = selectedMetricIds.has(metric.id);
 
                         return (
                             <View>
                                 <PressableOpacity
-                                    onPress={() => handleMetricToggle(item.id)}
+                                    onPress={() => handleMetricToggle(metric.id)}
                                     style={styles.rowContent}
                                 >
                                     <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
@@ -186,20 +308,14 @@ export default function AssignMetricToClientModal() {
                                             style={[styles.name, { color: themeColors.text }]}
                                             numberOfLines={1}
                                         >
-                                            {item.name}
+                                            {metric.name}
                                         </Text>
                                         <View style={styles.metaRow}>
-                                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                                                {item.unit}
-                                            </Text>
-                                            {item.description && (
-                                                <>
-                                                    <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                                                    <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
-                                                        {item.description}
-                                                    </Text>
-                                                </>
-                                            )}
+                                            <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                                                <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                                    {metric.unit}
+                                                </Text>
+                                            </View>
                                         </View>
                                     </View>
                                     <View
@@ -315,13 +431,17 @@ const styles = StyleSheet.create({
     metaRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 8,
     },
-    metaText: {
-        ...typography.p3,
+    pill: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 12,
+        borderWidth: 1,
     },
-    metaDot: {
-        marginHorizontal: 6,
-        ...typography.p3,
+    pillText: {
+        ...typography.p4,
+        fontWeight: '500',
     },
     checkbox: {
         width: 24,

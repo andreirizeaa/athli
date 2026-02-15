@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, Linking } from 'react-native';
-import { File, Play, UserPlus, Trash2, Pencil, Link as LinkIcon } from 'lucide-react-native';
+import { File, Play, UserPlus, Trash2, Pencil, Link as LinkIcon, Folder, ArrowRightLeft, ChevronRight } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { PressableScale } from 'pressto';
 import { Image } from 'expo-image';
@@ -8,6 +8,7 @@ import SquircleView from 'react-native-fast-squircle';
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { FlashList } from '@shopify/flash-list';
+import type { CoachFile, FileFolder } from '@athli/shared-types';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
@@ -20,9 +21,15 @@ import { useLibraryTab } from '@/stores';
 import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { getAllFiles, getFileTypeFromMime, getFileUrl, deleteFile, isExternalLink, isYouTubeUrl, isVimeoUrl, getYouTubeThumbnail } from '@/services/coach/coach-file-service';
+import { getAllFileFolders, deleteFileFolder, moveFile } from '@/services/coach/coach-file-folder-service';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Dialog } from '@/components/ui/dialog';
 import { StorageIndicator } from '@/components/ui/storage-indicator';
+import { SelectInput } from '@/components/ui/form-inputs/select-input';
+
+type ListItem =
+  | { type: 'folder'; data: FileFolder }
+  | { type: 'file'; data: CoachFile };
 
 export const FilesTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -42,6 +49,11 @@ export const FilesTab = () => {
   const [deleteDialogTitle, setDeleteDialogTitle] = useState('');
   const [fileToDelete, setFileToDelete] = useState<string | null>(null);
 
+  // Move dialog state
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [moveTargetFolder, setMoveTargetFolder] = useState<string | null>(null);
+  const [movingItemId, setMovingItemId] = useState<string | null>(null);
+
   // Fetch files directly with TanStack Query
   const { data: files = [], refetch } = useQuery({
     queryKey: ['files'],
@@ -53,6 +65,13 @@ export const FilesTab = () => {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
+  });
+
+  // Fetch folders
+  const { data: folders = [] } = useQuery({
+    queryKey: ['file-folders'],
+    queryFn: getAllFileFolders,
+    enabled: isAuthenticated,
   });
 
   const { ListHeaderComponent: BaseListHeader, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
@@ -84,16 +103,32 @@ export const FilesTab = () => {
     </View>
   ), [BaseListHeader, hasFileStorageAccess, storageLimit, hasUnlimitedStorage, totalStorageBytes]);
 
-  // Filter files based on search query
-  const filteredFiles = useMemo(() => {
-    if (!searchQuery.trim()) return files;
-    const lowerQuery = searchQuery.toLowerCase();
-    return files.filter(file =>
-      file.filename.toLowerCase().includes(lowerQuery) ||
-      file.mime_type?.toLowerCase().includes(lowerQuery) ||
-      getFileTypeFromMime(file.mime_type).toLowerCase().includes(lowerQuery)
-    );
-  }, [files, searchQuery]);
+  // Build combined list: folders first, then unfiled files
+  const combinedList = useMemo(() => {
+    const lowerQuery = searchQuery.trim().toLowerCase();
+    const filteredFolders = lowerQuery
+      ? folders.filter(f => f.name.toLowerCase().includes(lowerQuery))
+      : folders;
+    const unfiledFiles = files.filter(f => !f.folder_id);
+    const filteredFiles = lowerQuery
+      ? unfiledFiles.filter(file =>
+          file.filename.toLowerCase().includes(lowerQuery) ||
+          file.mime_type?.toLowerCase().includes(lowerQuery) ||
+          getFileTypeFromMime(file.mime_type).toLowerCase().includes(lowerQuery)
+        )
+      : unfiledFiles;
+
+    const items: ListItem[] = [
+      ...filteredFolders.map(f => ({ type: 'folder' as const, data: f })),
+      ...filteredFiles.map(f => ({ type: 'file' as const, data: f })),
+    ];
+    return items;
+  }, [files, folders, searchQuery]);
+
+  // Get just the file items for thumbnail queries
+  const fileItems = useMemo(() => {
+    return combinedList.filter((item): item is { type: 'file'; data: CoachFile } => item.type === 'file');
+  }, [combinedList]);
 
   // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
@@ -131,9 +166,55 @@ export const FilesTab = () => {
     },
   });
 
-  // Already filtered above
+  // Delete folder mutation
+  const deleteFolderMutation = useMutation({
+    mutationFn: (id: string) => deleteFileFolder(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['file-folders'] });
+      queryClient.invalidateQueries({ queryKey: ['files'] });
+      haptics.success();
+    },
+    onError: (error: Error) => {
+      haptics.error();
+      setErrorMessage(error.message || t('general.errorDeleting'));
+      setShowErrorDialog(true);
+    },
+  });
 
-  const handleFilePress = (item: typeof filteredFiles[0]) => {
+  // Move mutation with optimistic update
+  const moveMutation = useMutation({
+    mutationFn: ({ fileId, folderId }: { fileId: string; folderId: string | null }) =>
+      moveFile(fileId, folderId),
+    onMutate: async ({ fileId, folderId }) => {
+      await queryClient.cancelQueries({ queryKey: ['files'] });
+      const previousFiles = queryClient.getQueryData<CoachFile[]>(['files']);
+      queryClient.setQueryData<CoachFile[]>(['files'], (old) =>
+        old?.map(f => f.id === fileId ? { ...f, folder_id: folderId } : f) ?? []
+      );
+      return { previousFiles };
+    },
+    onSuccess: () => {
+      haptics.success();
+      setShowMoveDialog(false);
+      setMovingItemId(null);
+      setMoveTargetFolder(null);
+    },
+    onError: (error: Error, _variables, context) => {
+      if (context?.previousFiles) {
+        queryClient.setQueryData(['files'], context.previousFiles);
+      }
+      haptics.error();
+      setErrorMessage(error.message || t('general.errorSaving'));
+      setShowErrorDialog(true);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['files'] });
+      queryClient.invalidateQueries({ queryKey: ['file-folders'] });
+      queryClient.invalidateQueries({ queryKey: ['files-in-folder'] });
+    },
+  });
+
+  const handleFilePress = (item: CoachFile) => {
     // If a row is open, just close it and prevent navigation
     if (isRowOpen) {
       closeOpenRow();
@@ -155,7 +236,7 @@ export const FilesTab = () => {
     });
   };
 
-  const handleEditFilename = (item: typeof filteredFiles[0]) => {
+  const handleEditFilename = (item: CoachFile) => {
     haptics.medium();
     closeOpenRow();
     router.push({
@@ -167,7 +248,7 @@ export const FilesTab = () => {
     });
   };
 
-  const handleDeleteWithConfirmation = (item: typeof filteredFiles[0]) => {
+  const handleDeleteWithConfirmation = (item: CoachFile) => {
     setDeleteDialogTitle(`${t('general.delete')} ${item.filename}?`);
     setFileToDelete(item.id);
     setShowDeleteDialog(true);
@@ -181,7 +262,7 @@ export const FilesTab = () => {
     setFileToDelete(null);
   };
 
-  const handleAssign = (item: typeof filteredFiles[0]) => {
+  const handleAssign = (item: CoachFile) => {
     // If a row is open, just close it and prevent navigation
     if (isRowOpen) {
       closeOpenRow();
@@ -189,6 +270,33 @@ export const FilesTab = () => {
     }
 
     router.push(`/modals/shared/assign-to-clients-modal?type=file&itemIds=${item.id}`);
+  };
+
+  const handleMove = (itemId: string) => {
+    setMovingItemId(itemId);
+    setMoveTargetFolder(null);
+    setShowMoveDialog(true);
+  };
+
+  const handleConfirmMove = () => {
+    if (!movingItemId) return;
+    const folderId = moveTargetFolder === '__home__' ? null : moveTargetFolder;
+    moveMutation.mutate({ fileId: movingItemId, folderId });
+  };
+
+  const handleFolderPress = (folder: FileFolder) => {
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+    router.push(`/library/file-folder/${folder.id}` as any);
+  };
+
+  const handleEditFolder = (folder: FileFolder) => {
+    router.push({
+      pathname: '/modals/library/create-folder-modal',
+      params: { type: 'files', editingId: folder.id, name: folder.name },
+    } as any);
   };
 
   // Prefetch clients when long press happens to make modal open instantly
@@ -213,13 +321,13 @@ export const FilesTab = () => {
 
   // Get files that need thumbnail URLs (images and videos only, not external links)
   const filesNeedingThumbnails = useMemo(() => {
-    return filteredFiles.filter(file => {
+    return fileItems.map(item => item.data).filter(file => {
       // External links don't need signed URLs
       if (isExternalLink(file.file_path)) return false;
       const fileType = getFileTypeFromMime(file.mime_type);
       return fileType === 'image' || fileType === 'video';
     });
-  }, [filteredFiles]);
+  }, [fileItems]);
 
   // Fetch thumbnail URLs using React Query with caching (shared with assign modal)
   const thumbnailQueries = useQueries({
@@ -270,7 +378,7 @@ export const FilesTab = () => {
     return loadingMap;
   }, [filesNeedingThumbnails, thumbnailQueries]);
 
-  const renderThumbnail = (item: typeof filteredFiles[0]) => {
+  const renderThumbnail = (item: CoachFile) => {
     // Handle external links first
     if (isExternalLink(item.file_path)) {
       const linkUrl = item.file_path;
@@ -373,45 +481,109 @@ export const FilesTab = () => {
     );
   };
 
-  const renderItem = useCallback(({ item, index }: { item: typeof filteredFiles[0]; index: number }) => {
-    const isLastItem = index === filteredFiles.length - 1;
+  const moveOptions = useMemo(() => [
+    { value: '__home__' as string, label: 'Home (No folder)' },
+    ...folders.map(f => ({ value: f.id, label: f.name })),
+  ], [folders]);
+
+  const renderItem = useCallback(({ item, index }: { item: ListItem; index: number }) => {
+    const isLastItem = index === combinedList.length - 1;
+
+    if (item.type === 'folder') {
+      const folder = item.data;
+      const itemCount = files.filter(f => f.folder_id === folder.id).length;
+      const countLabel = itemCount === 0 ? 'Empty' : itemCount === 1 ? '1 file' : `${itemCount} files`;
+      const folderOptions: DropdownMenuOption[] = [
+        {
+          label: 'Edit Folder',
+          icon: { sf: 'pencil', IconComponent: Pencil },
+          onPress: () => handleEditFolder(folder),
+        },
+        {
+          label: 'Delete Folder',
+          icon: { sf: 'trash', IconComponent: Trash2 },
+          destructive: true,
+          onPress: () => deleteFolderMutation.mutateAsync(folder.id),
+        },
+      ];
+
+      return (
+        <View>
+          <ContextMenuWrapper options={folderOptions}>
+            <PressableScale onPress={() => handleFolderPress(folder)}>
+              <View style={[styles.fileItem, { backgroundColor: 'transparent' }]}>
+                <SquircleView cornerSmoothing={1} style={[styles.fileIconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                  <Folder {...({ size: 24, color: themeColors.text } as any)} />
+                </SquircleView>
+                <View style={styles.fileInfo}>
+                  <Text style={[styles.fileName, { color: themeColors.text }]} numberOfLines={1}>
+                    {folder.name}
+                  </Text>
+                  <Text style={[styles.fileDate, { color: themeColors.mutedText }]}>
+                    Folder · {countLabel}
+                  </Text>
+                </View>
+                <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+              </View>
+            </PressableScale>
+          </ContextMenuWrapper>
+
+          {!isLastItem && (
+            <View style={styles.separatorContainer}>
+              <View
+                style={[styles.separator, { backgroundColor: themeColors.mutedText, opacity: 0.2 }]}
+              />
+            </View>
+          )}
+          {isLastItem && <View style={{ height: 24 }} />}
+        </View>
+      );
+    }
+
+    // File row
+    const file = item.data;
     const dropdownOptions: DropdownMenuOption[] = [
       {
         label: t('clientDetail.files.editFilename'),
         icon: { sf: 'pencil', IconComponent: Pencil },
-        onPress: () => handleEditFilename(item),
+        onPress: () => handleEditFilename(file),
       },
       {
         label: terminology.assignToPlural,
         icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
-        onPress: () => handleAssign(item),
+        onPress: () => handleAssign(file),
       },
+      ...(folders.length > 0 ? [{
+        label: 'Move to Folder',
+        icon: { sf: 'folder', IconComponent: ArrowRightLeft },
+        onPress: () => handleMove(file.id),
+      }] : []),
       {
         label: t('general.delete'),
         icon: { sf: 'trash', IconComponent: Trash2 },
         destructive: true,
-        onPress: () => handleDeleteWithConfirmation(item),
+        onPress: () => handleDeleteWithConfirmation(file),
       }
     ];
 
     return (
-      <View key={item.id}>
+      <View key={file.id}>
         <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
           <SwipeableRow
-            onDelete={() => deleteMutation.mutateAsync(item.id)}
+            onDelete={() => deleteMutation.mutateAsync(file.id)}
             onOpen={registerOpenRow}
             deleteConfirmTitle={t('general.deleteFile')}
           >
-            <PressableScale onPress={() => handleFilePress(item)}>
+            <PressableScale onPress={() => handleFilePress(file)}>
               <View style={[styles.fileItem, { backgroundColor: 'transparent' }]}>
-                {renderThumbnail(item)}
+                {renderThumbnail(file)}
                 <View style={styles.fileInfo}>
                   <Text style={[styles.fileName, { color: themeColors.text }]} numberOfLines={1}>
-                    {item.filename}
+                    {file.filename}
                   </Text>
-                  {item.created_at && (
+                  {file.created_at && (
                     <Text style={[styles.fileDate, { color: themeColors.mutedText }]}>
-                      {formatDate(item.created_at)}
+                      {formatDate(file.created_at)}
                     </Text>
                   )}
                 </View>
@@ -432,14 +604,14 @@ export const FilesTab = () => {
         {isLastItem && <View style={{ height: 24 }} />}
       </View>
     );
-  }, [filteredFiles.length, themeColors, t, registerOpenRow, handleFilePress, handleAssign, handleEditFilename, handleDeleteWithConfirmation, handleLongPress, deleteMutation, renderThumbnail, formatDate]);
+  }, [combinedList.length, themeColors, t, registerOpenRow, handleFilePress, handleAssign, handleEditFilename, handleDeleteWithConfirmation, handleLongPress, deleteMutation, deleteFolderMutation, renderThumbnail, formatDate, folders, files, terminology]);
 
   return (
     <>
       <FlashList
-        data={filteredFiles}
+        data={combinedList}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.type === 'folder' ? `folder-${item.data.id}` : item.data.id}
         contentContainerStyle={{ paddingBottom: 40 }}
         ListHeaderComponent={ListHeaderComponent}
         refreshControl={refreshControl}
@@ -470,6 +642,29 @@ export const FilesTab = () => {
           { label: t('general.delete'), onPress: handleConfirmDelete, variant: 'destructive' }
         ]}
       />
+
+      <Dialog
+        visible={showMoveDialog}
+        onClose={() => { setShowMoveDialog(false); setMovingItemId(null); }}
+        title="Move to Folder"
+        message="Select a destination folder."
+        buttonLayout="horizontal"
+        buttons={[
+          { label: t('general.cancel'), onPress: () => { setShowMoveDialog(false); setMovingItemId(null); }, variant: 'secondary' },
+          { label: 'Save', onPress: handleConfirmMove, variant: 'primary', loading: moveMutation.isPending },
+        ]}
+      >
+        <View style={{ marginBottom: 16 }}>
+          <SelectInput
+            label=""
+            value={moveTargetFolder}
+            onChange={setMoveTargetFolder}
+            options={moveOptions}
+            placeholder="Select folder..."
+            clearable={false}
+          />
+        </View>
+      </Dialog>
     </>
   );
 };

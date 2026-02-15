@@ -12,9 +12,10 @@ interface ChatHeaderProps {
     isPowerViewOpen: boolean;
     onTogglePowerView: () => void;
     hideToggle?: boolean;
+    onBack?: () => void;
 }
 
-export function ChatHeader({ selectedContact, isPowerViewOpen, onTogglePowerView, hideToggle }: ChatHeaderProps) {
+export function ChatHeader({ selectedContact, isPowerViewOpen, onTogglePowerView, hideToggle, onBack }: ChatHeaderProps) {
     const t = useTranslations();
 
     if (!selectedContact) return null;
@@ -30,6 +31,16 @@ export function ChatHeader({ selectedContact, isPowerViewOpen, onTogglePowerView
     return (
         <div className="flex items-center justify-between px-4 h-[48px] flex-shrink-0 border-b border-border">
             <div className="flex items-center gap-3 flex-1 min-w-0">
+                {onBack && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onBack}
+                        className="shrink-0"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                )}
                 <Avatar className="h-8 w-8 flex-shrink-0 rounded-full">
                     <AvatarImage src={selectedContact.avatar} alt={selectedContact.name} className="rounded-full" />
                     <AvatarFallback className="rounded-full">{getInitials(selectedContact.name)}</AvatarFallback>

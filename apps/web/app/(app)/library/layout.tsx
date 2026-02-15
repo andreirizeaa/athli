@@ -199,24 +199,24 @@ const LibraryLayoutContent = ({ children }: LibraryLayoutProps) => {
       )}
 
       {/* Two Column Layout */}
-      <div className="flex flex-1 min-h-0">
+      <div className={cn("flex flex-1 min-h-0", !isMobile && "overflow-hidden")}>
         {/* Left Sidebar - hidden on mobile, animated width on desktop */}
         {!isMobile && (
           <div
             ref={sidebarRef}
             className={cn(
-              'flex flex-col border-r bg-background transition-[width] duration-200 ease-linear overflow-hidden',
-              isOpen ? 'w-[14.285714%]' : 'w-0 border-r-0'
+              'flex flex-col border-r bg-background transition-[width] duration-200 ease-linear overflow-hidden flex-shrink-0',
+              isOpen ? 'w-[240px]' : 'w-0 border-r-0'
             )}
           >
-            <div className="min-w-[14.285714vw]">
+            <div className="min-w-[240px]">
               <LibrarySidebarContent />
             </div>
           </div>
         )}
 
         {/* Right Content - remaining width */}
-        <div ref={contentRef} className="flex-1 flex flex-col">
+        <div ref={contentRef} className={cn("flex-1 flex flex-col", !isMobile && "min-h-0 min-w-0")}>
           {children}
         </div>
       </div>

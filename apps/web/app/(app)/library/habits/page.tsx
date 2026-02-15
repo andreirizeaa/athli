@@ -79,6 +79,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { useFeatureAccess } from '@/lib/permissions/feature-gate';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/general/utils';
 
 type HabitFormValues = {
   name: string;
@@ -99,6 +101,7 @@ const unitOptions = [
 const HabitsPage = () => {
   const t = useTranslations();
   const terminology = useTerminology();
+  const isMobile = useIsMobile();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -754,7 +757,7 @@ const HabitsPage = () => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col bg-background overflow-auto">
+    <div className={cn("h-full w-full flex flex-col bg-background", !isMobile && "overflow-auto")}>
       <PageHeader
         title={t('habits.title')}
         leading={<LibrarySidebarToggle />}

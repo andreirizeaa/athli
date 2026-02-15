@@ -597,6 +597,36 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="library/metric-folder/[id]"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.backgroundPrimary,
+              },
+            }}
+          />
+          <Stack.Screen
+            name="library/habit-folder/[id]"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.backgroundPrimary,
+              },
+            }}
+          />
+          <Stack.Screen
+            name="library/file-folder/[id]"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              contentStyle: {
+                backgroundColor: themeColors.backgroundPrimary,
+              },
+            }}
+          />
+          <Stack.Screen
             name="library/file-preview"
             options={{
               presentation: 'modal',
@@ -1290,6 +1320,17 @@ function RootLayoutNav() {
             options={{
               presentation: 'modal',
               gestureEnabled: false,
+              headerShown: false,
+              ...(Platform.OS === 'android' && {
+                animation: 'slide_from_bottom',
+                gestureDirection: 'vertical',
+              }),
+            }}
+          />
+          <Stack.Screen
+            name="modals/library/create-folder-modal"
+            options={{
+              presentation: 'modal',
               headerShown: false,
               ...(Platform.OS === 'android' && {
                 animation: 'slide_from_bottom',

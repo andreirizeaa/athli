@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl';
 import { PageTabs } from '@/components/page-tabs';
 import { Separator } from '@/components/ui/separator';
 import { LibrarySidebarToggle } from '../library-sidebar-toggle';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/general/utils';
 
 type FormsLayoutProps = {
   children: React.ReactNode;
@@ -15,6 +17,7 @@ const FormsLayout = ({ children }: FormsLayoutProps) => {
   const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
+  const isMobile = useIsMobile();
 
   // Set browser tab title based on active tab
   useEffect(() => {
@@ -52,7 +55,7 @@ const FormsLayout = ({ children }: FormsLayoutProps) => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-background overflow-auto">
+    <div className={cn("h-full w-full flex flex-col bg-background", !isMobile && "overflow-auto")}>
       {shouldShowHeader && (
         <div className="w-full relative flex-shrink-0">
           <div className="pl-4 pr-4 flex items-center gap-2 mb-2 mt-2">
@@ -70,7 +73,7 @@ const FormsLayout = ({ children }: FormsLayoutProps) => {
           <Separator className="absolute bottom-[-1px] left-0 right-0" />
         </div>
       )}
-      <div className="w-full flex-1 overflow-auto relative">{children}</div>
+      <div className={cn("w-full flex-1 relative", !isMobile && "overflow-auto")}>{children}</div>
     </div>
   );
 };

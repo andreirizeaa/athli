@@ -16,7 +16,7 @@ export type {
   DBHabit,
 };
 
-const mapDBHabitToHabit = (dbHabit: DBHabit): Habit => {
+export const mapDBHabitToHabit = (dbHabit: DBHabit): Habit => {
   return {
     id: dbHabit.id,
     name: dbHabit.name,

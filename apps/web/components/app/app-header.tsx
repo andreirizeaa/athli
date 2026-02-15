@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bell, Clock, Headset, PanelLeftClose, PanelLeftOpen, WandSparkles } from 'lucide-react';
+import { Bell, Clock, Headset, Menu, PanelLeftClose, PanelLeftOpen, WandSparkles } from 'lucide-react';
 import { useAIPanel } from '@/lib/providers/ai-panel-provider';
 import Lottie from 'lottie-react';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import { UserMenu } from './user-menu';
 import { NotificationSidePanel } from './notification-side-panel';
 import { useCoachNotifications } from '@/hooks/use-coach-notifications';
 import { useAccess } from '@/lib/permissions';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type AppHeaderProps = {
   isThemeMounted: boolean;
@@ -45,6 +46,7 @@ export function AppHeader({
   const { unreadCount } = useCoachNotifications();
   const { status, trialDaysRemaining } = useAccess();
 
+  const isMobile = useIsMobile();
   const isOnTrial = status === 'trial';
   const isAssistantPage = pathname?.startsWith('/assistant');
 
@@ -83,7 +85,9 @@ export function AppHeader({
                     : t('sidebar.actions.openSidebarAria')
                 }
               >
-                {state === 'expanded' ? (
+                {isMobile ? (
+                  <Menu className="-ml-4 h-4 w-4" />
+                ) : state === 'expanded' ? (
                   <PanelLeftClose className="h-4 w-4" />
                 ) : (
                   <PanelLeftOpen className="h-4 w-4" />

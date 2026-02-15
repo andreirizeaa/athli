@@ -20,6 +20,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { InputBox } from '@/components/ui/form-inputs';
 import { Card } from '@/components/ui/card';
 import { uploadFile, updateFile, createLink } from '@/services/coach/coach-file-service';
+import { moveFile } from '@/services/coach/coach-file-folder-service';
 import { uploadClientFile, updateClientFile } from '@/services/client/client-file-service';
 import { hexToRgba } from '@/utils/colorUtils';
 import { Dialog } from '@/components/ui/dialog';
@@ -92,6 +93,7 @@ export default function AddFileModal() {
         type?: string;
         clientId?: string;
         editNameOnly?: string;
+        folderId?: string;
     }>();
     const isEditing = !!params.editingId;
     const isEditNameOnly = params.editNameOnly === 'true';
@@ -131,7 +133,15 @@ export default function AddFileModal() {
     // Upload mutation (for coach library)
     const uploadMutation = useMutation({
         mutationFn: uploadFile,
-        onSuccess: async () => {
+        onSuccess: async (result) => {
+            if (params.folderId && result?.id) {
+                try {
+                    await moveFile(result.id, params.folderId);
+                    await queryClient.invalidateQueries({ queryKey: ['files-in-folder', params.folderId] });
+                } catch (e) {
+                    console.error('[AddFileModal] Failed to move file to folder:', e);
+                }
+            }
             await queryClient.refetchQueries({ queryKey: ['files'] });
             haptics.success();
             handleClose();
@@ -197,7 +207,15 @@ export default function AddFileModal() {
     // Create link mutation
     const createLinkMutation = useMutation({
         mutationFn: createLink,
-        onSuccess: async () => {
+        onSuccess: async (result) => {
+            if (params.folderId && result?.id) {
+                try {
+                    await moveFile(result.id, params.folderId);
+                    await queryClient.invalidateQueries({ queryKey: ['files-in-folder', params.folderId] });
+                } catch (e) {
+                    console.error('[AddFileModal] Failed to move link to folder:', e);
+                }
+            }
             await queryClient.refetchQueries({ queryKey: ['files'] });
             haptics.success();
             handleClose();
