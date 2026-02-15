@@ -131,7 +131,7 @@ export function AppHeader({
             </Button>
           </div>
           {/* Trial badge - hidden on mobile */}
-          {false && isOnTrial && (
+          {isOnTrial && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
