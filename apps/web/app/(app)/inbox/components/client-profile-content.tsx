@@ -14,6 +14,7 @@ const ClientCheckInPage = dynamic(() => import('@/app/(app)/athletes/[clientId]/
 const ClientQuestionnairesPage = dynamic(() => import('@/app/(app)/athletes/[clientId]/questionnaires/page'), { ssr: false });
 const ClientSettingsPage = dynamic(() => import('@/app/(app)/athletes/[clientId]/settings/page'), { ssr: false });
 const TrainingCalendarPage = dynamic(() => import('@/app/(app)/athletes/[clientId]/training/page'), { ssr: false });
+const ClientExerciseHistoryPage = dynamic(() => import('@/app/(app)/athletes/[clientId]/exercise-history/page'), { ssr: false });
 
 interface ClientProfileContentProps {
     tab: string;
@@ -32,6 +33,7 @@ export const ClientProfileContent = React.memo(function ClientProfileContent({ t
         'questionnaires': ClientQuestionnairesPage,
         'settings': ClientSettingsPage,
         'training': TrainingCalendarPage,
+        'exercise-history': ClientExerciseHistoryPage,
     };
 
     // Only render the active tab component

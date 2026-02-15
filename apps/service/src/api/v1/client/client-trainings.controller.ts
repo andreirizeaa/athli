@@ -1114,11 +1114,16 @@ export const clientTrainingsController = {
             .select('musclewiki_id, name, thumbnail_url')
             .in('musclewiki_id', exerciseIds);
 
-        // Also check coach_exercises for custom exercises
-        const { data: coachExercisesData, error: coachExercisesError } = await supabase
-            .from('coach_exercises')
-            .select('id, name, video_link')
-            .in('id', exerciseIds);
+        // Also check coach_exercises for custom exercises (filter to UUID-shaped IDs only)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const uuidExerciseIds = exerciseIds.filter((id: string) => uuidRegex.test(id));
+
+        const { data: coachExercisesData, error: coachExercisesError } = uuidExerciseIds.length > 0
+            ? await supabase
+                .from('coach_exercises')
+                .select('id, name, video_link')
+                .in('id', uuidExerciseIds)
+            : { data: [], error: null };
 
         // Build exercise map from cache
         const exerciseMap = new Map<string, { id: string; name: string; rawThumbnailUrl?: string }>();

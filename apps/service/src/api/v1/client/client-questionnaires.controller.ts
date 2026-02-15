@@ -227,14 +227,15 @@ export const clientQuestionnairesController = {
                 // Lock this name for this batch
                 batchMap.add(`${clientId}:${finalName}`);
 
+                const hasQuestions = Array.isArray(item.questions) && item.questions.length > 0;
                 newAssignments.push({
                     client_id: clientId,
                     coach_id: targetCoachId,
                     name: finalName,
                     description: item.description,
                     questions: item.questions,
-                    status: 'pending',
-                    sent_at: new Date().toISOString(),
+                    status: hasQuestions ? 'pending' : 'draft',
+                    sent_at: hasQuestions ? new Date().toISOString() : null,
                 });
             }
         }

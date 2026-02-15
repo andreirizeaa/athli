@@ -1,10 +1,14 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getClients, getAllClients, archiveUser, deleteClient, unarchiveClient, type Athlete } from '@/api/coach/coach-client-service';
 import { showErrorToast } from '@/lib/toast-utils';
 
-export function useCoachClients(options?: { enabled?: boolean; includeArchived?: boolean }) {
+export type EnhancedAthlete = Athlete & { isOwnClient: boolean };
+
+export function useCoachClients(options?: { enabled?: boolean; includeArchived?: boolean; userId?: string }) {
     const queryClient = useQueryClient();
     const includeArchived = options?.includeArchived ?? false;
+    const userId = options?.userId;
 
     const {
         data: clients,
@@ -63,11 +67,23 @@ export function useCoachClients(options?: { enabled?: boolean; includeArchived?:
         }
     });
 
-    // Get count of active (non-archived) clients
-    const activeClientCount = (clients || []).filter(c => c.status !== 'archived').length;
+    // Enhance clients with isOwnClient flag
+    const enhancedClients = useMemo((): EnhancedAthlete[] => {
+        if (!clients) return [];
+        return clients.map(client => ({
+            ...client,
+            isOwnClient: userId ? client.id === userId : false,
+        }));
+    }, [clients, userId]);
+
+    // Get count of active (non-archived) clients, excluding coach's own client
+    const activeClientCount = (clients || []).filter(c =>
+        c.status !== 'archived' &&
+        !(userId && c.id === userId)
+    ).length;
 
     return {
-        clients: clients || [],
+        clients: enhancedClients,
         activeClientCount,
         isLoading,
         error,
