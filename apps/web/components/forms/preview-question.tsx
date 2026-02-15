@@ -2,9 +2,15 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/general/utils';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Upload, Plus, Star } from 'lucide-react';
+import {
+  ThumbsUp,
+  ThumbsDown,
+  Star,
+  ChevronRight,
+  Camera,
+  Image,
+  Video,
+} from 'lucide-react';
 
 type QuestionFormat =
   | 'text'
@@ -47,40 +53,35 @@ export const PreviewQuestion = ({
 }: PreviewQuestionProps) => {
   const [selectedValue, setSelectedValue] = React.useState<string | null>(null);
   const [ratingValue, setRatingValue] = React.useState<number>(0);
-  const [sliderValue, setSliderValue] = React.useState<number>(
-    Math.floor((parseInt(scaleTo) - parseInt(scaleFrom)) / 2) + parseInt(scaleFrom)
-  );
 
   const renderQuestionContent = () => {
     switch (format) {
       case 'text':
         return (
           <div className="w-full">
-            <Input
-              placeholder="Your answer..."
-              className="w-full"
+            <textarea
+              placeholder="Type here..."
+              className="w-full min-h-[120px] rounded-lg bg-muted px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              readOnly
             />
           </div>
         );
 
       case 'number':
         return (
-          <div className="w-full">
-            <Input
-              type="number"
-              placeholder="Enter a number..."
-              className="w-full"
-            />
+          <div className="w-full flex justify-center">
+            <div className="w-full rounded-lg bg-muted h-12 flex items-center justify-center">
+              <span className="text-lg text-muted-foreground">0</span>
+            </div>
           </div>
         );
 
       case 'date':
         return (
           <div className="w-full">
-            <Input
-              type="date"
-              className="w-full"
-            />
+            <div className="rounded-2xl bg-muted h-12 flex items-center justify-center text-muted-foreground text-sm">
+              Select a date
+            </div>
           </div>
         );
 
@@ -88,37 +89,72 @@ export const PreviewQuestion = ({
       case 'select':
       case 'multiselect':
         return (
-          <div className="flex flex-col gap-2 w-full items-center justify-center">
+          <div className="flex flex-col gap-4 w-full">
             {options.map((option, index) => (
-              <Button
+              <button
                 key={index}
-                variant={selectedValue === option ? 'default' : 'outline'}
-                className="w-full h-12 text-sm rounded-[28px]"
+                type="button"
+                className={cn(
+                  'w-full h-[72px] rounded-2xl px-5 text-left font-semibold text-base transition-colors',
+                  selectedValue === option
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-foreground'
+                )}
                 onClick={() => setSelectedValue(option)}
               >
                 {option}
-              </Button>
+              </button>
             ))}
           </div>
         );
 
       case 'yesNo':
         return (
-          <div className="flex flex-col gap-2 w-full items-center justify-center">
-            <Button
-              variant={selectedValue === 'yes' ? 'default' : 'outline'}
-              className="w-full h-12 text-sm rounded-[28px]"
+          <div className="flex flex-col gap-4 w-full">
+            <button
+              type="button"
+              className={cn(
+                'w-full h-[72px] rounded-2xl px-5 flex items-center gap-4 font-semibold text-base transition-colors',
+                selectedValue === 'yes'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-foreground'
+              )}
               onClick={() => setSelectedValue('yes')}
             >
+              <div
+                className={cn(
+                  'h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0',
+                  selectedValue === 'yes'
+                    ? 'bg-primary-foreground/20'
+                    : 'bg-background'
+                )}
+              >
+                <ThumbsUp className="h-5 w-5" />
+              </div>
               Yes
-            </Button>
-            <Button
-              variant={selectedValue === 'no' ? 'default' : 'outline'}
-              className="w-full h-12 text-sm rounded-[28px]"
+            </button>
+            <button
+              type="button"
+              className={cn(
+                'w-full h-[72px] rounded-2xl px-5 flex items-center gap-4 font-semibold text-base transition-colors',
+                selectedValue === 'no'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-foreground'
+              )}
               onClick={() => setSelectedValue('no')}
             >
+              <div
+                className={cn(
+                  'h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0',
+                  selectedValue === 'no'
+                    ? 'bg-primary-foreground/20'
+                    : 'bg-background'
+                )}
+              >
+                <ThumbsDown className="h-5 w-5" />
+              </div>
               No
-            </Button>
+            </button>
           </div>
         );
 
@@ -131,15 +167,15 @@ export const PreviewQuestion = ({
                   key={rating}
                   type="button"
                   onClick={() => setRatingValue(rating)}
-                  className="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary rounded"
+                  className="focus:outline-none"
                   aria-label={`Rate ${rating} ${rating === 1 ? 'star' : 'stars'}`}
                 >
                   <Star
                     className={cn(
-                      "h-12 w-12 transition-colors",
+                      'h-11 w-11 transition-colors',
                       rating <= ratingValue
-                        ? "fill-primary text-primary"
-                        : "fill-none text-muted-foreground"
+                        ? 'fill-primary text-primary'
+                        : 'fill-none text-muted-foreground'
                     )}
                   />
                 </button>
@@ -148,64 +184,75 @@ export const PreviewQuestion = ({
           </div>
         );
 
-      case 'scale':
+      case 'scale': {
+        const from = parseInt(scaleFrom);
+        const to = parseInt(scaleTo);
+        const values = Array.from({ length: to - from + 1 }, (_, i) => from + i);
         return (
-          <div className="w-full flex flex-col items-center gap-4 px-4">
-            <div className="w-full max-w-[280px]">
-              <input
-                type="range"
-                min={scaleFrom}
-                max={scaleTo}
-                value={sliderValue}
-                onChange={(e) => setSliderValue(parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-primary"
-              />
-              <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                <span>{scaleFrom}</span>
-                <span className="font-semibold text-foreground">{sliderValue}</span>
-                <span>{scaleTo}</span>
-              </div>
+          <div className="w-full px-1">
+            <div className="grid grid-cols-2 gap-3">
+              {values.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={cn(
+                    'h-16 rounded-2xl font-semibold text-base transition-colors',
+                    selectedValue === String(value)
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-foreground'
+                  )}
+                  onClick={() => setSelectedValue(String(value))}
+                >
+                  {value}
+                </button>
+              ))}
             </div>
           </div>
         );
+      }
 
       case 'images':
-      case 'videos':
+      case 'videos': {
+        const Icon = format === 'images' ? Image : Video;
+        const label = format === 'images'
+          ? `Add Image${mediaCount > 1 ? 's' : ''}`
+          : `Add Video${mediaCount > 1 ? 's' : ''}`;
         return (
-          <div className="w-full flex justify-center">
-            <Button
-              variant="outline"
-              className="w-full h-12 gap-2 rounded-[28px]"
-            >
-              <Upload className="h-4 w-4" />
-              Upload {format === 'images' ? `Image${mediaCount > 1 ? 's' : ''}` : `Video${mediaCount > 1 ? 's' : ''}`}
-            </Button>
+          <div className="w-full">
+            <div className="w-full rounded-2xl bg-muted flex items-center px-5 h-[72px] gap-4">
+              <Icon className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+              <span className="flex-1 text-base font-semibold text-foreground">
+                {label}
+              </span>
+              <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            </div>
           </div>
         );
+      }
 
       case 'signature':
         return (
-          <div className="w-full flex justify-center">
-            <div className="w-full h-32 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20 flex items-center justify-center">
-              <span className="text-xs text-muted-foreground">Sign here</span>
+          <div className="w-full">
+            <div className="w-full h-[200px] border-2 border-dashed rounded-xl bg-white flex items-center justify-center">
+              <span className="text-sm text-muted-foreground">Sign here</span>
             </div>
           </div>
         );
 
       case 'progressPhoto':
         return (
-          <div className="w-full flex flex-col gap-3 items-start px-4">
+          <div className="w-full px-1">
             <div className="grid grid-cols-3 gap-3 w-full">
               {['Front', 'Back', 'Side'].map((label) => (
-                <Button
+                <div
                   key={label}
-                  variant="outline"
-                  className="aspect-square h-24 text-sm rounded-lg flex flex-col items-center justify-center gap-2 bg-muted"
-                  disabled
+                  className="aspect-square rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-muted flex flex-col items-center justify-center gap-2"
                 >
-                  <Plus className="h-5 w-5 text-muted-foreground" />
-                  <span>{label}</span>
-                </Button>
+                  <Camera className="h-6 w-6 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {label}
+                  </span>
+                </div>
               ))}
             </div>
           </div>
@@ -213,15 +260,11 @@ export const PreviewQuestion = ({
 
       case 'metrics':
         return (
-          <div className="w-full">
-            <div className="relative">
-              <Input
-                type="number"
-                placeholder="Enter value..."
-                className="w-full pr-16"
-              />
+          <div className="w-full flex justify-center">
+            <div className="w-full rounded-lg bg-muted h-12 flex items-center justify-center gap-2">
+              <span className="text-lg text-muted-foreground">0</span>
               {metricUnit && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+                <span className="text-sm text-muted-foreground">
                   {metricUnit}
                 </span>
               )}
@@ -232,9 +275,10 @@ export const PreviewQuestion = ({
       default:
         return (
           <div className="w-full">
-            <Input
-              placeholder="Your answer..."
-              className="w-full"
+            <textarea
+              placeholder="Type here..."
+              className="w-full min-h-[120px] rounded-lg bg-muted px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none resize-none"
+              readOnly
             />
           </div>
         );

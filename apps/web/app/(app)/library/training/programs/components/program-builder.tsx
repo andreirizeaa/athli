@@ -17,6 +17,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Calendar, Check, ChevronLeft, ChevronRight, Copy, Plus, Redo, Search, Trash2, Undo, X, Pencil, MoreHorizontal, Save, ChevronUp, ChevronDown, Eraser, Loader2 } from 'lucide-react';
+import { LibrarySidebarToggle } from '../../../library-sidebar-toggle';
 import {
   DndContext,
   DragEndEvent,
@@ -1836,7 +1837,10 @@ export const ProgramBuilder = ({
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            <h1 className="text-[22px] font-semibold truncate">{pageTitle}</h1>
+            <div className="flex items-center gap-2">
+              <LibrarySidebarToggle />
+              <h1 className="text-[22px] font-semibold truncate">{pageTitle}</h1>
+            </div>
           </div>
           <ButtonGroup className="flex-shrink-0">
             <Button

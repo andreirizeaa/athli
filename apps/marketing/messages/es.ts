@@ -132,17 +132,17 @@ const messages = {
   features: {
     sectionTitle: 'Nuestras funcionalidades',
     sectionSubtitle: 'Mantén a tus clientes comprometidos y simplifica tu negocio',
-    flows: {
-      label: 'Flujos',
+    automations: {
+      label: 'Automatizaciones',
       headline: 'Responsabilidad automatizada, más allá de los check-ins',
-      description: 'Configura flujos personalizados que se activan automáticamente cuando los clientes se quedan atrás. Ya sea una sesión perdida, un check-in pendiente o un hábito estancado, las automatizaciones predefinidas intervienen para que nada se escape.',
+      description: 'Configura automatizaciones personalizadas que se activan automáticamente cuando los clientes se quedan atrás. Ya sea una sesión perdida, un check-in pendiente o un hábito estancado, las automatizaciones predefinidas intervienen para que nada se escape.',
       highlights: ['Condiciones de activación personalizadas', 'Secuencias automatizadas predefinidas', 'Mantiene a los clientes en el camino sin seguimiento manual'],
-      pageTitle: 'Flujos que Mantienen a los Clientes Comprometidos',
+      pageTitle: 'Automatizaciones que Mantienen a los Clientes Comprometidos',
       pageSubtitle: 'Automatiza seguimientos y recordatorios para que ningún cliente quede olvidado. Define condiciones, configura acciones y deja que Athli se encargue del resto.',
       benefits: [
         { title: 'Activación por Cualquier Condición', description: '¿Sesión perdida? ¿Check-in omitido? Define las condiciones que importan y Athli responderá automáticamente con la acción correcta.' },
-        { title: 'Secuencias de Acciones Predefinidas', description: 'Crea flujos de varios pasos con mensajes, recordatorios y tareas que se ejecutan en orden, manteniendo a tus clientes comprometidos sin que muevas un dedo.' },
-        { title: 'Escala Sin Perder el Toque Personal', description: 'Gestiona 10 o 100 clientes con el mismo nivel de atención. Los flujos automatizados se encargan del seguimiento para que tú puedas enfocarte en entrenar.' },
+        { title: 'Secuencias de Acciones Predefinidas', description: 'Crea automatizaciones de varios pasos con mensajes, recordatorios y tareas que se ejecutan en orden, manteniendo a tus clientes comprometidos sin que muevas un dedo.' },
+        { title: 'Escala Sin Perder el Toque Personal', description: 'Gestiona 10 o 100 clientes con el mismo nivel de atención. Las automatizaciones se encargan del seguimiento para que tú puedas enfocarte en entrenar.' },
       ],
     },
     forms: {
@@ -184,8 +184,21 @@ const messages = {
         { title: 'Decisiones Basadas en Datos', description: 'Deja de adivinar. Usa datos reales de tus clientes para informar tu programación, consejos de nutrición y conversaciones de entrenamiento.' },
       ],
     },
-    progress: {
-      label: 'Progreso',
+    habits: {
+      label: 'Hábitos',
+      headline: 'Construye consistencia con el seguimiento diario de hábitos',
+      description: 'Asigna hábitos diarios a tus clientes y registra su cumplimiento a lo largo del tiempo. Desde la ingesta de agua hasta rutinas de estiramiento, los hábitos mantienen a los clientes comprometidos con las pequeñas acciones que generan grandes resultados.',
+      highlights: ['Hábitos diarios personalizables', 'Seguimiento de rachas y cumplimiento', 'Integrado con perfiles de clientes'],
+      pageTitle: 'Hábitos que Construyen Resultados Duraderos',
+      pageSubtitle: 'Asigna hábitos diarios, registra rachas y mantén a tus clientes comprometidos con las pequeñas acciones que hacen la mayor diferencia.',
+      benefits: [
+        { title: 'Asigna Cualquier Hábito', description: 'Crea hábitos para cualquier cosa: ingesta de agua, sueño, estiramientos, preparación de comidas. Si importa para tu entrenamiento, puedes registrarlo.' },
+        { title: 'Seguimiento de Rachas', description: 'Los clientes ven sus rachas y tasas de cumplimiento, construyendo impulso y motivación a través de la consistencia visible.' },
+        { title: 'Responsabilidad sin Microgestión', description: 'Los hábitos funcionan en segundo plano. Los clientes los marcan diariamente y tú ves los datos sin tener que perseguir a nadie.' },
+      ],
+    },
+    'exercise-history': {
+      label: 'Historial de Ejercicios',
       headline: 'Seguimiento detallado de cada ejercicio y variante',
       description: 'Cada serie, repetición y variación se registra y presenta con claridad. Consulta datos detallados de rendimiento para todos los tipos de ejercicios, compara el progreso entre sesiones e identifica tendencias para que tú y tus clientes siempre sepan qué está mejorando.',
       highlights: ['Registra todos los tipos de ejercicios y variantes', 'Comparaciones sesión por sesión', 'Visualizaciones claras del progreso'],
@@ -197,8 +210,21 @@ const messages = {
         { title: 'Progreso Visual a lo Largo del Tiempo', description: 'Gráficos claros y líneas de tiempo que hacen innegable el progreso. Ideal para la motivación del cliente y para demostrar el valor de tu entrenamiento.' },
       ],
     },
-    training: {
-      label: 'Entrenamiento',
+    'progress-photos': {
+      label: 'Fotos de Progreso',
+      headline: 'Progreso visual que tus clientes pueden ver y sentir',
+      description: 'Registra los cambios físicos de tus clientes con fotos de progreso estructuradas. Tomas de frente, espalda y lateral tomadas consistentemente a lo largo del tiempo dan a ti y a tus clientes una prueba visual innegable de su transformación.',
+      highlights: ['Capturas de fotos estructuradas', 'Comparaciones lado a lado', 'Prueba visual del progreso'],
+      pageTitle: 'Fotos de Progreso que Cuentan la Historia',
+      pageSubtitle: 'Captura fotos de progreso estructuradas, compáralas lado a lado y dale a tus clientes una prueba visual de su transformación.',
+      benefits: [
+        { title: 'Capturas de Fotos Estructuradas', description: 'Los clientes toman fotos de frente, espalda y lateral en un formato consistente. Cada conjunto de fotos está organizado y es fácil de comparar.' },
+        { title: 'Comparaciones Lado a Lado', description: 'Coloca fotos de diferentes fechas una al lado de la otra para ver los cambios claramente. Nada motiva más a los clientes que ver su propia transformación.' },
+        { title: 'Integrado con Check-Ins', description: 'Las fotos de progreso se pueden recopilar automáticamente a través de formularios y check-ins, para que siempre tengas imágenes actualizadas sin perseguir a los clientes.' },
+      ],
+    },
+    'client-training': {
+      label: 'Entrenamiento del Cliente',
       headline: 'Planifica todo desde una vista de calendario',
       description: 'Un calendario claro con arrastrar y soltar donde puedes planificar, copiar y reorganizar entrenamientos fácilmente. Consulta sesiones pasadas y planes futuros lado a lado, para que programar un bloque de entrenamiento completo tome minutos, no horas.',
       highlights: ['Calendario con arrastrar y soltar', 'Copia y reutiliza entrenamientos entre días', 'Consulta sesiones pasadas y futuras en un solo lugar'],
@@ -221,6 +247,19 @@ const messages = {
         { title: '1.734 Ejercicios Incluidos', description: 'Una biblioteca completa de ejercicios con vídeos, instrucciones y etiquetas de grupos musculares. Encuentra lo que necesitas al instante.' },
         { title: 'Todos los Tipos de Sección Disponibles', description: 'Crea entrenamientos con AMRAP, EMOM, Tabata, HIIT, circuitos, superseries y más. Estructura las sesiones exactamente como entrenas.' },
         { title: 'Totalmente Personalizable', description: 'Controla cada detalle: series, repeticiones, descanso, tempo, RPE, notas. Tus entrenamientos, a tu manera, sin compromisos.' },
+      ],
+    },
+    packages: {
+      label: 'Paquetes',
+      headline: 'Agrupa tus servicios en paquetes listos para vender',
+      description: 'Crea paquetes de entrenamiento que agrupan entrenamientos, programas, formularios y más en un solo producto. Los clientes compran un paquete y obtienen todo lo que necesitan, completamente estructurado y listo desde el primer día.',
+      highlights: ['Agrupa cualquier combinación de servicios', 'Vende directamente a clientes', 'Entrega automatizada al comprar'],
+      pageTitle: 'Paquetes que Venden tu Entrenamiento',
+      pageSubtitle: 'Agrupa entrenamientos, programas, formularios y hábitos en paquetes que tus clientes pueden comprar. Estructurados, profesionales y listos para entregar.',
+      benefits: [
+        { title: 'Agrupa Cualquier Cosa', description: 'Combina entrenamientos, programas, formularios, hábitos y más en un solo paquete. Dale a los clientes una experiencia completa desde el momento en que se inscriben.' },
+        { title: 'Vende con Confianza', description: 'Crea paquetes profesionales con descripciones y precios claros. Los clientes ven exactamente lo que obtienen, facilitando la decisión de compra.' },
+        { title: 'Entrega Automatizada', description: 'Cuando un cliente compra un paquete, todo se entrega y asigna automáticamente. Sin configuración manual, sin demoras.' },
       ],
     },
   },

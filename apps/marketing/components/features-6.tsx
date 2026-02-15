@@ -8,7 +8,7 @@ import { featureKeys } from '@/lib/features-data'
 import { useTranslations } from 'next-intl'
 
 export default function FeaturesSection() {
-    const [active, setActive] = useState<string>('flows')
+    const [active, setActive] = useState<string>('automations')
     const [dropdownOpen, setDropdownOpen] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
     const t = useTranslations('features')
@@ -107,14 +107,14 @@ export default function FeaturesSection() {
                                     className="hidden object-contain dark:block"
                                     alt={`Athli ${t(`${key}.label`)} — ${t(`${key}.headline`)}`}
                                     fill
-                                    priority={key === 'flows'}
+                                    priority={key === 'automations'}
                                 />
                                 <Image
                                     src={`/features/${key}/light.png`}
                                     className="object-contain dark:hidden"
                                     alt={`Athli ${t(`${key}.label`)} — ${t(`${key}.headline`)}`}
                                     fill
-                                    priority={key === 'flows'}
+                                    priority={key === 'automations'}
                                 />
                             </motion.div>
                         ))}
@@ -183,14 +183,14 @@ export default function FeaturesSection() {
                                             className="hidden object-contain dark:block"
                                             alt={`Athli ${t(`${key}.label`)} — ${t(`${key}.headline`)}`}
                                             fill
-                                            priority={key === 'flows'}
+                                            priority={key === 'automations'}
                                         />
                                         <Image
                                             src={`/features/${key}/light.png`}
                                             className="object-contain dark:hidden"
                                             alt={`Athli ${t(`${key}.label`)} — ${t(`${key}.headline`)}`}
                                             fill
-                                            priority={key === 'flows'}
+                                            priority={key === 'automations'}
                                         />
                                     </motion.div>
                                 ))}
