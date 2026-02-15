@@ -9,6 +9,9 @@ import { useCoachQuestionnaires } from '@/hooks/use-coach-questionnaires';
 import { useCoachCheckIns } from '@/hooks/use-coach-check-ins';
 import { useCoachHabits } from '@/hooks/use-coach-habits';
 import { useCoachMetrics } from '@/hooks/use-coach-metrics';
+import { useCoachFileFolders } from '@/hooks/use-coach-file-folders';
+import { useCoachHabitFolders } from '@/hooks/use-coach-habit-folders';
+import { useCoachMetricFolders } from '@/hooks/use-coach-metric-folders';
 import { X, Plus, Play, Pencil, Trash2, UserPlus } from 'lucide-react';
 import { FlowEditorSidePanel, TRIGGER_OPTIONS, ACTION_OPTIONS, type PanelType, type TriggerOption, type ActionOption } from './flow-editor-side-panel';
 import ReactFlow, {
@@ -371,7 +374,10 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
   const { checkIns: coachCheckIns, isLoading: isLoadingCheckIns } = useCoachCheckIns();
   const { habits: coachHabits, isLoading: isLoadingHabits } = useCoachHabits();
   const { metrics: coachMetrics, isLoading: isLoadingMetrics } = useCoachMetrics();
-  const isLoadingData = isLoadingFiles || isLoadingQuestionnaires || isLoadingCheckIns || isLoadingHabits || isLoadingMetrics;
+  const { folders: fileFolders, isLoading: isLoadingFileFolders } = useCoachFileFolders();
+  const { folders: habitFolders, isLoading: isLoadingHabitFolders } = useCoachHabitFolders();
+  const { folders: metricFolders, isLoading: isLoadingMetricFolders } = useCoachMetricFolders();
+  const isLoadingData = isLoadingFiles || isLoadingQuestionnaires || isLoadingCheckIns || isLoadingHabits || isLoadingMetrics || isLoadingFileFolders || isLoadingHabitFolders || isLoadingMetricFolders;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTrigger, setSelectedTrigger] = useState<TriggerOption | null>(null);
   const [actionNodes, setActionNodes] = useState<ActionNodeData[]>([]);
@@ -418,9 +424,9 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
   // Pre-fetched data mapped for the side panel
   const questionnaires = useMemo(() => coachQuestionnaires.map((q) => ({ id: q.id, name: q.name })), [coachQuestionnaires]);
   const checkIns = useMemo(() => coachCheckIns.map((c) => ({ id: c.id, name: c.name })), [coachCheckIns]);
-  const files = useMemo(() => coachFiles.map((f) => ({ id: f.id, name: f.filename })), [coachFiles]);
-  const habits = useMemo(() => coachHabits.map((h) => ({ id: h.id, name: h.name })), [coachHabits]);
-  const metrics = useMemo(() => coachMetrics.map((m) => ({ id: m.id, name: m.name })), [coachMetrics]);
+  const files = useMemo(() => coachFiles.map((f) => ({ id: f.id, name: f.filename, folder_id: f.folder_id })), [coachFiles]);
+  const habits = useMemo(() => coachHabits.map((h) => ({ id: h.id, name: h.name, folderId: h.folderId })), [coachHabits]);
+  const metrics = useMemo(() => coachMetrics.map((m) => ({ id: m.id, name: m.name, folder_id: m.folder_id })), [coachMetrics]);
 
   // Flow initialization and auto-save state
   const [isInitialized, setIsInitialized] = useState(false);
@@ -1798,6 +1804,9 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
         files={files}
         habits={habits}
         metrics={metrics}
+        fileFolders={fileFolders}
+        habitFolders={habitFolders}
+        metricFolders={metricFolders}
         isLoadingData={isLoadingData}
         onClose={handleCloseSidePanel}
         onTriggerOptionClick={handleTriggerOptionClick}

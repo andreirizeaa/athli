@@ -213,30 +213,30 @@ const PhotoComparisonPage = () => {
       {/* Content */}
       <div className="flex-1 p-4 overflow-hidden relative flex flex-col gap-4">
         {/* Angle Filter Toggle */}
-        <div className="w-full flex-shrink-0">
+        <div className="flex-shrink-0 flex justify-center">
           <Tabs value={angleFilter} onValueChange={(value) => setAngleFilter(value as 'all' | 'front' | 'back' | 'side')}>
-            <TabsList className="w-full">
+            <TabsList>
               <TabsTrigger
                 value="all"
-                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
               >
                 All
               </TabsTrigger>
               <TabsTrigger
                 value="front"
-                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
               >
                 Front
               </TabsTrigger>
               <TabsTrigger
                 value="back"
-                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
               >
                 Back
               </TabsTrigger>
               <TabsTrigger
                 value="side"
-                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
               >
                 Side
               </TabsTrigger>

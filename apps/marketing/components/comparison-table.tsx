@@ -4,6 +4,7 @@ import React from 'react'
 import { Check, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { motion } from 'motion/react'
+import { availability } from '@/lib/competitor-comparison-data'
 
 const AthliIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className={className}>
@@ -31,21 +32,6 @@ const apps = [
     { name: 'MyPTHub', logo: '/logos/mypthub.png' },
     { name: 'HubFit', logo: '/logos/hubfit.png' },
     { name: 'Kahunas', logo: '/logos/kahunas.png' },
-]
-
-const availability = [
-    // AI & Automation
-    [true, false, false, false, false, false, false, false],
-    [true, false, false, false, false, false, false, false],
-    [true, false, false, true, false, false, true, true],
-    // Training & Programming
-    [true, false, false, true, true, false, true, false],
-    // Accountability & Data
-    [true, false, false, true, false, false, true, true],
-    [true, false, true, true, false, true, true, true],
-    // Platform
-    [true, false, true, true, true, true, true, true],
-    [true, false, false, true, false, false, false, true],
 ]
 
 const athliColor = 'rgb(192,132,252)'
@@ -165,13 +151,13 @@ export default function ComparisonTable() {
                     <table className="w-full border-separate" style={{ borderSpacing: 0 }}>
                         <thead>
                             <tr>
-                                <th className="sticky left-0 z-20 w-[180px] min-w-[180px] border-b bg-background px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                <th className="sticky left-0 z-20 w-[140px] min-w-[140px] md:w-[180px] md:min-w-[180px] border-b bg-background px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                                     {t('featuresHeader')}
                                 </th>
                                 {apps.map((app) => (
                                     <th
                                         key={app.name}
-                                        className={`min-w-[100px] border-b bg-background p-3 text-center ${app.isOwn ? 'sticky left-[180px] z-20' : ''}`}
+                                        className={`min-w-[100px] border-b bg-background p-3 text-center ${app.isOwn ? 'sticky left-[140px] md:left-[180px] z-20' : ''}`}
                                         style={app.isOwn ? athliColumnTopStyle : undefined}>
                                         <div className="flex flex-col items-center gap-2">
                                             {app.isOwn ? (
@@ -207,7 +193,7 @@ export default function ComparisonTable() {
                                         {apps.map((app) => (
                                             <td
                                                 key={app.name}
-                                                className={`border-b bg-muted/50 ${app.isOwn ? 'sticky left-[180px] z-20' : ''}`}
+                                                className={`border-b bg-muted/50 ${app.isOwn ? 'sticky left-[140px] md:left-[180px] z-20' : ''}`}
                                                 style={app.isOwn ? athliColumnStyle : undefined}
                                             />
                                         ))}
@@ -225,7 +211,7 @@ export default function ComparisonTable() {
                                                 {avail.map((has, i) => (
                                                     <td
                                                         key={i}
-                                                        className={`border-b p-3 text-center ${apps[i].isOwn ? 'sticky left-[180px] z-20 bg-background' : ''}`}
+                                                        className={`border-b p-3 text-center ${apps[i].isOwn ? 'sticky left-[140px] md:left-[180px] z-20 bg-background' : ''}`}
                                                         style={apps[i].isOwn ? (isLast ? athliColumnBottomStyle : athliColumnStyle) : undefined}>
                                                         {has ? <CheckMark /> : <CrossMark />}
                                                     </td>

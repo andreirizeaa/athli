@@ -17,6 +17,7 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
 import { ChevronRight, Plus, GripVertical, Edit, Loader2 } from 'lucide-react';
+import { LibrarySidebarToggle } from '../../../library-sidebar-toggle';
 import { type Questionnaire as Form, addQuestion, reorderQuestions, getQuestionnaires } from '@/api/coach/coach-questionnaire-service';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
@@ -202,7 +203,10 @@ const QuestionnaireFormDetailPage = () => {
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            <h1 className="text-[22px] font-semibold">{currentForm?.name}</h1>
+            <div className="flex items-center gap-2">
+              <LibrarySidebarToggle />
+              <h1 className="text-[22px] font-semibold">{currentForm?.name}</h1>
+            </div>
           </div>
           <ButtonGroup className="flex-shrink-0">
             <Button

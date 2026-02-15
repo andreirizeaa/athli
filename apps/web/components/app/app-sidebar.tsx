@@ -8,9 +8,9 @@ import { AthliLogo, AthliIcon } from '@/components/athli-logo';
 import {
   // CalendarDays,
   Activity,
+  BadgeDollarSign,
   ChevronRight,
   File,
-  Gift,
   Home,
   Library,
   Lightbulb,
@@ -496,7 +496,7 @@ export function AppSidebar() {
               className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
             >
               <Link href="/refer-and-earn" onClick={handleMobileNavClick}>
-                <Gift className="shrink-0" />
+                <BadgeDollarSign className="shrink-0" />
                 <span>{t('sidebar.links.referAndEarn')}</span>
               </Link>
             </SidebarMenuButton>

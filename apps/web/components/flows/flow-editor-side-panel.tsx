@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DataGrid } from '@/components/app/data-grid';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { Info } from 'lucide-react';
+import { Info, Folder, Check } from 'lucide-react';
+import { cn } from '@/lib/general/utils';
 import Link from 'next/link';
 // Forms are now split into check-ins and questionnaires services
 import { type Habit } from '@/api/coach/coach-habit-service';
@@ -138,6 +139,11 @@ export const ACTION_OPTIONS: ActionOption[] = [
   ...CLIENT_ACTION_OPTIONS,
 ];
 
+export type FolderItem = {
+  id: string;
+  name: string;
+};
+
 interface FlowEditorSidePanelProps {
   panelType: PanelType;
   searchQuery: string;
@@ -164,9 +170,12 @@ interface FlowEditorSidePanelProps {
   onSetMetrics: (ids: Set<string>) => void;
   questionnaires: Array<{ id: string; name: string }>;
   checkIns: Array<{ id: string; name: string }>;
-  files: Array<{ id: string; name: string }>;
-  habits: Array<{ id: string; name: string }>;
-  metrics: Array<{ id: string; name: string }>;
+  files: Array<{ id: string; name: string; folder_id?: string | null }>;
+  habits: Array<{ id: string; name: string; folderId?: string | null }>;
+  metrics: Array<{ id: string; name: string; folder_id?: string | null }>;
+  fileFolders?: FolderItem[];
+  habitFolders?: FolderItem[];
+  metricFolders?: FolderItem[];
   isLoadingData: boolean;
   onClose: () => void;
   onTriggerOptionClick: (option: TriggerOption) => void;
@@ -234,6 +243,9 @@ export function FlowEditorSidePanel({
   files,
   habits,
   metrics,
+  fileFolders = [],
+  habitFolders = [],
+  metricFolders = [],
   isLoadingData,
   onClose,
   onTriggerOptionClick,
@@ -293,6 +305,86 @@ export function FlowEditorSidePanel({
   const filteredClientActions = CLIENT_ACTION_OPTIONS.filter((option) =>
     option.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Folder item counts
+  const fileFolderItemCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    files.forEach(f => {
+      if (f.folder_id) {
+        counts[f.folder_id] = (counts[f.folder_id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [files]);
+
+  const habitFolderItemCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    habits.forEach(h => {
+      if (h.folderId) {
+        counts[h.folderId] = (counts[h.folderId] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [habits]);
+
+  const metricFolderItemCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    metrics.forEach(m => {
+      if (m.folder_id) {
+        counts[m.folder_id] = (counts[m.folder_id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [metrics]);
+
+  // Handle folder selection - toggle all items in folder
+  const handleFileFolderClick = useCallback((folderId: string) => {
+    const folderFiles = files.filter(f => f.folder_id === folderId);
+    const fileIdsInFolder = folderFiles.map(f => f.id);
+    const allSelected = fileIdsInFolder.length > 0 && fileIdsInFolder.every(id => selectedFiles.has(id));
+
+    const newSelection = new Set(selectedFiles);
+    if (allSelected) {
+      // Deselect all files in folder
+      fileIdsInFolder.forEach(id => newSelection.delete(id));
+    } else {
+      // Select all files in folder
+      fileIdsInFolder.forEach(id => newSelection.add(id));
+    }
+    onSetFiles(newSelection);
+  }, [files, selectedFiles, onSetFiles]);
+
+  const handleHabitFolderClick = useCallback((folderId: string) => {
+    const folderHabits = habits.filter(h => h.folderId && h.folderId === folderId);
+    const habitIdsInFolder = folderHabits.map(h => h.id);
+    const allSelected = habitIdsInFolder.length > 0 && habitIdsInFolder.every(id => selectedHabits.has(id));
+
+    const newSelection = new Set(selectedHabits);
+    if (allSelected) {
+      // Deselect all habits in folder
+      habitIdsInFolder.forEach(id => newSelection.delete(id));
+    } else {
+      // Select all habits in folder
+      habitIdsInFolder.forEach(id => newSelection.add(id));
+    }
+    onSetHabits(newSelection);
+  }, [habits, selectedHabits, onSetHabits]);
+
+  const handleMetricFolderClick = useCallback((folderId: string) => {
+    const folderMetrics = metrics.filter(m => m.folder_id === folderId);
+    const metricIdsInFolder = folderMetrics.map(m => m.id);
+    const allSelected = metricIdsInFolder.length > 0 && metricIdsInFolder.every(id => selectedMetrics.has(id));
+
+    const newSelection = new Set(selectedMetrics);
+    if (allSelected) {
+      // Deselect all metrics in folder
+      metricIdsInFolder.forEach(id => newSelection.delete(id));
+    } else {
+      // Select all metrics in folder
+      metricIdsInFolder.forEach(id => newSelection.add(id));
+    }
+    onSetMetrics(newSelection);
+  }, [metrics, selectedMetrics, onSetMetrics]);
 
   return (
     <div
@@ -637,7 +729,37 @@ export function FlowEditorSidePanel({
 
                       if (!config) return null;
 
-                      return config.data.length === 0 ? (
+                      // Get folders and folder click handler based on action type
+                      const foldersConfig = selectedActionOption?.id === 'add-file' ? {
+                        folders: fileFolders,
+                        itemCounts: fileFolderItemCounts,
+                        onFolderClick: handleFileFolderClick,
+                      } : selectedActionOption?.id === 'add-habit' ? {
+                        folders: habitFolders,
+                        itemCounts: habitFolderItemCounts,
+                        onFolderClick: handleHabitFolderClick,
+                      } : selectedActionOption?.id === 'add-metric' ? {
+                        folders: metricFolders,
+                        itemCounts: metricFolderItemCounts,
+                        onFolderClick: handleMetricFolderClick,
+                      } : null;
+
+                      // Filter data to only show unfiled items (items not in any folder)
+                      const unfiledData = selectedActionOption?.id === 'add-file'
+                        ? config.data.filter((item: any) => !item.folder_id)
+                        : selectedActionOption?.id === 'add-habit'
+                          ? config.data.filter((item: any) => !item.folderId)
+                          : selectedActionOption?.id === 'add-metric'
+                            ? config.data.filter((item: any) => !item.folder_id)
+                            : config.data;
+
+                      // Check if there are any items at all (filed + unfiled)
+                      const hasAnyItems = config.data.length > 0;
+                      // Check if there are unfiled items or folders to show
+                      const hasUnfiledItems = unfiledData.length > 0;
+                      const hasFolders = foldersConfig && foldersConfig.folders.length > 0;
+
+                      return !hasAnyItems ? (
                         <Alert className="bg-primary/5 border-primary/20 text-primary">
                           <Info className="size-4" />
                           <AlertDescription className="min-w-0 line-clamp-4">
@@ -649,9 +771,50 @@ export function FlowEditorSidePanel({
                           </AlertDescription>
                         </Alert>
                       ) : (
-                        <div className="flex-1 min-h-0 flex flex-col [&>div]:flex-1 [&>div]:min-h-0 [&_.relative.mb-4]:!px-0 [&>div]:!-mx-0 [&>div]:!w-full">
+                        <div className="flex-1 min-h-0 flex flex-col">
+                          {/* Folders Row */}
+                          {foldersConfig && foldersConfig.folders.length > 0 && (
+                            <div className="flex-shrink-0 overflow-x-auto pb-3 -mx-1 px-1">
+                              <div className="flex gap-2">
+                                {foldersConfig.folders.map((folder) => {
+                                  // Check if all items in folder are selected
+                                  const folderItemIds = selectedActionOption?.id === 'add-file'
+                                    ? files.filter(f => f.folder_id === folder.id).map(f => f.id)
+                                    : selectedActionOption?.id === 'add-habit'
+                                      ? habits.filter(h => h.folderId === folder.id).map(h => h.id)
+                                      : selectedActionOption?.id === 'add-metric'
+                                        ? metrics.filter(m => m.folder_id === folder.id).map(m => m.id)
+                                        : [];
+                                  const isFolderSelected = folderItemIds.length > 0 && folderItemIds.every(id => config.selectedIds.has(id));
+                                  const filesCount = foldersConfig.itemCounts[folder.id] || 0;
+
+                                  return (
+                                    <button
+                                      key={folder.id}
+                                      onClick={() => foldersConfig.onFolderClick(folder.id)}
+                                      className={cn(
+                                        'flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors flex-shrink-0',
+                                        isFolderSelected
+                                          ? 'bg-primary/10 border-primary text-primary'
+                                          : 'bg-background border-border hover:bg-accent/50'
+                                      )}
+                                    >
+                                      {isFolderSelected ? (
+                                        <Check className="size-4" />
+                                      ) : (
+                                        <Folder className="size-4 text-muted-foreground" />
+                                      )}
+                                      <span className="text-sm font-medium whitespace-nowrap">{folder.name}</span>
+                                      <span className="text-xs text-muted-foreground">({filesCount})</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex-1 min-h-0 [&>div]:flex-1 [&>div]:min-h-0 [&_.relative.mb-4]:!px-0 [&>div]:!-mx-0 [&>div]:!w-full">
                           <DataGrid
-                            data={config.data}
+                            data={unfiledData}
                             columns={[
                               {
                                 id: 'name',
@@ -714,6 +877,7 @@ export function FlowEditorSidePanel({
                               </div>
                             )}
                           />
+                          </div>
                         </div>
                       );
                     })()}
