@@ -269,20 +269,11 @@ export const AddMetricSidePanel = ({
     if (selectedCoachMetrics.size > 0) {
       setIsSaving(true);
       try {
-        if (clientId && showSchedule) {
-          const { scheduleConfig, cronExpression } = buildScheduleData();
-          for (const metricId of selectedCoachMetrics) {
-            const m = coachMetrics.find(cm => cm.id === metricId);
-            if (m) {
-              await onSave(m.name, m.unit, m.description, metricId, scheduleConfig, cronExpression);
-            }
-          }
-        } else {
-          for (const metricId of selectedCoachMetrics) {
-            const m = coachMetrics.find(cm => cm.id === metricId);
-            if (m) {
-              await onSave(m.name, m.unit, m.description, metricId);
-            }
+        // Library metrics already have their schedule pre-configured, so no need to pass schedule data
+        for (const metricId of selectedCoachMetrics) {
+          const m = coachMetrics.find(cm => cm.id === metricId);
+          if (m) {
+            await onSave(m.name, m.unit, m.description, metricId);
           }
         }
         handleClose();
@@ -713,34 +704,6 @@ export const AddMetricSidePanel = ({
                       gridPadding={false}
                     />
                   </div>
-                  {selectedCoachMetrics.size > 0 && clientId && (
-                    <div className="space-y-4 border-t pt-6 mt-2">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="showScheduleLibrary"
-                          checked={showSchedule}
-                          onCheckedChange={(checked) => setShowSchedule(!!checked)}
-                        />
-                        <Label htmlFor="showScheduleLibrary" className="text-sm font-medium cursor-pointer">
-                          {t('metrics.schedule.addLogFrequency')}
-                        </Label>
-                      </div>
-                      {showSchedule && (
-                        <ScheduleSelector
-                          frequency={logFrequency}
-                          onFrequencyChange={setLogFrequency}
-                          selectedDays={selectedDays}
-                          onSelectedDaysChange={setSelectedDays}
-                          monthlyOption={monthlyOption}
-                          onMonthlyOptionChange={setMonthlyOption}
-                          specificDay={specificDay}
-                          onSpecificDayChange={setSpecificDay}
-                          translationPrefix="metrics.schedule"
-                          showTopBorder={false}
-                        />
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
             </TabsContent>

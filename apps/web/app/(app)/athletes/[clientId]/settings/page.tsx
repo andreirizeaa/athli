@@ -15,6 +15,7 @@ import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { ClientLimitExceededDialog } from '@/components/app/client-limit-exceeded-dialog';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { useEntitlements } from '@/hooks/use-entitlements';
+import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { useClientProfileContext } from '../client-profile-context';
 import { EditClientDetailsSidePanel } from '../components/edit-client-details-side-panel';
 import { unarchiveClient } from '@/api/coach/coach-client-service';
@@ -29,9 +30,11 @@ const AthleteSettingsPage = () => {
   const clientIdFromParams = params.clientId || params.contactId;
   const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
 
+  const { user } = useSupabaseAuth();
   const { athlete, details } = useClientProfileContext();
   const clientName = details?.name || athlete?.name || '';
   const isArchived = athlete?.status === 'archived';
+  const isOwnClient = user?.id === clientId;
 
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -192,49 +195,55 @@ const AthleteSettingsPage = () => {
         </CardHeader>
         <Separator className="w-full mt-[-8px] mb-[-4px]" />
         <div className="w-full">
-          <div className="space-y-0">
-            {/* Archive Client - Only shown for non-archived clients */}
-            {!isArchived && (
-              <div className="flex items-center justify-between pb-2 px-4 border-b -mt-0.5">
+          {isOwnClient ? (
+            <p className="text-sm text-muted-foreground py-3 px-4">
+              You cannot delete or archive your own client account.
+            </p>
+          ) : (
+            <div className="space-y-0">
+              {/* Archive Client - Only shown for non-archived clients */}
+              {!isArchived && (
+                <div className="flex items-center justify-between pb-2 px-4 border-b -mt-0.5">
+                  <div className="flex-1">
+                    <h3 className="font-medium text-sm">{t('athletes.profile.settings.danger.archiveTitle')}</h3>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {t('athletes.profile.settings.danger.archiveDescription')}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsArchiveModalOpen(true)}
+                    className="ml-4 gap-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Archive className="h-4 w-4" />
+                    {t('athletes.profile.settings.danger.archiveButton')}
+                  </Button>
+                </div>
+              )}
+
+              {/* Delete Client */}
+              <div className={`flex items-center justify-between px-4 ${!isArchived ? 'pt-2' : '-mt-0.5 py-2'}`}>
                 <div className="flex-1">
-                  <h3 className="font-medium text-sm">{t('athletes.profile.settings.danger.archiveTitle')}</h3>
+                  <h3 className="font-medium text-sm text-primary">
+                    {t('athletes.profile.settings.danger.deleteTitle')}
+                  </h3>
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    {t('athletes.profile.settings.danger.archiveDescription')}
+                    {t('athletes.profile.settings.danger.deleteDescription')}
                   </p>
                 </div>
                 <Button
-                  variant="outline"
+                  variant="destructive"
                   size="sm"
-                  onClick={() => setIsArchiveModalOpen(true)}
-                  className="ml-4 gap-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="ml-4 gap-2"
                 >
-                  <Archive className="h-4 w-4" />
-                  {t('athletes.profile.settings.danger.archiveButton')}
+                  <Trash2 className="h-4 w-4" />
+                  {t('athletes.profile.settings.danger.deleteButton')}
                 </Button>
               </div>
-            )}
-
-            {/* Delete Client */}
-            <div className={`flex items-center justify-between px-4 ${!isArchived ? 'pt-2' : '-mt-0.5 py-2'}`}>
-              <div className="flex-1">
-                <h3 className="font-medium text-sm text-primary">
-                  {t('athletes.profile.settings.danger.deleteTitle')}
-                </h3>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {t('athletes.profile.settings.danger.deleteDescription')}
-                </p>
-              </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="ml-4 gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                {t('athletes.profile.settings.danger.deleteButton')}
-              </Button>
             </div>
-          </div>
+          )}
         </div>
       </Card>
 

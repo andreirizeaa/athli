@@ -24,7 +24,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { archiveUser as archiveClient, type Athlete } from '@/api/coach/coach-client-service';
-import { useCoachClients } from '@/hooks/use-coach-clients';
+import { useCoachClients, type EnhancedAthlete } from '@/hooks/use-coach-clients';
 import { useTerminology } from '@/hooks/use-terminology';
 import { cn } from '@/lib/general/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -170,8 +170,9 @@ const AthletesPage = () => {
   const router = useRouter();
   const isMobile = useIsMobile();
   const { uniqueCode } = useGlobalData();
+  const { user } = useSupabaseAuth();
   const [showArchivedClients, setShowArchivedClients] = useState<boolean>(false);
-  const { clients: athletes, activeClientCount, isLoading, archiveClient, unarchiveClient } = useCoachClients({ includeArchived: showArchivedClients });
+  const { clients: athletes, activeClientCount, isLoading, archiveClient, unarchiveClient } = useCoachClients({ includeArchived: showArchivedClients, userId: user?.id });
   const { onboardings } = useCoachOnboardings();
   const { clientLimit } = useEntitlements();
   const terminology = useTerminology();
@@ -593,7 +594,7 @@ const AthletesPage = () => {
   };
 
   // Create column definitions for DataGrid
-  const columns: ColumnDefinition<Athlete>[] = [
+  const columns: ColumnDefinition<EnhancedAthlete>[] = [
     {
       id: 'name',
       label: terminology.singular,
@@ -602,7 +603,7 @@ const AthletesPage = () => {
       getSearchValue: (row) =>
         `${row.name || ''} ${row.email || ''} ${row.phone || ''} ${row.country || ''} ${row.category || ''}`,
     },
-    ...COLUMN_ORDER.map((columnId: ColumnId): ColumnDefinition<Athlete> => {
+    ...COLUMN_ORDER.map((columnId: ColumnId): ColumnDefinition<EnhancedAthlete> => {
       switch (columnId) {
         case 'lastActivity':
           return {
@@ -1031,7 +1032,7 @@ const AthletesPage = () => {
     ...(showArchivedClients ? [{ value: 'archived', label: t('general.archived') }] : []),
   ];
 
-  const filters: FilterDefinition<Athlete>[] = [
+  const filters: FilterDefinition<EnhancedAthlete>[] = [
     {
       id: 'category',
       label: t('athletes.filters.category'),
@@ -1112,7 +1113,7 @@ const AthletesPage = () => {
   };
 
   // Create first column renderer
-  const renderFirstColumn = (athlete: Athlete, isSelected: boolean) => {
+  const renderFirstColumn = (athlete: EnhancedAthlete, isSelected: boolean) => {
     const initials = (athlete.name?.trim() || '')
       .split(' ')
       .map((part) => part.charAt(0).toUpperCase())
@@ -1127,7 +1128,11 @@ const AthletesPage = () => {
           className="flex items-center justify-center h-full flex-shrink-0"
           data-no-row-link="true"
         >
-          <Checkbox checked={isSelected} onCheckedChange={() => handleToggleAthlete(athlete.id)} />
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => handleToggleAthlete(athlete.id)}
+            disabled={athlete.isOwnClient}
+          />
         </div>
         <div className="flex items-center justify-between gap-2 min-w-0 flex-1 w-full">
           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -1292,7 +1297,7 @@ const AthletesPage = () => {
         onFilteredDataChange={setFilteredCount}
         enableSearch={true}
         searchPlaceholder={t('athletes.searchPlaceholder')}
-        searchFields={[(row: Athlete) => `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`]}
+        searchFields={[(row: EnhancedAthlete) => `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`]}
         filters={filters}
         filterBarActions={
           <Popover>
@@ -1350,6 +1355,7 @@ const AthletesPage = () => {
           [t('athletes.export.clientFor')]: row.clientFor,
         })}
         enableRowSelection={true}
+        isRowSelectable={(row) => !row.isOwnClient}
         selectedRowIds={selectedAthletes}
         onSelectionChange={(next: Set<string>) => setSelectedAthletes(next)}
         onRowClick={(row, event) => {
