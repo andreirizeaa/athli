@@ -461,13 +461,12 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                         </div>
 
                         <div className="flex items-center gap-2">
-                            {/* Trial prompt limit indicator */}
                             {isLimited && (
                                 <span className={cn(
-                                    "text-xs px-2 py-1 rounded-full",
+                                    "inline-flex items-center text-xs px-3 h-9 rounded-full border",
                                     hasReachedLimit
-                                        ? "bg-destructive/10 text-destructive"
-                                        : "bg-muted text-muted-foreground"
+                                        ? "border-destructive/30 bg-destructive/10 text-destructive"
+                                        : "border-border bg-background text-muted-foreground"
                                 )}>
                                     {remaining} prompts left today
                                 </span>

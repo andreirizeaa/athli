@@ -132,17 +132,17 @@ const messages = {
   features: {
     sectionTitle: 'Our features',
     sectionSubtitle: 'Keep your clients accountable and simplify your business',
-    flows: {
-      label: 'Flows',
+    automations: {
+      label: 'Automations',
       headline: 'Automated accountability, beyond just check-ins',
-      description: "Set up custom flows that trigger automatically when clients fall behind. Whether it's a missed session, an overdue check-in, or a stalled habit, predefined automations step in so nothing slips through the cracks.",
+      description: "Set up custom automations that trigger automatically when clients fall behind. Whether it's a missed session, an overdue check-in, or a stalled habit, predefined automations step in so nothing slips through the cracks.",
       highlights: ['Custom trigger conditions', 'Predefined automated sequences', 'Keeps clients on track without manual follow-up'],
-      pageTitle: 'Flows that Keep Clients Accountable',
+      pageTitle: 'Automations that Keep Clients Accountable',
       pageSubtitle: 'Automate follow-ups and nudges so no client falls through the cracks. Set conditions, define actions, and let Athli handle the rest.',
       benefits: [
         { title: 'Trigger on Any Condition', description: 'Missed a session? Skipped a check-in? Define the conditions that matter and Athli will automatically respond with the right action.' },
-        { title: 'Predefined Action Sequences', description: 'Build multi-step flows with messages, reminders, and tasks that fire in order, keeping your clients engaged without you lifting a finger.' },
-        { title: 'Scale Without Losing the Personal Touch', description: 'Manage 10 or 100 clients with the same level of care. Automated flows handle the follow-up so you can focus on coaching.' },
+        { title: 'Predefined Action Sequences', description: 'Build multi-step automations with messages, reminders, and tasks that fire in order, keeping your clients engaged without you lifting a finger.' },
+        { title: 'Scale Without Losing the Personal Touch', description: 'Manage 10 or 100 clients with the same level of care. Automations handle the follow-up so you can focus on coaching.' },
       ],
     },
     forms: {
@@ -184,8 +184,21 @@ const messages = {
         { title: 'Data-Driven Decisions', description: 'Stop guessing. Use real client data to inform your programming, nutrition advice, and coaching conversations.' },
       ],
     },
-    progress: {
-      label: 'Progress',
+    habits: {
+      label: 'Habits',
+      headline: 'Build consistency with daily habit tracking',
+      description: 'Assign daily habits to clients and track completion over time. From water intake to stretching routines, habits keep clients accountable to the small actions that drive big results.',
+      highlights: ['Customizable daily habits', 'Streak and completion tracking', 'Integrated with client profiles'],
+      pageTitle: 'Habits That Build Lasting Results',
+      pageSubtitle: 'Assign daily habits, track streaks, and keep clients accountable to the small actions that make the biggest difference.',
+      benefits: [
+        { title: 'Assign Any Habit', description: 'Create habits for anything: water intake, sleep, stretching, meal prep. If it matters to your coaching, you can track it.' },
+        { title: 'Streak Tracking', description: 'Clients see their streaks and completion rates, building momentum and motivation through visible consistency.' },
+        { title: 'Accountability Without Micromanaging', description: 'Habits run in the background. Clients check them off daily, and you see the data without having to chase anyone.' },
+      ],
+    },
+    'exercise-history': {
+      label: 'Exercise History',
       headline: 'Detailed tracking across every exercise and variant',
       description: "Every set, rep, and variation is tracked and clearly presented. See detailed performance data for all exercise types, compare progress across sessions, and identify trends so you and your clients always know what's improving.",
       highlights: ['Track all exercise types and variants', 'Session-by-session comparisons', 'Clear progress visualizations'],
@@ -197,8 +210,21 @@ const messages = {
         { title: 'Visual Progress Over Time', description: "Clear charts and timelines that make progress undeniable. Great for client motivation and showing the value of your coaching." },
       ],
     },
-    training: {
-      label: 'Training',
+    'progress-photos': {
+      label: 'Progress Photos',
+      headline: 'Visual progress your clients can see and feel',
+      description: "Track your clients' physique changes with structured progress photos. Front, back, and side shots taken consistently over time give you and your clients undeniable visual proof of their transformation.",
+      highlights: ['Structured photo captures', 'Side-by-side comparisons', 'Visual proof of progress'],
+      pageTitle: 'Progress Photos That Tell the Story',
+      pageSubtitle: "Capture structured progress photos, compare them side by side, and give your clients visual proof of their transformation.",
+      benefits: [
+        { title: 'Structured Photo Captures', description: 'Clients take front, back, and side photos in a consistent format. Every photo set is organized and easy to compare.' },
+        { title: 'Side-by-Side Comparisons', description: 'Place photos from different dates next to each other to see changes clearly. Nothing motivates clients like seeing their own transformation.' },
+        { title: 'Integrated With Check-Ins', description: 'Progress photos can be collected automatically through forms and check-ins, so you always have up-to-date visuals without chasing clients.' },
+      ],
+    },
+    'client-training': {
+      label: 'Client Training',
       headline: 'Plan everything from one calendar view',
       description: 'A clear, drag-and-drop calendar where you can plan, copy, and rearrange workouts with ease. View past sessions and future plans side by side, so programming an entire training block takes minutes, not hours.',
       highlights: ['Drag-and-drop calendar', 'Copy and reuse workouts across days', 'View past and future sessions in one place'],
@@ -221,6 +247,19 @@ const messages = {
         { title: '1,734 Exercises Built In', description: 'A comprehensive exercise library with videos, instructions, and muscle group tags. Find what you need instantly.' },
         { title: 'Every Section Type Supported', description: 'Build workouts with AMRAPs, EMOMs, tabatas, HIITs, circuits, supersets, and more. Structure sessions exactly how you coach.' },
         { title: 'Fully Customizable', description: 'Control every detail, sets, reps, rest, tempo, RPE, notes. Your workouts, your way, with no compromises.' },
+      ],
+    },
+    packages: {
+      label: 'Packages',
+      headline: 'Bundle your services into ready-to-sell packages',
+      description: 'Create coaching packages that bundle workouts, programs, forms, and more into a single product. Clients purchase a package and get everything they need, fully structured and ready to go from day one.',
+      highlights: ['Bundle any combination of services', 'Sell directly to clients', 'Automated delivery on purchase'],
+      pageTitle: 'Packages That Sell Your Coaching',
+      pageSubtitle: 'Bundle workouts, programs, forms, and habits into packages your clients can purchase. Structured, professional, and ready to deliver.',
+      benefits: [
+        { title: 'Bundle Anything', description: 'Combine workouts, programs, forms, habits, and more into a single package. Give clients a complete experience from the moment they sign up.' },
+        { title: 'Sell With Confidence', description: 'Create professional packages with clear descriptions and pricing. Clients see exactly what they get, making the purchase decision easy.' },
+        { title: 'Automated Delivery', description: 'When a client purchases a package, everything is delivered and assigned automatically. No manual setup, no delays.' },
       ],
     },
   },
@@ -635,12 +674,33 @@ const messages = {
       cta: 'Start Coaching for Free',
     },
     pricingComparison: 'Pricing Comparison',
+    blog: {
+      backToComparisons: 'All Comparisons',
+      freeForever: 'Free forever',
+      noCardRequired: 'No credit card required',
+      whyItMatters: 'Why this matters',
+      hasFeature: 'Included',
+      missingFeature: 'Not available',
+      verdict: 'The Verdict',
+      startFree: 'Start Coaching for Free',
+      workoutBuilder: {
+        title: 'What Athli\'s Workout Builder Supports',
+        sectionTypes: 'Section Types',
+        reps: 'Reps',
+        weight: 'Weight',
+        distance: 'Distance',
+        duration: 'Duration',
+        advanced: 'Advanced',
+      },
+    },
     competitors: {
       truecoach: {
         name: 'TrueCoach',
         linkLabel: 'Athli vs TrueCoach',
         pageTitle: 'Athli vs TrueCoach',
         pageSubtitle: 'Compare Athli and TrueCoach pricing plans side by side to find the best value for your coaching business.',
+        seoTitle: 'Athli vs TrueCoach: Features, Pricing & What TrueCoach is Missing (2025)',
+        seoDescription: 'Detailed comparison of Athli and TrueCoach for personal trainers. See pricing differences, missing features, and why coaches are switching to Athli.',
         description: 'TrueCoach focuses on workout delivery and client communication. They offer three straightforward plans based on client capacity.',
         trialInfo: '14-day free trial',
         plans: [
@@ -648,52 +708,245 @@ const messages = {
           { name: 'Standard', price: '$49', clientLimit: 'Up to 20 clients', features: ['Everything in Starter', 'Expanded client capacity', 'Full client management'] },
           { name: 'Pro', price: '$99', clientLimit: 'Up to 50 clients', features: ['Everything in Standard', 'Priority support', 'Extended client capacity'] },
         ],
+        blogContent: {
+          intro: 'TrueCoach has earned its reputation as a reliable workout delivery platform. It handles the fundamentals well: building workouts, communicating with clients, and tracking sessions. But as coaching businesses grow, the gaps become harder to ignore. There is no AI to speed up programming, no automation to handle follow-ups, and no advanced workout sections for coaches who programme beyond basic sets and reps. Here is a detailed look at how Athli compares.',
+          verdict: 'TrueCoach is a solid choice for coaches who only need basic workout delivery. But if you want AI-powered programming, automation flows, advanced workout sections, and automated onboarding, Athli gives you significantly more. The free Starter plan gets you coaching right away, and the Pro plan (from $20/mo) with optional add-ons unlocks everything TrueCoach simply cannot match.',
+          priceComparison: {
+            headline: 'TrueCoach Starts at $19/mo. Athli Starts Free.',
+            body: "TrueCoach's cheapest plan costs $19 per month for up to 5 clients. Athli's Starter plan lets you coach up to 5 clients for free with no credit card required, covering mobile apps, workouts, a training calendar, and messaging. As you grow, Athli's Pro plan (from $20/mo) unlocks advanced features like the AI workout builder, custom exercises, questionnaires, and habit tracking, while optional add-ons give you AI assistance, automations, and payments.",
+          },
+          missingFeatures: {
+            'ai-assistant': {
+              headline: 'No AI Assistant to Speed Up Your Workflow',
+              body: 'TrueCoach requires you to build every programme from scratch. There is no AI assistant to generate workouts, analyse client progress, or answer questions about your roster. Athli offers Lyra, an AI coaching assistant available as an add-on ($25/mo) that understands your clients\' history and can produce training plans, meal suggestions, and progress summaries in seconds.',
+              whyItMatters: 'Coaches using AI-assisted programming report saving over 15 hours per week on admin and programme design.',
+            },
+            'automation-flows': {
+              headline: 'No Automation Flows to Keep Clients Accountable',
+              body: 'When a client misses a session on TrueCoach, the only person who notices is you. There are no event-driven automations to send reminders, trigger follow-ups, or adjust workflows based on client activity. With Athli\'s Automations add-on ($20/mo), you can build multi-step automation flows that fire when clients miss sessions, skip check-ins, or fall behind on habits.',
+              whyItMatters: 'Automations handle follow-ups around the clock so no client slips through the cracks, even when you are not online.',
+            },
+            'custom-onboarding': {
+              headline: 'No Automated Onboarding for New Clients',
+              body: 'Signing up a new client on TrueCoach means manual setup every time, from creating their profile, assigning programmes, and sending introductory messages yourself. With Athli\'s Automations add-on ($20/mo), you can automate the entire onboarding flow: welcome sequences, programme assignments, and intake forms all trigger the moment a client joins.',
+              whyItMatters: 'Automated onboarding gives every new client a professional, consistent first experience without adding to your workload.',
+            },
+            'advanced-workout-builder': {
+              headline: 'A Workout Builder Without Advanced Section Types',
+              body: "TrueCoach covers the basics of workout programming but lacks support for AMRAPs, EMOMs, supersets, circuits, and other section types that coaches need for varied programming. On the Pro plan (from $20/mo), Athli's workout builder supports every section type, custom trackable fields, and fully configurable structure so your programmes match exactly how you coach.",
+              whyItMatters: 'Advanced section types let you programme the way you actually coach rather than forcing your methodology into a limited template.',
+            },
+          },
+        },
       },
       trainerize: {
         name: 'Trainerize',
         linkLabel: 'Athli vs Trainerize',
         pageTitle: 'Athli vs Trainerize',
         pageSubtitle: 'Compare Athli and Trainerize (ABC Trainerize) pricing plans to see which platform delivers more value.',
+        seoTitle: 'Athli vs Trainerize: Full Feature Comparison (2025)',
+        seoDescription: 'Compare Athli and Trainerize side by side. See which coaching platform offers more features, better value, and fewer limitations.',
         description: 'Trainerize offers plans ranging from a free tier to a studio solution. Their Pro plan scales by client count, making costs rise quickly at higher volumes.',
         trialInfo: '30-day free trial',
         plans: [
           { name: 'Free', price: '$0', clientLimit: '1 client', features: ['Mobile app', 'Basic workout tracking', 'Basic nutrition tools', 'Client messaging'] },
           { name: 'Grow', price: '$9', clientLimit: 'Up to 2 clients', features: ['Everything in Free', 'Trainerize.me profile', 'Health app integrations', 'Automated program delivery'] },
-          { name: 'Pro', price: '$19.80', clientLimit: '5–200 clients', features: ['Custom branding options', 'Workout builder', 'Nutrition coaching & macros', 'In-app payments', 'Leaderboards & challenges'] },
+          { name: 'Pro', price: '$19.80', clientLimit: '5-200 clients', features: ['Custom branding options', 'Workout builder', 'Nutrition coaching & macros', 'In-app payments', 'Leaderboards & challenges'] },
           { name: 'Studio', price: '$225', clientLimit: '500+ clients per location', features: ['Custom branded apps', 'Multi-location management', 'API access', 'All premium add-ons included'] },
         ],
+        blogContent: {
+          intro: 'Trainerize (now ABC Trainerize) is one of the most established names in online coaching software. It offers a free tier and scales through paid plans, but many features are limited or absent even on premium subscriptions. There is no AI assistant, no event-driven automations, and the workout builder lacks advanced section types. Here is how Athli compares across the features that matter most.',
+          verdict: 'Trainerize has broad name recognition but falls short on the features modern coaches need. Athli\'s free Starter plan gets you coaching immediately, the Pro plan (from $20/mo) adds advanced workout building, custom forms, and habit tracking, and optional add-ons for AI ($25/mo), Automations ($20/mo), and Payments ($10/mo) round out the platform. That is a far more complete package than what Trainerize delivers at scale.',
+          priceComparison: {
+            headline: "Trainerize's Free Tier Covers 1 Client. Athli's Covers 5.",
+            body: "Trainerize's free plan supports just 1 client, and their Pro plan starts at $19.80 per month. Athli's free Starter plan lets you coach up to 5 clients with mobile apps, workouts, a training calendar, the exercise library, and messaging. When you upgrade to Pro (from $20/mo), you unlock the AI workout builder, custom exercises, questionnaires, and habit tracking. Add-ons for AI assistance, automations, and payments let you expand further as your business grows.",
+          },
+          missingFeatures: {
+            'ai-assistant': {
+              headline: 'No AI Assistant to Accelerate Programming',
+              body: "Trainerize offers no AI-powered coaching assistant. Every workout, programme adjustment, and client analysis has to be done manually. Athli offers Lyra, an AI coaching assistant available as an add-on ($25/mo), that can generate complete training plans, analyse client data, suggest programme modifications, and answer questions about any client, all from a single chat interface.",
+              whyItMatters: 'AI-assisted programming lets you deliver highly personalised plans at scale without spending hours on each client.',
+            },
+            'automation-flows': {
+              headline: 'No Event-Driven Automation Flows',
+              body: "Trainerize lacks automation flows that respond to client behaviour. If a client misses a check-in or stops logging workouts, you will not know until you manually check. With Athli's Automations add-on ($20/mo), you get an automation engine that triggers actions based on real events like missed sessions, overdue forms, and stalled habits, keeping your coaching proactive rather than reactive.",
+              whyItMatters: 'Event-driven automations mean your business runs in the background, following up with clients before problems become drop-offs.',
+            },
+            'custom-onboarding': {
+              headline: 'No Custom Onboarding Sequences',
+              body: "Getting new clients started on Trainerize involves manual programme assignment and individual messages. There is no way to automate a welcome sequence or trigger onboarding steps when a client signs up. With Athli's Automations add-on ($20/mo), you can build complete onboarding flows that welcome clients, assign programmes, deliver intake forms, and send introductory messages, all automatically.",
+              whyItMatters: 'A structured onboarding flow sets the tone for the entire coaching relationship and removes repetitive setup work from your plate.',
+            },
+            'advanced-workout-builder': {
+              headline: 'Limited Workout Customisation Options',
+              body: "Trainerize's workout builder handles standard sets and reps but offers limited support for advanced section types like AMRAPs, EMOMs, circuits, and tabatas. On Athli's Pro plan (from $20/mo), you get a fully customisable workout builder with every section type, custom fields, and drag-and-drop structure, so your programmes reflect your coaching style exactly.",
+              whyItMatters: 'Coaches who use varied training methods need a builder that supports their full repertoire, not just basic set-and-rep structures.',
+            },
+            'custom-forms': {
+              headline: 'No Custom Forms or Questionnaires',
+              body: "Trainerize does not offer custom form building for check-ins, intake questionnaires, or scheduled surveys. Client data collection is limited to their built-in options. On Athli's Pro plan (from $20/mo), you get a full form builder that lets you create any form you need, connect responses directly to client metrics and progress photos, and automate submission schedules.",
+              whyItMatters: 'Custom forms ensure you collect exactly the data you need, in the format you want, on the schedule that works for your coaching method.',
+            },
+            'file-resource-storage': {
+              headline: 'No Per-Client File and Resource Storage',
+              body: 'Trainerize does not offer dedicated file storage for client documents, meal plans, contracts, or resources. Athli provides organised per-client file storage (5GB on Pro, unlimited on Max) where you can upload and manage any document, keeping everything accessible in one place without relying on external cloud drives.',
+              whyItMatters: 'Having all client resources in one platform eliminates the chaos of scattered Google Drive folders and lost email attachments.',
+            },
+          },
+        },
       },
       everfit: {
         name: 'Everfit',
         linkLabel: 'Athli vs Everfit',
         pageTitle: 'Athli vs Everfit',
         pageSubtitle: 'Compare Athli and Everfit pricing plans side by side. Discover which coaching platform gives you more for less.',
+        seoTitle: "Athli vs Everfit: What You Get and What Everfit is Missing (2025)",
+        seoDescription: 'Compare Athli and Everfit for coaching businesses. See how pricing, AI features, and automation capabilities stack up.',
         description: 'Everfit offers a free starter tier and scales through Pro, Studio, and Enterprise plans. Many features like automation and payments are paid add-ons.',
         trialInfo: '30-day free trial',
         plans: [
           { name: 'Starter', price: '$0', clientLimit: 'Up to 5 clients', features: ['Exercise library (1,000+)', 'Workout builder', 'Progress tracking', 'Task management', 'Client messaging'] },
-          { name: 'Pro', price: 'From $16', clientLimit: '5–300 clients', features: ['Everything in Starter', 'Habit coaching', 'Custom forms & surveys', 'Meal plans & macro tracking', 'Custom branding'] },
-          { name: 'Studio', price: 'From $88', clientLimit: '50–500 clients', features: ['Everything in Pro', 'Group chat', 'Broadcast messaging', 'On-demand training portal', 'Studio programs'] },
+          { name: 'Pro', price: 'From $16', clientLimit: '5-300 clients', features: ['Everything in Starter', 'Habit coaching', 'Custom forms & surveys', 'Meal plans & macro tracking', 'Custom branding'] },
+          { name: 'Studio', price: 'From $88', clientLimit: '50-500 clients', features: ['Everything in Pro', 'Group chat', 'Broadcast messaging', 'On-demand training portal', 'Studio programs'] },
           { name: 'Enterprise', price: 'Custom', clientLimit: '500+ clients', features: ['Everything in Studio', 'White-label solution', 'API integrations', 'Dedicated success manager', '24/7 support'] },
         ],
+        blogContent: {
+          intro: 'Everfit is a feature-rich coaching platform with a free starter tier and plans that scale to enterprise level. It covers a lot of ground, including onboarding, custom forms, and workout building, but notable gaps remain. There is no AI coaching assistant, and automation flows are either missing or locked behind paid add-ons. Here is how Athli compares on the features that move the needle.',
+          verdict: 'Everfit is a capable platform that covers many coaching needs. However, the lack of an AI assistant is a real gap. Athli\'s free Starter plan gets you coaching immediately, the Pro plan (from $20/mo) adds the AI workout builder, custom forms, and habit tracking, and the AI add-on ($25/mo) gives you Lyra for programme generation and client analysis. The Automations add-on ($20/mo) rounds out your workflow. Together, Athli delivers more than Everfit at a comparable price.',
+          priceComparison: {
+            headline: 'Everfit Starts Free. So Does Athli.',
+            body: "Both Everfit and Athli offer free tiers for up to 5 clients. The difference is what you get as you grow. Athli's free Starter plan covers mobile apps, workouts, a training calendar, the exercise library, and messaging. When you move to Pro (from $20/mo), you unlock the AI workout builder, custom exercises, questionnaires, and habit tracking. Optional add-ons for AI ($25/mo) and Automations ($20/mo) let you build out the full coaching toolkit as your business scales.",
+          },
+          missingFeatures: {
+            'ai-assistant': {
+              headline: 'No AI Coaching Assistant Built In',
+              body: "Everfit offers a solid feature set but lacks an integrated AI assistant. Programme creation, client analysis, and progress reviews all rely on manual effort. Athli offers Lyra, an AI coaching assistant available as an add-on ($25/mo), purpose-built for coaching. It generates workouts, analyses trends, answers questions about your clients, and helps you plan programmes in a fraction of the time.",
+              whyItMatters: 'An AI assistant trained on coaching-specific tasks gives you a genuine productivity advantage over platforms that rely entirely on manual workflows.',
+            },
+            'automation-flows': {
+              headline: 'No Automation Flows Without Paid Add-Ons',
+              body: "Everfit's automation capabilities are either absent or locked behind paid add-ons depending on your plan. This means basic event-driven workflows, like following up when a client misses a session, require extra spend. Athli's Automations add-on ($20/mo) gives you a full automation engine to build trigger-based sequences tied to any client event, keeping your coaching proactive.",
+              whyItMatters: 'Both platforms treat automations as a paid capability, but Athli\'s Automations add-on offers deeper event-driven workflows at a transparent price.',
+            },
+          },
+        },
+      },
+      trainheroic: {
+        name: 'TrainHeroic',
+        linkLabel: 'Athli vs TrainHeroic',
+        pageTitle: 'Athli vs TrainHeroic',
+        pageSubtitle: 'Compare Athli and TrainHeroic pricing plans side by side to find the best platform for your coaching business.',
+        seoTitle: 'Athli vs TrainHeroic: Complete Platform Comparison (2025)',
+        seoDescription: 'Compare Athli and TrainHeroic pricing and features. See what TrainHeroic is missing and why coaches are making the switch.',
+        description: 'TrainHeroic is built around strength and conditioning with a marketplace for selling programs. Their plans scale by team size and include built-in athlete management tools.',
+        trialInfo: '14-day free trial',
+        plans: [
+          { name: 'Coach', price: '$49', clientLimit: 'Up to 20 athletes', features: ['Program builder', 'Exercise video library', 'Athlete tracking & analytics', 'In-app messaging', 'Marketplace access'] },
+          { name: 'Business', price: '$99', clientLimit: 'Up to 50 athletes', features: ['Everything in Coach', 'Custom branding', 'Team management', 'Revenue tools', 'Priority support'] },
+          { name: 'Enterprise', price: 'Custom', clientLimit: 'Unlimited athletes', features: ['Everything in Business', 'Dedicated account manager', 'API access', 'Custom integrations', 'Multi-location support'] },
+        ],
+        blogContent: {
+          intro: 'TrainHeroic is built for strength and conditioning coaches, with a marketplace for selling programmes and solid athlete management tools. But its focus on S&C means it lacks several features that broader coaching businesses need. There is no AI assistant, no custom forms, no habit tracking, and no file storage. Here is a detailed breakdown.',
+          verdict: 'TrainHeroic excels for pure strength and conditioning but leaves significant gaps for coaches who need a complete platform. Athli\'s free Starter plan gets you coaching immediately, while the Pro plan (from $20/mo) adds custom forms, habit tracking, and 5GB of file storage. Add-ons for AI ($25/mo) and Automations ($20/mo) fill the gaps TrainHeroic does not address at any price.',
+          priceComparison: {
+            headline: 'TrainHeroic Starts at $49/mo. Athli Starts Free.',
+            body: "TrainHeroic's cheapest plan costs $49 per month for up to 20 athletes. Athli's free Starter plan lets you coach up to 5 clients with mobile apps, workouts, a training calendar, the exercise library, and messaging. The Pro plan (from $20/mo) unlocks advanced features like the AI workout builder, questionnaires, and habit tracking, while add-ons for AI, automations, and payments give you even more. For coaches watching their budget, the maths is straightforward.",
+          },
+          missingFeatures: {
+            'ai-assistant': {
+              headline: 'No AI Assistant for Programme Design',
+              body: "TrainHeroic is strong on strength and conditioning delivery but offers no AI-powered assistant. Every programme, progress report, and client communication has to be handled manually. With Athli's AI add-on ($25/mo), Lyra can generate complete training blocks, analyse an athlete's performance data, and provide coaching insights, all from a conversational interface.",
+              whyItMatters: 'Coaches managing large rosters benefit most from AI, automating the repetitive parts of programming so they can focus on high-value coaching decisions.',
+            },
+            'automation-flows': {
+              headline: 'No Automation to Handle Client Follow-Ups',
+              body: "TrainHeroic has no automation flows to respond when athletes miss sessions or fall behind. All follow-up is manual. With Athli's Automations add-on ($20/mo), you can set triggers based on any client event and define multi-step action sequences including messages, reminders, and tasks that fire automatically.",
+              whyItMatters: 'Automated follow-ups keep athletes engaged and accountable without requiring you to monitor every session manually.',
+            },
+            'custom-onboarding': {
+              headline: 'No Automated Client Onboarding',
+              body: "TrainHeroic requires manual onboarding for every new athlete. There are no automated sequences to assign programmes, deliver intake forms, or send welcome messages when someone joins. With Athli's Automations add-on ($20/mo), you can automate the entire new-client setup so athletes get a seamless first experience while you save time.",
+              whyItMatters: 'First impressions matter. Automated onboarding ensures every athlete receives a polished, professional start without additional admin work.',
+            },
+            'custom-forms': {
+              headline: 'No Custom Check-In Forms',
+              body: "TrainHeroic lacks custom form building for check-ins, intake questionnaires, or wellness surveys. You are limited to their built-in tracking options. On Athli's Pro plan (from $20/mo), you get a full form builder to create any form you need, schedule submissions, and automatically link responses to client metrics and progress photos.",
+              whyItMatters: 'Custom forms let you collect the exact data points that inform your coaching decisions, not just what the platform decides to track.',
+            },
+            'habit-metric-tracking': {
+              headline: 'No Habit or Custom Metric Tracking',
+              body: 'TrainHeroic focuses on workout delivery but does not support daily habit tracking or custom metric monitoring. If you want to track sleep, hydration, or any other lifestyle factor, you will need a separate tool. On the Pro plan (from $20/mo), Athli includes habit and metric tracking for every client, letting you assign daily habits and define unlimited custom metrics, all integrated into their profile.',
+              whyItMatters: 'Results are not just about what happens in the gym. Tracking habits and lifestyle metrics gives you the complete picture of a client\'s progress.',
+            },
+            'file-resource-storage': {
+              headline: 'No Dedicated File Storage for Athletes',
+              body: 'TrainHeroic does not include per-client file storage for documents, meal plans, or supplementary resources. Coaches end up relying on email or external cloud storage to share files. Athli provides organised, per-client storage (5GB on Pro, unlimited on Max) where you can upload and manage any document alongside their training data.',
+              whyItMatters: 'Centralised file storage means you never have to dig through emails or shared drives to find a client\'s contract or nutrition plan.',
+            },
+          },
+        },
       },
       mypthub: {
         name: 'My PT Hub',
         linkLabel: 'Athli vs My PT Hub',
         pageTitle: 'Athli vs My PT Hub',
         pageSubtitle: 'Compare Athli and My PT Hub pricing to find the right coaching platform for your budget and needs.',
-        description: 'My PT Hub offers two plans — a limited Starter tier and a full-featured Premium plan. Pricing is in GBP with optional add-ons for branded apps and AI.',
+        seoTitle: 'Athli vs My PT Hub: Features, Pricing & Gaps (2025)',
+        seoDescription: 'Detailed comparison of Athli and My PT Hub. See pricing in GBP vs USD, feature gaps, and which platform delivers more value.',
+        description: 'My PT Hub offers two plans: a limited Starter tier and a full-featured Premium plan. Pricing is in GBP with optional add-ons for branded apps and AI.',
         trialInfo: '30-day free trial',
         plans: [
           { name: 'Starter', price: '£20', clientLimit: 'Up to 3 clients', features: ['50 workouts', '50 nutrition plans', 'Payment processing', '1-to-1 bookings', 'Habit coaching', 'Chat messaging'] },
           { name: 'Premium', price: '£59', clientLimit: 'Unlimited clients', features: ['Unlimited workouts & nutrition plans', 'Group bookings', 'Classes & live streams', 'Automated check-ins', 'Community features', 'Priority support'] },
         ],
+        blogContent: {
+          intro: 'My PT Hub offers two plans, a limited Starter tier and a full-featured Premium plan, with pricing in GBP. It covers the basics of client management, workout programming, and communication. But AI is an add-on, there are no automation flows, and the workout builder lacks advanced section types. Here is how Athli compares.',
+          verdict: 'My PT Hub is a straightforward platform that handles the fundamentals. But coaches who need AI, automation, advanced programming, and custom forms will find themselves paying for add-ons or switching platforms. Athli\'s free Starter plan covers the basics, the Pro plan (from $20/mo) unlocks advanced features, and add-ons for AI ($25/mo), Automations ($20/mo), and Payments ($10/mo) give you a complete coaching toolkit.',
+          priceComparison: {
+            headline: 'My PT Hub Starts at £20/mo. Athli Starts Free.',
+            body: "My PT Hub's Starter plan costs £20 per month for just 3 clients. Athli's free Starter plan lets you coach up to 5 clients with mobile apps, workouts, a training calendar, the exercise library, and messaging. The Pro plan (from $20/mo) adds the AI workout builder, custom exercises, questionnaires, and habit tracking. Optional add-ons unlock AI assistance, automations, and payments as your business grows. Athli's pricing is in USD, making it easier to compare and plan your coaching budget.",
+          },
+          missingFeatures: {
+            'ai-assistant': {
+              headline: 'AI Locked Behind Premium Add-Ons',
+              body: 'My PT Hub offers some AI features, but they are available only as paid add-ons on top of your subscription. Basic plan holders have no access to AI-assisted programming at all. Athli offers Lyra, an AI coaching assistant available as an add-on ($25/mo) on the Pro or Max plan. Both platforms treat AI as a paid extra, but Athli\'s add-on pricing is transparent and gives you a full-featured assistant rather than limited AI tools.',
+              whyItMatters: 'A dedicated AI coaching assistant saves hours per week on programme design, client analysis, and admin tasks.',
+            },
+            'automation-flows': {
+              headline: 'No Event-Driven Automation Flows',
+              body: "My PT Hub offers automated check-ins on higher plans, but lacks true event-driven automation flows. You cannot set up trigger-based workflows that respond to missed sessions, overdue forms, or stalled habits. With Athli's Automations add-on ($20/mo), you can build multi-step sequences tied to any client event.",
+              whyItMatters: 'True automation means your coaching business responds to client behaviour in real time, not just on a fixed schedule.',
+            },
+            'custom-onboarding': {
+              headline: 'No Automated Onboarding Sequences',
+              body: "My PT Hub requires manual setup for each new client, including assigning plans, sending welcome messages, and distributing intake forms one at a time. With Athli's Automations add-on ($20/mo), you can automate the entire onboarding process with customisable sequences that trigger the moment a client signs up.",
+              whyItMatters: 'Automated onboarding scales with your business. Whether you sign up one client or twenty in a week, the experience is consistent and professional.',
+            },
+            'advanced-workout-builder': {
+              headline: 'No Advanced Workout Builder',
+              body: "My PT Hub's workout builder handles basic programming but does not support advanced section types like AMRAPs, EMOMs, circuits, or tabatas. On Athli's Pro plan (from $20/mo), the workout builder offers every section type with custom trackable fields and fully configurable structure, giving you complete control over how your programmes look and feel.",
+              whyItMatters: 'Modern coaching requires varied programming. A builder that only handles standard sets and reps limits the types of training you can deliver.',
+            },
+            'custom-forms': {
+              headline: 'No Custom Form Builder',
+              body: "My PT Hub offers pre-built check-in templates but does not let you create fully custom forms with your own fields and logic. On Athli's Pro plan (from $20/mo), you get a full form builder with complete control. Design any form, connect responses to metrics, and automate submission schedules.",
+              whyItMatters: 'Custom forms mean you collect exactly the data your coaching method requires, not generic check-in templates.',
+            },
+            'file-resource-storage': {
+              headline: 'No Per-Client File Storage',
+              body: 'My PT Hub does not provide organised, per-client file storage for documents, meal plans, or supplementary resources. Athli gives each client their own file space (5GB on Pro, unlimited on Max) where you can upload contracts, nutrition guides, PDFs, and any other resources they need.',
+              whyItMatters: 'Per-client storage keeps all resources organised and accessible without switching to external file-sharing tools.',
+            },
+          },
+        },
       },
       hubfit: {
         name: 'HubFit',
         linkLabel: 'Athli vs HubFit',
         pageTitle: 'Athli vs HubFit',
         pageSubtitle: 'Compare Athli and HubFit pricing plans side by side. See which platform gives coaches more value.',
+        seoTitle: 'Athli vs HubFit: Full Feature & Pricing Comparison (2025)',
+        seoDescription: 'Compare Athli and HubFit side by side. See where HubFit falls short and why Athli offers better value for coaching businesses.',
         description: 'HubFit offers three tiers with AI features included on higher plans. Their Ultimate plan charges per additional client above the base limit.',
         trialInfo: 'Free trial available',
         plans: [
@@ -701,12 +954,39 @@ const messages = {
           { name: 'Premium', price: '$69', clientLimit: 'Up to 100 clients', features: ['Everything in Standard', 'Custom branding', 'Payments & packages', 'Autoflow events', 'Meal AI', 'Workout AI'] },
           { name: 'Ultimate', price: '$119', clientLimit: '100+ clients', features: ['Everything in Premium', 'Scalable pricing ($1.19/extra client)', 'All features included'] },
         ],
+        blogContent: {
+          intro: 'HubFit is a modern coaching platform with AI features on higher plans and solid client management tools. It offers three tiers with scaling pricing, and includes onboarding automations and wearable integrations. But the AI is limited to meal and workout generation, full automation flows are constrained, and there is no dedicated file storage. Here is how Athli measures up.',
+          verdict: "HubFit is a strong option with good built-in features, especially on premium tiers. But Athli's free Starter plan gets you coaching right away, the Pro plan (from $20/mo) adds the AI workout builder, custom forms, and habit tracking, and the AI add-on ($25/mo) gives you a comprehensive coaching assistant that goes well beyond HubFit's meal and workout AI. Add the Automations add-on ($20/mo) for full event-driven workflows, and you have a more complete platform.",
+          priceComparison: {
+            headline: 'HubFit Starts at $39/mo. Athli Starts Free.',
+            body: "HubFit's cheapest plan costs $39 per month. There is no free tier. Athli's free Starter plan lets you coach up to 5 clients with mobile apps, workouts, a training calendar, the exercise library, and messaging. The Pro plan (from $20/mo) unlocks the AI workout builder, questionnaires, habits, and 5GB of file storage. Optional add-ons for AI ($25/mo), Automations ($20/mo), and Payments ($10/mo) let you expand as your business grows.",
+          },
+          missingFeatures: {
+            'ai-assistant': {
+              headline: 'AI Features Limited to Higher Plans',
+              body: "HubFit includes Meal AI and Workout AI on their Premium and Ultimate plans, but their Standard plan has no AI at all. With Athli's AI add-on ($25/mo), you get Lyra, which goes beyond meal and workout generation. It analyses client data, answers coaching questions, and manages your to-do list, giving you a full-featured coaching assistant.",
+              whyItMatters: 'A comprehensive AI assistant does more than generate content. It understands your clients and helps you make better coaching decisions.',
+            },
+            'automation-flows': {
+              headline: 'Limited Automation Without Full Event Triggers',
+              body: "HubFit offers onboarding automations and autoflow events on higher plans, but lacks the depth of a full automation engine with custom event triggers. With Athli's Automations add-on ($20/mo), you can build multi-step automation flows tied to any client event, such as missed sessions, skipped check-ins, and habit streaks broken, with complete control over the sequence of actions.",
+              whyItMatters: 'Full automation flexibility means you can design workflows that match your exact coaching process rather than fitting into pre-built templates.',
+            },
+            'file-resource-storage': {
+              headline: 'No Dedicated File and Resource Storage',
+              body: 'HubFit does not include per-client file storage for documents, meal plans, or coaching resources. Athli provides organised storage for each client (5GB on Pro, unlimited on Max) where you can upload and manage any file type, keeping everything alongside their training and progress data.',
+              whyItMatters: 'All your coaching materials in one place means fewer platforms to manage and a better experience for both you and your clients.',
+            },
+          },
+        },
       },
       kahunas: {
         name: 'Kahunas',
         linkLabel: 'Athli vs Kahunas',
         pageTitle: 'Athli vs Kahunas',
         pageSubtitle: 'Compare Athli and Kahunas pricing plans to see which coaching platform fits your business best.',
+        seoTitle: 'Athli vs Kahunas: Which Coaching Platform is Better? (2025)',
+        seoDescription: "Compare Athli and Kahunas features and pricing. See what Kahunas lacks and why coaches prefer Athli's all-inclusive approach.",
         description: 'Kahunas offers three plans with branded apps available on the Ultimate tier. They include a solid set of features but AI is limited to higher plans.',
         trialInfo: '14-day free trial',
         plans: [
@@ -714,6 +994,31 @@ const messages = {
           { name: 'Growth', price: '$69', clientLimit: 'Up to 50 clients', features: ['Everything in Essentials', 'Lead generation forms', 'Bulk client upload', 'Health Score AI', 'Basic automations'] },
           { name: 'Ultimate', price: '$99', clientLimit: 'Unlimited clients', features: ['Everything in Growth', 'Fully branded iOS & Android apps', 'Group messaging', 'Team member management', 'All extensions included'] },
         ],
+        blogContent: {
+          intro: 'Kahunas offers a well-rounded coaching platform with three plans, strong feature coverage, and branded apps on the Ultimate tier. It handles workout programming, habits, forms, and messaging well. But the AI is limited to a Health Score feature, automations are basic, and the workout builder lacks advanced section types. Here is how Athli compares feature by feature.',
+          verdict: 'Kahunas is a capable platform with good fundamentals. But coaches who need a full AI assistant and advanced workout programming will find Athli delivers more. The free Starter plan gets you coaching right away, the Pro plan (from $20/mo) adds the advanced workout builder with every section type, and the AI add-on ($25/mo) gives you a comprehensive coaching assistant that goes far beyond a Health Score. The Automations add-on ($20/mo) provides deeper event-driven workflows than Kahunas offers.',
+          priceComparison: {
+            headline: 'Kahunas Starts at $35/mo. Athli Starts Free.',
+            body: "Kahunas' Essentials plan costs $35 per month for up to 25 clients. Athli's free Starter plan lets you coach up to 5 clients with mobile apps, workouts, a training calendar, the exercise library, and messaging. When you move to Pro (from $20/mo), you unlock the AI workout builder, custom exercises, questionnaires, and habit tracking. Optional add-ons for AI ($25/mo) and Automations ($20/mo) give you capabilities Kahunas reserves for higher tiers or does not offer at all.",
+          },
+          missingFeatures: {
+            'ai-assistant': {
+              headline: 'AI Limited to Health Score on Higher Plans',
+              body: "Kahunas offers a Health Score AI feature on their Growth plan, but there is no general-purpose coaching AI assistant for programme generation, client analysis, or conversational queries. With Athli's AI add-on ($25/mo), you get Lyra, a full coaching assistant that handles all of these and more, giving you a genuine productivity multiplier for every aspect of coaching.",
+              whyItMatters: 'A coaching-specific AI assistant transforms how you spend your time: less admin, more actual coaching.',
+            },
+            'automation-flows': {
+              headline: 'Only Basic Automations on Premium Plans',
+              body: "Kahunas includes basic automations on their Growth plan, but they lack the depth of a full event-driven automation engine. With Athli's Automations add-on ($20/mo), you can build complex, multi-step sequences triggered by any client event, giving you granular control over your coaching workflows.",
+              whyItMatters: 'Advanced automation flows scale your accountability systems so you can manage more clients without dropping the ball.',
+            },
+            'advanced-workout-builder': {
+              headline: 'No Advanced Workout Builder',
+              body: "Kahunas provides unlimited workout plans with a solid exercise library, but their builder does not support advanced section types like AMRAPs, EMOMs, circuits, or tabatas. On Athli's Pro plan (from $20/mo), the workout builder gives you full control with every section type, custom fields, and a configurable structure that matches how you actually programme.",
+              whyItMatters: 'Your programming should not be limited by your software. Advanced section types let you deliver the training your clients need.',
+            },
+          },
+        },
       },
     },
   },
