@@ -45,7 +45,8 @@ function getNotificationNavigationUrl(notification: CoachNotification): string {
     }
 
     // Check-in notifications - navigate to specific check-in
-    case NOTIFICATION_TYPES.checkin_completed: {
+    case NOTIFICATION_TYPES.checkin_completed:
+    case NOTIFICATION_TYPES.checkin_missed: {
       if (metadata?.checkin_id) {
         return `${baseUrl}/check-in/${metadata.checkin_id}`;
       }
@@ -62,9 +63,11 @@ function getNotificationNavigationUrl(notification: CoachNotification): string {
 
     // Tracking notifications - navigate to respective pages
     case NOTIFICATION_TYPES.metric_logged:
+    case NOTIFICATION_TYPES.metric_missed:
       return `${baseUrl}/metrics`;
 
     case NOTIFICATION_TYPES.habit_logged:
+    case NOTIFICATION_TYPES.habit_missed:
       return `${baseUrl}/habits`;
 
     case NOTIFICATION_TYPES.photo_uploaded:
@@ -176,7 +179,7 @@ export function NotificationSidePanel({ open, onOpenChange }: NotificationSidePa
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{notification.client_name}</p>
-                <p className="text-xs text-muted-foreground truncate">{notification.title}</p>
+                <p className="text-xs text-muted-foreground truncate">{notification.description || notification.title}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                 </p>

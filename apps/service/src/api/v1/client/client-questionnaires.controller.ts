@@ -588,19 +588,20 @@ export const clientQuestionnairesController = {
 
             if (error) return res.status(500).json({ success: false, message: error.message });
 
-            // Send notification for client submissions only
-            if (!isCoach) {
+            // Send notification when the authenticated user is the client submitting their own questionnaire.
+            if (targetClientId === userId) {
                 resolveClientName(targetClientId).then((clientName) => {
-                    if (clientName) {
-                        createCoachNotification({
-                            coachId: targetCoachId,
-                            clientId: targetClientId,
-                            notificationType: NOTIFICATION_TYPES.questionnaire_completed,
-                            title: NOTIFICATION_TITLES.questionnaire_completed,
-                            description: `${clientName} completed a questionnaire`,
-                            metadata: { questionnaire_id: id, name: assignmentDetails.name },
-                        });
-                    }
+                    const firstName = clientName?.split(' ')[0] || 'Client';
+                    createCoachNotification({
+                        coachId: targetCoachId,
+                        clientId: targetClientId,
+                        notificationType: NOTIFICATION_TYPES.questionnaire_completed,
+                        title: NOTIFICATION_TITLES.questionnaire_completed,
+                        description: `${firstName} completed a questionnaire`,
+                        metadata: { questionnaire_id: id, name: assignmentDetails.name },
+                    });
+                }).catch((err) => {
+                    console.error('[QuestionnaireController] notification error:', err);
                 });
             }
 

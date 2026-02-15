@@ -245,7 +245,7 @@ export function UserMenu({
           );
         })()}
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger className={cn("px-3 py-2", isChecklistComplete ? "" : "rounded-b-none")}>
+          <DropdownMenuSubTrigger className="px-3 py-2 rounded-b-none">
             <span className="mr-2 text-lg leading-none">
               {availableLanguages.find((lang) => lang.code === currentLanguage)?.flag || '🇬🇧'}
             </span>
@@ -267,24 +267,23 @@ export function UserMenu({
             </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
-        {/* Section: Get Started (only when checklist is complete) */}
-        {isChecklistComplete && (
-          <>
-            <DropdownMenuItem className="cursor-pointer px-3 py-2 rounded-b-none" asChild>
-              <Link href="/get-started">
-                <Rocket className="mr-2 size-4" />
-                <span>{t('sidebar.links.getStarted')}</span>
-              </Link>
-            </DropdownMenuItem>
-          </>
-        )}
-        {/* Section: Help, Billing & Settings */}
+        {/* Section: Get Started & Help */}
         <DropdownMenuSeparator className="my-0" />
-        <DropdownMenuItem className="cursor-pointer px-3 py-2 rounded-t-none">
+        {isChecklistComplete && (
+          <DropdownMenuItem className="cursor-pointer px-3 py-2 rounded-t-none" asChild>
+            <Link href="/get-started">
+              <Rocket className="mr-2 size-4" />
+              <span>{t('sidebar.links.getStarted')}</span>
+            </Link>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem className={cn("cursor-pointer px-3 py-2", isChecklistComplete ? "" : "rounded-t-none", "rounded-b-none")}>
           <BookOpen className="mr-2 size-4" />
           <span>{t('sidebar.profile.helpArticles')}</span>
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer px-3 py-2" asChild>
+        {/* Section: Billing & Settings */}
+        <DropdownMenuSeparator className="my-0" />
+        <DropdownMenuItem className="cursor-pointer px-3 py-2 rounded-t-none" asChild>
           <Link href="/settings/billing">
             <CreditCard className="mr-2 size-4" />
             <span>{t('sidebar.profile.billing') || 'Billing'}</span>

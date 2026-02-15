@@ -44,7 +44,10 @@ export const coachHabitsController = {
             timezone,
             start_date,
             end_date,
-            schedule_config
+            schedule_config,
+            reminder_enabled,
+            reminder_time,
+            reminder_message,
         } = req.body;
 
         if (!userId) {
@@ -69,7 +72,10 @@ export const coachHabitsController = {
                 timezone: timezone || 'UTC',
                 start_date,
                 end_date,
-                schedule_config: schedule_config || {}
+                schedule_config: schedule_config || {},
+                reminder_enabled: reminder_enabled || false,
+                reminder_time: reminder_time || null,
+                reminder_message: reminder_message || null,
             })
             .select()
             .single();
@@ -199,6 +205,9 @@ export const coachHabitsController = {
                 start_date: original.start_date,
                 end_date: original.end_date,
                 schedule_config: original.schedule_config,
+                reminder_enabled: original.reminder_enabled,
+                reminder_time: original.reminder_time,
+                reminder_message: original.reminder_message,
             })
             .select()
             .single();

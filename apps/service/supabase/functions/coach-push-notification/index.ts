@@ -110,8 +110,9 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to fetch push tokens: ${tokensResult.error.message}`)
     }
 
-    const tokens = tokensResult.data
-    if (!tokens || tokens.length === 0) {
+    // Deduplicate tokens (same device can be registered multiple times)
+    const uniqueTokens = [...new Set((tokensResult.data || []).map((t: PushToken) => t.expo_push_token))]
+    if (uniqueTokens.length === 0) {
       console.log(`No push tokens found for coach ${coach_id}`)
       return new Response(
         JSON.stringify({ success: true, message: 'No push tokens registered' }),
@@ -119,28 +120,50 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Debug logging
-    console.log('[DEBUG] client_id:', notification.client_id)
-    console.log('[DEBUG] clientResult data:', JSON.stringify(clientResult.data))
-    console.log('[DEBUG] clientResult error:', JSON.stringify(clientResult.error))
-    console.log('[DEBUG] notification.metadata:', JSON.stringify(notification.metadata))
-    console.log('[DEBUG] metadata type:', typeof notification.metadata)
-
-    // Build push title with client name, fall back to generic title
+    // Build push title and body
     const clientName = clientResult.data?.name || null
-    console.log('[DEBUG] clientName:', clientName)
-
-    const pushTitle = clientName || title
-    // Use item name from metadata for a specific body, fall back to generic title
+    const firstName = clientName?.split(' ')[0] || 'Client'
     const itemName = notification.metadata?.name || notification.metadata?.workout_name
-    console.log('[DEBUG] itemName:', itemName)
+    const value = notification.metadata?.value
 
-    const pushBody = itemName ? `${title}: ${itemName}` : title
-    console.log('[DEBUG] pushTitle:', pushTitle, '| pushBody:', pushBody)
+    // Map notification_type to a verb for the push title
+    const actionVerbs: Record<string, string> = {
+      habit_logged: 'logged',
+      metric_logged: 'logged',
+      workout_completed: 'completed',
+      checkin_completed: 'completed',
+      questionnaire_completed: 'completed',
+      photo_uploaded: 'uploaded a progress photo',
+      client_connected: 'connected to the app',
+      goal_added: 'added a goal',
+      goal_edited: 'updated a goal',
+      goal_deleted: 'removed a goal',
+      injury_added: 'added an injury',
+      injury_edited: 'updated an injury',
+      injury_deleted: 'removed an injury',
+      workout_missed: 'missed a workout',
+      habit_missed: 'missed a habit log',
+      metric_missed: 'missed a metric log',
+      checkin_missed: 'missed a check-in',
+    }
+
+    const verb = actionVerbs[notification_type] || 'update'
+
+    // Title: "John logged Water Intake" or "John connected to the app"
+    const pushTitle = itemName
+      ? `${firstName} ${verb} ${itemName}`
+      : `${firstName} ${verb}`
+
+    // Body: show value if present, otherwise use the description
+    const pushBody = value != null
+      ? `Value: ${value}`
+      : (description || title)
+
+    console.log(`Push: title="${pushTitle}" body="${pushBody}" tokens=${uniqueTokens.length}`)
 
     // Send push notifications to all registered devices
-    const messages = tokens.map((token: PushToken) => ({
-      to: token.expo_push_token,
+    const messages = uniqueTokens.map((token: string) => ({
+      to: token,
       sound: 'default',
       title: pushTitle,
       body: pushBody,

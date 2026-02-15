@@ -596,24 +596,24 @@ export const clientTrainingsController = {
                 console.error('Failed to insert exercise history:', historyError);
             }
 
-            // Send notification for completed workouts from client requests only
-            if (workoutStatus === 'completed') {
-                const isCoachRequest = !!req.header('x-coach-id');
-                if (!isCoachRequest) {
-                    const workoutName = workoutToSave.program || workoutToSave.title || workoutToSave.name || workoutToSave.workoutName || 'Untitled Workout';
-                    Promise.all([resolveCoachId(clientId), resolveClientName(clientId)]).then(([resolvedCoachId, clientName]) => {
-                        if (resolvedCoachId && clientName) {
-                            createCoachNotification({
-                                coachId: resolvedCoachId,
-                                clientId,
-                                notificationType: NOTIFICATION_TYPES.workout_completed,
-                                title: NOTIFICATION_TITLES.workout_completed,
-                                description: `${clientName} completed ${workoutName} for ${date}`,
-                                metadata: { training_id: instanceKey, workout_name: workoutName, date },
-                            });
-                        }
-                    });
-                }
+            // Send notification when the authenticated user is the client completing their own workout.
+            if (workoutStatus === 'completed' && clientId === userId) {
+                const workoutName = workoutToSave.program || workoutToSave.title || workoutToSave.name || workoutToSave.workoutName || 'Untitled Workout';
+                Promise.all([resolveCoachId(clientId), resolveClientName(clientId)]).then(([resolvedCoachId, clientName]) => {
+                    if (resolvedCoachId) {
+                        const firstName = clientName?.split(' ')[0] || 'Client';
+                        createCoachNotification({
+                            coachId: resolvedCoachId,
+                            clientId,
+                            notificationType: NOTIFICATION_TYPES.workout_completed,
+                            title: NOTIFICATION_TITLES.workout_completed,
+                            description: `${firstName} completed ${workoutName} for ${date}`,
+                            metadata: { training_id: instanceKey, workout_name: workoutName, date },
+                        });
+                    }
+                }).catch((err) => {
+                    console.error('[TrainingController] notification error:', err);
+                });
             }
         }
 

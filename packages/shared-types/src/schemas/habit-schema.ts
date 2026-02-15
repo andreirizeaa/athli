@@ -82,6 +82,10 @@ export interface DBHabit {
     reminder_message?: string;
     [key: string]: unknown;
   };
+  // Dedicated reminder columns
+  reminder_enabled: boolean | null;
+  reminder_time: string | null;
+  reminder_message: string | null;
   created_at: string;
   updated_at: string;
   client_id: string | null;

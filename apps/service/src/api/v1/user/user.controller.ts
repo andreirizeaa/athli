@@ -295,16 +295,19 @@ export class UserController {
 
     // Send notification - this is always a client action
     Promise.all([resolveCoachId(userId), resolveClientName(userId)]).then(([coachId, clientName]) => {
-      if (coachId && clientName) {
+      if (coachId) {
+        const firstName = clientName?.split(' ')[0] || 'Client';
         createCoachNotification({
           coachId,
           clientId: userId,
           notificationType: NOTIFICATION_TYPES.client_connected,
           title: NOTIFICATION_TITLES.client_connected,
-          description: `${clientName} connected to the app`,
+          description: `${firstName} connected to the app`,
           metadata: {},
         });
       }
+    }).catch((err) => {
+      console.error('[UserController] notification error:', err);
     });
 
     success(res, { message: 'Client marked as connected' });

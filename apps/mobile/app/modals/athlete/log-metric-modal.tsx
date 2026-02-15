@@ -15,6 +15,7 @@ import { logMetric } from '@/services/client/client-metric-service';
 import { hexToRgba } from '@/utils/colorUtils';
 import { haptics } from '@/utils/haptics';
 import { Dialog } from '@/components/ui/dialog';
+import { useCelebrationStore } from '@/stores/useCelebrationStore';
 
 export default function AthleteLogMetricModal() {
     const router = useRouter();
@@ -35,9 +36,19 @@ export default function AthleteLogMetricModal() {
     const [showErrorDialog, setShowErrorDialog] = useState(false);
 
     const dateDisplay = useMemo(() => {
-        if (!params.date) return '';
-        const d = new Date(params.date);
-        return d.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const d = new Date();
+        return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    }, []);
+
+    const overdueNotice = useMemo(() => {
+        if (!params.date) return null;
+        const due = new Date(params.date);
+        due.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (due >= today) return null;
+        const dueFormatted = due.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+        return `You missed your log date on ${dueFormatted}. This log will be recorded for today.`;
     }, [params.date]);
 
     const handleBackPress = () => {
@@ -52,12 +63,13 @@ export default function AthleteLogMetricModal() {
             await logMetric({
                 assignmentId: params.assignmentId,
                 value: parseFloat(value),
-                date: new Date(params.date),
+                date: new Date(),
                 clientId: clientProfile.client_id,
                 coachId: clientProfile.coach_id,
             });
 
             haptics.success();
+            useCelebrationStore.getState().triggerConfetti();
             await queryClient.invalidateQueries({ queryKey: ['athlete-tasks'] });
             router.back();
         } catch (error) {
@@ -137,6 +149,12 @@ export default function AthleteLogMetricModal() {
                         onChangeText={() => {}}
                         editable={false}
                     />
+
+                    {overdueNotice && (
+                        <Text style={[styles.overdueNotice, { color: themeColors.mutedText }]}>
+                            {overdueNotice}
+                        </Text>
+                    )}
                 </View>
             </KeyboardAwareScrollView>
 
@@ -190,5 +208,10 @@ const styles = StyleSheet.create({
     },
     form: {
         gap: 16,
+    },
+    overdueNotice: {
+        ...typography.p3,
+        marginTop: -4,
+        paddingHorizontal: 4,
     },
 });

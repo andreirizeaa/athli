@@ -543,6 +543,7 @@ export const enMessages = {
         description: 'Notifications when clients submit forms.',
         options: {
           checkinCompleted: 'Client completed a check-in',
+          checkinMissed: 'Client missed a check-in',
           questionnaireCompleted: 'Client completed a questionnaire',
         },
       },
@@ -551,7 +552,9 @@ export const enMessages = {
         description: 'Notifications related to client tracking activity.',
         options: {
           metricLogged: 'Client logged a metric',
+          metricMissed: 'Client missed a metric log',
           habitLogged: 'Client logged a habit',
+          habitMissed: 'Client missed a habit log',
           photoUploaded: 'Client uploaded a progress photo',
         },
       },
