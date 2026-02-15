@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useTerminology } from '@/hooks/use-terminology';
 import { Plus, Loader2, Check, X, FolderPlus, Move, Folder } from 'lucide-react';
 import { useFeatureAccess, useEntitlements } from '@/lib/permissions';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -86,6 +87,7 @@ function getStorageColorClass(usedBytes: number, limitGb: number): string {
 const FilesPage = () => {
   const t = useTranslations();
   const terminology = useTerminology();
+  const isMobile = useIsMobile();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { hasAccess: hasFileStorageAccess } = useFeatureAccess('file_storage');
@@ -529,7 +531,7 @@ const FilesPage = () => {
   ];
 
   return (
-    <div className="h-full w-full flex flex-col bg-background overflow-auto">
+    <div className={cn("h-full w-full flex flex-col bg-background", !isMobile && "overflow-auto")}>
         <PageHeader
           title={t('files.title')}
           leading={<LibrarySidebarToggle />}

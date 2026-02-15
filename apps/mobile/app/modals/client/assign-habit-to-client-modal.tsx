@@ -5,8 +5,9 @@ import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check, CheckCircle } from 'lucide-react-native';
+import { X, Check, CheckCircle, Folder } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
+import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore } from '@/stores';
@@ -17,10 +18,16 @@ import { fuzzyMatch } from '@/utils/searchUtils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { getAllHabits, type Habit } from '@/services/coach/coach-habit-service';
+import { getAllHabitFolders } from '@/services/coach/coach-habit-folder-service';
 import { assignHabit } from '@/services/client/client-habit-service';
 import { haptics } from '@/utils/haptics';
 import { Dialog } from '@/components/ui/dialog';
 import { HABIT_UNIT_OPTIONS, HABIT_PERIOD_OPTIONS } from '@athli/shared-types';
+import type { HabitFolder } from '@athli/shared-types';
+
+type ListItem =
+    | { type: 'folder'; data: HabitFolder }
+    | { type: 'habit'; data: Habit };
 
 export default function AssignHabitToClientModal() {
     const router = useRouter();
@@ -37,6 +44,7 @@ export default function AssignHabitToClientModal() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedHabitIds, setSelectedHabitIds] = useState<Set<string>>(new Set());
+    const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
     const [showErrorDialog, setShowErrorDialog] = useState(false);
 
@@ -49,18 +57,48 @@ export default function AssignHabitToClientModal() {
         refetchOnWindowFocus: false,
     });
 
-    // Filter habits based on search query
-    const filteredHabits = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return habits;
-        }
+    const { data: folders = [] } = useQuery({
+        queryKey: ['habit-folders'],
+        queryFn: getAllHabitFolders,
+        staleTime: Infinity,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+    });
 
-        const query = searchQuery.toLowerCase().trim();
-        return habits.filter((habit) =>
-            fuzzyMatch(habit.name.toLowerCase(), query) ||
-            (habit.description && fuzzyMatch(habit.description.toLowerCase(), query))
-        );
-    }, [habits, searchQuery]);
+    // Get habit IDs that belong to each folder
+    const folderHabitIds = useMemo(() => {
+        const map: Record<string, string[]> = {};
+        folders.forEach(f => {
+            map[f.id] = habits.filter(h => h.folderId === f.id).map(h => h.id);
+        });
+        return map;
+    }, [folders, habits]);
+
+    // Build combined list: folders first, then unfiled habits
+    const combinedList = useMemo(() => {
+        const lowerQuery = searchQuery.trim().toLowerCase();
+
+        const filteredFolders = lowerQuery
+            ? folders.filter(f => f.name.toLowerCase().includes(lowerQuery))
+            : folders;
+
+        // Only show folders that have items
+        const nonEmptyFolders = filteredFolders.filter(f => (folderHabitIds[f.id]?.length ?? 0) > 0);
+
+        const unfiledHabits = habits.filter(h => !h.folderId);
+        const filteredHabits = lowerQuery
+            ? unfiledHabits.filter(h =>
+                fuzzyMatch(h.name.toLowerCase(), lowerQuery) ||
+                (h.description && fuzzyMatch(h.description.toLowerCase(), lowerQuery))
+            )
+            : unfiledHabits;
+
+        const items: ListItem[] = [
+            ...nonEmptyFolders.map(f => ({ type: 'folder' as const, data: f })),
+            ...filteredHabits.map(h => ({ type: 'habit' as const, data: h })),
+        ];
+        return items;
+    }, [habits, folders, folderHabitIds, searchQuery]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -69,12 +107,18 @@ export default function AssignHabitToClientModal() {
     }, [router]);
 
     const handleSave = useCallback(async () => {
-        if (selectedHabitIds.size === 0 || !clientId || !coachId) return;
+        // Collect all individual habit IDs: directly selected + unpacked from folders
+        const allHabitIds = new Set(selectedHabitIds);
+        selectedFolderIds.forEach(folderId => {
+            folderHabitIds[folderId]?.forEach(id => allHabitIds.add(id));
+        });
+
+        if (allHabitIds.size === 0 || !clientId || !coachId) return;
 
         setIsSaving(true);
         try {
             await assignHabit({
-                habitIds: Array.from(selectedHabitIds),
+                habitIds: Array.from(allHabitIds),
                 clientId,
                 coachId,
             });
@@ -88,9 +132,9 @@ export default function AssignHabitToClientModal() {
         } finally {
             setIsSaving(false);
         }
-    }, [handleClose, selectedHabitIds, clientId, coachId, refreshSection, t]);
+    }, [handleClose, selectedHabitIds, selectedFolderIds, folderHabitIds, clientId, coachId, refreshSection]);
 
-    const canSave = selectedHabitIds.size > 0 && !isSaving;
+    const canSave = (selectedHabitIds.size > 0 || selectedFolderIds.size > 0) && !isSaving;
 
     const handleHabitToggle = useCallback((habitId: string) => {
         setSelectedHabitIds((prev) => {
@@ -99,6 +143,18 @@ export default function AssignHabitToClientModal() {
                 newSet.delete(habitId);
             } else {
                 newSet.add(habitId);
+            }
+            return newSet;
+        });
+    }, []);
+
+    const handleFolderToggle = useCallback((folderId: string) => {
+        setSelectedFolderIds((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(folderId)) {
+                newSet.delete(folderId);
+            } else {
+                newSet.add(folderId);
             }
             return newSet;
         });
@@ -178,18 +234,84 @@ export default function AssignHabitToClientModal() {
             {/* Content */}
             <View style={styles.content}>
                 <FlashList
-                    data={filteredHabits}
-                    keyExtractor={(item) => item.id}
+                    data={combinedList}
+                    keyExtractor={(item) => item.type === 'folder' ? `folder-${item.data.id}` : item.data.id}
                     renderItem={({ item, index }) => {
-                        const isSelected = selectedHabitIds.has(item.id);
-                        const isLastItem = index === filteredHabits.length - 1;
-                        const unitLabel = getUnitLabel(item.unit);
-                        const periodLabel = getPeriodLabel(item.period);
+                        const isLastItem = index === combinedList.length - 1;
+
+                        if (item.type === 'folder') {
+                            const folder = item.data;
+                            const isSelected = selectedFolderIds.has(folder.id);
+                            const itemCount = folderHabitIds[folder.id]?.length ?? 0;
+                            const countLabel = itemCount === 1 ? '1 habit' : `${itemCount} habits`;
+
+                            return (
+                                <View>
+                                    <PressableOpacity
+                                        onPress={() => handleFolderToggle(folder.id)}
+                                        style={styles.rowContent}
+                                    >
+                                        <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                                            <Folder {...({ size: 24, color: themeColors.text } as any)} />
+                                        </SquircleView>
+                                        <View style={styles.textContent}>
+                                            <Text
+                                                style={[styles.name, { color: themeColors.text }]}
+                                                numberOfLines={1}
+                                            >
+                                                {folder.name}
+                                            </Text>
+                                            <View style={styles.metaRow}>
+                                                <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                                                    <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                                        Folder
+                                                    </Text>
+                                                </View>
+                                                <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                                                    <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                                        {countLabel}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                        <View
+                                            style={[
+                                                styles.checkbox,
+                                                {
+                                                    backgroundColor: isSelected ? themeColors.primary : 'transparent',
+                                                    borderColor: isSelected ? themeColors.primary : themeColors.border,
+                                                },
+                                            ]}
+                                        >
+                                            {isSelected && (
+                                                <Check {...({ size: 16, color: themeColors.primaryForeground } as any)} />
+                                            )}
+                                        </View>
+                                    </PressableOpacity>
+
+                                    {!isLastItem && (
+                                        <View style={styles.separatorContainer}>
+                                            <View
+                                                style={[
+                                                    styles.separator,
+                                                    { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                                                ]}
+                                            />
+                                        </View>
+                                    )}
+                                </View>
+                            );
+                        }
+
+                        const habit = item.data;
+                        const isSelected = selectedHabitIds.has(habit.id);
+                        const unitLabel = getUnitLabel(habit.unit);
+                        const periodLabel = getPeriodLabel(habit.period);
 
                         return (
                             <View>
                                 <PressableOpacity
-                                    onPress={() => handleHabitToggle(item.id)}
+                                    onPress={() => handleHabitToggle(habit.id)}
                                     style={styles.rowContent}
                                 >
                                     <View style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
@@ -205,16 +327,19 @@ export default function AssignHabitToClientModal() {
                                             style={[styles.name, { color: themeColors.text }]}
                                             numberOfLines={1}
                                         >
-                                            {item.name}
+                                            {habit.name}
                                         </Text>
                                         <View style={styles.metaRow}>
-                                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                                                {item.amount} {unitLabel}
-                                            </Text>
-                                            <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                                            <Text style={[styles.metaText, { color: themeColors.mutedText }]} numberOfLines={1}>
-                                                {periodLabel}
-                                            </Text>
+                                            <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                                                <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                                    {habit.amount} {unitLabel}
+                                                </Text>
+                                            </View>
+                                            <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                                                <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                                    {periodLabel}
+                                                </Text>
+                                            </View>
                                         </View>
                                     </View>
                                     <View
@@ -330,13 +455,17 @@ const styles = StyleSheet.create({
     metaRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 8,
     },
-    metaText: {
-        ...typography.p3,
+    pill: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 12,
+        borderWidth: 1,
     },
-    metaDot: {
-        marginHorizontal: 6,
-        ...typography.p3,
+    pillText: {
+        ...typography.p4,
+        fontWeight: '500',
     },
     checkbox: {
         width: 24,

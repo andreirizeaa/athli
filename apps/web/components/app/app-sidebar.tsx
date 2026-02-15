@@ -316,55 +316,69 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
               <SidebarMenuItem>
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={activePath.startsWith('/library')}
-                      tooltip={isCollapsed ? t('sidebar.links.library') : undefined}
-                      className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
-                    >
-                      <Link href="/library/training/workouts" onClick={handleMobileNavClick}>
-                        <Library className="shrink-0" />
-                        <span className="flex-1">{t('sidebar.links.library')}</span>
-                        {!isCollapsed && (
-                          <ChevronRight className="!size-3 shrink-0 opacity-50 group-data-[collapsible=icon]:hidden" />
-                        )}
-                      </Link>
-                    </SidebarMenuButton>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="right"
-                    align="start"
-                    sideOffset={isCollapsed ? 0 : -2}
-                    className="flex flex-col px-0 py-1.5 min-w-[160px]"
+                {isMobile ? (
+                  <SidebarMenuButton
+                    asChild
+                    isActive={activePath.startsWith('/library')}
+                    className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
                   >
-                    <div className="flex items-center justify-between px-3 pb-1.5">
-                      <span className="text-xs font-semibold text-background/70 uppercase">
-                        {t('sidebar.links.library')}
-                      </span>
-                      <Library className="size-4 text-background/70" />
-                    </div>
-                    <div className="h-px w-full bg-background/20 mb-1" />
-                    {librarySections.map((section) => {
-                      const isSectionActive = activePath.startsWith(section.matchPath);
-                      return (
-                        <Link
-                          key={section.id}
-                          href={section.href}
-                          onClick={handleMobileNavClick}
-                          className={cn(
-                            'mx-1.5 px-2 py-2 text-[15px] rounded transition-colors',
-                            'hover:bg-background/20',
-                            isSectionActive && 'bg-background/20 font-medium'
+                    <Link href="/library/training/workouts" onClick={handleMobileNavClick}>
+                      <Library className="shrink-0" />
+                      <span className="flex-1">{t('sidebar.links.library')}</span>
+                      <ChevronRight className="!size-3 shrink-0 opacity-50 group-data-[collapsible=icon]:hidden" />
+                    </Link>
+                  </SidebarMenuButton>
+                ) : (
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={activePath.startsWith('/library')}
+                        tooltip={isCollapsed ? t('sidebar.links.library') : undefined}
+                        className="text-sm hover:bg-[var(--primary)]/10 hover:text-foreground"
+                      >
+                        <Link href="/library/training/workouts" onClick={handleMobileNavClick}>
+                          <Library className="shrink-0" />
+                          <span className="flex-1">{t('sidebar.links.library')}</span>
+                          {!isCollapsed && (
+                            <ChevronRight className="!size-3 shrink-0 opacity-50 group-data-[collapsible=icon]:hidden" />
                           )}
-                        >
-                          {t(section.labelKey)}
                         </Link>
-                      );
-                    })}
-                  </TooltipContent>
-                </Tooltip>
+                      </SidebarMenuButton>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="right"
+                      align="start"
+                      sideOffset={isCollapsed ? 0 : -2}
+                      className="flex flex-col px-0 py-1.5 min-w-[160px]"
+                    >
+                      <div className="flex items-center justify-between px-3 pb-1.5">
+                        <span className="text-xs font-semibold text-background/70 uppercase">
+                          {t('sidebar.links.library')}
+                        </span>
+                        <Library className="size-4 text-background/70" />
+                      </div>
+                      <div className="h-px w-full bg-background/20 mb-1" />
+                      {librarySections.map((section) => {
+                        const isSectionActive = activePath.startsWith(section.matchPath);
+                        return (
+                          <Link
+                            key={section.id}
+                            href={section.href}
+                            onClick={handleMobileNavClick}
+                            className={cn(
+                              'mx-1.5 px-2 py-2 text-[15px] rounded transition-colors',
+                              'hover:bg-background/20',
+                              isSectionActive && 'bg-background/20 font-medium'
+                            )}
+                          >
+                            {t(section.labelKey)}
+                          </Link>
+                        );
+                      })}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>

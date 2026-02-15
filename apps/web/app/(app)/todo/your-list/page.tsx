@@ -232,7 +232,7 @@ const YourListPage = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <>
       <DataGrid
         data={filteredAndSortedYourListTasks}
         columns={yourListColumns}
@@ -300,7 +300,7 @@ const YourListPage = () => {
         onSave={handleSaveEditTask}
         onDelete={handleDeleteTask}
       />
-    </div>
+    </>
   );
 };
 

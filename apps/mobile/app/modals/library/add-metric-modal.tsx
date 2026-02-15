@@ -29,6 +29,7 @@ import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
 import { createMetric, updateMetric } from '@/services/coach/coach-metric-service';
+import { moveMetric } from '@/services/coach/coach-metric-folder-service';
 import { updateMetric as updateClientMetric, addMetric as addClientMetric, convertMetricScheduleToCron } from '@/services/client/client-metric-service';
 import { useClientDetailStore } from '@/stores';
 
@@ -49,6 +50,7 @@ export default function AddMetricModal() {
         unit?: string;
         description?: string;
         schedule_config?: string; // JSON stringified schedule
+        folderId?: string;
         // Client assignment context (when editing from client detail)
         isClientAssignment?: string;
         assignmentId?: string;
@@ -155,8 +157,17 @@ export default function AddMetricModal() {
             console.log('[AddMetricModal] ➕ Adding to coach library');
             return createMetric(data);
         },
-        onSuccess: async () => {
+        onSuccess: async (result) => {
             console.log('[AddMetricModal] 🎉 Save successful');
+            // If folderId is provided and we just created a new metric, move it to the folder
+            if (!isEditing && params.folderId && result?.id) {
+                try {
+                    await moveMetric(result.id, params.folderId);
+                    await queryClient.invalidateQueries({ queryKey: ['metrics-in-folder', params.folderId] });
+                } catch (e) {
+                    console.error('[AddMetricModal] Failed to move metric to folder:', e);
+                }
+            }
             // Refetch to update the cache and trigger Zustand store update
             if (isClientAssignment || isClientPrivateMetric) {
                 await refreshClientMetrics('metrics');

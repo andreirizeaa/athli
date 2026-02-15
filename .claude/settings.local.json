@@ -184,7 +184,8 @@
       "Bash(npm info:*)",
       "WebFetch(domain:bxgbbpiswmauqdqkkaha.supabase.co)",
       "Bash(npx turbo run build:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(wc:*)"
     ]
   }
 }

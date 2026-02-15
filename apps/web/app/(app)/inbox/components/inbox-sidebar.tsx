@@ -32,6 +32,7 @@ interface InboxSidebarProps {
     showArchivedConversations: boolean;
     setShowArchivedConversations: (value: boolean) => void;
     isLoading?: boolean;
+    isMobile?: boolean;
 
     onOpenBroadcast: () => void;
     onContactClick: (contactId: string) => void;
@@ -47,6 +48,7 @@ export const InboxSidebar = React.memo(function InboxSidebar({
     showArchivedConversations,
     setShowArchivedConversations,
     isLoading,
+    isMobile,
 
     onOpenBroadcast,
     onContactClick,
@@ -54,11 +56,15 @@ export const InboxSidebar = React.memo(function InboxSidebar({
     const t = useTranslations();
     const router = useRouter();
 
+    // On mobile, sidebar is always full-width and never collapsed
+    const effectiveCollapsed = isMobile ? false : isSidebarCollapsed;
+
     return (
         <div
             className={cn(
-                'bg-background h-full overflow-hidden flex flex-col border-r transition-all duration-300 ease-in-out',
-                isSidebarCollapsed ? 'w-[64px]' : 'w-[320px]'
+                'bg-background h-full overflow-hidden flex flex-col transition-all duration-300 ease-in-out',
+                isMobile ? 'w-full' : 'border-r',
+                !isMobile && (effectiveCollapsed ? 'w-[64px]' : 'w-[320px]')
             )}
         >
             <div className="flex flex-col h-full grow min-w-0">
@@ -69,56 +75,60 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                         <div
                             className={cn(
                                 'absolute inset-0 flex items-center justify-between transition-all duration-300',
-                                isSidebarCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'
+                                effectiveCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'
                             )}
                         >
                             <h2 className="text-xl font-semibold whitespace-nowrap">
                                 {t('messages.title')}
                             </h2>
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="size-8 text-muted-foreground hover:text-foreground shrink-0"
-                                            onClick={() => setIsSidebarCollapsed(true)}
-                                        >
-                                            <PanelLeftClose className="size-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="right">
-                                        <p>Close inbox panel</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
+                            {!isMobile && (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-8 text-muted-foreground hover:text-foreground shrink-0"
+                                                onClick={() => setIsSidebarCollapsed(true)}
+                                            >
+                                                <PanelLeftClose className="size-4" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="right">
+                                            <p>Close inbox panel</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            )}
                         </div>
 
-                        {/* Collapsed: Open Button (Same Position) */}
-                        <div
-                            className={cn(
-                                'absolute inset-0 flex items-center transition-all duration-300',
-                                isSidebarCollapsed ? 'opacity-100 visible' : 'opacity-0 invisible'
-                            )}
-                        >
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="size-8 text-muted-foreground hover:text-foreground shrink-0"
-                                            onClick={() => setIsSidebarCollapsed(false)}
-                                        >
-                                            <PanelLeftOpen className="size-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="right">
-                                        <p>Open inbox panel</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        </div>
+                        {/* Collapsed: Open Button (Same Position) - hidden on mobile */}
+                        {!isMobile && (
+                            <div
+                                className={cn(
+                                    'absolute inset-0 flex items-center transition-all duration-300',
+                                    effectiveCollapsed ? 'opacity-100 visible' : 'opacity-0 invisible'
+                                )}
+                            >
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-8 text-muted-foreground hover:text-foreground shrink-0"
+                                                onClick={() => setIsSidebarCollapsed(false)}
+                                            >
+                                                <PanelLeftOpen className="size-4" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="right">
+                                            <p>Open inbox panel</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </div>
+                        )}
                     </div>
 
                     {/* Broadcast Button Row (Fixed Height) */}
@@ -127,7 +137,7 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                         <div
                             className={cn(
                                 'absolute inset-0 flex items-center transition-all duration-300',
-                                isSidebarCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'
+                                effectiveCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'
                             )}
                         >
                             <Button
@@ -140,31 +150,33 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                             </Button>
                         </div>
 
-                        {/* Collapsed: Icon Button */}
-                        <div
-                            className={cn(
-                                'absolute inset-0 flex items-center transition-all duration-300',
-                                isSidebarCollapsed ? 'opacity-100 visible' : 'opacity-0 invisible'
-                            )}
-                        >
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="size-8 text-muted-foreground hover:text-foreground shrink-0"
-                                            onClick={onOpenBroadcast}
-                                        >
-                                            <Megaphone className="size-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="right">
-                                        <p>{t('messages.broadcast')}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        </div>
+                        {/* Collapsed: Icon Button - hidden on mobile */}
+                        {!isMobile && (
+                            <div
+                                className={cn(
+                                    'absolute inset-0 flex items-center transition-all duration-300',
+                                    effectiveCollapsed ? 'opacity-100 visible' : 'opacity-0 invisible'
+                                )}
+                            >
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-8 text-muted-foreground hover:text-foreground shrink-0"
+                                                onClick={onOpenBroadcast}
+                                            >
+                                                <Megaphone className="size-4" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="right">
+                                            <p>{t('messages.broadcast')}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </div>
+                        )}
                     </div>
 
                     {/* Search Row: Input or Icon (Fixed Height) */}
@@ -173,7 +185,7 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                         <div
                             className={cn(
                                 'absolute inset-0 transition-all duration-300 flex items-center gap-1',
-                                isSidebarCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'
+                                effectiveCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'
                             )}
                         >
                             <div className="relative flex-1">
@@ -221,22 +233,24 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                             </Popover>
                         </div>
 
-                        {/* Collapsed: Search Icon (Same Position) */}
-                        <div
-                            className={cn(
-                                'absolute inset-0 flex items-center transition-all duration-300',
-                                isSidebarCollapsed ? 'opacity-100 visible' : 'opacity-0 invisible'
-                            )}
-                        >
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-8 text-muted-foreground hover:text-foreground shrink-0"
-                                onClick={() => setIsSidebarCollapsed(false)}
+                        {/* Collapsed: Search Icon (Same Position) - hidden on mobile */}
+                        {!isMobile && (
+                            <div
+                                className={cn(
+                                    'absolute inset-0 flex items-center transition-all duration-300',
+                                    effectiveCollapsed ? 'opacity-100 visible' : 'opacity-0 invisible'
+                                )}
                             >
-                                <Search className="size-4" />
-                            </Button>
-                        </div>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-8 text-muted-foreground hover:text-foreground shrink-0"
+                                    onClick={() => setIsSidebarCollapsed(false)}
+                                >
+                                    <Search className="size-4" />
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div className="flex-1 overflow-auto pt-2">
@@ -251,7 +265,7 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                                     contact={contact}
                                     key={contact.id}
                                     active={selectedContactId === contact.id}
-                                    isCollapsed={isSidebarCollapsed}
+                                    isCollapsed={effectiveCollapsed}
 
                                     onClick={() => {
                                         onContactClick(contact.id);

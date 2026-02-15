@@ -177,7 +177,7 @@ export function SearchComponent() {
       {/* Mobile trigger */}
       <div className="block lg:hidden">
         <Button size="icon" variant="ghost" onClick={() => setIsSearchOpen(true)}>
-          <Search className="size-4" />
+          <Search className="-ml-12 size-4" />
         </Button>
       </div>
 

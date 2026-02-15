@@ -125,8 +125,7 @@ const AthliAssistantPage = () => {
 
   return (
     <FeatureGate feature="ai_todo_list">
-      <div className="h-full w-full flex flex-col">
-        <DataGrid
+      <DataGrid
           data={filteredAthliAssistantTasks}
           columns={athliAssistantColumns}
           getRowId={(row) => row.id}
@@ -163,7 +162,6 @@ const AthliAssistantPage = () => {
           />
         }
       />
-      </div>
     </FeatureGate>
   );
 };

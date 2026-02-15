@@ -4,6 +4,7 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLibrarySidebar } from './library-sidebar-context';
+import { cn } from '@/lib/general/utils';
 
 export function LibrarySidebarToggle() {
   const { isOpen, isMobile, toggle } = useLibrarySidebar();
@@ -22,7 +23,7 @@ export function LibrarySidebarToggle() {
           variant="ghost"
           size="icon"
           onClick={toggle}
-          className="h-8 w-8"
+          className={cn("h-8 w-8", isMobile && "-ml-[5px]")}
           aria-label={showOpenIcon ? openLabel : closeLabel}
         >
           {showOpenIcon ? (

@@ -36,6 +36,7 @@ import { Separator } from '@/components/ui/separator';
 import { SearchBar } from '@/components/ui/search-bar';
 import { hexToRgba } from '@/utils/colorUtils';
 import { addHabit, editHabit } from '@/services/coach/coach-habit-service';
+import { moveHabit } from '@/services/coach/coach-habit-folder-service';
 import { updateHabit as updateClientHabit, addHabit as addClientHabit } from '@/services/client/client-habit-service';
 import { useClientDetailStore } from '@/stores';
 
@@ -84,6 +85,7 @@ export default function AddHabitModal() {
         reminderTime?: string;
         reminderMessage?: string;
         duration?: string;
+        folderId?: string;
         // Client assignment context (when editing from client detail)
         isClientAssignment?: string;
         assignmentId?: string;
@@ -167,6 +169,15 @@ export default function AddHabitModal() {
         },
         onSuccess: async (result) => {
             console.log('[AddHabitModal] 🎉 Save successful, result:', result);
+            // If folderId is provided and we just created a new habit, move it to the folder
+            if (!isEditing && params.folderId && result?.id) {
+                try {
+                    await moveHabit(result.id, params.folderId);
+                    await queryClient.invalidateQueries({ queryKey: ['habits-in-folder', params.folderId] });
+                } catch (e) {
+                    console.error('[AddHabitModal] Failed to move habit to folder:', e);
+                }
+            }
             // Refetch to update the cache and trigger Zustand store update
             if (isClientAssignment || isClientPrivateHabit) {
                 console.log('[AddHabitModal] 🔄 Refreshing client habits');

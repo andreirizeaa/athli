@@ -1,12 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { ChevronRight, CheckCircle, UserPlus, Trash2 } from 'lucide-react-native';
+import { ChevronRight, CheckCircle, UserPlus, Trash2, Folder, Pencil, ArrowRightLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { PressableScale } from 'pressto';
 import SquircleView from 'react-native-fast-squircle';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { FlashList } from '@shopify/flash-list';
+import type { Habit, HabitFolder } from '@athli/shared-types';
 
 import { typography } from '@/constants/typography';
 import { haptics } from '@/utils/haptics';
@@ -19,10 +20,16 @@ import { useLibraryTab } from '@/stores';
 import { useLibraryTabList } from '@/hooks/use-library-tab-list';
 import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/ui/dropdown-menu';
 import { getAllHabits, deleteHabit, duplicateHabit } from '@/services/coach/coach-habit-service';
+import { getAllHabitFolders, deleteHabitFolder, moveHabit } from '@/services/coach/coach-habit-folder-service';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Dialog } from '@/components/ui/dialog';
+import { SelectInput } from '@/components/ui/form-inputs/select-input';
 import { UpgradeDialog } from '@/components/permissions/upgrade-dialog';
 import { HABIT_UNIT_OPTIONS, HABIT_PERIOD_OPTIONS } from '@athli/shared-types';
+
+type ListItem =
+  | { type: 'folder'; data: HabitFolder }
+  | { type: 'habit'; data: Habit };
 
 export const HabitsTab = () => {
   const { colors: themeColors } = useThemePreference();
@@ -41,9 +48,14 @@ export const HabitsTab = () => {
   // Upgrade dialog state
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
-  // Dialog state
+  // Error dialog state
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Move dialog state
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [moveTargetFolder, setMoveTargetFolder] = useState<string | null>(null);
+  const [movingItemId, setMovingItemId] = useState<string | null>(null);
 
   // Fetch habits directly with TanStack Query
   const { data: habits = [], refetch } = useQuery({
@@ -58,42 +70,52 @@ export const HabitsTab = () => {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch folders
+  const { data: folders = [] } = useQuery({
+    queryKey: ['habit-folders'],
+    queryFn: getAllHabitFolders,
+    enabled: isAuthenticated,
+  });
+
   const { ListHeaderComponent, refreshControl, searchQuery, isRowOpen, closeOpenRow } = useLibraryTabList({
     searchPlaceholderKey: 'library.searchPlaceholders.habits',
     refetch,
   });
 
-  // Filter habits based on search query
-  const filteredHabits = useMemo(() => {
-    if (!searchQuery.trim()) return habits;
-    const lowerQuery = searchQuery.toLowerCase();
-    return habits.filter(habit =>
-      habit.name.toLowerCase().includes(lowerQuery) ||
-      habit.unit?.toLowerCase().includes(lowerQuery) ||
-      habit.period?.toLowerCase().includes(lowerQuery)
-    );
-  }, [habits, searchQuery]);
+  // Build combined list: folders first, then unfiled habits
+  const combinedList = useMemo(() => {
+    const lowerQuery = searchQuery.trim().toLowerCase();
+    const filteredFolders = lowerQuery
+      ? folders.filter(f => f.name.toLowerCase().includes(lowerQuery))
+      : folders;
+    const unfiledHabits = habits.filter(h => !h.folderId);
+    const filteredHabits = lowerQuery
+      ? unfiledHabits.filter(habit =>
+          habit.name.toLowerCase().includes(lowerQuery) ||
+          habit.unit?.toLowerCase().includes(lowerQuery) ||
+          habit.period?.toLowerCase().includes(lowerQuery)
+        )
+      : unfiledHabits;
+
+    const items: ListItem[] = [
+      ...filteredFolders.map(f => ({ type: 'folder' as const, data: f })),
+      ...filteredHabits.map(h => ({ type: 'habit' as const, data: h })),
+    ];
+    return items;
+  }, [habits, folders, searchQuery]);
 
   // Delete mutation with optimistic updates
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteHabit({ id }),
     onMutate: async (id) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['habits'] });
-
-      // Snapshot previous value
       const previousHabits = queryClient.getQueryData<typeof habits>(['habits']);
-
-      // Optimistically remove from cache
       queryClient.setQueryData<typeof habits>(['habits'], (old) =>
         old?.filter((h) => h.id !== id) ?? []
       );
-
-      // Return context with snapshot for rollback
       return { previousHabits };
     },
     onError: (error: Error, _id, context) => {
-      // Rollback on error
       if (context?.previousHabits) {
         queryClient.setQueryData(['habits'], context.previousHabits);
       }
@@ -102,11 +124,58 @@ export const HabitsTab = () => {
       setShowErrorDialog(true);
     },
     onSettled: () => {
-      // Refetch to ensure server state
       queryClient.invalidateQueries({ queryKey: ['habits'] });
     },
     onSuccess: () => {
       haptics.success();
+    },
+  });
+
+  // Delete folder mutation
+  const deleteFolderMutation = useMutation({
+    mutationFn: (id: string) => deleteHabitFolder(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['habit-folders'] });
+      queryClient.invalidateQueries({ queryKey: ['habits'] });
+      haptics.success();
+    },
+    onError: (error: Error) => {
+      haptics.error();
+      setErrorMessage(error.message || t('general.errorDeleting'));
+      setShowErrorDialog(true);
+    },
+  });
+
+  // Move mutation with optimistic update
+  const moveMutation = useMutation({
+    mutationFn: ({ habitId, folderId }: { habitId: string; folderId: string | null }) =>
+      moveHabit(habitId, folderId),
+    onMutate: async ({ habitId, folderId }) => {
+      await queryClient.cancelQueries({ queryKey: ['habits'] });
+      const previousHabits = queryClient.getQueryData<Habit[]>(['habits']);
+      queryClient.setQueryData<Habit[]>(['habits'], (old) =>
+        old?.map(h => h.id === habitId ? { ...h, folderId } : h) ?? []
+      );
+      return { previousHabits };
+    },
+    onSuccess: () => {
+      haptics.success();
+      setShowMoveDialog(false);
+      setMovingItemId(null);
+      setMoveTargetFolder(null);
+    },
+    onError: (error: Error, _variables, context) => {
+      if (context?.previousHabits) {
+        queryClient.setQueryData(['habits'], context.previousHabits);
+      }
+      haptics.error();
+      setErrorMessage(error.message || t('general.errorSaving'));
+      setShowErrorDialog(true);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['habits'] });
+      queryClient.invalidateQueries({ queryKey: ['habit-folders'] });
+      queryClient.invalidateQueries({ queryKey: ['habits-in-folder'] });
     },
   });
 
@@ -124,13 +193,11 @@ export const HabitsTab = () => {
     },
   });
 
-  const handleHabitPress = (item: typeof filteredHabits[0]) => {
-    // If a row is open, just close it and prevent navigation
+  const handleHabitPress = (item: Habit) => {
     if (isRowOpen) {
       closeOpenRow();
       return;
     }
-
     closeOpenRow();
     router.push({
       pathname: '/modals/library/add-habit-modal',
@@ -148,20 +215,43 @@ export const HabitsTab = () => {
     });
   };
 
-  const handleAssign = (item: typeof filteredHabits[0]) => {
-    // If a row is open, just close it and prevent navigation
+  const handleAssign = (item: Habit) => {
     if (isRowOpen) {
       closeOpenRow();
       return;
     }
-
-    // Feature gate: show upgrade dialog if no access
     if (!hasHabitsAccess) {
       setShowUpgradeDialog(true);
       return;
     }
-
     router.push(`/modals/shared/assign-to-clients-modal?type=habit&itemIds=${item.id}`);
+  };
+
+  const handleMove = (itemId: string) => {
+    setMovingItemId(itemId);
+    setMoveTargetFolder(null);
+    setShowMoveDialog(true);
+  };
+
+  const handleConfirmMove = () => {
+    if (!movingItemId) return;
+    const folderId = moveTargetFolder === '__home__' ? null : moveTargetFolder;
+    moveMutation.mutate({ habitId: movingItemId, folderId });
+  };
+
+  const handleFolderPress = (folder: HabitFolder) => {
+    if (isRowOpen) {
+      closeOpenRow();
+      return;
+    }
+    router.push(`/library/habit-folder/${folder.id}` as any);
+  };
+
+  const handleEditFolder = (folder: HabitFolder) => {
+    router.push({
+      pathname: '/modals/library/create-folder-modal',
+      params: { type: 'habits', editingId: folder.id, name: folder.name },
+    } as any);
   };
 
   // Prefetch clients when long press happens to make modal open instantly
@@ -170,8 +260,7 @@ export const HabitsTab = () => {
       queryKey: ['clients'],
       queryFn: async () => {
         const { getClients } = await import('@/services/coach/coach-client-service');
-        const data = await getClients();
-        return data;
+        return getClients();
       },
     });
   }, [queryClient]);
@@ -192,36 +281,112 @@ export const HabitsTab = () => {
     return option?.label || value;
   };
 
-  const renderItem = useCallback(({ item, index }: { item: typeof filteredHabits[0]; index: number }) => {
-    const isLastItem = index === filteredHabits.length - 1;
-    const unitLabel = getUnitLabel(item.unit);
-    const periodLabel = getPeriodLabel(item.period);
+  const moveOptions = useMemo(() => [
+    { value: '__home__' as string, label: 'Home (No folder)' },
+    ...folders.map(f => ({ value: f.id, label: f.name })),
+  ], [folders]);
+
+  const renderItem = useCallback(({ item, index }: { item: ListItem; index: number }) => {
+    const isLastItem = index === combinedList.length - 1;
+
+    if (item.type === 'folder') {
+      const folder = item.data;
+      const itemCount = habits.filter(h => h.folderId === folder.id).length;
+      const countLabel = itemCount === 0 ? 'Empty' : itemCount === 1 ? '1 habit' : `${itemCount} habits`;
+      const folderOptions: DropdownMenuOption[] = [
+        {
+          label: 'Edit Folder',
+          icon: { sf: 'pencil', IconComponent: Pencil },
+          onPress: () => handleEditFolder(folder),
+        },
+        {
+          label: 'Delete Folder',
+          icon: { sf: 'trash', IconComponent: Trash2 },
+          destructive: true,
+          onPress: () => deleteFolderMutation.mutateAsync(folder.id),
+        },
+      ];
+
+      return (
+        <View>
+          <ContextMenuWrapper options={folderOptions}>
+            <PressableScale
+              style={styles.rowWrapper}
+              onPress={() => handleFolderPress(folder)}
+            >
+              <View style={[styles.rowContent, { backgroundColor: 'transparent' }]}>
+                <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                  <Folder {...({ size: 24, color: themeColors.text } as any)} />
+                </SquircleView>
+                <View style={styles.textContent}>
+                  <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
+                    {folder.name}
+                  </Text>
+                  <View style={styles.metaRow}>
+                    <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                      <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                        Folder
+                      </Text>
+                    </View>
+                    <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                      <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                        {countLabel}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+              </View>
+            </PressableScale>
+          </ContextMenuWrapper>
+
+          {!isLastItem && (
+            <View style={styles.separatorContainer}>
+              <View
+                style={[styles.separator, { backgroundColor: themeColors.mutedText, opacity: 0.2 }]}
+              />
+            </View>
+          )}
+          {isLastItem && <View style={{ height: 24 }} />}
+        </View>
+      );
+    }
+
+    // Habit row
+    const habit = item.data;
+    const unitLabel = getUnitLabel(habit.unit);
+    const periodLabel = getPeriodLabel(habit.period);
 
     const dropdownOptions: DropdownMenuOption[] = [
       {
         label: terminology.assignToPlural,
         icon: { sf: 'person.badge.plus', IconComponent: UserPlus },
-        onPress: () => handleAssign(item),
+        onPress: () => handleAssign(habit),
       },
+      ...(folders.length > 0 ? [{
+        label: 'Move to Folder',
+        icon: { sf: 'folder', IconComponent: ArrowRightLeft },
+        onPress: () => handleMove(habit.id),
+      }] : []),
       {
         label: `${t('general.delete')} Habit`,
         icon: { sf: 'trash', IconComponent: Trash2 },
         destructive: true,
-        onPress: () => deleteMutation.mutateAsync(item.id),
+        onPress: () => deleteMutation.mutateAsync(habit.id),
       }
     ];
 
     return (
       <View>
         <SwipeableRow
-          onDelete={() => deleteMutation.mutateAsync(item.id)}
+          onDelete={() => deleteMutation.mutateAsync(habit.id)}
           onOpen={registerOpenRow}
           deleteConfirmTitle={t('general.deleteHabit')}
         >
           <ContextMenuWrapper options={dropdownOptions} onLongPress={handleLongPress}>
             <PressableScale
               style={styles.rowWrapper}
-              onPress={() => handleHabitPress(item)}
+              onPress={() => handleHabitPress(habit)}
             >
               <View style={[styles.rowContent, { backgroundColor: 'transparent' }]}>
                 <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
@@ -234,12 +399,12 @@ export const HabitsTab = () => {
                 </SquircleView>
                 <View style={styles.textContent}>
                   <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
-                    {item.name}
+                    {habit.name}
                   </Text>
                   <View style={styles.metaRow}>
                     <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
                       <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
-                        {item.amount} {unitLabel}
+                        {habit.amount} {unitLabel}
                       </Text>
                     </View>
                     <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
@@ -258,25 +423,21 @@ export const HabitsTab = () => {
         {!isLastItem && (
           <View style={styles.separatorContainer}>
             <View
-              style={[
-                styles.separator,
-                { backgroundColor: themeColors.mutedText, opacity: 0.2 },
-              ]}
+              style={[styles.separator, { backgroundColor: themeColors.mutedText, opacity: 0.2 }]}
             />
           </View>
         )}
-
         {isLastItem && <View style={{ height: 24 }} />}
       </View>
     );
-  }, [filteredHabits.length, themeColors, t, deleteMutation, registerOpenRow, handleHabitPress, handleAssign, getUnitLabel, getPeriodLabel]);
+  }, [combinedList.length, themeColors, t, deleteMutation, deleteFolderMutation, registerOpenRow, handleLongPress, folders, habits, terminology]);
 
   return (
     <>
       <FlashList
-        data={filteredHabits}
+        data={combinedList}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.type === 'folder' ? `folder-${item.data.id}` : item.data.id}
         contentContainerStyle={{ paddingBottom: 40 }}
         ListHeaderComponent={ListHeaderComponent}
         refreshControl={refreshControl}
@@ -296,6 +457,29 @@ export const HabitsTab = () => {
         showCloseIcon={false}
         buttons={[{ label: t('general.ok'), onPress: () => setShowErrorDialog(false), variant: 'primary' }]}
       />
+
+      <Dialog
+        visible={showMoveDialog}
+        onClose={() => { setShowMoveDialog(false); setMovingItemId(null); }}
+        title="Move to Folder"
+        message="Select a destination folder."
+        buttonLayout="horizontal"
+        buttons={[
+          { label: t('general.cancel'), onPress: () => { setShowMoveDialog(false); setMovingItemId(null); }, variant: 'secondary' },
+          { label: 'Save', onPress: handleConfirmMove, variant: 'primary', loading: moveMutation.isPending },
+        ]}
+      >
+        <View style={{ marginBottom: 16 }}>
+          <SelectInput
+            label=""
+            value={moveTargetFolder}
+            onChange={setMoveTargetFolder}
+            options={moveOptions}
+            placeholder="Select folder..."
+            clearable={false}
+          />
+        </View>
+      </Dialog>
 
       <UpgradeDialog
         visible={showUpgradeDialog}

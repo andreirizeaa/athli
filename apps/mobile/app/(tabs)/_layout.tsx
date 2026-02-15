@@ -19,6 +19,7 @@ import { useLibraryTab, type LibraryTab } from '@/stores';
 import { useAthleteDataStore, useCoachDataStore, useCoachEntitlementsStore, useAthleteCoachEntitlementsStore } from '@/stores';
 import { useTerminology } from '@/hooks/useTerminology';
 import { UpgradeDialog } from '@/components/permissions/upgrade-dialog';
+import { Dialog } from '@/components/ui/dialog';
 
 type UpgradeTargetPlan = 'pro' | 'max' | 'increase' | null;
 
@@ -239,6 +240,34 @@ export default function TabLayout() {
   const [upgradeFeature, setUpgradeFeature] = useState<string | undefined>(undefined);
   const [upgradeTargetPlan, setUpgradeTargetPlan] = useState<UpgradeTargetPlan>('pro');
 
+  // Create dialog state (for folder-supported tabs)
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+
+  // Tabs that support folders
+  const folderSupportedTabs: LibraryTab[] = ['metrics', 'habits', 'files'];
+
+  const getFolderTypeLabel = (): string => {
+    switch (currentLibraryTab) {
+      case 'metrics': return 'Metric';
+      case 'habits': return 'Habit';
+      case 'files': return 'File';
+      default: return '';
+    }
+  };
+
+  const handleCreateItem = () => {
+    setShowCreateDialog(false);
+    router.push(getLibraryModalRoute() as any);
+  };
+
+  const handleCreateFolder = () => {
+    setShowCreateDialog(false);
+    router.push({
+      pathname: '/modals/library/create-folder-modal',
+      params: { type: currentLibraryTab },
+    } as any);
+  };
+
   const handleFabPress = () => {
     // Check for library first, then clients/chats
     if (pathname.includes('/library')) {
@@ -247,6 +276,11 @@ export default function TabLayout() {
         setUpgradeFeature(t('library.tabs.files') || 'Files');
         setUpgradeTargetPlan('pro');
         setShowUpgradeDialog(true);
+        return;
+      }
+      // Show create dialog for folder-supported tabs
+      if (folderSupportedTabs.includes(currentLibraryTab)) {
+        setShowCreateDialog(true);
         return;
       }
       router.push(getLibraryModalRoute() as any);
@@ -335,6 +369,17 @@ export default function TabLayout() {
             feature={upgradeFeature}
             targetPlan={upgradeTargetPlan}
           />
+          <Dialog
+            visible={showCreateDialog}
+            onClose={() => setShowCreateDialog(false)}
+            title="Create"
+            message="Organize your items into folders or add a new item."
+            buttonLayout="horizontal"
+            buttons={[
+              { label: 'Folder', onPress: handleCreateFolder, variant: 'secondary' },
+              { label: getFolderTypeLabel(), onPress: handleCreateItem, variant: 'primary' },
+            ]}
+          />
         </View>
       );
     }
@@ -422,6 +467,17 @@ export default function TabLayout() {
         onClose={() => setShowUpgradeDialog(false)}
         feature={upgradeFeature}
         targetPlan={upgradeTargetPlan}
+      />
+      <Dialog
+        visible={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        title="Create"
+        message="Organize your items into folders or add a new item."
+        buttonLayout="horizontal"
+        buttons={[
+          { label: 'Folder', onPress: handleCreateFolder, variant: 'secondary' },
+          { label: getFolderTypeLabel(), onPress: handleCreateItem, variant: 'primary' },
+        ]}
       />
     </View>
   );

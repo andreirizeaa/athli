@@ -5,9 +5,10 @@ import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Check, FileText, Play } from 'lucide-react-native';
+import { X, Check, FileText, Play, Folder } from 'lucide-react-native';
 import { useQuery, useQueries } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import SquircleView from 'react-native-fast-squircle';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore } from '@/stores';
@@ -18,9 +19,15 @@ import { fuzzyMatch } from '@/utils/searchUtils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { getAllFiles, getFileUrl, getFileTypeFromMime, type CoachFile } from '@/services/coach/coach-file-service';
+import { getAllFileFolders } from '@/services/coach/coach-file-folder-service';
 import { addFilesToClient } from '@/services/client/client-file-service';
 import { haptics } from '@/utils/haptics';
 import { Dialog } from '@/components/ui/dialog';
+import type { FileFolder } from '@athli/shared-types';
+
+type ListItem =
+    | { type: 'folder'; data: FileFolder }
+    | { type: 'file'; data: CoachFile };
 
 export default function AssignFileToClientModal() {
     const router = useRouter();
@@ -37,6 +44,7 @@ export default function AssignFileToClientModal() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
+    const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
     const [showErrorDialog, setShowErrorDialog] = useState(false);
 
@@ -49,25 +57,56 @@ export default function AssignFileToClientModal() {
         refetchOnWindowFocus: false,
     });
 
-    // Filter files based on search query
-    const filteredFiles = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return files;
-        }
+    const { data: folders = [] } = useQuery({
+        queryKey: ['file-folders'],
+        queryFn: getAllFileFolders,
+        staleTime: Infinity,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+    });
 
-        const query = searchQuery.toLowerCase().trim();
-        return files.filter((file) =>
-            fuzzyMatch(file.filename.toLowerCase(), query)
-        );
-    }, [files, searchQuery]);
+    // Get file IDs that belong to each folder
+    const folderFileIds = useMemo(() => {
+        const map: Record<string, string[]> = {};
+        folders.forEach(f => {
+            map[f.id] = files.filter(file => file.folder_id === f.id).map(file => file.id);
+        });
+        return map;
+    }, [folders, files]);
 
-    // Get files that need thumbnail URLs (images and videos only)
+    // Build combined list: folders first, then unfiled files
+    const combinedList = useMemo(() => {
+        const lowerQuery = searchQuery.trim().toLowerCase();
+
+        const filteredFolders = lowerQuery
+            ? folders.filter(f => f.name.toLowerCase().includes(lowerQuery))
+            : folders;
+
+        // Only show folders that have items
+        const nonEmptyFolders = filteredFolders.filter(f => (folderFileIds[f.id]?.length ?? 0) > 0);
+
+        const unfiledFiles = files.filter(f => !f.folder_id);
+        const filteredFiles = lowerQuery
+            ? unfiledFiles.filter(f =>
+                fuzzyMatch(f.filename.toLowerCase(), lowerQuery)
+            )
+            : unfiledFiles;
+
+        const items: ListItem[] = [
+            ...nonEmptyFolders.map(f => ({ type: 'folder' as const, data: f })),
+            ...filteredFiles.map(f => ({ type: 'file' as const, data: f })),
+        ];
+        return items;
+    }, [files, folders, folderFileIds, searchQuery]);
+
+    // Get files that need thumbnail URLs (images and videos only) - only from file items
     const filesNeedingThumbnails = useMemo(() => {
-        return filteredFiles.filter(file => {
+        const fileItems = combinedList.filter((item): item is { type: 'file'; data: CoachFile } => item.type === 'file');
+        return fileItems.map(item => item.data).filter(file => {
             const fileType = getFileTypeFromMime(file.mime_type);
             return fileType === 'image' || fileType === 'video';
         });
-    }, [filteredFiles]);
+    }, [combinedList]);
 
     // Fetch thumbnail URLs using React Query with caching
     const thumbnailQueries = useQueries({
@@ -99,42 +138,35 @@ export default function AssignFileToClientModal() {
     }, [router]);
 
     const handleSave = useCallback(async () => {
-        console.log('[AssignFileModal] handleSave called', {
-            selectedFileIds: Array.from(selectedFileIds),
-            clientId,
-            coachId,
+        // Collect all individual file IDs: directly selected + unpacked from folders
+        const allFileIds = new Set(selectedFileIds);
+        selectedFolderIds.forEach(folderId => {
+            folderFileIds[folderId]?.forEach(id => allFileIds.add(id));
         });
-        if (selectedFileIds.size === 0 || !clientId || !coachId) {
-            console.warn('[AssignFileModal] Missing required data, aborting');
-            return;
-        }
+
+        if (allFileIds.size === 0 || !clientId || !coachId) return;
 
         setIsSaving(true);
         try {
-            console.log('[AssignFileModal] Calling addFilesToClient...');
             await addFilesToClient({
-                fileIds: Array.from(selectedFileIds),
+                fileIds: Array.from(allFileIds),
                 clientId,
                 coachId,
             });
-            console.log('[AssignFileModal] addFilesToClient completed');
 
             haptics.success();
             await new Promise(r => setTimeout(r, 300)); // Allow backend to persist
-            console.log('[AssignFileModal] Calling refreshSection...');
             await refreshSection('files');
-            console.log('[AssignFileModal] refreshSection completed');
             handleClose();
         } catch (error) {
-            console.error('[AssignFileModal] Error:', error);
             haptics.error();
             setShowErrorDialog(true);
         } finally {
             setIsSaving(false);
         }
-    }, [handleClose, selectedFileIds, clientId, coachId, refreshSection, t]);
+    }, [handleClose, selectedFileIds, selectedFolderIds, folderFileIds, clientId, coachId, refreshSection]);
 
-    const canSave = selectedFileIds.size > 0 && !isSaving;
+    const canSave = (selectedFileIds.size > 0 || selectedFolderIds.size > 0) && !isSaving;
 
     const handleFileToggle = useCallback((fileId: string) => {
         setSelectedFileIds((prev) => {
@@ -143,6 +175,18 @@ export default function AssignFileToClientModal() {
                 newSet.delete(fileId);
             } else {
                 newSet.add(fileId);
+            }
+            return newSet;
+        });
+    }, []);
+
+    const handleFolderToggle = useCallback((folderId: string) => {
+        setSelectedFolderIds((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(folderId)) {
+                newSet.delete(folderId);
+            } else {
+                newSet.add(folderId);
             }
             return newSet;
         });
@@ -270,40 +314,107 @@ export default function AssignFileToClientModal() {
             {/* Content */}
             <View style={styles.content}>
                 <FlashList
-                    data={filteredFiles}
-                    keyExtractor={(item) => item.id}
+                    data={combinedList}
+                    keyExtractor={(item) => item.type === 'folder' ? `folder-${item.data.id}` : item.data.id}
                     renderItem={({ item, index }) => {
-                        const isSelected = selectedFileIds.has(item.id);
-                        const isLastItem = index === filteredFiles.length - 1;
+                        const isLastItem = index === combinedList.length - 1;
+
+                        if (item.type === 'folder') {
+                            const folder = item.data;
+                            const isSelected = selectedFolderIds.has(folder.id);
+                            const itemCount = folderFileIds[folder.id]?.length ?? 0;
+                            const countLabel = itemCount === 1 ? '1 file' : `${itemCount} files`;
+
+                            return (
+                                <View>
+                                    <PressableOpacity
+                                        onPress={() => handleFolderToggle(folder.id)}
+                                        style={styles.rowContent}
+                                    >
+                                        <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+                                            <Folder {...({ size: 24, color: themeColors.text } as any)} />
+                                        </SquircleView>
+                                        <View style={styles.textContent}>
+                                            <Text
+                                                style={[styles.name, { color: themeColors.text }]}
+                                                numberOfLines={1}
+                                            >
+                                                {folder.name}
+                                            </Text>
+                                            <View style={styles.metaRow}>
+                                                <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                                                    <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                                        Folder
+                                                    </Text>
+                                                </View>
+                                                <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                                                    <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                                        {countLabel}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                        <View
+                                            style={[
+                                                styles.checkbox,
+                                                {
+                                                    backgroundColor: isSelected ? themeColors.primary : 'transparent',
+                                                    borderColor: isSelected ? themeColors.primary : themeColors.border,
+                                                },
+                                            ]}
+                                        >
+                                            {isSelected && (
+                                                <Check {...({ size: 16, color: themeColors.primaryForeground } as any)} />
+                                            )}
+                                        </View>
+                                    </PressableOpacity>
+
+                                    {!isLastItem && (
+                                        <View style={styles.separatorContainer}>
+                                            <View
+                                                style={[
+                                                    styles.separator,
+                                                    { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+                                                ]}
+                                            />
+                                        </View>
+                                    )}
+                                </View>
+                            );
+                        }
+
+                        const file = item.data;
+                        const isSelected = selectedFileIds.has(file.id);
 
                         return (
                             <View>
                                 <PressableOpacity
-                                    onPress={() => handleFileToggle(item.id)}
+                                    onPress={() => handleFileToggle(file.id)}
                                     style={styles.rowContent}
                                 >
                                     <View style={styles.thumbnailWrapper}>
-                                        {renderThumbnail(item)}
+                                        {renderThumbnail(file)}
                                     </View>
                                     <View style={styles.textContent}>
                                         <Text
                                             style={[styles.name, { color: themeColors.text }]}
                                             numberOfLines={1}
                                         >
-                                            {item.filename}
+                                            {file.filename}
                                         </Text>
                                         <View style={styles.metaRow}>
-                                            <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                                                {getFormattedFileTypeLabel(item.mime_type)}
-                                            </Text>
-                                            {item.size && (
-                                                <>
-                                                    <Text style={[styles.metaDot, { color: themeColors.mutedText }]}>•</Text>
-                                                    <Text style={[styles.metaText, { color: themeColors.mutedText }]}>
-                                                        {formatSize(item.size)}
+                                            <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                                                <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                                    {getFormattedFileTypeLabel(file.mime_type)}
+                                                </Text>
+                                            </View>
+                                            {file.size ? (
+                                                <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                                                    <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                                                        {formatSize(file.size)}
                                                     </Text>
-                                                </>
-                                            )}
+                                                </View>
+                                            ) : null}
                                         </View>
                                     </View>
                                     <View
@@ -399,6 +510,14 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 16,
     },
+    iconContainer: {
+        width: 58,
+        height: 58,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
     thumbnailWrapper: {
         marginRight: 12,
     },
@@ -443,13 +562,17 @@ const styles = StyleSheet.create({
     metaRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 8,
     },
-    metaText: {
-        ...typography.p3,
+    pill: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 12,
+        borderWidth: 1,
     },
-    metaDot: {
-        marginHorizontal: 6,
-        ...typography.p3,
+    pillText: {
+        ...typography.p4,
+        fontWeight: '500',
     },
     checkbox: {
         width: 24,

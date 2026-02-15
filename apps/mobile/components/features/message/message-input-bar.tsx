@@ -1,11 +1,9 @@
 import React, { forwardRef } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { X } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/stores';
-import { PlatformIcon } from '@/components/ui/platform-icon';
 
 type MessageInputBarProps = {
   value: string;
@@ -42,21 +40,8 @@ export const MessageInputBar = forwardRef<TextInput, MessageInputBarProps>(
           onChangeText={onChangeText}
           multiline={true}
           blurOnSubmit={false}
-          scrollEnabled={false}
+          scrollEnabled={true}
         />
-        {value.length > 0 && (
-          <PressableOpacity
-            style={styles.clearIcon}
-            onPress={() => onChangeText('')}
-          >
-            <PlatformIcon
-              sf="xmark.circle.fill"
-              IconComponent={X}
-              size={20}
-              color={themeColors.mutedText}
-            />
-          </PressableOpacity>
-        )}
         {rightIcon && (
           <PressableOpacity
             style={styles.rightIcon}
@@ -75,11 +60,11 @@ MessageInputBar.displayName = 'MessageInputBar';
 const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     borderRadius: 18,
     paddingHorizontal: 12,
     minHeight: 36,
-    maxHeight: 120,
+    maxHeight: 100,
   },
   input: {
     flex: 1,
@@ -87,10 +72,6 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 6,
     includeFontPadding: false,
-  },
-  clearIcon: {
-    marginLeft: 8,
-    padding: 4,
   },
   rightIcon: {
     marginLeft: 8,

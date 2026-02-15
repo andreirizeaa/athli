@@ -91,30 +91,33 @@ export default function FeaturesSection() {
                         )}
                     </AnimatePresence>
 
-                    {/* Mobile image */}
-                    <div className="relative" style={{ aspectRatio: '3020 / 1640' }}>
-                        <AnimatePresence mode="wait">
+                    {/* Mobile image - all images preloaded */}
+                    <div className="relative overflow-hidden rounded-xl border" style={{ aspectRatio: '3020 / 1640' }}>
+                        {featureKeys.map((key) => (
                             <motion.div
-                                key={active}
-                                className="absolute inset-0 overflow-hidden rounded-xl border"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.25 }}>
+                                key={key}
+                                className="absolute inset-0"
+                                initial={false}
+                                animate={{ opacity: active === key ? 1 : 0 }}
+                                transition={{ duration: 0.25 }}
+                                style={{ pointerEvents: active === key ? 'auto' : 'none' }}
+                            >
                                 <Image
-                                    src={`/features/${active}/dark.png`}
+                                    src={`/features/${key}/dark.png`}
                                     className="hidden object-contain dark:block"
-                                    alt={`Athli ${t(`${active}.label`)} — ${t(`${active}.headline`)}`}
+                                    alt={`Athli ${t(`${key}.label`)} — ${t(`${key}.headline`)}`}
                                     fill
+                                    priority={key === 'flows'}
                                 />
                                 <Image
-                                    src={`/features/${active}/light.png`}
+                                    src={`/features/${key}/light.png`}
                                     className="object-contain dark:hidden"
-                                    alt={`Athli ${t(`${active}.label`)} — ${t(`${active}.headline`)}`}
+                                    alt={`Athli ${t(`${key}.label`)} — ${t(`${key}.headline`)}`}
                                     fill
+                                    priority={key === 'flows'}
                                 />
                             </motion.div>
-                        </AnimatePresence>
+                        ))}
                     </div>
                 </div>
 
@@ -164,30 +167,33 @@ export default function FeaturesSection() {
                                 </motion.div>
                             </AnimatePresence>
 
-                            {/* Image */}
+                            {/* Image - all images preloaded */}
                             <div className="relative overflow-hidden rounded-xl border" style={{ aspectRatio: '3020 / 1640' }}>
-                                <AnimatePresence mode="wait">
+                                {featureKeys.map((key) => (
                                     <motion.div
-                                        key={active}
+                                        key={key}
                                         className="absolute inset-0"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        transition={{ duration: 0.25 }}>
+                                        initial={false}
+                                        animate={{ opacity: active === key ? 1 : 0 }}
+                                        transition={{ duration: 0.25 }}
+                                        style={{ pointerEvents: active === key ? 'auto' : 'none' }}
+                                    >
                                         <Image
-                                            src={`/features/${active}/dark.png`}
+                                            src={`/features/${key}/dark.png`}
                                             className="hidden object-contain dark:block"
-                                            alt={`Athli ${t(`${active}.label`)} — ${t(`${active}.headline`)}`}
+                                            alt={`Athli ${t(`${key}.label`)} — ${t(`${key}.headline`)}`}
                                             fill
+                                            priority={key === 'flows'}
                                         />
                                         <Image
-                                            src={`/features/${active}/light.png`}
+                                            src={`/features/${key}/light.png`}
                                             className="object-contain dark:hidden"
-                                            alt={`Athli ${t(`${active}.label`)} — ${t(`${active}.headline`)}`}
+                                            alt={`Athli ${t(`${key}.label`)} — ${t(`${key}.headline`)}`}
                                             fill
+                                            priority={key === 'flows'}
                                         />
                                     </motion.div>
-                                </AnimatePresence>
+                                ))}
                             </div>
                         </div>
                     </div>
