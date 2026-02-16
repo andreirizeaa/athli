@@ -562,6 +562,45 @@ export type AthleteQuestionnaire = {
 };
 
 /**
+ * Athlete check-in type for self-access
+ */
+export type AthleteCheckIn = {
+  id: string;
+  name: string;
+  description?: string;
+  questions: Question[];
+  status: string;
+  submission_count: number;
+  latest_answers: QuestionAnswer[] | null;
+  latest_submission_date: string | null;
+  created_at: string;
+};
+
+/**
+ * Get check-ins for the authenticated athlete (self-access)
+ */
+export const getMyCheckIns = async (clientId: string, coachId: string): Promise<AthleteCheckIn[]> => {
+  const response = await apiFetch<{ success: boolean; data: { checkins: any[] } }>(
+    '/client/forms/check-ins',
+    {
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+    }
+  );
+
+  return (response.data.checkins || []).map((c: any) => ({
+    id: c.id,
+    name: c.name || 'Untitled Check-in',
+    description: c.description,
+    questions: c.questions || [],
+    status: c.status || 'draft',
+    submission_count: c.submission_count || 0,
+    latest_answers: c.latest_answers || null,
+    latest_submission_date: c.latest_submission_date || null,
+    created_at: c.created_at,
+  }));
+};
+
+/**
  * Get questionnaires for the authenticated athlete (self-access)
  */
 export const getMyQuestionnaires = async (clientId: string, coachId: string): Promise<AthleteQuestionnaire[]> => {

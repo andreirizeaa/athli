@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
+import { motion } from 'motion/react';
 import {
   ChevronDown,
   Dumbbell,
@@ -51,9 +53,18 @@ interface AccordionCardProps {
 
 const ProgressCircle = ({ current, total }: { current: number; total: number }) => {
   const percentage = (current / total) * 100;
+  const isComplete = current === total;
   const radius = 7;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  if (isComplete) {
+    return (
+      <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary">
+        <Check className="h-2.5 w-2.5 text-primary-foreground" strokeWidth={3} />
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-5 w-5 flex items-center justify-center">
@@ -80,6 +91,101 @@ const ProgressCircle = ({ current, total }: { current: number; total: number }) 
           strokeLinecap="round"
         />
       </svg>
+    </div>
+  );
+};
+
+/**
+ * Animated border effect with two chasing tails
+ */
+const AnimatedBorder = ({ width, height }: { width: number; height: number }) => {
+  const r = 12;
+
+  if (width <= 0 || height <= 0) return null;
+
+  return (
+    <svg
+      className="pointer-events-none absolute top-0 left-0 z-20"
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      fill="none"
+    >
+      <defs>
+        <linearGradient id="border-gradient" x1="0.5" y1="0" x2="0.5" y2="1">
+          <stop offset="0%" stopColor="rgb(192,132,252)" />
+          <stop offset="100%" stopColor="rgb(165,180,252)" />
+        </linearGradient>
+      </defs>
+      <motion.rect
+        x={1.5}
+        y={1.5}
+        width={width - 3}
+        height={height - 3}
+        rx={r}
+        ry={r}
+        pathLength={1}
+        stroke="url(#border-gradient)"
+        strokeWidth={3}
+        strokeLinecap="round"
+        strokeDasharray="0.15 0.85"
+        animate={{ strokeDashoffset: [0, -1] }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+      />
+      <motion.rect
+        x={1.5}
+        y={1.5}
+        width={width - 3}
+        height={height - 3}
+        rx={r}
+        ry={r}
+        pathLength={1}
+        stroke="url(#border-gradient)"
+        strokeWidth={3}
+        strokeLinecap="round"
+        strokeDasharray="0.15 0.85"
+        animate={{ strokeDashoffset: [-0.5, -1.5] }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+      />
+    </svg>
+  );
+};
+
+/**
+ * Feature image preview with animated border and purple glow
+ */
+const FeatureImagePreview = ({ imagePath, alt }: { imagePath: string; alt: string }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setDims({ w: el.offsetWidth, h: el.offsetHeight });
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div className="relative mt-3 mb-4" style={{ perspective: '1000px' }}>
+      {/* Purple glow background */}
+      <div className="absolute inset-x-0 inset-y-1 bg-gradient-to-r from-purple-500/15 via-indigo-500/15 to-purple-500/15 blur-md -z-10" />
+      <div
+        ref={containerRef}
+        className="relative rounded-xl overflow-hidden"
+        style={{
+          transform: 'rotateY(-6deg) rotateX(3deg)',
+          transformStyle: 'preserve-3d',
+        }}
+      >
+        <AnimatedBorder width={dims.w} height={dims.h} />
+        <img
+          src={imagePath}
+          alt={alt}
+          className="w-full h-auto transition-all duration-300 rounded-xl"
+        />
+      </div>
     </div>
   );
 };
@@ -139,13 +245,14 @@ const AccordionCard = ({
 const GetStartedPage = () => {
   const router = useRouter();
   const [openAccordion, setOpenAccordion] = useState<number | null>(1);
-  const [selectedChecklistItem, setSelectedChecklistItem] = useState<string>('workoutAi');
+  const [selectedChecklistItem, setSelectedChecklistItem] = useState<string>('workouts');
   const [isNavigating, setIsNavigating] = useState(false);
   const [giftAnimationData, setGiftAnimationData] = useState<object | null>(null);
   const t = useTranslations('getStarted');
   const { flows } = useCoachFlows();
   const { data: checklist } = useCoachChecklist();
   const isMobile = useIsMobile();
+  const { resolvedTheme } = useTheme();
 
   // Load the gift animation
   useEffect(() => {
@@ -164,14 +271,12 @@ const GetStartedPage = () => {
 
   const featuresProgress = [
     checklist?.workout_ai,
-    checklist?.program_templates,
-    checklist?.custom_exercises,
-    checklist?.automate_onboardings,
-    checklist?.check_ins_forms,
+    checklist?.ai_assistant,
     checklist?.powerful_flows,
     checklist?.lifestyle_habits,
     checklist?.track_metrics,
-    checklist?.on_demand_resources,
+    checklist?.check_ins_forms,
+    checklist?.automate_onboardings,
   ].filter(Boolean).length;
 
   // Check if a checklist item is completed
@@ -179,42 +284,53 @@ const GetStartedPage = () => {
     if (!checklist) return false;
 
     const keyMap: Record<string, keyof typeof checklist> = {
-      'workoutAi': 'workout_ai',
-      'programTemplates': 'program_templates',
-      'customExercises': 'custom_exercises',
-      'automateOnboardings': 'automate_onboardings',
-      'checkInsForms': 'check_ins_forms',
-      'powerfulFlows': 'powerful_flows',
-      'lifestyleHabits': 'lifestyle_habits',
-      'trackMetrics': 'track_metrics',
-      'onDemandResources': 'on_demand_resources',
+      'workouts': 'workout_ai',
+      'aiAssistant': 'ai_assistant',
+      'flows': 'powerful_flows',
+      'habits': 'lifestyle_habits',
+      'metrics': 'track_metrics',
+      'forms': 'check_ins_forms',
+      'automations': 'automate_onboardings',
     };
 
     const checklistKey = keyMap[key];
     return checklistKey ? Boolean(checklist[checklistKey]) : false;
   };
 
+  // Feature items configuration
+  const featureItems = [
+    { icon: Dumbbell, key: 'workouts', image: '/app-screenshots/workouts' },
+    { icon: Bot, key: 'aiAssistant', image: '/app-screenshots/ai' },
+    { icon: Workflow, key: 'flows', image: '/app-screenshots/flows' },
+    { icon: Sprout, key: 'habits', image: '/app-screenshots/client/habits' },
+    { icon: BarChart3, key: 'metrics', image: '/app-screenshots/client/metrics' },
+    { icon: FileCheck, key: 'forms', image: '/app-screenshots/client/check-ins' },
+    { icon: Zap, key: 'automations', image: '/app-screenshots/onboardings' },
+  ];
+
+  // Get image path based on theme
+  const getFeatureImage = (basePath: string) => {
+    const theme = resolvedTheme === 'dark' ? 'dark' : 'light';
+    return `${basePath}/${theme}.png`;
+  };
+
   // Get route for a checklist item
   const getRouteForItem = (item: string) => {
     switch (item) {
-      case 'workoutAi':
+      case 'workouts':
         return '/training/workouts?ai=true';
-      case 'programTemplates':
-        return '/training/programs?create=true';
-      case 'customExercises':
-        return '/training/exercises?create=true';
-      case 'automateOnboardings':
-        return '/onboarding';
-      case 'checkInsForms':
-        return '/forms/check-ins?create=true';
-      case 'powerfulFlows':
+      case 'aiAssistant':
+        return '/training/workouts?ai=true';
+      case 'flows':
         return '/flows';
-      case 'lifestyleHabits':
+      case 'habits':
         return '/habits?create=true';
-      case 'trackMetrics':
+      case 'metrics':
         return '/metrics?create=true';
-      case 'onDemandResources':
-        return '/files?create=true';
+      case 'forms':
+        return '/forms/check-ins?create=true';
+      case 'automations':
+        return '/onboarding';
       default:
         return '/';
     }
@@ -297,8 +413,8 @@ const GetStartedPage = () => {
               isOpen={openAccordion === 1}
               onClick={() => handleAccordionClick(1)}
               currentProgress={featuresProgress}
-              totalItems={9}
-              exploredLabel={t('explored', { count: featuresProgress, total: 9 })}
+              totalItems={7}
+              exploredLabel={t('explored', { count: featuresProgress, total: 7 })}
             >
               {/* Mobile Layout - Dropdown + Content stacked */}
               {isMobile ? (
@@ -309,17 +425,7 @@ const GetStartedPage = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {[
-                        { icon: Bot, key: 'workoutAi' },
-                        { icon: Copy, key: 'programTemplates' },
-                        { icon: Dumbbell, key: 'customExercises' },
-                        { icon: Zap, key: 'automateOnboardings' },
-                        { icon: FileCheck, key: 'checkInsForms' },
-                        { icon: Workflow, key: 'powerfulFlows' },
-                        { icon: Sprout, key: 'lifestyleHabits' },
-                        { icon: BarChart3, key: 'trackMetrics' },
-                        { icon: File, key: 'onDemandResources' },
-                      ].map((item) => {
+                      {featureItems.map((item) => {
                         const isCompleted = isChecklistItemCompleted(item.key);
                         return (
                           <SelectItem key={item.key} value={item.key}>
@@ -333,6 +439,12 @@ const GetStartedPage = () => {
                       })}
                     </SelectContent>
                   </Select>
+
+                  {/* 3D Image */}
+                  <FeatureImagePreview
+                    imagePath={getFeatureImage(featureItems.find(f => f.key === selectedChecklistItem)?.image || '')}
+                    alt={t(`checklist.details.${selectedChecklistItem}.title`)}
+                  />
 
                   {/* Content */}
                   <div>
@@ -354,20 +466,10 @@ const GetStartedPage = () => {
                 </div>
               ) : (
                 /* Desktop Layout - Side by side */
-                <div className="flex items-stretch gap-6 min-h-[400px]">
+                <div className="flex items-stretch gap-6 min-h-[320px]">
                   {/* Left Side - Checklist Items */}
                   <div className="flex-1 flex flex-col gap-1">
-                    {[
-                      { icon: Bot, key: 'workoutAi', route: '/library/training' },
-                      { icon: Copy, key: 'programTemplates', route: '/library/training' },
-                      { icon: Dumbbell, key: 'customExercises', route: '/library/training' },
-                      { icon: Zap, key: 'automateOnboardings', route: '/flows' },
-                      { icon: FileCheck, key: 'checkInsForms', route: '/library/forms' },
-                      { icon: Workflow, key: 'powerfulFlows', route: '/flows' },
-                      { icon: Sprout, key: 'lifestyleHabits', route: '/library/habits' },
-                      { icon: BarChart3, key: 'trackMetrics', route: '/library/metrics' },
-                      { icon: File, key: 'onDemandResources', route: '/library/files' },
-                    ].map((item) => {
+                    {featureItems.map((item) => {
                       const isCompleted = isChecklistItemCompleted(item.key);
                       return (
                         <div
@@ -409,9 +511,15 @@ const GetStartedPage = () => {
                   {/* Vertical Divider */}
                   <div className="w-px bg-border self-stretch" />
 
-                  {/* Right Side - Dynamic Content + Explore Button */}
+                  {/* Right Side - 3D Image + Content + Explore Button */}
                   <div className="flex-1 flex flex-col justify-between">
-                    <div />
+                    {/* 3D Image Container */}
+                    <FeatureImagePreview
+                      imagePath={getFeatureImage(featureItems.find(f => f.key === selectedChecklistItem)?.image || '')}
+                      alt={t(`checklist.details.${selectedChecklistItem}.title`)}
+                    />
+
+                    {/* Title and Description */}
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-foreground mb-1">
                         {t(`checklist.details.${selectedChecklistItem}.title`)}
@@ -420,6 +528,8 @@ const GetStartedPage = () => {
                         {t(`checklist.details.${selectedChecklistItem}.subtitle`)}
                       </p>
                     </div>
+
+                    {/* Explore Button */}
                     <div className="flex justify-end">
                       <Button variant="default" onClick={(e) => { e.stopPropagation(); handleExploreClick(); }} disabled={isNavigating}>
                         {t('checklist.explore')}

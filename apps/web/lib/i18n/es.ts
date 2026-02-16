@@ -565,6 +565,8 @@ export const esMessages = {
       helpArticles: 'Artículos de Ayuda',
       billing: 'Facturación',
       logOut: 'Cerrar sesión',
+      confirmLogoutTitle: 'Confirmar cierre de sesión',
+      confirmLogoutDescription: '¿Estás seguro de que quieres cerrar sesión?',
     },
     search: {
       placeholder: 'Buscar en Athli...',
@@ -2168,6 +2170,11 @@ export const esMessages = {
       emptyState: {
         title: 'No se encontraron check-ins',
         subtitle: 'Comienza creando tu primera plantilla de check-in.',
+      },
+      review: {
+        title: 'Revisar',
+        pageTitle: 'Revisar Check-in',
+        client: 'Cliente',
       },
     },
     type: {

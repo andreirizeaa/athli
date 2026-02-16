@@ -289,6 +289,7 @@ export default function FormResponseSessionModal() {
       // Invalidate caches to refetch
       await queryClient.invalidateQueries({ queryKey: ['athlete-questionnaires'] });
       await queryClient.invalidateQueries({ queryKey: ['athlete-tasks'] });
+      await queryClient.invalidateQueries({ queryKey: ['athlete-checkins'] });
       setSubmissionComplete(true);
     } catch (error) {
       haptics.error();

@@ -21,9 +21,9 @@ const PageTabs = ({ tabs, value, defaultValue, onValueChange, className }: PageT
   const defaultTabValue = defaultValue || tabs[0]?.value;
 
   return (
-    <div className={cn('relative', className)}>
+    <div className={cn('relative bg-background', className)}>
       <Tabs value={value} defaultValue={defaultTabValue} onValueChange={onValueChange}>
-        <div className="-mx-4 relative px-4">
+        <div className="-mx-4 relative px-4 bg-background pb-[1px]">
           <div className="flex items-end pb-0">
             <TabsList className="h-auto bg-transparent p-0 gap-2 border-none mt-1">
               {tabs.map((tab) => (
