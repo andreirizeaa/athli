@@ -7,6 +7,8 @@ import { PressableOpacity } from 'pressto';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 
+import Constants from 'expo-constants';
+
 import { Dialog } from '@/components/ui/dialog';
 import { FilledButton } from '@/components/ui/buttons/filled-button';
 import { OutlinedButton } from '@/components/ui/buttons/outlined-button';
@@ -140,7 +142,10 @@ export default function WelcomeScreen() {
   };
 
   const handleTermsOfServicePress = async () => {
-    await WebBrowser.openBrowserAsync('https://app.tryathli.com/', {
+    const marketingUrl = process.env.EXPO_PUBLIC_MARKETING_APP_URL ||
+      Constants.expoConfig?.extra?.EXPO_PUBLIC_MARKETING_APP_URL ||
+      'https://www.tryathli.com';
+    await WebBrowser.openBrowserAsync(`${marketingUrl}/terms-of-use`, {
       presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
       dismissButtonStyle: 'done',
       showTitle: true,
@@ -148,7 +153,10 @@ export default function WelcomeScreen() {
   };
 
   const handlePrivacyPolicyPress = async () => {
-    await WebBrowser.openBrowserAsync('https://app.tryathli.com/', {
+    const marketingUrl = process.env.EXPO_PUBLIC_MARKETING_APP_URL ||
+      Constants.expoConfig?.extra?.EXPO_PUBLIC_MARKETING_APP_URL ||
+      'https://www.tryathli.com';
+    await WebBrowser.openBrowserAsync(`${marketingUrl}/privacy-policy`, {
       presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
       dismissButtonStyle: 'done',
       showTitle: true,

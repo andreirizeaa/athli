@@ -151,3 +151,25 @@ export const deleteFlow = async (flowId: string): Promise<void> => {
     method: 'DELETE',
   });
 };
+
+export type FlowClientStat = {
+  id: string;
+  name: string;
+  avatarUrl: string;
+  executionCount: number;
+};
+
+/**
+ * Get per-client execution stats for a flow
+ */
+export const getFlowStats = async (flowId: string): Promise<FlowClientStat[]> => {
+  const response = await apiFetch<{ data: { stats: any[] } }>(
+    `/coach/flows/${flowId}/stats`
+  );
+  return (response.data.stats || []).map((s) => ({
+    id: s.client_id,
+    name: s.name || 'Unknown',
+    avatarUrl: s.avatar_url || '',
+    executionCount: s.execution_count ?? 0,
+  }));
+};

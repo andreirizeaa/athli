@@ -95,20 +95,40 @@ export const clientCheckInsController = {
             countMap[s.assignment_id] = (countMap[s.assignment_id] || 0) + 1;
         });
 
-        const checkins = assignments.map((a: any) => ({
-            id: a.id,
-            assignment_id: a.id,
-            coach_id: a.coach_id,
-            name: a.name,
-            description: a.description,
-            schedule_config: a.schedule_config,
-            questions: a.questions,
-            status: a.status || 'draft',
-            completed_at: a.completed_at,
-            assigned_at: a.created_at,
-            created_at: a.created_at,
-            submission_count: countMap[a.id] || 0,
-        }));
+        // Get latest submission per assignment for review display
+        const { data: latestSubmissions } = await supabase
+            .from('client_checkin_logs')
+            .select('assignment_id, answers, submission_date, created_at')
+            .eq('client_id', targetClientId)
+            .in('assignment_id', checkInIds)
+            .order('created_at', { ascending: false });
+
+        const latestMap: Record<string, any> = {};
+        (latestSubmissions || []).forEach((s: any) => {
+            if (!latestMap[s.assignment_id]) {
+                latestMap[s.assignment_id] = s;
+            }
+        });
+
+        const checkins = assignments.map((a: any) => {
+            const latest = latestMap[a.id];
+            return {
+                id: a.id,
+                assignment_id: a.id,
+                coach_id: a.coach_id,
+                name: a.name,
+                description: a.description,
+                schedule_config: a.schedule_config,
+                questions: a.questions,
+                status: a.status || 'draft',
+                completed_at: a.completed_at,
+                assigned_at: a.created_at,
+                created_at: a.created_at,
+                submission_count: countMap[a.id] || 0,
+                latest_answers: latest?.answers || null,
+                latest_submission_date: latest?.submission_date || null,
+            };
+        });
 
         success(res, {
             message: 'Client check-ins retrieved successfully',
@@ -237,7 +257,7 @@ export const clientCheckInsController = {
     submitCheckIn: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const { id } = req.params;
-        const { responses } = req.body;
+        const { answers } = req.body;
 
         const clientIdHeader = req.header('x-client-id');
         const coachIdHeader = req.header('x-coach-id');
@@ -263,32 +283,20 @@ export const clientCheckInsController = {
             return forbidden(res, { message: 'Coach ID mismatch' });
         }
 
-        // 2. Insert into logs
-        await supabase.from('client_checkin_logs').insert({
+        // 2. Insert into logs (check-ins are recurring — the assignment stays 'live',
+        //    each submission is recorded as a log entry)
+        const { error: logError } = await supabase.from('client_checkin_logs').insert({
             client_id: targetClientId,
             coach_id: assignmentDetails.coach_id,
             assignment_id: id,
-            answers: responses,
+            answers: answers,
             submission_date: new Date().toISOString(),
-            status: 'completed'
+            status: 'review'
         });
 
-        // 3. Update assignment status
-        const { data, error } = await supabase
-            .from('client_checkins')
-            .update({
-                status: 'completed',
-                completed_at: new Date().toISOString(),
-            })
-            .eq('id', id)
-            .eq('client_id', targetClientId)
-            .eq('coach_id', assignmentDetails.coach_id)
-            .select()
-            .single();
+        if (logError) return res.status(500).json({ success: false, message: logError.message });
 
-        if (error) return res.status(500).json({ success: false, message: error.message });
-
-        // Send notification when the authenticated user is the client submitting their own check-in.
+        // 3. Send notification when the authenticated user is the client submitting their own check-in.
         if (targetClientId === userId) {
             resolveClientName(targetClientId).then((clientName) => {
                 const firstName = clientName?.split(' ')[0] || 'Client';
@@ -307,7 +315,6 @@ export const clientCheckInsController = {
 
         success(res, {
             message: 'Check-in submitted successfully',
-            data: { assignment: data },
         });
     },
 

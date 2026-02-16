@@ -69,6 +69,16 @@ Deno.serve(async (req) => {
     const notification = payload.record
     const { coach_id, notification_type, title, description } = notification
 
+    // Defer missed-type pushes to the consolidated morning digest.
+    // In-app notifications (coach_notifications table) remain individual.
+    const MISSED_TYPES = ['workout_missed', 'checkin_missed', 'habit_missed', 'metric_missed']
+    if (MISSED_TYPES.includes(notification_type)) {
+      return new Response(
+        JSON.stringify({ success: true, message: 'Deferred to morning digest' }),
+        { headers: { 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Check if push notifications are enabled for this notification type

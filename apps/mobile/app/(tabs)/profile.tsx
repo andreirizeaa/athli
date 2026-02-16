@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Linking, InteractionManager, ActivityIndicator } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -135,11 +136,17 @@ export default function ProfileTabScreen() {
   };
 
   const handleOpenTermsOfService = () => {
-    handleOpenWebURL('https://app.tryathli.com/');
+    const marketingUrl = process.env.EXPO_PUBLIC_MARKETING_APP_URL ||
+      Constants.expoConfig?.extra?.EXPO_PUBLIC_MARKETING_APP_URL ||
+      'https://www.tryathli.com';
+    handleOpenWebURL(`${marketingUrl}/terms-of-use`);
   };
 
   const handleOpenPrivacyPolicy = () => {
-    handleOpenWebURL('https://app.tryathli.com/');
+    const marketingUrl = process.env.EXPO_PUBLIC_MARKETING_APP_URL ||
+      Constants.expoConfig?.extra?.EXPO_PUBLIC_MARKETING_APP_URL ||
+      'https://www.tryathli.com';
+    handleOpenWebURL(`${marketingUrl}/privacy-policy`);
   };
 
   const handleOpenSupportEmail = () => {
