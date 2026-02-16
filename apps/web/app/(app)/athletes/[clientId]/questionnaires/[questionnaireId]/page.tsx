@@ -24,15 +24,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ChevronRight, ChevronLeft, Plus, GripVertical, Download, Loader2, Edit, Play } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Plus, GripVertical, Download, Loader2, Edit, Play, Send } from 'lucide-react';
 import { PageTabs } from '@/components/page-tabs';
 import {
   getClientQuestionnaireById,
   getClientQuestionnaire,
   updateClientQuestionnaire,
+  sendClientQuestionnaire,
   getQuestionnaireMediaUrl,
   type ClientQuestionnaireDetail as SharedClientQuestionnaireDetail,
 } from '@/api/client/client-form-service';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { FormBuilder, type Question } from '@/components/forms/form-builder';
 import { EditClientQuestionnaireFormSidePanel } from '@/components/forms/edit-client-questionnaire-form-side-panel';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -92,6 +94,9 @@ const ClientQuestionnaireDetailPage = () => {
   const [mediaPreview, setMediaPreview] = useState<MediaPreview | null>(null);
   const [resolvedMediaUrls, setResolvedMediaUrls] = useState<Record<string, string>>({});
   const fetchedMediaPathsRef = useRef<Set<string>>(new Set());
+
+  // Send form dialog
+  const [isSendDialogOpen, setIsSendDialogOpen] = useState<boolean>(false);
 
   const isValidMediaPath = (path: string): boolean => {
     return !!(path && !path.startsWith('__') && path !== '__FILE_UPLOAD__' && !path.startsWith('http'));
@@ -371,6 +376,26 @@ const ClientQuestionnaireDetailPage = () => {
   const handleDeleteForm = () => {
     // Navigate back to questionnaires list after deletion
     router.push(`/athletes/${clientId}/questionnaires`);
+  };
+
+  // Send form handler
+  const handleConfirmSend = async () => {
+    if (!currentForm || !clientId || !user?.id) return;
+
+    try {
+      await sendClientQuestionnaire({
+        questionnaireId: currentForm.id,
+        clientId: clientId,
+        coachId: user.id,
+      });
+      toast.success(t('athletes.profile.questionnaires.sendSuccess'));
+      setCurrentForm({ ...currentForm, status: 'pending' });
+      queryClient.invalidateQueries({ queryKey: ['client-questionnaires', clientId] });
+    } catch (error) {
+      console.error('Failed to send questionnaire:', error);
+      toast.error(t('general.error'));
+      throw error;
+    }
   };
 
   // Render answer helper
@@ -660,6 +685,17 @@ const ClientQuestionnaireDetailPage = () => {
         <div className="absolute top-2 right-4 flex items-center gap-2">
           {activeTab === 'builder' && currentForm?.status !== 'pending' && currentForm?.status !== 'completed' && (
             <ButtonGroup className="flex-shrink-0">
+              {/* Send form button - only show if there are questions */}
+              {currentForm?.status === 'draft' && questions.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsSendDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Send className="size-4" />
+                  <span>{t('athletes.profile.questionnaires.sendForm')}</span>
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={() => setIsEditFormOpen(true)}
@@ -880,6 +916,17 @@ const ClientQuestionnaireDetailPage = () => {
           onDelete={handleDeleteForm}
         />
       )}
+
+      {/* Send form confirmation dialog */}
+      <ConfirmDeleteDialog
+        open={isSendDialogOpen}
+        onOpenChange={setIsSendDialogOpen}
+        onConfirm={handleConfirmSend}
+        title={t('athletes.profile.questionnaires.sendConfirmTitle')}
+        description={t('athletes.profile.questionnaires.sendConfirmDescription')}
+        confirmText={t('athletes.profile.questionnaires.sendForm')}
+        variant="default"
+      />
     </div>
   );
 };

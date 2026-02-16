@@ -269,7 +269,7 @@ export default function BillingScreen() {
             </View>
 
             {/* Progress bar */}
-            <View style={[styles.progressBarContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+            <View style={[styles.progressBarContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
               <View
                 style={[
                   styles.progressBar,

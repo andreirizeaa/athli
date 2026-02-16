@@ -1,7 +1,8 @@
-import React, { useMemo, useEffect, useState, useCallback } from 'react';
+import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
+import LottieView from 'lottie-react-native';
 import { ChevronRight, FileText, Dumbbell, Moon, ListChecks, CircleCheck, ClipboardList, Send, CheckCircle, Target } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 import { Separator } from '@/components/ui/separator';
@@ -21,6 +22,25 @@ import { getCoaches, getInboxMessages, type Coach } from '@/services/inbox-servi
 import { formatDateDDMMYYYY, formatDateYYYYMMDD } from '@/lib/utils/date-formatters';
 import { haptics } from '@/utils/haptics';
 import { useRealtimeConversations } from '@/hooks/use-realtime-messaging';
+import { useCelebrationStore } from '@/stores/useCelebrationStore';
+
+// Helper to check if a task is overdue
+const isOverdue = (dateString?: string): boolean => {
+  if (!dateString) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(dateString);
+  d.setHours(0, 0, 0, 0);
+  return d < today;
+};
+
+const TASK_TYPE_ORDER = ['habit', 'metric', 'check_in', 'questionnaire'] as const;
+const TASK_TYPE_LABELS: Record<string, string> = {
+  habit: 'Habits',
+  metric: 'Metrics',
+  check_in: 'Check-ins',
+  questionnaire: 'Questionnaires',
+};
 
 // Helper to get ordinal suffix
 const getOrdinalSuffix = (day: number): string => {
@@ -70,6 +90,18 @@ export const AthleteHomeContent = () => {
   const iconColor = themeColors.text;
 
   const userId = useAuthSessionStore((state) => state.userId);
+
+  // Confetti celebration — delay so modal dismiss animation completes first
+  const [showConfetti, setShowConfetti] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (useCelebrationStore.getState().showConfetti) {
+        useCelebrationStore.getState().clearConfetti();
+        const timer = setTimeout(() => setShowConfetti(true), 400);
+        return () => clearTimeout(timer);
+      }
+    }, [])
+  );
 
   // Fetch tasks
   const { tasks, isLoading: isLoadingTasks } = useAthleteTasks();
@@ -332,6 +364,24 @@ export const AthleteHomeContent = () => {
     return t('tasksCard.hasTasksPlural', { count: tasks.length });
   }, [tasks.length, t]);
 
+  const groupedTasks = useMemo(() => {
+    const groups: { type: string; label: string; tasks: ClientTask[] }[] = [];
+    for (const type of TASK_TYPE_ORDER) {
+      const typeTasks = tasks.filter((t) => t.task_type === type);
+      if (typeTasks.length === 0) continue;
+      // Sort overdue items first
+      typeTasks.sort((a, b) => {
+        const aOverdue = isOverdue(a.due_date);
+        const bOverdue = isOverdue(b.due_date);
+        if (aOverdue && !bOverdue) return -1;
+        if (!aOverdue && bOverdue) return 1;
+        return 0;
+      });
+      groups.push({ type, label: TASK_TYPE_LABELS[type], tasks: typeTasks });
+    }
+    return groups;
+  }, [tasks]);
+
   const isRestDay = !isLoadingWorkouts && todayWorkouts.length === 0;
 
   // Today's workout card content
@@ -451,26 +501,46 @@ export const AthleteHomeContent = () => {
         {/* Divider */}
         <View style={[styles.activeCardDivider, { backgroundColor: themeColors.border }]} />
 
-        {/* Task list */}
+        {/* Task list grouped by type */}
         <View style={styles.activeCardList}>
-          {tasks.map((task, index) => (
-            <PressableScale key={task.id} onPress={() => handleTaskPress(task)}>
-              <View style={styles.workoutRow}>
-                <View style={[styles.workoutNumberCircle, { backgroundColor: primaryColor }]}>
-                  <Text style={[styles.workoutNumberText, { color: themeColors.primaryForeground }]}>
-                    {index + 1}
-                  </Text>
-                </View>
-                <Text style={[styles.workoutName, { color: themeColors.text }]}>
-                  {task.name || task.task_type}
-                </Text>
-              </View>
-            </PressableScale>
+          {groupedTasks.map((group, groupIndex) => (
+            <View key={group.type}>
+              <Text
+                style={[
+                  styles.taskSectionLabel,
+                  { color: themeColors.mutedText },
+                  groupIndex > 0 && styles.taskSectionLabelSpacing,
+                ]}
+              >
+                {group.label}
+              </Text>
+              {group.tasks.map((task, index) => (
+                <PressableScale key={task.id} onPress={() => handleTaskPress(task)}>
+                  <View style={styles.workoutRow}>
+                    <View style={[styles.workoutNumberCircle, { backgroundColor: primaryColor }]}>
+                      <Text style={[styles.workoutNumberText, { color: themeColors.primaryForeground }]}>
+                        {index + 1}
+                      </Text>
+                    </View>
+                    <View style={styles.taskNameContainer}>
+                      <Text style={[styles.workoutName, { color: themeColors.text }]}>
+                        {task.name || task.task_type}
+                      </Text>
+                      {isOverdue(task.due_date) && (
+                        <View style={styles.overduePill}>
+                          <Text style={styles.overduePillText}>Overdue</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </PressableScale>
+              ))}
+            </View>
           ))}
         </View>
       </Card>
     );
-  }, [isLoadingTasks, tasks, themeColors, primaryColor, noTasksMessage, tasksCardMessage, handleTaskPress, t]);
+  }, [isLoadingTasks, tasks, groupedTasks, themeColors, primaryColor, noTasksMessage, tasksCardMessage, handleTaskPress, t]);
 
   const weSentLastMessage = coachConversation?.last_message_sender_id === userId;
 
@@ -561,6 +631,7 @@ export const AthleteHomeContent = () => {
   }, [isLoadingConversation, coachConversation, themeColors, primaryColor, weSentLastMessage, handleCoachMessagePress, t]);
 
   return (
+    <>
     <ScreenWrapper scrollable tabScreen>
       <View style={styles.header}>
         <Text style={[styles.title, { color: themeColors.text }]}>{greeting}</Text>
@@ -656,6 +727,17 @@ export const AthleteHomeContent = () => {
         </Card>
       </View>
     </ScreenWrapper>
+    {showConfetti && (
+      <LottieView
+        source={require('@/assets/animations/confetti.json')}
+        autoPlay
+        loop={false}
+        resizeMode="cover"
+        onAnimationFinish={() => setShowConfetti(false)}
+        style={styles.confettiAnimation}
+      />
+    )}
+    </>
   );
 };
 
@@ -770,6 +852,31 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
   },
+  taskNameContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  taskSectionLabel: {
+    ...typography.p2,
+    marginBottom: 4,
+  },
+  taskSectionLabelSpacing: {
+    marginTop: 10,
+  },
+  overduePill: {
+    borderWidth: 1,
+    borderColor: '#E85C4A',
+    borderRadius: 100,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginLeft: 8,
+  },
+  overduePillText: {
+    color: '#E85C4A',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   // Coach messages card
   coachMessageCard: {
     marginBottom: 24,
@@ -864,5 +971,10 @@ const styles = StyleSheet.create({
   optionTitle: {
     ...typography.p1,
     lineHeight: 22,
+  },
+  confettiAnimation: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 999,
+    pointerEvents: 'none',
   },
 });

@@ -227,14 +227,15 @@ export const clientQuestionnairesController = {
                 // Lock this name for this batch
                 batchMap.add(`${clientId}:${finalName}`);
 
+                const hasQuestions = Array.isArray(item.questions) && item.questions.length > 0;
                 newAssignments.push({
                     client_id: clientId,
                     coach_id: targetCoachId,
                     name: finalName,
                     description: item.description,
                     questions: item.questions,
-                    status: 'pending',
-                    sent_at: new Date().toISOString(),
+                    status: hasQuestions ? 'pending' : 'draft',
+                    sent_at: hasQuestions ? new Date().toISOString() : null,
                 });
             }
         }
@@ -587,19 +588,20 @@ export const clientQuestionnairesController = {
 
             if (error) return res.status(500).json({ success: false, message: error.message });
 
-            // Send notification for client submissions only
-            if (!isCoach) {
+            // Send notification when the authenticated user is the client submitting their own questionnaire.
+            if (targetClientId === userId) {
                 resolveClientName(targetClientId).then((clientName) => {
-                    if (clientName) {
-                        createCoachNotification({
-                            coachId: targetCoachId,
-                            clientId: targetClientId,
-                            notificationType: NOTIFICATION_TYPES.questionnaire_completed,
-                            title: NOTIFICATION_TITLES.questionnaire_completed,
-                            description: `${clientName} completed a questionnaire`,
-                            metadata: { questionnaire_id: id, name: assignmentDetails.name },
-                        });
-                    }
+                    const firstName = clientName?.split(' ')[0] || 'Client';
+                    createCoachNotification({
+                        coachId: targetCoachId,
+                        clientId: targetClientId,
+                        notificationType: NOTIFICATION_TYPES.questionnaire_completed,
+                        title: NOTIFICATION_TITLES.questionnaire_completed,
+                        description: `${firstName} completed a questionnaire`,
+                        metadata: { questionnaire_id: id, name: assignmentDetails.name },
+                    });
+                }).catch((err) => {
+                    console.error('[QuestionnaireController] notification error:', err);
                 });
             }
 

@@ -741,6 +741,7 @@ class DemoDataService {
     BAND_PULL_APART: '225',
     CHEST_STRETCH: '102',
     SHOULDER_STRETCH: '116',
+    FORWARD_ARM_CIRCLE: '972',
     // Lower body
     BARBELL_SQUAT: '6',
     BARBELL_STIFF_LEG_DEADLIFT: '21',
@@ -752,6 +753,9 @@ class DemoDataService {
     BODYWEIGHT_SQUAT: '153',
     QUADS_STRETCH: '106',
     HAMSTRINGS_STRETCH: '123',
+    HIP_MOBILITY: '1285',
+    BOX_JUMP: '634',
+    WALL_SIT: '1413',
   };
 
   private buildUpperWorkout(completed: boolean, dateStr: string): any {
@@ -761,7 +765,7 @@ class DemoDataService {
     const EX = DemoDataService.EXERCISE_IDS;
     const exBenchId = EX.BARBELL_BENCH_PRESS;
     const exOhpId = EX.BARBELL_OVERHEAD_PRESS;
-    const exArmCirclesId = crypto.randomUUID(); // No seed data for arm circles
+    const exArmCirclesId = EX.FORWARD_ARM_CIRCLE;
     const exBandPullId = EX.BAND_PULL_APART;
     const exPushupId = EX.PUSH_UP;
     const exDbRowId = EX.DUMBBELL_ROW_BILATERAL;
@@ -913,14 +917,14 @@ class DemoDataService {
     const workoutEnded = completed ? new Date(dateStr + 'T09:15:00Z') : null;
 
     const EX = DemoDataService.EXERCISE_IDS;
-    const exLegSwingsId = crypto.randomUUID(); // No seed data for leg swings
+    const exLegSwingsId = EX.HIP_MOBILITY;
     const exBwSquatsId = EX.BODYWEIGHT_SQUAT;
     const exBackSquatId = EX.BARBELL_SQUAT;
     const exRdlId = EX.BARBELL_STIFF_LEG_DEADLIFT;
     const exJumpSquatsId = EX.JUMP_SQUATS;
     const exLungesId = EX.FORWARD_LUNGE;
-    const exBoxJumpsId = crypto.randomUUID(); // No seed data for box jumps
-    const exWallSitsId = crypto.randomUUID(); // No seed data for wall sits
+    const exBoxJumpsId = EX.BOX_JUMP;
+    const exWallSitsId = EX.WALL_SIT;
     const exLegPressId = EX.MACHINE_LEG_PRESS;
     const exCalfRaisesId = EX.CALF_RAISES;
     const exLegCurlsId = EX.MACHINE_HAMSTRING_CURL;

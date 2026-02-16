@@ -596,24 +596,24 @@ export const clientTrainingsController = {
                 console.error('Failed to insert exercise history:', historyError);
             }
 
-            // Send notification for completed workouts from client requests only
-            if (workoutStatus === 'completed') {
-                const isCoachRequest = !!req.header('x-coach-id');
-                if (!isCoachRequest) {
-                    const workoutName = workoutToSave.program || workoutToSave.title || workoutToSave.name || workoutToSave.workoutName || 'Untitled Workout';
-                    Promise.all([resolveCoachId(clientId), resolveClientName(clientId)]).then(([resolvedCoachId, clientName]) => {
-                        if (resolvedCoachId && clientName) {
-                            createCoachNotification({
-                                coachId: resolvedCoachId,
-                                clientId,
-                                notificationType: NOTIFICATION_TYPES.workout_completed,
-                                title: NOTIFICATION_TITLES.workout_completed,
-                                description: `${clientName} completed ${workoutName} for ${date}`,
-                                metadata: { training_id: instanceKey, workout_name: workoutName, date },
-                            });
-                        }
-                    });
-                }
+            // Send notification when the authenticated user is the client completing their own workout.
+            if (workoutStatus === 'completed' && clientId === userId) {
+                const workoutName = workoutToSave.program || workoutToSave.title || workoutToSave.name || workoutToSave.workoutName || 'Untitled Workout';
+                Promise.all([resolveCoachId(clientId), resolveClientName(clientId)]).then(([resolvedCoachId, clientName]) => {
+                    if (resolvedCoachId) {
+                        const firstName = clientName?.split(' ')[0] || 'Client';
+                        createCoachNotification({
+                            coachId: resolvedCoachId,
+                            clientId,
+                            notificationType: NOTIFICATION_TYPES.workout_completed,
+                            title: NOTIFICATION_TITLES.workout_completed,
+                            description: `${firstName} completed ${workoutName} for ${date}`,
+                            metadata: { training_id: instanceKey, workout_name: workoutName, date },
+                        });
+                    }
+                }).catch((err) => {
+                    console.error('[TrainingController] notification error:', err);
+                });
             }
         }
 
@@ -1114,11 +1114,16 @@ export const clientTrainingsController = {
             .select('musclewiki_id, name, thumbnail_url')
             .in('musclewiki_id', exerciseIds);
 
-        // Also check coach_exercises for custom exercises
-        const { data: coachExercisesData, error: coachExercisesError } = await supabase
-            .from('coach_exercises')
-            .select('id, name, video_link')
-            .in('id', exerciseIds);
+        // Also check coach_exercises for custom exercises (filter to UUID-shaped IDs only)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const uuidExerciseIds = exerciseIds.filter((id: string) => uuidRegex.test(id));
+
+        const { data: coachExercisesData, error: coachExercisesError } = uuidExerciseIds.length > 0
+            ? await supabase
+                .from('coach_exercises')
+                .select('id, name, video_link')
+                .in('id', uuidExerciseIds)
+            : { data: [], error: null };
 
         // Build exercise map from cache
         const exerciseMap = new Map<string, { id: string; name: string; rawThumbnailUrl?: string }>();

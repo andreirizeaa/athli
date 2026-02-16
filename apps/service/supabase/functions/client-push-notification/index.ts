@@ -5,8 +5,11 @@
  * Invoked by pg_cron every 30 minutes.
  *
  * Two notification windows per client (based on their local timezone):
- * - 5:00 AM — new tasks/workouts for today
- * - 6:00 PM — uncompleted tasks/workouts reminder
+ * - 5:00 AM — new tasks/workouts for today + overdue items
+ * - 4:00 PM — uncompleted tasks/workouts reminder
+ *
+ * Each window sends a single consolidated push notification combining
+ * tasks, workouts, and overdue items with type breakdowns.
  *
  * Environment Variables Required:
  * - SUPABASE_URL
@@ -58,7 +61,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Step 1 — Find eligible clients (local hour = 5 or 18)
+    // Step 1 — Find eligible clients (local hour = 5 or 16)
     const { data: eligibleClients, error: eligibleError } = await supabase.rpc('get_eligible_push_clients')
 
     // If the RPC doesn't exist yet, fall back to raw SQL
@@ -118,7 +121,7 @@ Deno.serve(async (req) => {
         const day = String(localTime.getDate()).padStart(2, '0')
         const localToday = `${year}-${month}-${day}`
 
-        if (localHour === 5 || localHour === 18) {
+        if (localHour === 5 || localHour === 16) {
           clients.push({
             client_id: clientId,
             timezone,
@@ -144,51 +147,35 @@ Deno.serve(async (req) => {
       const { client_id, local_hour, local_today } = client
       const isMorning = local_hour === 5
 
-      // Step 2 — Determine notification types for this window
-      const taskType = isMorning ? 'morning_tasks' : 'evening_tasks'
-      const workoutType = isMorning ? 'morning_workouts' : 'evening_workouts'
+      // Determine notification type for dedup
+      const notificationType = isMorning ? 'morning_tasks' : 'afternoon_tasks'
 
-      // Step 3 — Attempt dedup inserts
-      const [taskDedup, workoutDedup] = await Promise.all([
-        supabase
-          .from('client_push_notification_log')
-          .insert({ client_id, notification_type: taskType, notification_date: local_today })
-          .select('id')
-          .single(),
-        supabase
-          .from('client_push_notification_log')
-          .insert({ client_id, notification_type: workoutType, notification_date: local_today })
-          .select('id')
-          .single(),
-      ])
+      // Attempt dedup insert (single entry per window now)
+      const { error: dedupError } = await supabase
+        .from('client_push_notification_log')
+        .insert({ client_id, notification_type: notificationType, notification_date: local_today })
+        .select('id')
+        .single()
 
-      const shouldSendTasks = !taskDedup.error
-      const shouldSendWorkouts = !workoutDedup.error
-
-      if (!shouldSendTasks && !shouldSendWorkouts) {
-        console.log(`Client ${client_id}: already notified today, skipping`)
+      if (dedupError) {
+        console.log(`Client ${client_id}: already notified for ${notificationType} today, skipping`)
         continue
       }
 
-      // Step 4 — Fetch tasks and workouts data
-      const notifications: Array<{ title: string; body: string }> = []
+      // Gather all data for consolidated notification
+      const taskInfo = await getTaskBreakdown(supabase, client_id, local_today, isMorning)
+      const workoutInfo = await getWorkoutInfo(supabase, client_id, local_today, isMorning)
+      const overdueInfo = isMorning ? await getOverdueInfo(supabase, client_id, local_today) : null
 
-      if (shouldSendTasks) {
-        const taskNotification = await buildTaskNotification(supabase, client_id, local_today, isMorning)
-        if (taskNotification) notifications.push(taskNotification)
-      }
+      // Build consolidated notification
+      const notification = buildConsolidatedNotification(taskInfo, workoutInfo, overdueInfo, isMorning)
 
-      if (shouldSendWorkouts) {
-        const workoutNotification = await buildWorkoutNotification(supabase, client_id, local_today, isMorning)
-        if (workoutNotification) notifications.push(workoutNotification)
-      }
-
-      if (notifications.length === 0) {
+      if (!notification) {
         console.log(`Client ${client_id}: no tasks/workouts to notify about`)
         continue
       }
 
-      // Step 5 — Get push tokens and send
+      // Get push tokens and send
       const { data: tokens, error: tokenError } = await supabase
         .from('client_push_tokens')
         .select('expo_push_token')
@@ -199,19 +186,14 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // Send each notification to all devices
-      const messages = []
-      for (const notification of notifications) {
-        for (const token of tokens) {
-          messages.push({
-            to: token.expo_push_token,
-            sound: 'default',
-            title: notification.title,
-            body: notification.body,
-            data: { type: 'client_notification' },
-          })
-        }
-      }
+      // Single consolidated push to all devices
+      const messages = tokens.map((token: any) => ({
+        to: token.expo_push_token,
+        sound: 'default',
+        title: notification.title,
+        body: notification.body,
+        data: { type: 'client_notification' },
+      }))
 
       if (messages.length > 0) {
         const expoResponse = await fetch('https://exp.host/--/api/v2/push/send', {
@@ -257,17 +239,37 @@ function jsonResponse(body: Record<string, any>, status = 200) {
   })
 }
 
+interface TaskBreakdown {
+  check_in: number
+  metric: number
+  habit: number
+  questionnaire: number
+  total: number
+}
+
+interface WorkoutInfo {
+  count: number
+}
+
+interface OverdueInfo {
+  check_in: number
+  metric: number
+  habit: number
+  questionnaire: number
+  total: number
+  daysBehind: number
+}
+
 /**
- * Build a task notification for a client.
- * Morning: "You have N new task(s)"
- * Evening: "You still have N task(s) to complete"
+ * Get today's tasks grouped by type.
+ * For afternoon, only uncompleted tasks remain (they're hard-deleted on completion).
  */
-async function buildTaskNotification(
+async function getTaskBreakdown(
   supabase: any,
   clientId: string,
   localToday: string,
-  isMorning: boolean
-): Promise<{ title: string; body: string } | null> {
+  _isMorning: boolean
+): Promise<TaskBreakdown | null> {
   const { data: tasks, error } = await supabase
     .from('client_tasks')
     .select('id, task_type, reference_id')
@@ -276,38 +278,26 @@ async function buildTaskNotification(
 
   if (error || !tasks || tasks.length === 0) return null
 
-  // Tasks are hard-deleted on completion, so remaining tasks = uncompleted
-  const count = tasks.length
-
-  // Enrich first task for single-item body
-  const enriched = await enrichTaskNames(supabase, tasks)
-  const firstName = enriched[0]?.displayName || 'task'
-
-  if (isMorning) {
-    if (count === 1) {
-      return { title: 'You have a new task', body: firstName }
+  const breakdown: TaskBreakdown = { check_in: 0, metric: 0, habit: 0, questionnaire: 0, total: tasks.length }
+  for (const task of tasks as TaskRow[]) {
+    if (task.task_type in breakdown) {
+      breakdown[task.task_type as keyof Omit<TaskBreakdown, 'total'>]++
     }
-    return { title: `You have ${count} new tasks`, body: firstName }
-  } else {
-    if (count === 1) {
-      return { title: "Don't forget your task", body: firstName }
-    }
-    return { title: `You still have ${count} tasks to complete`, body: firstName }
   }
+
+  return breakdown
 }
 
 /**
- * Build a workout notification for a client.
- * Morning: "You have N workout(s) today"
- * Evening: "You still have N workout(s) to complete" (only uncompleted)
+ * Get today's workout count.
+ * For afternoon, filter out completed workouts.
  */
-async function buildWorkoutNotification(
+async function getWorkoutInfo(
   supabase: any,
   clientId: string,
   localToday: string,
   isMorning: boolean
-): Promise<{ title: string; body: string } | null> {
-  // Query client_training using its actual columns (no 'id' column exists)
+): Promise<WorkoutInfo | null> {
   const { data: trainings, error } = await supabase
     .from('client_training')
     .select('client_id, date, coach_id, training_data')
@@ -317,151 +307,171 @@ async function buildWorkoutNotification(
   if (error || !trainings || trainings.length === 0) return null
 
   // Extract all workout keys from training_data JSONB
-  // training_data is an object like { workout_1: {...}, workout_2: {...} }
-  const allWorkouts: Array<{ workoutId: string; name: string; trainingData: Record<string, any> }> = []
+  const allWorkoutIds: string[] = []
   for (const training of trainings as TrainingRow[]) {
     if (training.training_data && typeof training.training_data === 'object') {
-      for (const [workoutId, workoutData] of Object.entries(training.training_data)) {
-        allWorkouts.push({
-          workoutId,
-          name: (workoutData as any)?.name || 'workout',
-          trainingData: training.training_data,
-        })
+      for (const workoutId of Object.keys(training.training_data)) {
+        allWorkoutIds.push(workoutId)
       }
     }
   }
 
-  if (allWorkouts.length === 0) return null
+  if (allWorkoutIds.length === 0) return null
 
-  let workoutsToNotify = allWorkouts
-
-  // For evening, filter out completed workouts
   if (!isMorning) {
-    const workoutIds = allWorkouts.map(w => w.workoutId)
+    // Filter out completed workouts
     const { data: history } = await supabase
       .from('client_training_history')
       .select('workout_id, status')
       .eq('client_id', clientId)
       .eq('date', localToday)
-      .in('workout_id', workoutIds)
+      .in('workout_id', allWorkoutIds)
       .eq('status', 'completed')
 
-    const completedWorkoutIds = new Set((history || []).map((h: TrainingHistoryRow) => h.workout_id))
-    workoutsToNotify = allWorkouts.filter(w => !completedWorkoutIds.has(w.workoutId))
-
-    if (workoutsToNotify.length === 0) return null
+    const completedIds = new Set((history || []).map((h: TrainingHistoryRow) => h.workout_id))
+    const remaining = allWorkoutIds.filter(id => !completedIds.has(id))
+    if (remaining.length === 0) return null
+    return { count: remaining.length }
   }
 
-  const count = workoutsToNotify.length
-  const firstName = workoutsToNotify[0].name
+  return { count: allWorkoutIds.length }
+}
+
+/**
+ * Get overdue tasks from previous days (due_date < today).
+ */
+async function getOverdueInfo(
+  supabase: any,
+  clientId: string,
+  localToday: string
+): Promise<OverdueInfo | null> {
+  const { data: tasks, error } = await supabase
+    .from('client_tasks')
+    .select('id, task_type, due_date')
+    .eq('client_id', clientId)
+    .lt('due_date', localToday)
+
+  if (error || !tasks || tasks.length === 0) return null
+
+  const info: OverdueInfo = { check_in: 0, metric: 0, habit: 0, questionnaire: 0, total: tasks.length, daysBehind: 0 }
+  for (const task of tasks) {
+    if (task.task_type in info && task.task_type !== 'total' && task.task_type !== 'daysBehind') {
+      (info as any)[task.task_type]++
+    }
+  }
+
+  // Calculate how far behind the oldest overdue task is
+  const dates = tasks.map((t: any) => t.due_date).sort()
+  if (dates.length > 0) {
+    const oldest = new Date(dates[0])
+    const today = new Date(localToday)
+    info.daysBehind = Math.floor((today.getTime() - oldest.getTime()) / (1000 * 60 * 60 * 24))
+  }
+
+  return info
+}
+
+/**
+ * Build a type breakdown string like "2 check-ins, 1 metric log, and 1 habit"
+ */
+function buildTypeBreakdown(counts: { check_in: number; metric: number; habit: number; questionnaire: number }): string {
+  const parts: string[] = []
+
+  if (counts.check_in > 0) {
+    parts.push(`${counts.check_in} check-in${counts.check_in > 1 ? 's' : ''}`)
+  }
+  if (counts.metric > 0) {
+    parts.push(`${counts.metric} metric log${counts.metric > 1 ? 's' : ''}`)
+  }
+  if (counts.habit > 0) {
+    parts.push(`${counts.habit} habit${counts.habit > 1 ? 's' : ''}`)
+  }
+  if (counts.questionnaire > 0) {
+    parts.push(`${counts.questionnaire} questionnaire${counts.questionnaire > 1 ? 's' : ''}`)
+  }
+
+  return formatList(parts)
+}
+
+/**
+ * Join items with commas and "and": ["a", "b", "c"] -> "a, b, and c"
+ */
+function formatList(items: string[]): string {
+  if (items.length === 0) return ''
+  if (items.length === 1) return items[0]
+  if (items.length === 2) return `${items[0]} and ${items[1]}`
+  return items.slice(0, -1).join(', ') + ', and ' + items[items.length - 1]
+}
+
+/**
+ * Build a single consolidated notification combining tasks, workouts, and overdue items.
+ */
+function buildConsolidatedNotification(
+  taskInfo: TaskBreakdown | null,
+  workoutInfo: WorkoutInfo | null,
+  overdueInfo: OverdueInfo | null,
+  isMorning: boolean
+): { title: string; body: string } | null {
+  const bodyParts: string[] = []
+
+  // Tasks breakdown
+  if (taskInfo) {
+    const breakdown = buildTypeBreakdown(taskInfo)
+    if (breakdown) {
+      bodyParts.push(breakdown)
+    }
+  }
+
+  // Workouts
+  if (workoutInfo) {
+    const wCount = workoutInfo.count
+    bodyParts.push(`${wCount} workout${wCount > 1 ? 's' : ''}`)
+  }
+
+  // Overdue (morning only)
+  if (overdueInfo && overdueInfo.total > 0) {
+    const overdueBreakdown = buildTypeBreakdown(overdueInfo)
+    if (overdueBreakdown) {
+      const daysLabel = overdueInfo.daysBehind === 1 ? 'yesterday' : `from the last ${overdueInfo.daysBehind} days`
+      bodyParts.push(`${overdueBreakdown} overdue ${daysLabel}`)
+    }
+  }
+
+  if (bodyParts.length === 0) return null
+
+  let title: string
+  let body: string
 
   if (isMorning) {
-    if (count === 1) {
-      return { title: 'You have a new workout today', body: firstName }
+    title = "Good morning! Here's your plan for today"
+
+    if (overdueInfo && overdueInfo.total > 0) {
+      // Separate today's items from overdue
+      const todayParts: string[] = []
+      if (taskInfo) {
+        const breakdown = buildTypeBreakdown(taskInfo)
+        if (breakdown) todayParts.push(breakdown)
+      }
+      if (workoutInfo) {
+        const wCount = workoutInfo.count
+        todayParts.push(`${wCount} workout${wCount > 1 ? 's' : ''}`)
+      }
+
+      const overdueBreakdown = buildTypeBreakdown(overdueInfo)
+      const daysLabel = overdueInfo.daysBehind === 1 ? 'yesterday' : `from the last ${overdueInfo.daysBehind} days`
+
+      if (todayParts.length > 0) {
+        body = `${formatList(todayParts)}. Also ${overdueBreakdown} overdue ${daysLabel}.`
+      } else {
+        body = `You have ${overdueBreakdown} overdue ${daysLabel}.`
+      }
+    } else {
+      body = formatList(bodyParts)
     }
-    return { title: `You have ${count} workouts today`, body: firstName }
   } else {
-    if (count === 1) {
-      return { title: "Don't forget your workout", body: firstName }
-    }
-    return { title: `You still have ${count} workouts to complete`, body: firstName }
-  }
-}
-
-/**
- * Enrich task rows with display names by looking up reference tables.
- * Mirrors the enrichTasks pattern from client-tasks.controller.ts
- */
-async function enrichTaskNames(
-  supabase: any,
-  tasks: Array<{ id: string; task_type: string; reference_id: string }>
-): Promise<Array<{ id: string; task_type: string; reference_id: string; displayName: string }>> {
-  // Group reference_ids by task_type
-  const idsByType: Record<string, string[]> = {}
-  for (const t of tasks) {
-    if (!idsByType[t.task_type]) idsByType[t.task_type] = []
-    idsByType[t.task_type].push(t.reference_id)
+    title = 'You still have tasks to complete'
+    body = `${formatList(bodyParts)} remaining`
   }
 
-  const refMap: Record<string, string> = {}
-
-  const fetches: Promise<void>[] = []
-
-  if (idsByType.check_in?.length) {
-    fetches.push(
-      supabase
-        .from('client_checkins')
-        .select('id, name')
-        .in('id', idsByType.check_in)
-        .then(({ data }: any) => {
-          for (const r of data || []) refMap[r.id] = r.name
-        })
-    )
-  }
-
-  if (idsByType.metric?.length) {
-    fetches.push(
-      supabase
-        .from('client_metrics')
-        .select('id, name')
-        .in('id', idsByType.metric)
-        .then(({ data }: any) => {
-          for (const r of data || []) refMap[r.id] = r.name
-        })
-    )
-  }
-
-  if (idsByType.habit?.length) {
-    fetches.push(
-      supabase
-        .from('client_habits')
-        .select('id, name')
-        .in('id', idsByType.habit)
-        .then(({ data }: any) => {
-          for (const r of data || []) refMap[r.id] = r.name
-        })
-    )
-  }
-
-  if (idsByType.questionnaire?.length) {
-    fetches.push(
-      supabase
-        .from('client_questionnaires')
-        .select('id, name')
-        .in('id', idsByType.questionnaire)
-        .then(({ data }: any) => {
-          for (const r of data || []) refMap[r.id] = r.name
-        })
-    )
-  }
-
-  await Promise.all(fetches)
-
-  // Format display names
-  const typeLabels: Record<string, (name: string) => string> = {
-    check_in: (name) => `Complete ${name} check-in`,
-    metric: (name) => `Enter a log for ${name}`,
-    habit: (name) => `Complete ${name}`,
-    questionnaire: (name) => `Fill out ${name}`,
-  }
-
-  return tasks.map(t => {
-    const name = refMap[t.reference_id] || 'task'
-    const formatter = typeLabels[t.task_type]
-    return {
-      ...t,
-      displayName: formatter ? formatter(name) : name,
-    }
-  })
-}
-
-/**
- * Extract workout name from training_data JSONB.
- * training_data is an object where keys are workout IDs and values have a `name` field.
- */
-function extractWorkoutName(trainingData: Record<string, any>): string {
-  if (!trainingData || typeof trainingData !== 'object') return 'workout'
-  const keys = Object.keys(trainingData)
-  if (keys.length === 0) return 'workout'
-  return trainingData[keys[0]]?.name || 'workout'
+  return { title, body }
 }

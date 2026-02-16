@@ -21,6 +21,7 @@ import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { haptics } from '@/utils/haptics';
 import { useAthleteQuestionnaires, type AthleteQuestionnaire } from '@/hooks/useAthleteQuestionnaires';
+import { useAthleteCheckIns, type AthleteCheckIn } from '@/hooks/useAthleteCheckIns';
 
 const HEADER_HEIGHT = 52;
 
@@ -43,9 +44,11 @@ export default function AthleteFormsScreen() {
     isLoading: isLoadingQuestionnaires,
   } = useAthleteQuestionnaires();
 
-  // Check-ins tab is a placeholder for now — check-in history not yet implemented
-  const historicCheckIns: any[] = [];
-  const isLoadingCheckIns = false;
+  // Fetch check-ins from API
+  const {
+    historicCheckIns,
+    isLoading: isLoadingCheckIns,
+  } = useAthleteCheckIns();
 
   const UNDERLINE_EXTRA_WIDTH = 8;
 
@@ -118,6 +121,20 @@ export default function AthleteFormsScreen() {
     });
   }, [router]);
 
+  const handleCheckInPress = useCallback((item: AthleteCheckIn) => {
+    haptics.medium();
+    router.push({
+      pathname: '/modals/athlete/form-review-modal',
+      params: {
+        questionnaireId: item.id,
+        questionnaireName: item.name,
+        questionsJson: JSON.stringify(item.questions),
+        answersJson: JSON.stringify(item.latest_answers || []),
+        completedAt: item.latest_submission_date || undefined,
+      },
+    });
+  }, [router]);
+
   const renderQuestionnaireItem = useCallback(({ item, index }: { item: AthleteQuestionnaire; index: number }) => {
     const questionCount = item.questions?.length ?? 0;
     const isLastItem = index === historicQuestionnaires.length - 1;
@@ -168,6 +185,57 @@ export default function AthleteFormsScreen() {
       </View>
     );
   }, [historicQuestionnaires, themeColors, t, handleQuestionnairePress]);
+
+  const renderCheckInItem = useCallback(({ item, index }: { item: AthleteCheckIn; index: number }) => {
+    const questionCount = item.questions?.length ?? 0;
+    const isLastItem = index === historicCheckIns.length - 1;
+
+    return (
+      <View>
+        <PressableScale
+          style={styles.rowWrapper}
+          onPress={() => handleCheckInPress(item)}
+        >
+          <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
+            <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
+              <PlatformIcon
+                sf="list.bullet.rectangle.portrait.fill"
+                IconComponent={ClipboardList}
+                size={24}
+                color={themeColors.text}
+              />
+            </SquircleView>
+            <View style={styles.textContent}>
+              <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <View style={styles.metaRow}>
+                <View style={[styles.pill, { borderColor: themeColors.mutedText }]}>
+                  <Text style={[styles.pillText, { color: themeColors.mutedText }]}>
+                    {questionCount} {questionCount === 1 ? t('general.question') : t('general.questions')}
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <ChevronRight {...({ size: 16, color: themeColors.mutedText } as any)} />
+          </View>
+        </PressableScale>
+
+        {!isLastItem && (
+          <View style={styles.separatorContainer}>
+            <View
+              style={[
+                styles.separator,
+                { backgroundColor: themeColors.mutedText, opacity: 0.2 },
+              ]}
+            />
+          </View>
+        )}
+
+        {isLastItem && <View style={{ height: 24 }} />}
+      </View>
+    );
+  }, [historicCheckIns, themeColors, t, handleCheckInPress]);
 
   const renderEmptyState = (isCheckIns: boolean) => (
     <View style={styles.emptyState}>
@@ -249,10 +317,10 @@ export default function AthleteFormsScreen() {
           showsVerticalScrollIndicator={false}
         />
       ) : (
-        <FlashList
+        <FlashList<AthleteCheckIn>
           data={historicCheckIns}
-          renderItem={() => null}
-          keyExtractor={(item: any) => item.id}
+          renderItem={renderCheckInItem}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.listContent, { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 32 }]}
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={() => renderEmptyState(true)}

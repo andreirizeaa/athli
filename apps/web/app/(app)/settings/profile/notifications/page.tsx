@@ -38,6 +38,7 @@ const notificationGroups: NotificationGroup[] = [
     descriptionKey: 'settings.notifications.forms.description',
     types: [
       { type: 'checkin_completed', labelKey: 'settings.notifications.forms.options.checkinCompleted' },
+      { type: 'checkin_missed', labelKey: 'settings.notifications.forms.options.checkinMissed' },
       { type: 'questionnaire_completed', labelKey: 'settings.notifications.forms.options.questionnaireCompleted' },
     ],
   },
@@ -47,7 +48,9 @@ const notificationGroups: NotificationGroup[] = [
     descriptionKey: 'settings.notifications.tracking.description',
     types: [
       { type: 'metric_logged', labelKey: 'settings.notifications.tracking.options.metricLogged' },
+      { type: 'metric_missed', labelKey: 'settings.notifications.tracking.options.metricMissed' },
       { type: 'habit_logged', labelKey: 'settings.notifications.tracking.options.habitLogged' },
+      { type: 'habit_missed', labelKey: 'settings.notifications.tracking.options.habitMissed' },
       { type: 'photo_uploaded', labelKey: 'settings.notifications.tracking.options.photoUploaded' },
     ],
   },

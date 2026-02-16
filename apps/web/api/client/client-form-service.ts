@@ -776,6 +776,7 @@ export type ClientCheckInDetail = {
   questions: any[];
   scheduleConfig?: Record<string, any>;
   cronExpression?: string;
+  status?: 'draft' | 'live' | 'paused';
 };
 
 export type LocalClientQuestionnaireDetail = {
