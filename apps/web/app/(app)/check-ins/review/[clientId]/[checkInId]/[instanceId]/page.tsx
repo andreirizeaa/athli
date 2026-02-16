@@ -1,7 +1,9 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 import {
     Breadcrumb,
@@ -11,56 +13,84 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator
 } from '@/components/ui/breadcrumb';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { CheckInReviewContent } from '@/components/forms/check-in-review-content';
-import { Button } from '@/components/ui/button';
+import { useClientProfile } from '@/hooks/use-client-profile';
+import { getCheckInInstance, type CheckInInstance } from '@/api/client/client-form-service';
 
 const CheckInReviewPage = () => {
     const t = useTranslations();
-    const router = useRouter();
     const params = useParams<{ clientId: string; checkInId: string; instanceId: string }>();
 
     const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
     const checkInId = Array.isArray(params.checkInId) ? params.checkInId[0] : params.checkInId;
     const instanceId = Array.isArray(params.instanceId) ? params.instanceId[0] : params.instanceId;
 
-    const handleBack = () => {
-        router.push('/check-ins');
-    };
+    const { client } = useClientProfile(clientId);
+    const [checkInInstance, setCheckInInstance] = useState<CheckInInstance | null>(null);
+
+    useEffect(() => {
+        const fetchInstance = async () => {
+            if (!clientId || !checkInId || !instanceId) return;
+            try {
+                const data = await getCheckInInstance(clientId, checkInId, instanceId);
+                setCheckInInstance(data);
+            } catch (error) {
+                console.error('Failed to fetch check-in instance:', error);
+            }
+        };
+        fetchInstance();
+    }, [clientId, checkInId, instanceId]);
+
+    const clientName = client ? `${client.firstName} ${client.lastName}` : '';
+    const checkInName = checkInInstance?.formName || '';
 
     return (
         <div className="h-full w-full flex flex-col bg-background overflow-hidden font-sans">
             <div className="w-full relative flex-shrink-0">
-                <div className="px-6 py-4 flex flex-col gap-1">
+                <div className="px-4 flex flex-col gap-1 mb-2 mt-2">
                     <Breadcrumb>
-                        <BreadcrumbList>
+                        <BreadcrumbList className="text-xs gap-1">
                             <BreadcrumbItem>
-                                <BreadcrumbLink
-                                    href="/check-ins"
-                                    className="hover:text-foreground transition-colors"
-                                >
-                                    Check-ins
+                                <BreadcrumbLink asChild>
+                                    <Link
+                                        href="/check-ins"
+                                        className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
+                                    >
+                                        {t('sidebar.links.checkIns')}
+                                    </Link>
                                 </BreadcrumbLink>
                             </BreadcrumbItem>
-                            <BreadcrumbSeparator>
-                                <ChevronRight className="size-3.5" />
+                            <BreadcrumbSeparator className="text-muted-foreground/60">
+                                <ChevronRight className="h-2 w-2" />
                             </BreadcrumbSeparator>
                             <BreadcrumbItem>
-                                <BreadcrumbPage>Review</BreadcrumbPage>
+                                <BreadcrumbLink asChild>
+                                    <Link
+                                        href={`/athletes/${clientId}/overview`}
+                                        className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
+                                    >
+                                        {clientName || t('forms.checkIns.review.client')}
+                                    </Link>
+                                </BreadcrumbLink>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator className="text-muted-foreground/60">
+                                <ChevronRight className="h-2 w-2" />
+                            </BreadcrumbSeparator>
+                            <BreadcrumbItem>
+                                <BreadcrumbPage className="px-0.5 font-semibold text-foreground">
+                                    {checkInName && clientName
+                                        ? `${checkInName} · ${clientName}`
+                                        : checkInName || t('forms.checkIns.review.title')}
+                                </BreadcrumbPage>
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
-                    <div className="flex items-center gap-4 mt-1">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleBack}
-                            className="size-8 -ml-2"
-                        >
-                            <ChevronLeft className="size-5" />
-                        </Button>
-                        <h1 className="text-xl font-semibold">Review Submission</h1>
-                    </div>
+                    <h1 className="text-[22px] font-semibold">
+                        {checkInName
+                            ? `${t('forms.checkIns.review.title')} ${checkInName}`
+                            : t('forms.checkIns.review.pageTitle')}
+                    </h1>
                 </div>
                 <Separator className="absolute bottom-[-1px] left-0 right-0" />
             </div>

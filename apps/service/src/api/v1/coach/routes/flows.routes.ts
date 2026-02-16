@@ -61,6 +61,8 @@ coachFlowRouter.get('/', supabaseAuthenticate, coachFlowController.getFlows);
  *                         flow:
  *                           $ref: '#/components/schemas/CoachFlow'
  */
+coachFlowRouter.get('/:id/stats', supabaseAuthenticate, coachFlowController.getFlowStats);
+
 coachFlowRouter.get('/:id', supabaseAuthenticate, coachFlowController.getFlowById);
 
 /**

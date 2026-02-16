@@ -45,8 +45,19 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/general/utils';
 import { SidebarMenuItemWithTabs } from '@/components/app/sidebar-menu-item-with-tabs';
+import { useLogout } from '@/lib/providers/logout-provider';
 
 export function AppSidebar() {
   const t = useTranslations();
@@ -64,6 +75,8 @@ export function AppSidebar() {
   };
   const { data: checklist } = useCoachChecklist();
   const terminology = useTerminology();
+  const { triggerLogout } = useLogout();
+  const [showLogoutDialog, setShowLogoutDialog] = React.useState(false);
 
   const isChecklistComplete = checklist
     ? checklist.client_app_demo &&
@@ -509,9 +522,40 @@ export function AppSidebar() {
             tabs={settingsTabs}
             tooltipAlign="end"
             onNavigate={handleMobileNavClick}
+            footerContent={
+              <>
+                <div className="h-px w-full bg-background/20 mt-1 mb-1" />
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutDialog(true)}
+                  className="mx-1.5 px-2 py-2 text-[15px] rounded transition-colors text-left text-red-400 hover:bg-background/20 hover:text-red-400"
+                >
+                  {t('sidebar.profile.logOut')}
+                </button>
+              </>
+            }
           />
         </SidebarMenu>
       </SidebarFooter>
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent onInteractOutside={() => setShowLogoutDialog(false)}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('sidebar.profile.confirmLogoutTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('sidebar.profile.confirmLogoutDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('general.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={triggerLogout}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('sidebar.profile.logOut')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sidebar>
   );
 }

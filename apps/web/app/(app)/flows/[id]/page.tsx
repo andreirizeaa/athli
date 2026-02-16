@@ -17,7 +17,10 @@ import {
 import { ChevronRight } from 'lucide-react';
 import { FlowEditor } from '@/components/flows/flow-editor';
 import { AddFlowSidePanel } from '@/components/flows/add-flow-side-panel';
+import { FlowStatsSidePanel } from '@/components/flows/flow-stats-side-panel';
 import { getFlowById, updateFlowDetails, updateFlowStatus, type Flow } from '@/api/coach/coach-flow-service';
+import { ButtonGroup } from '@/components/ui/button-group';
+import { BarChart3 } from 'lucide-react';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -34,6 +37,7 @@ const FlowDetailPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isEditFlowOpen, setIsEditFlowOpen] = useState(false);
   const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
 
   useEffect(() => {
     const fetchFlow = async () => {
@@ -138,14 +142,21 @@ const FlowDetailPage = () => {
               <h1 className="text-[22px] font-semibold">{flow.name}</h1>
             </div>
           </div>
-          <div className="flex gap-2">
+          <ButtonGroup>
+            <Button
+              variant="outline"
+              onClick={() => setIsStatsOpen(true)}
+            >
+              <BarChart3 className="size-4 mr-1.5" />
+              View Stats
+            </Button>
             <Button
               variant={flow.is_active ? "outline" : "default"}
               onClick={() => setIsPublishDialogOpen(true)}
             >
               {flow.is_active ? 'Unpublish' : 'Publish'}
             </Button>
-          </div>
+          </ButtonGroup>
         </div>
         <Separator />
       </div>
@@ -166,6 +177,13 @@ const FlowDetailPage = () => {
         initialName={flow.name || ''}
         initialDescription={flow.description || ''}
         onSave={handleEditFlow}
+      />
+
+      <FlowStatsSidePanel
+        open={isStatsOpen}
+        onOpenChange={setIsStatsOpen}
+        flowId={flowId}
+        flowName={flow.name || 'Flow'}
       />
 
       <ConfirmPublishDialog

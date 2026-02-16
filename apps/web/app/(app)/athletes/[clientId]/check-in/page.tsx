@@ -133,6 +133,12 @@ const ClientCheckInPage = () => {
   const [isEditCheckInOpen, setIsEditCheckInOpen] = useState<boolean>(false);
   const [editingCheckIn, setEditingCheckIn] = useState<ClientCheckInDetail | null>(null);
   const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState<boolean>(false);
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState<boolean>(false);
+  const [checkInToPublish, setCheckInToPublish] = useState<ClientCheckIn | null>(null);
+  const [isPauseDialogOpen, setIsPauseDialogOpen] = useState<boolean>(false);
+  const [checkInToPause, setCheckInToPause] = useState<ClientCheckIn | null>(null);
+  const [isResumeDialogOpen, setIsResumeDialogOpen] = useState<boolean>(false);
+  const [checkInToResume, setCheckInToResume] = useState<ClientCheckIn | null>(null);
 
   // Format schedule text
   const formatSchedule = (schedule: string): string => {
@@ -245,12 +251,17 @@ const ClientCheckInPage = () => {
     });
   };
 
-  const handlePublish = async (checkIn: ClientCheckIn) => {
-    if (!clientId || !user?.id) return;
+  const handlePublish = (checkIn: ClientCheckIn) => {
+    setCheckInToPublish(checkIn);
+    setIsPublishDialogOpen(true);
+  };
+
+  const handleConfirmPublish = async () => {
+    if (!checkInToPublish || !clientId || !user?.id) return;
 
     try {
       await updateClientCheckInStatus({
-        checkInId: checkIn.id,
+        checkInId: checkInToPublish.id,
         clientId: clientId,
         coachId: user.id,
         status: 'live',
@@ -260,15 +271,21 @@ const ClientCheckInPage = () => {
     } catch (error) {
       console.error('Failed to publish check-in:', error);
       toast.error(t('general.error'));
+      throw error; // Re-throw to prevent dialog from closing on error
     }
   };
 
-  const handlePause = async (checkIn: ClientCheckIn) => {
-    if (!clientId || !user?.id) return;
+  const handlePause = (checkIn: ClientCheckIn) => {
+    setCheckInToPause(checkIn);
+    setIsPauseDialogOpen(true);
+  };
+
+  const handleConfirmPause = async () => {
+    if (!checkInToPause || !clientId || !user?.id) return;
 
     try {
       await updateClientCheckInStatus({
-        checkInId: checkIn.id,
+        checkInId: checkInToPause.id,
         clientId: clientId,
         coachId: user.id,
         status: 'paused',
@@ -278,15 +295,21 @@ const ClientCheckInPage = () => {
     } catch (error) {
       console.error('Failed to pause check-in:', error);
       toast.error(t('general.error'));
+      throw error;
     }
   };
 
-  const handleResume = async (checkIn: ClientCheckIn) => {
-    if (!clientId || !user?.id) return;
+  const handleResume = (checkIn: ClientCheckIn) => {
+    setCheckInToResume(checkIn);
+    setIsResumeDialogOpen(true);
+  };
+
+  const handleConfirmResume = async () => {
+    if (!checkInToResume || !clientId || !user?.id) return;
 
     try {
       await updateClientCheckInStatus({
-        checkInId: checkIn.id,
+        checkInId: checkInToResume.id,
         clientId: clientId,
         coachId: user.id,
         status: 'live',
@@ -296,6 +319,7 @@ const ClientCheckInPage = () => {
     } catch (error) {
       console.error('Failed to resume check-in:', error);
       toast.error(t('general.error'));
+      throw error;
     }
   };
 
@@ -709,6 +733,45 @@ const ClientCheckInPage = () => {
         count={checkInToDelete ? 1 : selectedCheckIns.size}
         itemName={checkInToDelete?.name}
         itemType="check-in"
+        variant="default"
+      />
+
+      <ConfirmDeleteDialog
+        open={isPublishDialogOpen}
+        onOpenChange={(open) => {
+          setIsPublishDialogOpen(open);
+          if (!open) setCheckInToPublish(null);
+        }}
+        onConfirm={handleConfirmPublish}
+        title={t('athletes.profile.checkIns.publishConfirmTitle')}
+        description={t('athletes.profile.checkIns.publishConfirmDescription')}
+        confirmText={t('athletes.profile.checkIns.publish')}
+        variant="default"
+      />
+
+      <ConfirmDeleteDialog
+        open={isPauseDialogOpen}
+        onOpenChange={(open) => {
+          setIsPauseDialogOpen(open);
+          if (!open) setCheckInToPause(null);
+        }}
+        onConfirm={handleConfirmPause}
+        title={t('athletes.profile.checkIns.pauseConfirmTitle')}
+        description={t('athletes.profile.checkIns.pauseConfirmDescription')}
+        confirmText={t('athletes.profile.checkIns.pause')}
+        variant="default"
+      />
+
+      <ConfirmDeleteDialog
+        open={isResumeDialogOpen}
+        onOpenChange={(open) => {
+          setIsResumeDialogOpen(open);
+          if (!open) setCheckInToResume(null);
+        }}
+        onConfirm={handleConfirmResume}
+        title={t('athletes.profile.checkIns.resumeConfirmTitle')}
+        description={t('athletes.profile.checkIns.resumeConfirmDescription')}
+        confirmText={t('athletes.profile.checkIns.resume')}
         variant="default"
       />
 

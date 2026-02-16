@@ -262,6 +262,48 @@ export const billingController = {
     res.json(entitlements);
   },
 
+  // ─── Get Coach Entitlements (for clients to check their coach's plan) ───
+
+  getCoachEntitlements: async (req: Request, res: Response) => {
+    const supabase = getSupabaseClient();
+    const coachId = req.params.coachId;
+
+    const { data: entitlements, error } = await supabase
+      .from('coach_entitlements')
+      .select('*')
+      .eq('coach_id', coachId)
+      .maybeSingle();
+
+    if (error) {
+      logger.error({ err: error.message }, 'Failed to get coach entitlements');
+      res.status(500).json({ error: 'Failed to get entitlements' });
+      return;
+    }
+
+    if (!entitlements) {
+      res.json({
+        plan_type: 'starter',
+        client_limit: 5,
+        has_ai_workout_builder: false,
+        has_custom_exercises: false,
+        has_questionnaires: false,
+        has_habits_metrics: false,
+        storage_limit_gb: 0,
+        has_broadcast_messaging: false,
+        has_ai_todo_list: false,
+        has_priority_support: false,
+        has_automations: false,
+        has_ai_assistant: false,
+        has_payments: false,
+        subscription_status: 'active',
+        is_trial: false,
+      });
+      return;
+    }
+
+    res.json(entitlements);
+  },
+
   // ─── Get Billing Activity ────────────────────────────────────
 
   getBillingActivity: async (req: Request, res: Response) => {

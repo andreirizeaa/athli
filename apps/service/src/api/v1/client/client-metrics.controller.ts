@@ -334,19 +334,31 @@ export const clientMetricsController = {
 
         if (logError) return res.status(500).json({ success: false, message: logError.message });
 
-        // Send notification for client requests only
-        if (!isCoach) {
+        // Clean up any overdue tasks for this assignment (trigger handles same-day)
+        await supabase
+            .from('client_tasks')
+            .delete()
+            .eq('task_type', 'metric')
+            .eq('reference_id', assignmentId)
+            .eq('client_id', targetClientId)
+            .eq('coach_id', metric.coach_id)
+            .lte('due_date', date || new Date().toISOString().split('T')[0]);
+
+        // Send notification when the authenticated user is the client logging their own metric.
+        // Skip only when a coach logs on behalf of a *different* client.
+        if (targetClientId === userId) {
             resolveClientName(targetClientId).then((clientName) => {
-                if (clientName) {
-                    createCoachNotification({
-                        coachId: metric.coach_id,
-                        clientId: targetClientId,
-                        notificationType: NOTIFICATION_TYPES.metric_logged,
-                        title: NOTIFICATION_TITLES.metric_logged,
-                        description: `${clientName} logged a metric`,
-                        metadata: { assignment_id: assignmentId, name: metric.name, date: date || new Date().toISOString().split('T')[0] },
-                    });
-                }
+                const firstName = clientName?.split(' ')[0] || 'Client';
+                createCoachNotification({
+                    coachId: metric.coach_id,
+                    clientId: targetClientId,
+                    notificationType: NOTIFICATION_TYPES.metric_logged,
+                    title: NOTIFICATION_TITLES.metric_logged,
+                    description: `${firstName} logged ${metric.name}`,
+                    metadata: { assignment_id: assignmentId, name: metric.name, date: date || new Date().toISOString().split('T')[0], value },
+                });
+            }).catch((err) => {
+                console.error('[MetricController] notification error:', err);
             });
         }
 

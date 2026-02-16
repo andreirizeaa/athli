@@ -35,9 +35,18 @@ export function AuthLayout({ children, showHomeButton = true, rightContent, sing
           }}
         />
 
-        {/* Home Button */}
+        {/* Mobile Header - Sticky centered logo */}
         {showHomeButton && (
-          <div className="fixed left-6 top-6 z-20">
+          <div className="sticky top-0 z-20 flex items-center justify-center border-b bg-white/80 px-6 py-4 backdrop-blur-sm dark:bg-black/80 lg:hidden">
+            <Link href={landingPageUrl}>
+              <AthliIcon className="size-8 text-black dark:text-white" />
+            </Link>
+          </div>
+        )}
+
+        {/* Desktop Home Button - Fixed top left */}
+        {showHomeButton && (
+          <div className="fixed left-6 top-6 z-20 hidden lg:block">
             <Link href={landingPageUrl}>
               <AthliLogo />
             </Link>
@@ -45,7 +54,7 @@ export function AuthLayout({ children, showHomeButton = true, rightContent, sing
         )}
 
         {/* Content Container */}
-        <div className="relative z-10 flex min-h-full w-full items-center justify-center px-4 py-20">
+        <div className="relative z-10 flex min-h-full w-full items-center justify-center px-4 py-12 lg:py-20">
           <div className="w-full max-w-lg">
             {children}
           </div>

@@ -94,9 +94,9 @@ const CheckInsPage = () => {
       width: { class: 'w-[120px]', pixel: '120px' },
       getSortValue: (row) => row.status,
       renderCell: (row) => (
-        <div className="flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+        <span className="inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
           Awaiting Review
-        </div>
+        </span>
       ),
     },
   ];

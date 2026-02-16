@@ -28,52 +28,42 @@ export const enMessages = {
       },
     },
     checklist: {
-      workoutAi: 'Athli Workout AI',
-      programTemplates: 'Program templates',
-      customExercises: 'Custom exercises',
-      automateOnboardings: 'Automate onboardings',
-      checkInsForms: 'Check-ins & forms',
-      powerfulFlows: 'Powerful flows',
-      lifestyleHabits: 'Lifestyle Habits',
-      trackMetrics: 'Track any metrics!',
-      onDemandResources: 'On demand resources',
+      workouts: 'Workouts',
+      aiAssistant: 'AI Assistant',
+      flows: 'Flows',
+      habits: 'Habits',
+      metrics: 'Metrics',
+      forms: 'Forms',
+      automations: 'Automations',
       explore: 'Explore',
       details: {
-        workoutAi: {
+        workouts: {
           title: 'Build workouts with AI',
           subtitle: 'Create personalized workouts in seconds using our intelligent workout builder.',
         },
-        programTemplates: {
-          title: 'Create program templates',
-          subtitle: 'Design reusable multi-week programs to assign to clients with ease.',
+        aiAssistant: {
+          title: 'Your AI-powered coaching assistant',
+          subtitle: 'Get intelligent suggestions, automate tasks, and enhance your coaching workflow.',
         },
-        customExercises: {
-          title: 'Add custom exercises',
-          subtitle: 'Build your own exercise library with videos, instructions, and cues.',
-        },
-        automateOnboardings: {
-          title: 'Automate client onboarding',
-          subtitle: 'Set up automated flows to welcome new clients and collect information.',
-        },
-        checkInsForms: {
-          title: 'Create check-ins & forms',
-          subtitle: 'Build questionnaires to gather feedback, progress updates, and client data.',
-        },
-        powerfulFlows: {
+        flows: {
           title: 'Build powerful automations',
           subtitle: 'Create workflows that trigger actions based on client activity.',
         },
-        lifestyleHabits: {
+        habits: {
           title: 'Track lifestyle habits',
           subtitle: 'Help clients build healthy habits with daily tracking and streaks.',
         },
-        trackMetrics: {
+        metrics: {
           title: 'Track any metric',
           subtitle: 'Monitor weight, body measurements, or any custom metric over time.',
         },
-        onDemandResources: {
-          title: 'Share resources on demand',
-          subtitle: 'Upload PDFs, videos, and documents for clients to access anytime.',
+        forms: {
+          title: 'Create check-ins & forms',
+          subtitle: 'Build questionnaires to gather feedback, progress updates, and client data.',
+        },
+        automations: {
+          title: 'Automate client onboarding',
+          subtitle: 'Set up automated flows to welcome new clients and collect information.',
         },
       },
     },
@@ -543,6 +533,7 @@ export const enMessages = {
         description: 'Notifications when clients submit forms.',
         options: {
           checkinCompleted: 'Client completed a check-in',
+          checkinMissed: 'Client missed a check-in',
           questionnaireCompleted: 'Client completed a questionnaire',
         },
       },
@@ -551,7 +542,9 @@ export const enMessages = {
         description: 'Notifications related to client tracking activity.',
         options: {
           metricLogged: 'Client logged a metric',
+          metricMissed: 'Client missed a metric log',
           habitLogged: 'Client logged a habit',
+          habitMissed: 'Client missed a habit log',
           photoUploaded: 'Client uploaded a progress photo',
         },
       },
@@ -696,6 +689,8 @@ export const enMessages = {
       helpArticles: 'Help Articles',
       billing: 'Billing',
       logOut: 'Log out',
+      confirmLogoutTitle: 'Confirm log out',
+      confirmLogoutDescription: 'Are you sure you want to log out?',
     },
     search: {
       placeholder: 'Search across Athli...',
@@ -1763,6 +1758,8 @@ export const enMessages = {
       export: 'Export',
       exportSelectedAria: 'Export selected athletes',
       archive: 'Archive',
+      archivePlural: 'Archive {item}',
+      archivePluralTooltip: 'Archive {item} that are active',
       archiveSelectedAria: 'Archive selected athletes',
       viewTrainingCalendarAria: 'Open training calendar for {name}',
       copyAthleteName: 'Copy athlete name',
@@ -1899,8 +1896,14 @@ export const enMessages = {
         publish: 'Publish',
         pause: 'Pause',
         resume: 'Resume',
+        publishConfirmTitle: 'Publish check-in?',
+        publishConfirmDescription: 'Are you sure? This will make this check-in live and the client will start receiving it according to the schedule.',
         publishSuccess: 'Check-in published successfully',
+        pauseConfirmTitle: 'Pause check-in?',
+        pauseConfirmDescription: 'Are you sure? This will pause the check-in and the client will stop receiving it until you resume.',
         pauseSuccess: 'Check-in paused successfully',
+        resumeConfirmTitle: 'Resume check-in?',
+        resumeConfirmDescription: 'Are you sure? This will resume the check-in and the client will start receiving it again according to the schedule.',
         resumeSuccess: 'Check-in resumed successfully',
         columns: {
           name: 'Name',
@@ -2602,6 +2605,11 @@ export const enMessages = {
       emptyState: {
         title: 'No check-ins found',
         subtitle: 'Get started by creating your first check-in template.',
+      },
+      review: {
+        title: 'Review',
+        pageTitle: 'Review Check-in',
+        client: 'Client',
       },
     },
     assignToClients: 'Assign to clients',

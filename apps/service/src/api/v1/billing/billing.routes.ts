@@ -16,6 +16,9 @@ billingRouter.get('/subscription', supabaseAuthenticate, billingController.getSu
 // Coach: Get entitlements (for feature gates)
 billingRouter.get('/entitlements', supabaseAuthenticate, billingController.getEntitlements);
 
+// Client: Get coach's entitlements (for feature gates on client side)
+billingRouter.get('/coach-entitlements/:coachId', supabaseAuthenticate, billingController.getCoachEntitlements);
+
 // Coach: Get billing activity log
 billingRouter.get('/activity', supabaseAuthenticate, billingController.getBillingActivity);
 

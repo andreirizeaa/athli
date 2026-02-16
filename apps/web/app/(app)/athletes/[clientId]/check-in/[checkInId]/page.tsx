@@ -25,16 +25,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronRight, Plus, GripVertical, Download, Loader2, GitCompare, ChevronDown, Edit } from 'lucide-react';
+import { ChevronRight, Plus, GripVertical, Download, Loader2, GitCompare, ChevronDown, Edit, Play, Pause, Send } from 'lucide-react';
 import { PageTabs } from '@/components/page-tabs';
 import {
   getClientCheckInById,
   updateClientCheckIn,
+  updateClientCheckInStatus,
   getClientCheckInsForForm,
   getCheckInInstance,
   type ClientCheckInDetail,
   type CheckInInstance,
 } from '@/api/client/client-form-service';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { FormBuilder, type Question } from '@/components/forms/form-builder';
 import { CheckInReviewContent } from '@/components/forms/check-in-review-content';
 import { EditClientCheckInFormSidePanel } from '@/components/forms/edit-client-check-in-form-side-panel';
@@ -70,6 +72,11 @@ const ClientCheckInDetailPage = () => {
   const [instancesLoading, setInstancesLoading] = useState<boolean>(false);
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
+
+  // Status action dialogs
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState<boolean>(false);
+  const [isPauseDialogOpen, setIsPauseDialogOpen] = useState<boolean>(false);
+  const [isResumeDialogOpen, setIsResumeDialogOpen] = useState<boolean>(false);
 
   const fetchForm = async () => {
     if (!user?.id) return;
@@ -342,6 +349,67 @@ const ClientCheckInDetailPage = () => {
     router.push(`/athletes/${clientId}/check-in`);
   };
 
+  // Status action handlers
+  const handleConfirmPublish = async () => {
+    if (!currentForm || !clientId || !user?.id) return;
+
+    try {
+      await updateClientCheckInStatus({
+        checkInId: currentForm.id,
+        clientId: clientId,
+        coachId: user.id,
+        status: 'live',
+      });
+      toast.success(t('athletes.profile.checkIns.publishSuccess'));
+      setCurrentForm({ ...currentForm, status: 'live' });
+      queryClient.invalidateQueries({ queryKey: ['client-check-ins', clientId] });
+    } catch (error) {
+      console.error('Failed to publish check-in:', error);
+      toast.error(t('general.error'));
+      throw error;
+    }
+  };
+
+  const handleConfirmPause = async () => {
+    if (!currentForm || !clientId || !user?.id) return;
+
+    try {
+      await updateClientCheckInStatus({
+        checkInId: currentForm.id,
+        clientId: clientId,
+        coachId: user.id,
+        status: 'paused',
+      });
+      toast.success(t('athletes.profile.checkIns.pauseSuccess'));
+      setCurrentForm({ ...currentForm, status: 'paused' });
+      queryClient.invalidateQueries({ queryKey: ['client-check-ins', clientId] });
+    } catch (error) {
+      console.error('Failed to pause check-in:', error);
+      toast.error(t('general.error'));
+      throw error;
+    }
+  };
+
+  const handleConfirmResume = async () => {
+    if (!currentForm || !clientId || !user?.id) return;
+
+    try {
+      await updateClientCheckInStatus({
+        checkInId: currentForm.id,
+        clientId: clientId,
+        coachId: user.id,
+        status: 'live',
+      });
+      toast.success(t('athletes.profile.checkIns.resumeSuccess'));
+      setCurrentForm({ ...currentForm, status: 'live' });
+      queryClient.invalidateQueries({ queryKey: ['client-check-ins', clientId] });
+    } catch (error) {
+      console.error('Failed to resume check-in:', error);
+      toast.error(t('general.error'));
+      throw error;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="h-full w-full flex items-center justify-center">
@@ -398,6 +466,37 @@ const ClientCheckInDetailPage = () => {
         <div className="absolute top-2 right-4 flex items-center gap-2">
           {activeTab === 'builder' && (
             <ButtonGroup className="flex-shrink-0">
+              {/* Status action button - only show if there are questions */}
+              {currentForm?.status === 'draft' && questions.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsPublishDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Send className="size-4" />
+                  <span>{t('athletes.profile.checkIns.publish')}</span>
+                </Button>
+              )}
+              {currentForm?.status === 'live' && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsPauseDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Pause className="size-4" />
+                  <span>{t('athletes.profile.checkIns.pause')}</span>
+                </Button>
+              )}
+              {currentForm?.status === 'paused' && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsResumeDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Play className="size-4" />
+                  <span>{t('athletes.profile.checkIns.resume')}</span>
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={() => setIsEditFormOpen(true)}
@@ -594,6 +693,37 @@ const ClientCheckInDetailPage = () => {
           onDelete={handleDeleteForm}
         />
       )}
+
+      {/* Status action dialogs */}
+      <ConfirmDeleteDialog
+        open={isPublishDialogOpen}
+        onOpenChange={setIsPublishDialogOpen}
+        onConfirm={handleConfirmPublish}
+        title={t('athletes.profile.checkIns.publishConfirmTitle')}
+        description={t('athletes.profile.checkIns.publishConfirmDescription')}
+        confirmText={t('athletes.profile.checkIns.publish')}
+        variant="default"
+      />
+
+      <ConfirmDeleteDialog
+        open={isPauseDialogOpen}
+        onOpenChange={setIsPauseDialogOpen}
+        onConfirm={handleConfirmPause}
+        title={t('athletes.profile.checkIns.pauseConfirmTitle')}
+        description={t('athletes.profile.checkIns.pauseConfirmDescription')}
+        confirmText={t('athletes.profile.checkIns.pause')}
+        variant="default"
+      />
+
+      <ConfirmDeleteDialog
+        open={isResumeDialogOpen}
+        onOpenChange={setIsResumeDialogOpen}
+        onConfirm={handleConfirmResume}
+        title={t('athletes.profile.checkIns.resumeConfirmTitle')}
+        description={t('athletes.profile.checkIns.resumeConfirmDescription')}
+        confirmText={t('athletes.profile.checkIns.resume')}
+        variant="default"
+      />
     </div>
   );
 };

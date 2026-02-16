@@ -160,20 +160,22 @@ export const clientPhotosController = {
                 return res.status(500).json({ success: false, message: error.message });
             }
 
-            // Send notification for client uploads only (no x-client-id means client is uploading)
-            const isCoachRequest = !!req.header('x-client-id');
-            if (!isCoachRequest) {
+            // Send notification when the authenticated user is the client uploading their own photo.
+            if (targetClientId === userId) {
                 Promise.all([resolveCoachId(targetClientId), resolveClientName(targetClientId)]).then(([resolvedCoachId, clientName]) => {
-                    if (resolvedCoachId && clientName) {
+                    if (resolvedCoachId) {
+                        const firstName = clientName?.split(' ')[0] || 'Client';
                         createCoachNotification({
                             coachId: resolvedCoachId,
                             clientId: targetClientId,
                             notificationType: NOTIFICATION_TYPES.photo_uploaded,
                             title: NOTIFICATION_TITLES.photo_uploaded,
-                            description: `${clientName} uploaded a progress photo`,
+                            description: `${firstName} uploaded a progress photo`,
                             metadata: { date: date || new Date().toISOString().split('T')[0] },
                         });
                     }
+                }).catch((err) => {
+                    console.error('[PhotosController] notification error:', err);
                 });
             }
 

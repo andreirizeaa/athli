@@ -13,6 +13,7 @@ export interface CoachChecklist {
   lifestyle_habits: boolean;
   track_metrics: boolean;
   on_demand_resources: boolean;
+  ai_assistant: boolean;
   created_at: string;
   updated_at: string;
 }

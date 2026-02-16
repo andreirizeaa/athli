@@ -44,6 +44,7 @@ function getNotificationNavigationRoute(notification: CoachNotification): string
       return `/client/${client_id}/training`;
 
     case NOTIFICATION_TYPES.checkin_completed:
+    case NOTIFICATION_TYPES.checkin_missed:
       if (metadata?.checkin_id) {
         return `/client/${client_id}/check-in-detail?checkInId=${metadata.checkin_id}`;
       }
@@ -56,12 +57,14 @@ function getNotificationNavigationRoute(notification: CoachNotification): string
       return `/client/${client_id}/questionaires`;
 
     case NOTIFICATION_TYPES.metric_logged:
+    case NOTIFICATION_TYPES.metric_missed:
       if (metadata?.assignment_id) {
         return `/client/${client_id}/metrics?assignmentId=${metadata.assignment_id}`;
       }
       return `/client/${client_id}/metrics`;
 
     case NOTIFICATION_TYPES.habit_logged:
+    case NOTIFICATION_TYPES.habit_missed:
       if (metadata?.assignment_id) {
         return `/client/${client_id}/habits?assignmentId=${metadata.assignment_id}`;
       }
@@ -292,7 +295,7 @@ export default function NotificationsScreen() {
                   style={[styles.notificationTitle, { color: themeColors.mutedText }]}
                   numberOfLines={1}
                 >
-                  {notification.title}
+                  {notification.description || notification.title}
                 </Text>
                 <Text
                   style={[styles.timestamp, { color: themeColors.mutedText }]}

@@ -30,6 +30,7 @@ type SidebarMenuItemWithTabsProps = {
   tabs: Tab[];
   tooltipAlign?: 'start' | 'center' | 'end';
   onNavigate?: () => void;
+  footerContent?: React.ReactNode;
 };
 
 export function SidebarMenuItemWithTabs({
@@ -40,6 +41,7 @@ export function SidebarMenuItemWithTabs({
   tabs,
   tooltipAlign = 'start',
   onNavigate,
+  footerContent,
 }: SidebarMenuItemWithTabsProps) {
   const t = useTranslations();
   const pathname = usePathname();
@@ -125,6 +127,7 @@ export function SidebarMenuItemWithTabs({
               </Link>
             );
           })}
+          {footerContent}
         </TooltipContent>
       </Tooltip>
     </SidebarMenuItem>

@@ -565,6 +565,8 @@ export const esMessages = {
       helpArticles: 'Artículos de Ayuda',
       billing: 'Facturación',
       logOut: 'Cerrar sesión',
+      confirmLogoutTitle: 'Confirmar cierre de sesión',
+      confirmLogoutDescription: '¿Estás seguro de que quieres cerrar sesión?',
     },
     search: {
       placeholder: 'Buscar en Athli...',
@@ -1530,6 +1532,8 @@ export const esMessages = {
       export: 'Exportar',
       exportSelectedAria: 'Exportar atletas seleccionados',
       archive: 'Archivar',
+      archivePlural: 'Archivar {item}',
+      archivePluralTooltip: 'Archivar {item} que están activos',
       archiveSelectedAria: 'Archivar atletas seleccionados',
       viewTrainingCalendarAria: 'Abrir calendario de entrenamiento para {name}',
       copyAthleteName: 'Copiar nombre del atleta',
@@ -1649,8 +1653,14 @@ export const esMessages = {
         publish: 'Publicar',
         pause: 'Pausar',
         resume: 'Reanudar',
+        publishConfirmTitle: '¿Publicar check-in?',
+        publishConfirmDescription: '¿Estás seguro? Esto activará el check-in y el cliente comenzará a recibirlo según el horario programado.',
         publishSuccess: 'Check-in publicado exitosamente',
+        pauseConfirmTitle: '¿Pausar check-in?',
+        pauseConfirmDescription: '¿Estás seguro? Esto pausará el check-in y el cliente dejará de recibirlo hasta que lo reanudes.',
         pauseSuccess: 'Check-in pausado exitosamente',
+        resumeConfirmTitle: '¿Reanudar check-in?',
+        resumeConfirmDescription: '¿Estás seguro? Esto reanudará el check-in y el cliente comenzará a recibirlo nuevamente según el horario programado.',
         resumeSuccess: 'Check-in reanudado exitosamente',
         columns: {
           name: 'Nombre',
@@ -2160,6 +2170,11 @@ export const esMessages = {
       emptyState: {
         title: 'No se encontraron check-ins',
         subtitle: 'Comienza creando tu primera plantilla de check-in.',
+      },
+      review: {
+        title: 'Revisar',
+        pageTitle: 'Revisar Check-in',
+        client: 'Cliente',
       },
     },
     type: {
