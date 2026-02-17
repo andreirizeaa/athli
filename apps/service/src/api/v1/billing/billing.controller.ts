@@ -268,6 +268,11 @@ export const billingController = {
     const supabase = getSupabaseClient();
     const coachId = req.params.coachId;
 
+    if (!coachId) {
+      res.status(400).json({ error: 'Coach ID is required' });
+      return;
+    }
+
     const { data: entitlements, error } = await supabase
       .from('coach_entitlements')
       .select('*')
@@ -275,28 +280,29 @@ export const billingController = {
       .maybeSingle();
 
     if (error) {
-      logger.error({ err: error.message }, 'Failed to get coach entitlements');
-      res.status(500).json({ error: 'Failed to get entitlements' });
+      logger.error({ err: error.message, coachId }, 'Failed to get coach entitlements');
+      res.status(500).json({ error: 'Failed to get coach entitlements' });
       return;
     }
 
+    // If no entitlements, return trial defaults (30-day free trial gives full access)
     if (!entitlements) {
       res.json({
-        plan_type: 'starter',
-        client_limit: 5,
-        has_ai_workout_builder: false,
-        has_custom_exercises: false,
-        has_questionnaires: false,
-        has_habits_metrics: false,
-        storage_limit_gb: 0,
-        has_broadcast_messaging: false,
-        has_ai_todo_list: false,
-        has_priority_support: false,
-        has_automations: false,
-        has_ai_assistant: false,
-        has_payments: false,
-        subscription_status: 'active',
-        is_trial: false,
+        plan_type: 'pro',
+        client_limit: 999,
+        has_ai_workout_builder: true,
+        has_custom_exercises: true,
+        has_questionnaires: true,
+        has_habits_metrics: true,
+        storage_limit_gb: -1,
+        has_broadcast_messaging: true,
+        has_ai_todo_list: true,
+        has_priority_support: true,
+        has_automations: true,
+        has_ai_assistant: true,
+        has_payments: true,
+        subscription_status: 'trialing',
+        is_trial: true,
       });
       return;
     }

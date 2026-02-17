@@ -294,7 +294,9 @@ export const clientCheckInsController = {
             status: 'review'
         });
 
-        if (logError) return res.status(500).json({ success: false, message: logError.message });
+        if (logError) {
+            return res.status(500).json({ success: false, message: logError.message });
+        }
 
         // 3. Send notification when the authenticated user is the client submitting their own check-in.
         if (targetClientId === userId) {
@@ -315,6 +317,7 @@ export const clientCheckInsController = {
 
         success(res, {
             message: 'Check-in submitted successfully',
+            data: { checkInId: id },
         });
     },
 
