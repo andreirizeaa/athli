@@ -1,18 +1,17 @@
 -- ================================================
--- 238: Fix check-in task deletion trigger (timezone mismatch)
+-- 238: Fix check-in task deletion trigger
 -- ================================================
--- The trigger trg_delete_task_on_checkin_submit previously compared
--- due_date = NEW.submission_date. However, due_date is set using the
--- client's local timezone (via generate_daily_client_tasks), while
--- submission_date is recorded in UTC. When the UTC date differs from
--- the client's local date, the DELETE matched nothing and the task
--- was never removed.
+-- Two fixes:
 --
--- Fix: remove the due_date comparison. The remaining columns
--- (task_type, reference_id, client_id, coach_id) uniquely identify
--- the active task for a given check-in assignment. The cron job only
--- generates one task per assignment per day, so there is at most one
--- matching row.
+-- 1. Timezone mismatch: The trigger previously compared
+--    due_date = NEW.submission_date. However, due_date is set using
+--    the client's local timezone (via generate_daily_client_tasks),
+--    while submission_date is recorded in UTC. When the dates differ,
+--    the DELETE matched nothing. Fix: drop the date comparison — the
+--    remaining columns uniquely identify the active task(s).
+--
+-- 2. Status check: Accept both 'review' and 'completed' so the
+--    trigger fires regardless of which status the controller sends.
 -- ================================================
 
 CREATE OR REPLACE FUNCTION public.trg_delete_task_on_checkin_submit()
@@ -22,7 +21,7 @@ SECURITY DEFINER
 SET search_path = 'public'
 AS $$
 BEGIN
-    IF NEW.status = 'review' THEN
+    IF NEW.status IN ('review', 'completed') THEN
         DELETE FROM public.client_tasks
         WHERE task_type    = 'check_in'
           AND reference_id = NEW.assignment_id

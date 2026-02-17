@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Pencil, Inbox, Pause, Play, Trash2, Send, Eye } from 'lucide-react-native';
+import { ChevronLeft, Pencil, Inbox, Pause, Play, Trash2, Send } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -61,6 +61,7 @@ export default function CheckInDetailScreen() {
   };
 
   const handleViewEditForm = () => {
+    // Check-ins can always be edited (unlike questionnaires which are locked once sent)
     router.push({
       pathname: '/library/form/form-builder',
       params: {
@@ -68,7 +69,7 @@ export default function CheckInDetailScreen() {
         formId: params.checkInId,
         formName: params.checkInName,
         clientId: params.id,
-        viewOnly: isDraft ? 'false' : 'true',
+        viewOnly: 'false',
       },
     } as any);
   };
@@ -148,8 +149,8 @@ export default function CheckInDetailScreen() {
           <View style={styles.contentContainer}>
             <Card>
               <SettingsOption
-                icon={<PlatformIcon sf={isDraft ? 'pencil' : 'eye'} IconComponent={isDraft ? Pencil : Eye} size={iconSize} color={iconColor} />}
-                title={isDraft ? t('clientDetail.checkIns.viewEditForm') : t('clientDetail.checkIns.viewForm')}
+                icon={<PlatformIcon sf="pencil" IconComponent={Pencil} size={iconSize} color={iconColor} />}
+                title={t('clientDetail.checkIns.viewEditForm')}
                 onPress={handleViewEditForm}
                 showChevron
               />
