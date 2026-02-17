@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import LottieView from 'lottie-react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, FileText, Dumbbell, Moon, ListChecks, CircleCheck, ClipboardList, Send, CheckCircle, Target } from 'lucide-react-native';
 import { PressableScale } from 'pressto';
 import { Separator } from '@/components/ui/separator';
@@ -82,6 +83,7 @@ const getDayOfYearIndex = (): number => {
 
 export const AthleteHomeContent = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { colors: themeColors, primaryColor } = useThemePreference();
   const { t } = useTranslations();
   const { clientProfile } = useAuth();
@@ -102,6 +104,20 @@ export const AthleteHomeContent = () => {
       }
     }, [])
   );
+
+  // Refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      // Use refetchQueries instead of invalidateQueries to avoid triggering loading states
+      await queryClient.refetchQueries();
+      haptics.success();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [queryClient]);
 
   // Fetch tasks
   const { tasks, isLoading: isLoadingTasks } = useAthleteTasks();
@@ -632,7 +648,7 @@ export const AthleteHomeContent = () => {
 
   return (
     <>
-    <ScreenWrapper scrollable tabScreen>
+    <ScreenWrapper scrollable tabScreen refreshing={isRefreshing} onRefresh={handleRefresh}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: themeColors.text }]}>{greeting}</Text>
         <Text style={[styles.subtitle, { color: themeColors.mutedText }]}>{dateSubtitle}</Text>

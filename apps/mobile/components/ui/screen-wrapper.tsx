@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { View, ScrollView, StyleSheet, ViewStyle, Platform } from 'react-native';
+import { View, ScrollView, StyleSheet, ViewStyle, Platform, RefreshControl, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemePreference, useColorScheme } from '@/stores';
@@ -24,6 +24,8 @@ type ScreenWrapperProps = {
   useImageBackground?: boolean; // Set to false to use solid backgroundPrimary instead
   largeHeader?: boolean; // Use stronger blur gradient for pages with fixed headers
   tabScreen?: boolean; // Add extra bottom padding for tab screens
+  refreshing?: boolean; // Whether pull-to-refresh is in progress
+  onRefresh?: () => void; // Callback when user pulls to refresh
 };
 
 export const ScreenWrapper = ({
@@ -39,9 +41,11 @@ export const ScreenWrapper = ({
   useImageBackground = true,
   largeHeader = false,
   tabScreen = false,
+  refreshing,
+  onRefresh,
 }: ScreenWrapperProps) => {
   const insets = useSafeAreaInsets();
-  const { colors: themeColors } = useThemePreference();
+  const { colors: themeColors, primaryColor } = useThemePreference();
   const colorScheme = useColorScheme();
   const backgroundImage = colorScheme === 'dark' ? darkBackground : lightBackground;
 
@@ -56,6 +60,7 @@ export const ScreenWrapper = ({
           paddingBottom: 0,
           paddingLeft: insets.left,
           paddingRight: insets.right,
+          zIndex: 1,
         },
       ]}
     >
@@ -68,12 +73,30 @@ export const ScreenWrapper = ({
         showsVerticalScrollIndicator={showsVerticalScrollIndicator}
         scrollEnabled={scrollEnabled}
         keyboardDismissMode="on-drag"
+        bounces={true}
+        alwaysBounceVertical={onRefresh ? true : false}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={refreshing ?? false}
+              onRefresh={onRefresh}
+              tintColor={primaryColor}
+              colors={[primaryColor]}
+              progressViewOffset={Platform.OS === 'android' ? insets.top : 0}
+            />
+          ) : undefined
+        }
       >
         <View style={{ height: insets.top }} />
+        {refreshing && (
+          <View style={styles.refreshIndicator}>
+            <ActivityIndicator size="large" color={primaryColor} />
+          </View>
+        )}
         {children}
       </ScrollView>
       {overlay}
-      {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} largeHeader={largeHeader} />}
+      {!hideStatusBarBlur && <StatusBarBlur intensity={blurIntensity} blurHeight={blurHeight} largeHeader={largeHeader} hidden={refreshing} />}
     </View>
   );
 
@@ -103,7 +126,7 @@ export const ScreenWrapper = ({
       <View style={styles.screen}>
         <Image
           source={backgroundImage}
-          style={StyleSheet.absoluteFill}
+          style={[StyleSheet.absoluteFill, { zIndex: 0 }]}
           contentFit="cover"
           cachePolicy="memory-disk"
         />
@@ -131,5 +154,10 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  refreshIndicator: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
   },
 });

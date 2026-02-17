@@ -187,15 +187,32 @@ export const coachCheckInsController = {
         }
 
         const supabase = getSupabaseClient();
-        const { data: reviews, error } = await supabase
+        const { data: rows, error } = await supabase
             .from('coach_checkins_review_view')
             .select('*')
             .eq('coach_id', userId)
-            .order('submission_date', { ascending: false });
+            .order('created_at', { ascending: false });
 
         if (error) {
             return res.status(500).json({ success: false, message: error.message });
         }
+
+        // Map view columns to the CheckInReview interface
+        const reviews = (rows || []).map((r: any) => ({
+            checkin_log_id: r.log_id,
+            client_id: r.client_id,
+            coach_checkin_id: r.assignment_id,
+            client_name: r.client_name,
+            client_avatar: r.client_avatar,
+            client_email: r.client_email || '',
+            checkin_name: r.checkin_name,
+            checkin_description: r.checkin_description || null,
+            submission_date: r.submission_date,
+            created_at: r.created_at,
+            status: r.review_status,
+            updated_at: r.created_at,
+            coach_id: r.coach_id,
+        }));
 
         success(res, {
             message: 'Coach check-in reviews retrieved successfully',
