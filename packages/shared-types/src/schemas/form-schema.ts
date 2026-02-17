@@ -93,6 +93,7 @@ export interface CheckInReview {
   checkin_name: string;
   checkin_description?: string;
   submission_date: string;
+  created_at: string;
   status: string;
   updated_at: string;
   coach_id: string;

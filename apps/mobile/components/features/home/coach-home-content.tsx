@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { PressableOpacity, PressableScale } from 'pressto';
 import { ChevronRight, Sparkles, ListTodo, ClipboardList, Bell } from 'lucide-react-native';
 import { SymbolView } from 'expo-symbols';
@@ -16,6 +17,7 @@ import { AtRiskClientsCard } from '@/components/features/home/at-risk-clients-ca
 import { useCoachOwnTodos, useCoachAutoTodos } from '@/hooks/useCoachTodo';
 import { useCheckInReviews } from '@/hooks/useCheckInReviews';
 import { useCoachNotifications } from '@/hooks/useCoachNotifications';
+import { haptics } from '@/utils/haptics';
 
 // AI Assistant Card for coach view
 const AIAssistantCard = () => {
@@ -72,6 +74,21 @@ export const CoachHomeContent = () => {
   const { t } = useTranslations();
   const { coachProfile } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  // Refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      // Use refetchQueries instead of invalidateQueries to avoid triggering loading states
+      await queryClient.refetchQueries();
+      haptics.success();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [queryClient]);
 
   // Fetch todos and check-in reviews counts
   const { ownTodos } = useCoachOwnTodos();
@@ -105,7 +122,7 @@ export const CoachHomeContent = () => {
   }, [t]);
 
   return (
-    <ScreenWrapper scrollable tabScreen>
+    <ScreenWrapper scrollable tabScreen refreshing={isRefreshing} onRefresh={handleRefresh}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={[styles.title, { color: themeColors.text }]}>{greeting}</Text>

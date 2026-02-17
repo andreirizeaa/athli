@@ -7,12 +7,14 @@ type StatusBarBlurProps = {
   intensity?: number;
   blurHeight?: number;
   largeHeader?: boolean;
+  hidden?: boolean;
 };
 
 export const StatusBarBlur = ({
   intensity = 5,
   blurHeight = 0,
   largeHeader = false,
+  hidden = false,
 }: StatusBarBlurProps) => {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -29,6 +31,10 @@ export const StatusBarBlur = ({
     ? ['rgba(0, 0, 0, 0.95)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.6)', 'rgba(0, 0, 0, 0.2)', 'rgba(0, 0, 0, 0)']
     : ['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.6)', 'rgba(255, 255, 255, 0.2)', 'rgba(255, 255, 255, 0)'];
   const largeHeaderLocations = [0, 0.3, 0.55, 0.8, 1];
+
+  if (hidden) {
+    return null;
+  }
 
   return (
     <LinearGradient

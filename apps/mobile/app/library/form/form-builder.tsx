@@ -143,7 +143,7 @@ export default function FormBuilderScreen() {
     mutationFn: async (questionsToSave: Question[]) => {
       // Convert temp IDs to proper UUIDs before saving
       const questionsWithRealIds = questionsToSave.map(q => {
-        if (q.id.startsWith('temp-')) {
+        if (!q.id || q.id.startsWith('temp-')) {
           return { ...q, id: Crypto.randomUUID() };
         }
         return q;

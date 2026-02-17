@@ -185,7 +185,10 @@
       "WebFetch(domain:bxgbbpiswmauqdqkkaha.supabase.co)",
       "Bash(npx turbo run build:*)",
       "Bash(pkill:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(git add:*)",
+      "Bash(git rebase:*)",
+      "Bash(GIT_EDITOR=true git rebase:*)"
     ]
   }
 }
