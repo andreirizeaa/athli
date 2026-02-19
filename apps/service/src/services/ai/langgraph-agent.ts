@@ -191,7 +191,8 @@ export const runAgent = async (
         }
 
         try {
-          const result = await tool.invoke(toolCall.args);
+          // Type assertion needed because tools array has union of different Zod schemas
+          const result = await (tool as any).invoke(toolCall.args);
           const resultStr = typeof result === 'string' ? result : JSON.stringify(result);
 
           // Check if this is an action payload
