@@ -188,7 +188,8 @@
       "Bash(wc:*)",
       "Bash(git add:*)",
       "Bash(git rebase:*)",
-      "Bash(GIT_EDITOR=true git rebase:*)"
+      "Bash(GIT_EDITOR=true git rebase:*)",
+      "Bash(gh pr view:*)"
     ]
   }
 }

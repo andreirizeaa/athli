@@ -22,6 +22,9 @@
   },
   "dependencies": {
     "@athli/shared-types": "^1.0.0",
+    "@langchain/core": "^1.1.26",
+    "@langchain/langgraph": "^1.1.5",
+    "@langchain/openai": "^1.2.8",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@supabase/supabase-js": "^2.86.2",
     "@types/bcryptjs": "^3.0.0",
