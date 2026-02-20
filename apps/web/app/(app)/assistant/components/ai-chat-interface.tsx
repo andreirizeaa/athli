@@ -71,22 +71,28 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
     const [hasStartedChat, setHasStartedChat] = useState(!!chatId);
     const [animationData, setAnimationData] = useState<object | null>(null);
 
+    // If chatId is provided (loading existing chat), mark as started
+    useEffect(() => {
+        if (chatId) setHasStartedChat(true);
+    }, [chatId]);
+
     const containerRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
     const { toggle, isOpen, isMobile } = useAssistantSidebar();
 
-    // Use the AI chat hook
+    // Use the AI chat hook with optional chatId for history persistence
     const {
         messages,
         isStreaming,
+        isLoadingHistory,
         currentToolCall,
         pendingAction,
         error,
         sendMessage,
         stopStreaming,
         clearChat,
-    } = useAIChat();
+    } = useAIChat({ chatId });
 
     // Use workout hook for creating workouts
     const { createWorkout } = useCoachWorkouts();
@@ -434,6 +440,15 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                     {isStreaming && currentToolCall && (
                         <div className="ps-2">
                             <ToolStatus toolCall={currentToolCall} />
+                        </div>
+                    )}
+
+                    {/* History loading indicator */}
+                    {isLoadingHistory && (
+                        <div className="ps-2 flex items-center gap-2">
+                            <div className="flex items-center gap-2 bg-muted/50 rounded-full px-4 py-2">
+                                <PromptLoader variant="text-shimmer" text="Loading conversation..." size="sm" />
+                            </div>
                         </div>
                     )}
 
