@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/general/utils';
 import { AssistantSidebar } from './components/sidebar';
 import { AssistantSidebarProvider, useAssistantSidebar } from './assistant-sidebar-context';
+import { TamboProvider } from '@/components/tambo/tambo-provider';
 import {
   Sheet,
   SheetContent,
@@ -59,7 +60,9 @@ function AssistantLayoutContent({ children }: { children: React.ReactNode }) {
 export default function AssistantLayout({ children }: { children: React.ReactNode }) {
   return (
     <AssistantSidebarProvider>
-      <AssistantLayoutContent>{children}</AssistantLayoutContent>
+      <TamboProvider>
+        <AssistantLayoutContent>{children}</AssistantLayoutContent>
+      </TamboProvider>
     </AssistantSidebarProvider>
   );
 }

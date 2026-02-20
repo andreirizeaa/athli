@@ -24,6 +24,7 @@
     "@dicebear/collection": "^9.2.4",
     "@dicebear/core": "^9.2.4",
     "@dnd-kit/core": "^6.3.1",
+    "@tambo-ai/react": "^0.7.0",
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
