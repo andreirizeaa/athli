@@ -19,7 +19,7 @@ import {
 import { CodeIcon } from '@radix-ui/react-icons';
 import Lottie from 'lottie-react';
 import { Button } from '@/components/ui/button';
-import { motion, useScroll, useTransform, AnimatePresence, useMotionValue, animate } from 'motion/react';
+import { motion, useScroll, useTransform, useMotionValue } from 'motion/react';
 import { TextEffect } from '@/components/ui/text-effect';
 import { AnimatedGroup } from '@/components/ui/animated-group';
 import { HeroHeader } from './header';
@@ -163,7 +163,7 @@ function FloatingIconWithPopover({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <motion.div {...motionProps} className={className}>
+        <motion.div {...motionProps} whileHover={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 400, damping: 25 }} className={className}>
           <img src={iconSrc} alt="" className={iconClassName} />
         </motion.div>
       </PopoverTrigger>
@@ -444,45 +444,87 @@ export default function HeroSection() {
   React.useEffect(() => {
     if (!mounted) return;
 
-    const duration = 0.7;
-    const ease = [0.25, 0.1, 0.25, 1] as const;
+    const duration = 700; // ms
+    const ease = (t: number) => {
+      // cubic-bezier(0.25, 0.1, 0.25, 1) approximation
+      const t2 = t * t;
+      const t3 = t2 * t;
+      return 3 * t2 - 2 * t3 + 0.1 * (t - t2); // smooth ease-out
+    };
+    // Simple cubic-bezier easing
+    const cubicBezierEase = (t: number): number => {
+      // Attempt a closer approximation of cubic-bezier(0.25, 0.1, 0.25, 1)
+      // Using a simple smooth-step with bias towards ease-out
+      return t < 0.5
+        ? 2 * t * t
+        : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    };
 
-    // Animate each icon with staggered delays
-    const animations = Object.entries(ICON_CONFIG).map(([iconId, config]) => {
-      const mv = iconMotionValues[iconId as keyof typeof iconMotionValues];
-      return [
-        animate(mv.x, 0, { duration, ease, delay: config.delay }),
-        animate(mv.opacity, 1, { duration, ease, delay: config.delay }),
-        animate(mv.scale, 1, { duration, ease, delay: config.delay }),
-      ];
-    }).flat();
+    let rafId: number;
+    let startTime: number | null = null;
+    let cancelled = false;
 
-    // After all entrance animations complete, bind to scroll
-    const lastDelay = Math.max(...Object.values(ICON_CONFIG).map(c => c.delay));
-    const totalEntranceTime = (lastDelay + duration) * 1000;
+    const entries = Object.entries(ICON_CONFIG) as [IconId, typeof ICON_CONFIG[IconId]][];
 
-    const bindToScroll = setTimeout(() => {
-      entranceDoneRef.current = true;
+    const tick = (now: number) => {
+      if (cancelled) return;
+      if (startTime === null) startTime = now;
+      const elapsed = now - startTime;
 
-      // Bind each icon's x to appropriate scroll transform
-      Object.entries(iconMotionValues).forEach(([iconId, mv]) => {
-        const scrollX = mv.side === 'left' ? scrollLeftX : scrollRightX;
+      let allDone = true;
 
-        // Subscribe to scroll changes
-        scrollX.on('change', v => mv.x.set(v));
-        scrollOpacity.on('change', v => mv.opacity.set(v));
-        scrollScale.on('change', v => mv.scale.set(v));
+      for (const [iconId, config] of entries) {
+        const mv = iconMotionValues[iconId];
+        const delayMs = config.delay * 1000;
+        const t = Math.max(0, Math.min(1, (elapsed - delayMs) / duration));
 
-        // Set current scroll values
-        mv.x.set(scrollX.get());
-        mv.opacity.set(scrollOpacity.get());
-        mv.scale.set(scrollScale.get());
-      });
-    }, totalEntranceTime);
+        if (t < 1) allDone = false;
+        if (t <= 0) continue;
+
+        const progress = cubicBezierEase(t);
+        const startX = mv.side === 'left' ? -60 : 60;
+
+        // Update all three properties in the same frame - prevents desync
+        mv.x.set(startX * (1 - progress));
+        mv.opacity.set(progress);
+        mv.scale.set(0.8 + 0.2 * progress);
+      }
+
+      if (!allDone) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        // Entrance done — snap final values and bind to scroll
+        for (const [iconId] of entries) {
+          const mv = iconMotionValues[iconId];
+          mv.x.set(0);
+          mv.opacity.set(1);
+          mv.scale.set(1);
+        }
+
+        entranceDoneRef.current = true;
+
+        // Bind each icon's motion values to scroll transforms
+        for (const [iconId] of entries) {
+          const mv = iconMotionValues[iconId];
+          const scrollX = mv.side === 'left' ? scrollLeftX : scrollRightX;
+
+          scrollX.on('change', v => mv.x.set(v));
+          scrollOpacity.on('change', v => mv.opacity.set(v));
+          scrollScale.on('change', v => mv.scale.set(v));
+
+          // Set current scroll values immediately
+          mv.x.set(scrollX.get());
+          mv.opacity.set(scrollOpacity.get());
+          mv.scale.set(scrollScale.get());
+        }
+      }
+    };
+
+    rafId = requestAnimationFrame(tick);
 
     return () => {
-      clearTimeout(bindToScroll);
-      animations.forEach(a => a.stop());
+      cancelled = true;
+      cancelAnimationFrame(rafId);
     };
   }, [mounted, iconMotionValues, scrollLeftX, scrollRightX, scrollOpacity, scrollScale]);
 
@@ -501,7 +543,7 @@ export default function HeroSection() {
                 <FloatingIconWithPopover
                   iconId="chatgpt"
                   iconSrc="/icons/chatgpt.png"
-                  className="absolute top-[12%] left-[6%] pointer-events-auto flex size-24 -rotate-12 cursor-pointer items-center justify-center rounded-[20px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)] dark:shadow-[0_0_25px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
+                  className="absolute top-[12%] left-[6%] pointer-events-auto flex size-24 -rotate-12 cursor-pointer items-center justify-center rounded-[20px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)] dark:shadow-[0_0_25px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.06)] will-change-transform"
                   iconClassName="size-[68px] object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:invert dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
                   motionProps={{
                     style: { x: iconMotionValues.chatgpt.x, opacity: iconMotionValues.chatgpt.opacity, scale: iconMotionValues.chatgpt.scale },
@@ -512,7 +554,7 @@ export default function HeroSection() {
                 <FloatingIconWithPopover
                   iconId="whatsapp"
                   iconSrc="/icons/whatsapp.png"
-                  className="absolute top-[22%] right-[8%] pointer-events-auto flex size-20 rotate-12 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(37,211,102,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
+                  className="absolute top-[22%] right-[8%] pointer-events-auto flex size-20 rotate-12 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(37,211,102,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] will-change-transform"
                   iconClassName="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(37,211,102,0.35)]"
                   motionProps={{
                     style: { x: iconMotionValues.whatsapp.x, opacity: iconMotionValues.whatsapp.opacity, scale: iconMotionValues.whatsapp.scale },
@@ -523,7 +565,7 @@ export default function HeroSection() {
                 <FloatingIconWithPopover
                   iconId="excel"
                   iconSrc="/icons/excel.png"
-                  className="absolute bottom-[30%] left-[5%] pointer-events-auto flex size-20 -rotate-[18deg] cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(33,185,110,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
+                  className="absolute bottom-[30%] left-[5%] pointer-events-auto flex size-20 -rotate-[18deg] cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(33,185,110,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] will-change-transform"
                   iconClassName="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(33,115,70,0.35)]"
                   motionProps={{
                     style: { x: iconMotionValues.excel.x, opacity: iconMotionValues.excel.opacity, scale: iconMotionValues.excel.scale },
@@ -534,7 +576,7 @@ export default function HeroSection() {
                 <FloatingIconWithPopover
                   iconId="zapier"
                   iconSrc="/icons/zapier.png"
-                  className="absolute bottom-[22%] right-[12%] pointer-events-auto flex size-24 rotate-6 cursor-pointer items-center justify-center rounded-[20px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(255,159,28,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
+                  className="absolute bottom-[22%] right-[12%] pointer-events-auto flex size-24 rotate-6 cursor-pointer items-center justify-center rounded-[20px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(255,159,28,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] will-change-transform"
                   iconClassName="size-[68px] object-contain drop-shadow-[0_0_8px_rgba(255,159,28,0.35)]"
                   motionProps={{
                     style: { x: iconMotionValues.zapier.x, opacity: iconMotionValues.zapier.opacity, scale: iconMotionValues.zapier.scale },
@@ -545,7 +587,7 @@ export default function HeroSection() {
                 <FloatingIconWithPopover
                   iconId="docs"
                   iconSrc="/icons/drive.png"
-                  className="absolute top-[-6%] right-[14%] pointer-events-auto flex size-20 rotate-3 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 hover:scale-110 transition-transform"
+                  className="absolute top-[-6%] right-[14%] pointer-events-auto flex size-20 rotate-3 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-br from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 will-change-transform"
                   iconClassName="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(66,133,244,0.3)]"
                   motionProps={{
                     style: {
@@ -561,7 +603,7 @@ export default function HeroSection() {
                 <FloatingIconWithPopover
                   iconId="notion"
                   iconSrc="/icons/notion.png"
-                  className="absolute bottom-[6%] left-[15%] pointer-events-auto flex size-20 -rotate-3 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)] dark:shadow-[0_0_25px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.06)] hover:scale-110 transition-transform"
+                  className="absolute bottom-[6%] left-[15%] pointer-events-auto flex size-20 -rotate-3 cursor-pointer items-center justify-center rounded-[18px] border border-zinc-200 bg-gradient-to-bl from-white to-zinc-100 dark:border-zinc-700/50 dark:from-zinc-900 dark:to-zinc-950 shadow-[0_0_25px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.06)] dark:shadow-[0_0_25px_rgba(255,255,255,0.15),inset_0_1px_0_rgba(255,255,255,0.06)] will-change-transform"
                   iconClassName="size-[52px] object-contain drop-shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:invert dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
                   motionProps={{
                     style: { x: iconMotionValues.notion.x, opacity: iconMotionValues.notion.opacity, scale: iconMotionValues.notion.scale },
