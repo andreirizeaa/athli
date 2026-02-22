@@ -9,7 +9,9 @@
   ],
   "overrides": {
     "ajv": "^8.17.1",
-    "ajv-keywords": "^5.1.0"
+    "ajv-keywords": "^5.1.0",
+    "ansi-styles": "^4.3.0",
+    "zod": "^3.24.0"
   },
   "scripts": {
     "dev": "turbo run dev --parallel",

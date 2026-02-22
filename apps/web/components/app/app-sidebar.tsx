@@ -538,7 +538,7 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-        <AlertDialogContent onInteractOutside={() => setShowLogoutDialog(false)}>
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('sidebar.profile.confirmLogoutTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
