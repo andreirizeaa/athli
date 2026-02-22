@@ -1,19 +1,31 @@
-import { Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from '../../../middlewares/auth';
+import { Request, Response, NextFunction } from 'express';
 import { IntercomService } from '../../../services/intercom.service';
 import { AppError } from '../../../middlewares/error-handler';
+import { getSupabaseClient } from '../../../services/supabase.service';
 
 const intercomService = new IntercomService();
 
 export async function intercomJWTController(
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    const user = req.user;
+    const userId = (req as any).userId;
 
-    if (!user) {
+    if (!userId) {
+      return next(new AppError(401, 'User not authenticated'));
+    }
+
+    // Fetch user details for Intercom JWT
+    const supabase = getSupabaseClient();
+    const { data: user, error } = await supabase
+      .from('user_profiles')
+      .select('id, email')
+      .eq('id', userId)
+      .single();
+
+    if (error || !user) {
       return next(new AppError(404, 'User not found'));
     }
 
@@ -36,4 +48,3 @@ export async function intercomJWTController(
     next(err);
   }
 }
-

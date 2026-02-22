@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authController } from './auth.controller';
 import { validate } from '../../../middlewares/validate';
-import { authenticate } from '../../../middlewares/auth';
+import { supabaseAuthenticate } from '../../../middlewares/supabase-auth';
 import { supabaseAuthenticate } from '../../../middlewares/supabase-auth';
 import {
   loginRateLimiter,
@@ -244,7 +244,7 @@ authRouter.post('/google', loginRateLimiter, validate(googleAuthSchema), authCon
  *       200:
  *         description: Logout successful
  */
-authRouter.post('/logout', authenticate, authController.logout);
+authRouter.post('/logout', supabaseAuthenticate, authController.logout);
 
 /**
  * @swagger
