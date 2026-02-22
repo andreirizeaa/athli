@@ -30,10 +30,10 @@ interface AddFeatureRequestDialogProps {
 
 export function AddFeatureRequestDialog({
   open,
-  const t = useTranslations();
   onOpenChange,
   onCreated,
 }: AddFeatureRequestDialogProps) {
+  const t = useTranslations();
   const { user } = useGlobalData();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');

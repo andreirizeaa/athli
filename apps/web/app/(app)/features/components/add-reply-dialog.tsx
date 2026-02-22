@@ -30,11 +30,11 @@ interface AddReplyDialogProps {
 
 export function AddReplyDialog({
   open,
-  const t = useTranslations();
   onOpenChange,
   featureRequestId,
   onCreated,
 }: AddReplyDialogProps) {
+  const t = useTranslations();
   const { user } = useGlobalData();
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
