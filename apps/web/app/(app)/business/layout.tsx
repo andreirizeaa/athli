@@ -173,11 +173,11 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
     const onboardingStatus = searchParams.get('stripe_onboarding');
     if (onboardingStatus === 'complete') {
       refetchConnection();
-      toast.success('Stripe account connected successfully');
+      toast.success(t('toasts.stripeConnected'));
       window.history.replaceState({}, '', window.location.pathname);
     } else if (onboardingStatus === 'refresh') {
       refetchConnection();
-      toast.info('Please complete Stripe onboarding');
+      toast.info(t('toasts.completeStripeOnboarding'));
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, [searchParams, refetchConnection]);
@@ -187,7 +187,7 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
       const url = await startOnboarding();
       window.open(url, '_blank');
     } catch {
-      toast.error('Failed to start Stripe connection');
+      toast.error(t('toasts.failedStartStripeConnection'));
     }
   };
 
@@ -196,17 +196,17 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
       const url = await getDashboardLink();
       window.open(url, '_blank');
     } catch {
-      toast.error('Failed to open Stripe Dashboard');
+      toast.error(t('toasts.failedOpenStripeDashboard'));
     }
   };
 
   const handleDisconnect = async () => {
     try {
       await disconnectStripe();
-      toast.success('Stripe account disconnected');
+      toast.success(t('toasts.stripeDisconnected'));
       setIsDisconnectOpen(false);
     } catch {
-      toast.error('Failed to disconnect Stripe account');
+      toast.error(t('toasts.failedDisconnectStripe'));
     }
   };
 
@@ -229,7 +229,7 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
           className="h-9 gap-2 border border-[#635BFF] border-r-0 bg-transparent hover:bg-[#635BFF]/5 dark:bg-transparent dark:hover:bg-[#635BFF]/10 text-[#635BFF] dark:text-white"
         >
           <ExternalLink className="size-4" />
-          <span>Preview Packages</span>
+          <span>{t('common.previewPackages')}</span>
         </Button>
         <Button
           onClick={handleOpenDashboard}
@@ -348,7 +348,7 @@ const BusinessLayout = ({ children }: BusinessLayoutProps) => {
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Payments Add-on Required</DialogTitle>
+            <DialogTitle>{t('common.paymentsAddonRequired')}</DialogTitle>
             <DialogDescription>
               To connect Stripe and accept payments from your clients, you need to add the Payments add-on to your plan.
             </DialogDescription>

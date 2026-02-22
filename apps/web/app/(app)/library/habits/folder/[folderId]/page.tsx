@@ -268,7 +268,7 @@ const HabitFolderPage = () => {
   };
 
   const handleAssignFolderToClients = () => {
-    if (folderHabits.length === 0) { toast.error('This folder is empty'); return; }
+    if (folderHabits.length === 0) { toast.error(t('toasts.folderEmpty')); return; }
     setHabitsToAssign(folderHabits);
     setIsAssignToClientsOpen(true);
   };
@@ -507,7 +507,7 @@ const HabitFolderPage = () => {
             <div className="flex flex-col gap-6 max-h-[calc(100vh-200px)] overflow-y-auto px-1 pt-1">
               <div className="relative mb-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input type="text" placeholder="Search habits..." value={librarySearchQuery} onChange={(e) => setLibrarySearchQuery(e.target.value)} className="pl-9" />
+                <Input type="text" placeholder={t('common.searchHabits')} value={librarySearchQuery} onChange={(e) => setLibrarySearchQuery(e.target.value)} className="pl-9" />
               </div>
               {filteredLibraryHabits.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground"><p>No habits found matching &quot;{librarySearchQuery}&quot;</p></div>

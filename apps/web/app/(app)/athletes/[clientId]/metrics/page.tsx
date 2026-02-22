@@ -400,14 +400,14 @@ const ClientMetricsPage = () => {
           clientId,
           coachId: user.id
         });
-        toast.success('Log updated successfully');
+        toast.success(t('toasts.logUpdated'));
         refetch();
         refreshData?.();
         setEditingLogId(null);
         setEditingLogValue('');
       } catch (error) {
         console.error(error);
-        toast.error('Failed to update log');
+        toast.error(t('toasts.failedUpdateLog'));
       }
     }
   };
@@ -421,7 +421,7 @@ const ClientMetricsPage = () => {
     if (!clientId || !user?.id) return;
     try {
       await deleteMetricLog(logId, clientId, user.id);
-      toast.success('Log deleted successfully');
+      toast.success(t('toasts.logDeleted'));
       refetch();
       refreshData?.();
       if (editingLogId === logId) {
@@ -430,7 +430,7 @@ const ClientMetricsPage = () => {
       }
     } catch (error) {
       console.error(error);
-      toast.error('Failed to delete log');
+      toast.error(t('toasts.failedDeleteLog'));
     }
   };
 
@@ -509,14 +509,14 @@ const ClientMetricsPage = () => {
         });
       }
 
-      toast.success('Metric saved successfully');
+      toast.success(t('toasts.metricSaved'));
       // Refetch
       refetch();
       refreshData?.();
       handleCloseAddMetric();
     } catch (error) {
       console.error('Failed to save metric:', error);
-      toast.error('Failed to save metric');
+      toast.error(t('toasts.failedSaveMetric'));
     }
   };
 
@@ -530,13 +530,13 @@ const ClientMetricsPage = () => {
         clientId,
         coachId: user.id
       });
-      toast.success('Metric logged successfully');
+      toast.success(t('toasts.metricLogged'));
       refetch();
       refreshData?.();
       handleCloseLogMetric();
     } catch (error) {
       console.error(error);
-      toast.error('Failed to log metric');
+      toast.error(t('toasts.failedLogMetric'));
     }
   };
 
@@ -551,13 +551,13 @@ const ClientMetricsPage = () => {
         clientId,
         coachId: user.id
       });
-      toast.success('Metric updated successfully');
+      toast.success(t('toasts.metricUpdated'));
       refetch();
       refreshData?.();
       handleCloseEditMetric();
     } catch (error) {
       console.error(error);
-      toast.error('Failed to update metric');
+      toast.error(t('toasts.failedUpdateMetric'));
     }
   };
 
@@ -571,14 +571,14 @@ const ClientMetricsPage = () => {
         coachId: user.id
       });
 
-      toast.success('Metric deleted successfully');
+      toast.success(t('toasts.metricDeleted'));
       refetch();
       refreshData?.();
       setSelectedMetricId(null);
       setIsDeleteDialogOpen(false);
     } catch (error) {
       console.error('Failed to delete metric:', error);
-      toast.error('Failed to delete metric');
+      toast.error(t('toasts.failedDeleteMetric'));
     }
   };
 
@@ -598,12 +598,12 @@ const ClientMetricsPage = () => {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center p-8">
         <EmptyGridState
-          title="No metrics assigned"
+          title={t('common.noMetricsAssigned')}
           subtitle={hasHabitsMetricsAccess ? "This client hasn't been assigned any metrics yet." : "Upgrade to Pro to assign metrics to clients"}
           action={
             <Button onClick={handleOpenAddMetric} className="gap-2">
               <Plus className="size-4" />
-              <span>Assign Metric</span>
+              <span>{t('common.assignMetric')}</span>
             </Button>
           }
         />
@@ -618,7 +618,7 @@ const ClientMetricsPage = () => {
         <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Upgrade to Pro</DialogTitle>
+              <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
               <DialogDescription>
                 Track client metrics with detailed analytics and progress tracking.
               </DialogDescription>
@@ -744,14 +744,14 @@ const ClientMetricsPage = () => {
                   className="gap-2 rounded-r-none border-r-0"
                 >
                   <FileText className="size-4" />
-                  <span>Log a Metric</span>
+                  <span>{t('common.logMetric')}</span>
                 </Button>
                 <Button
                   onClick={handleOpenAddMetric}
                   className="gap-2 rounded-l-none"
                 >
                   <Plus className="size-4" />
-                  <span>Assign Metric</span>
+                  <span>{t('common.assignMetric')}</span>
                 </Button>
               </ButtonGroup>
             </div>
@@ -921,7 +921,7 @@ const ClientMetricsPage = () => {
                       setIsLogMetricOpen(true);
                     }} className="gap-2" variant="outline">
                       <FileText className="size-4" />
-                      <span>Enter a Log</span>
+                      <span>{t('common.enterLog')}</span>
                     </Button>
                     <Button onClick={handleOpenEditMetric} className="gap-2" variant="outline">
                       <Edit className="size-4" />
@@ -1178,7 +1178,7 @@ const ClientMetricsPage = () => {
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
             <DialogDescription>
               Track client metrics with detailed analytics and progress tracking.
             </DialogDescription>

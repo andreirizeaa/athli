@@ -411,7 +411,7 @@ export const AddProgramSidePanel = ({
                                 }}
                             >
                                 <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Start Week" />
+                                    <SelectValue placeholder={t('common.startWeek')} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {Array.from({ length: totalWeeks }, (_, idx) => {
@@ -441,7 +441,7 @@ export const AddProgramSidePanel = ({
                                 }}
                             >
                                 <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="End Week" />
+                                    <SelectValue placeholder={t('common.endWeek')} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {Array.from({ length: totalWeeks }, (_, idx) => {
@@ -477,7 +477,7 @@ export const AddProgramSidePanel = ({
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent side="left">
-                                            <p>Change program</p>
+                                            <p>{t('common.changeProgram')}</p>
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>

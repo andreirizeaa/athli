@@ -2423,7 +2423,7 @@ const InboxPage = () => {
       <Dialog open={isBroadcastUpgradeOpen} onOpenChange={setIsBroadcastUpgradeOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Upgrade to Max</DialogTitle>
+            <DialogTitle>{t('upgrade.toMax')}</DialogTitle>
             <DialogDescription>
               Send broadcast messages to multiple clients at once. Keep your clients informed with announcements, updates, and important information.
             </DialogDescription>

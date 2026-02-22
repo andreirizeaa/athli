@@ -95,7 +95,7 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent side="right">
-                                            <p>Close inbox panel</p>
+                                            <p>{t('common.closeInboxPanel')}</p>
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
@@ -123,7 +123,7 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent side="right">
-                                            <p>Open inbox panel</p>
+                                            <p>{t('common.openInboxPanel')}</p>
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>

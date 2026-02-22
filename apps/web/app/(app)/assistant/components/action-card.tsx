@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ interface ActionCardProps {
 
 export function ActionCard({ actionType, payload, onConfirm, className }: ActionCardProps) {
   const [isConfirming, setIsConfirming] = useState(false);
+  const t = useTranslations();
   const [isConfirmed, setIsConfirmed] = useState(false);
 
   const handleConfirm = async () => {
@@ -194,7 +196,7 @@ function DraftMessageCard({
         value={editedMessage}
         onChange={(e) => setEditedMessage(e.target.value)}
         className="min-h-[120px] text-sm resize-y bg-background"
-        placeholder="Edit your message..."
+        placeholder={t('common.editMessage')}
       />
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">

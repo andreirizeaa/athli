@@ -74,7 +74,7 @@ export default function FeaturesPage() {
       setRequests(result.requests);
     } catch (error) {
       console.error('Failed to load feature requests:', error);
-      toast.error('Failed to load feature requests');
+      toast.error(t('toasts.failedLoadRequests'));
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +94,7 @@ export default function FeaturesPage() {
       }
     } catch (error) {
       console.error('Failed to load request details:', error);
-      toast.error('Failed to load request details');
+      toast.error(t('toasts.failedLoadDetails'));
     } finally {
       setIsLoadingReplies(false);
     }
@@ -185,7 +185,7 @@ export default function FeaturesPage() {
           prev ? { ...prev, hasUpvoted: request.hasUpvoted, upvoteCount: request.upvoteCount } : null
         );
       }
-      toast.error('Failed to toggle upvote');
+      toast.error(t('toasts.failedToggleUpvote'));
     }
   }, [selectedRequest?.id]);
 
@@ -200,7 +200,7 @@ export default function FeaturesPage() {
         setSelectedRequest(null);
         setReplies([]);
       }
-      toast.success('Feature request deleted');
+      toast.success(t('toasts.featureDeleted'));
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete request');
     } finally {
@@ -223,7 +223,7 @@ export default function FeaturesPage() {
           r.id === selectedRequest.id ? { ...r, replyCount: r.replyCount - 1 } : r
         )
       );
-      toast.success('Reply deleted');
+      toast.success(t('toasts.replyDeleted'));
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete reply');
     } finally {
@@ -300,7 +300,7 @@ export default function FeaturesPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search requests..."
+            placeholder={t('common.searchRequests')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -628,7 +628,7 @@ export default function FeaturesPage() {
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
           <div className="text-center">
             <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-20" />
-            <p>Select a feature request to view details</p>
+            <p>{t('common.selectFeatureRequest')}</p>
           </div>
         </div>
       )}
@@ -668,13 +668,13 @@ export default function FeaturesPage() {
       <AlertDialog open={!!deleteRequestId} onOpenChange={() => setDeleteRequestId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Feature Request?</AlertDialogTitle>
+            <AlertDialogTitle>{t('common.deleteFeatureRequest')}</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the feature request and all its replies.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t('general.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteRequest}
               disabled={isDeleting}
@@ -691,13 +691,13 @@ export default function FeaturesPage() {
       <AlertDialog open={!!deleteReplyId} onOpenChange={() => setDeleteReplyId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Reply?</AlertDialogTitle>
+            <AlertDialogTitle>{t('common.deleteReply')}</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t('general.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteReply}
               disabled={isDeleting}

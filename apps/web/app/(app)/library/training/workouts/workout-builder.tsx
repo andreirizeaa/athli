@@ -567,7 +567,7 @@ const SectionItem = memo(function SectionItem({
                       )}
                     >
                       {draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === 0 && (
-                        <span>Drop your exercise here</span>
+                        <span>{t('common.dropExerciseHere')}</span>
                       )}
                     </div>
 
@@ -680,7 +680,7 @@ const SectionItem = memo(function SectionItem({
                                   ) : draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === exerciseIndex + 1 ? (
                                     // Dragging and this is the drop slot - show drop zone
                                     <div className="my-2 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                      <span>Drop your exercise here</span>
+                                      <span>{t('common.dropExerciseHere')}</span>
                                     </div>
                                   ) : (
                                     // Show superset button (visible even when dragging, unless drop zone is showing here)
@@ -703,7 +703,7 @@ const SectionItem = memo(function SectionItem({
                               {/* Drop zone after the last exercise */}
                               {section.exercises && exerciseIndex === section.exercises.length - 1 && draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === exerciseIndex + 1 && (
                                 <div className="my-2 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                  <span>Drop your exercise here</span>
+                                  <span>{t('common.dropExerciseHere')}</span>
                                 </div>
                               )}
                             </div>
@@ -1625,11 +1625,11 @@ export const WorkoutBuilder = ({
         processGeneratedWorkout(generated);
         setActiveBuilder('manual'); // Switch back to manual to see the results
       } else {
-        toast.error('Failed to generate workout');
+        toast.error(t('toasts.failedGenerateWorkout'));
       }
     } catch (error) {
       console.error('Failed to generate workout from AI', error);
-      toast.error('An error occurred during generation');
+      toast.error(t('toasts.errorDuringGeneration'));
     } finally {
       setIsGeneratingAi(false);
     }
@@ -1731,7 +1731,7 @@ Focus on proper form and progressive overload.`;
 
     // Validate workout title is not empty
     if (!workoutTitle || workoutTitle.trim() === '') {
-      toast.error('Please enter a workout name');
+      toast.error(t('toasts.enterWorkoutName'));
       if (onSaveError) onSaveError();
       return;
     }
@@ -1752,7 +1752,7 @@ Focus on proper form and progressive overload.`;
     });
 
     if (hasBlankExercises) {
-      toast.error('Please select an exercise for all exercise cards');
+      toast.error(t('toasts.selectExerciseForCards'));
       if (onSaveError) onSaveError();
       return;
     }
@@ -1763,7 +1763,7 @@ Focus on proper form and progressive overload.`;
       setValidationErrors(exerciseErrors);
       setSectionValidationErrors(sectionErrors);
 
-      toast.error('Please fill out all fields');
+      toast.error(t('toasts.fillAllFields'));
       if (onSaveError) onSaveError();
       return;
     }
@@ -1781,7 +1781,7 @@ Focus on proper form and progressive overload.`;
     };
     const payload = buildWorkoutPayload(workoutSchema, updatedMeta);
     if (!payload) {
-      toast.error('Workout details are missing');
+      toast.error(t('toasts.workoutDetailsMissing'));
       if (onSaveError) onSaveError();
       return;
     }
@@ -1819,7 +1819,7 @@ Focus on proper form and progressive overload.`;
         }
       } catch (error) {
         setIsSaving(false);
-        toast.error('Failed to save workout');
+        toast.error(t('toasts.failedSaveWorkout'));
         if (onSaveError) onSaveError();
       }
     }
@@ -1908,10 +1908,10 @@ Focus on proper form and progressive overload.`;
       // Invalidate sections query to refresh the library
       await queryClient.invalidateQueries({ queryKey: ['coach-sections'] });
 
-      toast.success('Section saved to library');
+      toast.success(t('toasts.sectionSavedToLibrary'));
     } catch (error) {
       console.error('Error saving section to library:', error);
-      toast.error('Failed to save section to library');
+      toast.error(t('toasts.failedSaveSectionToLibrary'));
     } finally {
       setSavingSectionId(null);
     }
@@ -2856,7 +2856,7 @@ Focus on proper form and progressive overload.`;
                         )}
                       >
                         <Sparkles className="size-4" />
-                        <span>Athli AI</span>
+                        <span>{t('common.athliAI')}</span>
                       </Button>
                       <Button
                         variant={activeBuilder === 'manual' ? 'default' : 'outline'}
@@ -2867,7 +2867,7 @@ Focus on proper form and progressive overload.`;
                         )}
                       >
                         <NotebookPen className="size-4" />
-                        <span>Manual</span>
+                        <span>{t('common.manual')}</span>
                       </Button>
                     </ButtonGroup>
                   </div>
@@ -3133,7 +3133,7 @@ Focus on proper form and progressive overload.`;
                         <div className="flex items-center gap-2 w-full">
                           <Input
                             className="flex-1 h-9 text-sm shadow-none"
-                            placeholder="Workout title"
+                            placeholder={t('common.workoutTitle')}
                             value={workoutTitle}
                             onChange={(e) => {
                               const newTitle = e.target.value;
@@ -3460,7 +3460,7 @@ Focus on proper form and progressive overload.`;
                                         className="flex-1 gap-1.5 text-xs h-9 px-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                                       >
                                         <Plus className="size-3" />
-                                        <span>Create section</span>
+                                        <span>{t('common.createSection')}</span>
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="w-64">
@@ -3488,7 +3488,7 @@ Focus on proper form and progressive overload.`;
                                     onClick={handleAddTopLevelExercise}
                                   >
                                     <Plus className="size-3" />
-                                    <span>Add exercise</span>
+                                    <span>{t('common.addExercise')}</span>
                                   </Button>
                                 </div>
                               </div>
@@ -3528,7 +3528,7 @@ Focus on proper form and progressive overload.`;
                                         className="gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                                       >
                                         <Plus className="size-4" />
-                                        <span>Create section</span>
+                                        <span>{t('common.createSection')}</span>
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="center" className="w-64">
@@ -3556,7 +3556,7 @@ Focus on proper form and progressive overload.`;
                                     onClick={handleAddTopLevelExercise}
                                   >
                                     <Plus className="size-4" />
-                                    <span>Add exercise</span>
+                                    <span>{t('common.addExercise')}</span>
                                   </Button>
                                 </div>
                               </div>
@@ -3654,7 +3654,7 @@ Focus on proper form and progressive overload.`;
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top">
-                      <p>Close</p>
+                      <p>{t('general.close')}</p>
                     </TooltipContent>
                   </Tooltip>
                   {/* Toggle chevron - position changes based on overview state */}
@@ -3786,7 +3786,7 @@ Focus on proper form and progressive overload.`;
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
             <DialogDescription>
               Generate workouts instantly with AI - describe what you need and let Athli AI build it for you.
             </DialogDescription>

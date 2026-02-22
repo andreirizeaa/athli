@@ -378,7 +378,7 @@ const FilesPage = () => {
       setSelectedFiles(new Set());
     } catch (error) {
       console.error('Failed to assign files to clients:', error);
-      toast.error('Failed to assign files');
+      toast.error(t('toasts.failedAssignFiles'));
     }
   };
 
@@ -427,7 +427,7 @@ const FilesPage = () => {
 
     const folderFiles = files.filter(f => f.folder_id === folderId);
     if (folderFiles.length === 0) {
-      toast.error('This folder is empty');
+      toast.error(t('toasts.folderEmpty'));
       return;
     }
     setFolderToAssign({ id: folder.id, name: folder.name });
@@ -500,7 +500,7 @@ const FilesPage = () => {
               {folders.length > 0 && (
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setFileToMove(row); }}>
                   <Move className="size-4 mr-2" />
-                  <span>Move to folder</span>
+                  <span>{t('common.moveToFolder')}</span>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteFile(row); }} className="text-destructive focus:text-destructive">
@@ -549,7 +549,7 @@ const FilesPage = () => {
               setIsCreateFolderOpen(true);
             }} className="gap-2 border border-primary">
               <FolderPlus className="size-4" />
-              <span>Create Folder</span>
+              <span>{t('common.createFolder')}</span>
             </Button>
             <Button
               onClick={handleOpenAddFile}
@@ -638,7 +638,7 @@ const FilesPage = () => {
         emptyState={
           <EmptyGridState
             title={t('files.emptyState.title')}
-            subtitle="Upload and organize files to share with your clients - training plans, nutrition guides, and resources"
+            subtitle={t('common.uploadFilesSubtitle')}
             action={<Button onClick={handleOpenAddFile} className="gap-2" disabled={hasFileStorageAccess && isAtStorageLimit}><Plus className="size-4" /><span>{t('files.addFile')}</span></Button>}
           />
         }
@@ -675,8 +675,8 @@ const FilesPage = () => {
       <ConfirmDeleteDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen} onConfirm={handleConfirmDelete} itemName={fileToDelete?.filename} itemType="file" />
 
       {/* Folder dialogs */}
-      <CreateFolderDialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen} onSave={handleCreateFolder} title="Create Folder" />
-      <CreateFolderDialog open={editingFolder !== null} onOpenChange={(open) => !open && setEditingFolder(null)} onSave={handleUpdateFolder} title="Edit Folder" initialName={editingFolder?.name || ''} isEdit={true} />
+      <CreateFolderDialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen} onSave={handleCreateFolder} title={t('common.createFolder')} />
+      <CreateFolderDialog open={editingFolder !== null} onOpenChange={(open) => !open && setEditingFolder(null)} onSave={handleUpdateFolder} title={t('common.editFolder')} initialName={editingFolder?.name || ''} isEdit={true} />
       <ConfirmDeleteDialog open={folderToDelete !== null} onOpenChange={(open) => !open && setFolderToDelete(null)} onConfirm={handleDeleteFolder} itemName={folders.find(f => f.id === folderToDelete)?.name} itemType="folder" />
       <MoveToFolderDialog open={fileToMove !== null} onOpenChange={(open) => !open && setFileToMove(null)} folders={folders} currentFolderId={fileToMove?.folder_id} onMove={handleMoveFile} itemName={fileToMove?.filename} />
       <MoveToFolderDialog open={isBulkMoveOpen} onOpenChange={setIsBulkMoveOpen} folders={folders} onMove={handleBulkMove} />

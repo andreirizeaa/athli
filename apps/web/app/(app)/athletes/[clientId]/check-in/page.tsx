@@ -659,7 +659,7 @@ const ClientCheckInPage = () => {
         emptyMessage={t('athletes.profile.checkIns.emptyMessage')}
         emptyState={
           <EmptyGridState
-            title="No check-ins assigned"
+            title={t('common.noCheckinAssigned')}
             subtitle={hasQuestionnairesAccess ? "This client has no check-ins assigned yet" : "Upgrade to Pro to assign forms to clients"}
             action={
               <Button onClick={handleAddCheckIn} className="gap-2">
@@ -779,7 +779,7 @@ const ClientCheckInPage = () => {
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
             <DialogDescription>
               Assign check-in forms to track client progress with regular updates and insights.
             </DialogDescription>

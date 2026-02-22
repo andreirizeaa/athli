@@ -144,7 +144,7 @@ const OnboardingPage = () => {
         description: values.description,
       });
       handleAddPanelClose();
-      toast.success('Onboarding created successfully');
+      toast.success(t('toasts.onboardingCreated'));
       queryClient.invalidateQueries({ queryKey: ['coach-onboardings'] });
     } catch (error) {
       console.error('Failed to create onboarding:', error);
@@ -416,7 +416,7 @@ const OnboardingPage = () => {
       <UpgradeDialog
         open={isUpgradeDialogOpen}
         onOpenChange={setIsUpgradeDialogOpen}
-        description="Activate onboarding flows to automatically guide new clients through your setup process."
+        description={t('common.activateOnboarding')}
         screenshot={{
           light: '/app-screenshots/onboardings/light.png',
           dark: '/app-screenshots/onboardings/dark.png',

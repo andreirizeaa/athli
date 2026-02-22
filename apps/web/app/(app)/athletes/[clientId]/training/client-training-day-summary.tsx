@@ -358,7 +358,7 @@ export const ClientTrainingDaySummary = ({
                                                         </button>
                                                     </TooltipTrigger>
                                                     <TooltipContent>
-                                                        <p>Message Client</p>
+                                                        <p>{t('common.messageClient')}</p>
                                                     </TooltipContent>
                                                 </Tooltip>
                                                 <Tooltip>
@@ -371,7 +371,7 @@ export const ClientTrainingDaySummary = ({
                                                         </button>
                                                     </TooltipTrigger>
                                                     <TooltipContent>
-                                                        <p>Close</p>
+                                                        <p>{t('general.close')}</p>
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </div>

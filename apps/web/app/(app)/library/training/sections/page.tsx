@@ -768,7 +768,7 @@ const SectionsPage = () => {
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
             <DialogDescription>
               Create custom sections to organize your workout routines with specialized formats like AMRAP, EMOM, Tabata, and more.
             </DialogDescription>

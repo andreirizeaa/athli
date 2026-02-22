@@ -98,7 +98,7 @@ const SettingsSidebarContent = ({
           <Search className="absolute left-2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
           <Input
             type="search"
-            placeholder="Search..."
+            placeholder={t('common.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8 h-8 text-sm"
@@ -298,7 +298,7 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
           >
             <SheetHeader className="sr-only">
               <SheetTitle>{t('settings.title')}</SheetTitle>
-              <SheetDescription>Settings navigation</SheetDescription>
+              <SheetDescription>{t('common.settingsNavigation')}</SheetDescription>
             </SheetHeader>
             <SettingsSidebarContent
               searchQuery={searchQuery}

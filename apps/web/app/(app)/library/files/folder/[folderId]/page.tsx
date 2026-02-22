@@ -82,7 +82,7 @@ const FileFolderPage = () => {
     try {
       const uploadedFile = await uploadFileAsync({ file, fileName });
       await moveFile({ fileId: uploadedFile.id, folderId, silent: true });
-      toast.success('File added successfully');
+      toast.success(t('toasts.fileAdded'));
     } catch (error) {
       // Error toast is handled by the mutation
     } finally {
@@ -166,7 +166,7 @@ const FileFolderPage = () => {
   };
 
   const handleAssignFolderToClients = () => {
-    if (folderFiles.length === 0) { toast.error('This folder is empty'); return; }
+    if (folderFiles.length === 0) { toast.error(t('toasts.folderEmpty')); return; }
     setFilesToAssign(folderFiles);
     setIsAssignToClientsOpen(true);
   };
@@ -192,7 +192,7 @@ const FileFolderPage = () => {
       setSelectedFiles(new Set());
     } catch (error) {
       console.error('Failed to assign files to clients:', error);
-      toast.error('Failed to assign files');
+      toast.error(t('toasts.failedAssignFiles'));
     }
   };
 

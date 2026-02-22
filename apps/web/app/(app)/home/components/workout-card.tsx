@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,6 +32,7 @@ export const WorkoutCard = ({
     className
 }: WorkoutCardProps) => {
     const router = useRouter();
+    const t = useTranslations();
 
     const handleAvatarClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -143,7 +145,7 @@ export const WorkoutCard = ({
                                     </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>View profile</p>
+                                    <p>{t('common.viewProfile')}</p>
                                 </TooltipContent>
                             </Tooltip>
                             <div className="flex flex-col gap-0.5 overflow-hidden">
@@ -165,11 +167,11 @@ export const WorkoutCard = ({
                                             onClick={handleMessageClick}
                                         >
                                             <MessageCircle className="h-4 w-4" />
-                                            <span>Message</span>
+                                            <span>{t('common.message')}</span>
                                         </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>Send a message to {workout.clientName}</p>
+                                        <p>{t('common.sendMessageTo', { name: workout.clientName })}</p>
                                     </TooltipContent>
                                 </Tooltip>
                             )}

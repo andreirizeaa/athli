@@ -89,7 +89,7 @@ const FlowDetailPage = () => {
       await queryClient.invalidateQueries({ queryKey: ['coach-flows'] });
     } catch (error) {
       console.error('Failed to update flow status:', error);
-      toast.error('Failed to update flow status');
+      toast.error(t('toasts.failedUpdateFlow'));
     }
   };
 

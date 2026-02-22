@@ -725,7 +725,7 @@ const ClientQuestionnaireDetailPage = () => {
               ) : (
                 <>
                   <Download className="size-4" />
-                  <span>Download</span>
+                  <span>{t('common.download')}</span>
                 </>
               )}
             </Button>
