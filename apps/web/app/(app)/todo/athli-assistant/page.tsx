@@ -59,20 +59,20 @@ const AthliAssistantPage = () => {
         </div>
       ),
       renderCell: (row) => (
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           {row.type === 'client' && row.clientAvatar && (
             <Avatar className="h-8 w-8 flex-shrink-0">
               <AvatarImage src={row.clientAvatar} alt={row.clientName} />
               <AvatarFallback>{row.clientName?.charAt(0) || 'C'}</AvatarFallback>
             </Avatar>
           )}
-          <div className="flex flex-col min-w-0">
+          <div className="flex flex-col min-w-0 flex-1">
             <span className={cn('text-sm font-medium', row.completed && 'line-through text-muted-foreground')}>
               {row.title}
             </span>
             {row.description && (
-              <span className={cn('text-xs text-muted-foreground', row.completed && 'line-through')}>
-                {row.description.length > 80 ? `${row.description.slice(0, 80)}...` : row.description}
+              <span className={cn('text-xs text-muted-foreground break-words', row.completed && 'line-through')}>
+                {row.description}
               </span>
             )}
           </div>

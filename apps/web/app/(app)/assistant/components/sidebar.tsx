@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/general/utils";
 import { SquarePen, SearchIcon, MessageSquareIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,7 @@ interface AssistantSidebarProps {
 }
 
 export function AssistantSidebar({ onChatClick }: AssistantSidebarProps) {
+    const t = useTranslations();
     const router = useRouter();
     const pathname = usePathname();
     const [searchQuery, setSearchQuery] = useState("");
