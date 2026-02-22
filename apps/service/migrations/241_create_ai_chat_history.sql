@@ -7,7 +7,7 @@
 
 CREATE TABLE IF NOT EXISTS public.ai_chats (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    coach_id    UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    coach_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     title       TEXT NOT NULL DEFAULT 'New Chat',
     data        JSONB NOT NULL DEFAULT '{"messages":[]}'::jsonb,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),

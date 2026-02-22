@@ -7,7 +7,6 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   streamChat,
@@ -15,6 +14,8 @@ import {
   ChatContext,
   StreamEvent,
   ActionPayload,
+  ChartPayload,
+  ClientSelectOption,
 } from '@/api/ai/ai-service';
 import {
   createChat,
@@ -22,6 +23,7 @@ import {
   appendMessage as appendMessageApi,
   summarizeTitle,
   updateChatTitle,
+  updateChatData,
   ChatMessageData,
 } from '@/api/ai/ai-chat-history-service';
 import { v4 as uuidv4 } from 'uuid';
@@ -35,6 +37,9 @@ export interface ChatMessage {
   timestamp: Date;
   toolCalls?: ToolCallStatus[];
   action?: ActionPayload;
+  charts?: ChartPayload[];
+  clientSelect?: ClientSelectOption[];
+  selectedClientId?: string;
 }
 
 export interface ToolCallStatus {
@@ -46,6 +51,8 @@ export interface ToolCallStatus {
 export interface UseAIChatOptions {
   chatId?: string;
   onAction?: (action: ActionPayload) => void;
+  /** When true, skip window.history.replaceState (used by the side panel) */
+  skipUrlUpdate?: boolean;
 }
 
 // ── Hook ───────────────────────────────────────────────────────────
@@ -63,8 +70,8 @@ export function useAIChat(options?: UseAIChatOptions) {
   const streamingMessageRef = useRef<string>('');
   const chatIdRef = useRef<string | null>(options?.chatId ?? null);
   const titleGeneratedRef = useRef(false);
+  const [activeChatId, setActiveChatId] = useState<string | null>(options?.chatId ?? null);
 
-  const router = useRouter();
   const queryClient = useQueryClient();
 
   // ── Load existing chat ───────────────────────────────────────────
@@ -72,10 +79,12 @@ export function useAIChat(options?: UseAIChatOptions) {
   useEffect(() => {
     if (!options?.chatId) {
       chatIdRef.current = null;
+      setActiveChatId(null);
       titleGeneratedRef.current = false;
       return;
     }
     chatIdRef.current = options.chatId;
+    setActiveChatId(options.chatId);
     titleGeneratedRef.current = true; // existing chat already has a title
     setIsLoadingHistory(true);
 
@@ -90,6 +99,9 @@ export function useAIChat(options?: UseAIChatOptions) {
               timestamp: new Date(m.timestamp),
               toolCalls: m.toolCalls as ToolCallStatus[] | undefined,
               action: m.action as ActionPayload | undefined,
+              charts: m.charts as ChartPayload[] | undefined,
+              clientSelect: m.clientSelect as ClientSelectOption[] | undefined,
+              selectedClientId: (m as any).selectedClientId as string | undefined,
             })),
           );
         }
@@ -101,10 +113,10 @@ export function useAIChat(options?: UseAIChatOptions) {
   // ── Persist helper ───────────────────────────────────────────────
 
   const persist = useCallback(
-    async (role: 'user' | 'assistant', content: string, toolCalls?: ToolCallStatus[], action?: ActionPayload) => {
+    async (role: 'user' | 'assistant', content: string, toolCalls?: ToolCallStatus[], action?: ActionPayload, charts?: ChartPayload[], clientSelect?: ClientSelectOption[]) => {
       if (!chatIdRef.current) return;
       try {
-        await appendMessageApi(chatIdRef.current, { role, content, toolCalls: toolCalls as any, action: action as any });
+        await appendMessageApi(chatIdRef.current, { role, content, toolCalls: toolCalls as any, action: action as any, charts: charts?.length ? charts : undefined, clientSelect: clientSelect?.length ? clientSelect : undefined });
         queryClient.invalidateQueries({ queryKey: ['ai-chats'] });
       } catch (e) {
         console.error('persist message failed', e);
@@ -116,7 +128,7 @@ export function useAIChat(options?: UseAIChatOptions) {
   // ── Send a message ───────────────────────────────────────────────
 
   const sendMessage = useCallback(
-    async (content: string, context?: ChatContext) => {
+    async (content: string, context?: ChatContext, displayText?: string) => {
       if (!content.trim() || isStreaming) return;
 
       setError(null);
@@ -125,14 +137,21 @@ export function useAIChat(options?: UseAIChatOptions) {
       setCurrentToolCall(null);
 
       const trimmed = content.trim();
+      const displayContent = displayText || trimmed;
 
       // Create a new chat record if we don't have one yet
       if (!chatIdRef.current) {
         try {
           const chat = await createChat(); // default title, will be updated
           chatIdRef.current = chat.id;
+          setActiveChatId(chat.id);
           queryClient.invalidateQueries({ queryKey: ['ai-chats'] });
-          router.replace(`/assistant/${chat.id}`, { scroll: false });
+          // Update URL without triggering Next.js navigation — this prevents
+          // the component from unmounting/remounting (which would kill the
+          // SSE stream).
+          if (!options?.skipUrlUpdate) {
+            window.history.replaceState(null, '', `/assistant/${chat.id}`);
+          }
         } catch {
           setError('Failed to create chat');
           setIsStreaming(false);
@@ -150,10 +169,11 @@ export function useAIChat(options?: UseAIChatOptions) {
           .catch((e) => console.error('title generation failed', e));
       }
 
-      // Add user message to UI
-      const userMsg: ChatMessage = { id: uuidv4(), role: 'user', content: trimmed, timestamp: new Date() };
+      // Add user message to UI (show displayContent, persist displayContent so reload shows the same)
+      const userMsg: ChatMessage = { id: uuidv4(), role: 'user', content: displayContent, timestamp: new Date() };
       setMessages((prev) => [...prev, userMsg]);
-      persist('user', trimmed);
+
+      persist('user', displayContent);
 
       // Placeholder for assistant response
       const asstId = uuidv4();
@@ -167,6 +187,8 @@ export function useAIChat(options?: UseAIChatOptions) {
 
       let finalToolCalls: ToolCallStatus[] = [];
       let finalAction: ActionPayload | undefined;
+      let finalCharts: ChartPayload[] = [];
+      let finalClientSelect: ClientSelectOption[] | undefined;
 
       try {
         await streamChat(
@@ -216,6 +238,28 @@ export function useAIChat(options?: UseAIChatOptions) {
                 }
                 break;
 
+              case 'client_select':
+                if (event.data) {
+                  finalClientSelect = event.data;
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === asstId ? { ...m, clientSelect: event.data } : m
+                    ),
+                  );
+                }
+                break;
+
+              case 'chart':
+                if (event.data) {
+                  finalCharts.push(event.data);
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === asstId ? { ...m, charts: [...(m.charts || []), event.data] } : m
+                    ),
+                  );
+                }
+                break;
+
               case 'error':
                 setError(event.data?.message || 'An error occurred');
                 break;
@@ -223,9 +267,9 @@ export function useAIChat(options?: UseAIChatOptions) {
               case 'done':
                 setIsStreaming(false);
                 setCurrentToolCall(null);
-                // Persist assistant message (including tool calls & actions)
+                // Persist assistant message (including tool calls, actions, charts & client selection)
                 if (streamingMessageRef.current) {
-                  persist('assistant', streamingMessageRef.current, finalToolCalls, finalAction);
+                  persist('assistant', streamingMessageRef.current, finalToolCalls, finalAction, finalCharts, finalClientSelect);
                 }
                 break;
             }
@@ -237,7 +281,7 @@ export function useAIChat(options?: UseAIChatOptions) {
         setIsStreaming(false);
       }
     },
-    [messages, isStreaming, options, persist, router, queryClient],
+    [messages, isStreaming, options, persist, queryClient],
   );
 
   // ── Controls ─────────────────────────────────────────────────────
@@ -254,13 +298,92 @@ export function useAIChat(options?: UseAIChatOptions) {
     setPendingAction(null);
     setError(null);
     chatIdRef.current = null;
+    setActiveChatId(null);
     titleGeneratedRef.current = false;
     sessionIdRef.current = uuidv4();
   }, []);
 
   const clearAction = useCallback(() => setPendingAction(null), []);
 
+  const markClientSelected = useCallback(
+    (clientId: string) => {
+      // Update local state immediately
+      setMessages((prev) => {
+        const updated = [...prev];
+        for (let i = updated.length - 1; i >= 0; i--) {
+          if (updated[i].role === 'assistant' && updated[i].clientSelect?.length) {
+            updated[i] = { ...updated[i], selectedClientId: clientId };
+            break;
+          }
+        }
+        return updated;
+      });
+
+      // Persist to backend after a delay so the user message append completes first
+      const cid = chatIdRef.current;
+      if (cid) {
+        setTimeout(async () => {
+          try {
+            const chat = await fetchChat(cid);
+            if (!chat?.data?.messages) return;
+            const msgs = chat.data.messages;
+            for (let i = msgs.length - 1; i >= 0; i--) {
+              if (msgs[i].role === 'assistant' && msgs[i].clientSelect?.length) {
+                (msgs[i] as any).selectedClientId = clientId;
+                break;
+              }
+            }
+            await updateChatData(cid, { messages: msgs });
+          } catch (e) {
+            console.error('markClientSelected persist failed', e);
+          }
+        }, 3000);
+      }
+    },
+    [],
+  );
+
+  const markActionConfirmed = useCallback(
+    async (actionType: string) => {
+      if (!chatIdRef.current) return;
+      try {
+        const chat = await fetchChat(chatIdRef.current);
+        if (!chat?.data?.messages) return;
+
+        const msgs = chat.data.messages;
+        // Find the last assistant message whose action.type matches
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          if (msgs[i].role === 'assistant' && msgs[i].action?.type === actionType) {
+            msgs[i].action!.confirmed = true;
+            break;
+          }
+        }
+
+        await updateChatData(chatIdRef.current, { messages: msgs });
+
+        // Update local state
+        setMessages((prev) => {
+          const updated = [...prev];
+          for (let i = updated.length - 1; i >= 0; i--) {
+            if (updated[i].role === 'assistant' && updated[i].action?.type === actionType) {
+              updated[i] = {
+                ...updated[i],
+                action: { ...updated[i].action!, confirmed: true },
+              };
+              break;
+            }
+          }
+          return updated;
+        });
+      } catch (e) {
+        console.error('markActionConfirmed failed', e);
+      }
+    },
+    [],
+  );
+
   return {
+    chatId: activeChatId,
     messages,
     isStreaming,
     isLoadingHistory,
@@ -271,5 +394,7 @@ export function useAIChat(options?: UseAIChatOptions) {
     stopStreaming,
     clearChat,
     clearAction,
+    markClientSelected,
+    markActionConfirmed,
   };
 }

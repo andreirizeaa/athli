@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/supabase/client';
 import { authService } from '@/api/auth/auth-service';
 import { Spinner } from '@/components/ui/spinner';
@@ -11,23 +11,30 @@ import { getCoachCodeById } from '@/api/coach/coach-public-service';
 
 export default function NewClientPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const handleNewClient = async () => {
-      // Retrieve auth flow data from sessionStorage
+      // Try to get data from sessionStorage first, then fall back to URL params
       const storedData = sessionStorage.getItem('auth_flow_data');
-      if (!storedData) {
-        toast.error('Missing authentication data');
-        router.push('/');
-        return;
-      }
+      let coachId: string | null = null;
+      let invitationToken: string | null = null;
+      let onboardingId: string | null = null;
 
-      const authFlowData = JSON.parse(storedData);
-      const coachId = authFlowData.coach_id;
-      const invitationToken = authFlowData.invitation_token;
-      const onboardingId = authFlowData.onboarding_id;
+      if (storedData) {
+        const authFlowData = JSON.parse(storedData);
+        coachId = authFlowData.coach_id;
+        invitationToken = authFlowData.invitation_token;
+        onboardingId = authFlowData.onboarding_id;
+      } else {
+        // Fallback to URL params (for cases where sessionStorage didn't persist across OAuth)
+        coachId = searchParams.get('coach_id');
+        invitationToken = searchParams.get('invitation_token');
+        onboardingId = searchParams.get('onboarding_id');
+        console.log('[New Client] Using URL params fallback', { coachId, invitationToken, onboardingId });
+      }
 
       if (!coachId) {
         toast.error('Missing coach ID');
@@ -95,7 +102,7 @@ export default function NewClientPage() {
 
   if (isLoading) {
     return (
-      <AuthLayout showHomeButton={false}>
+      <AuthLayout showHomeButton={false} singleColumn>
         <div className="flex flex-col items-center justify-center gap-4 py-12">
           <Spinner className="size-8" />
           <p className="text-muted-foreground text-sm">Setting up your account...</p>

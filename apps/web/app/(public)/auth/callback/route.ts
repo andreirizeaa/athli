@@ -189,7 +189,12 @@ export async function GET(request: NextRequest) {
         // Redirect to new-client page to complete profile creation with invitation token
         if (flow === 'client_invite' && userType === 'client') {
           console.log('=== Client invite OAuth flow, redirecting to /auth/new-client ===');
-          return NextResponse.redirect(new URL('/auth/new-client', request.url));
+          // Pass coach_id via URL params as fallback (sessionStorage may not persist across OAuth redirect)
+          const newClientUrl = new URL('/auth/new-client', request.url);
+          if (coachId) {
+            newClientUrl.searchParams.set('coach_id', coachId);
+          }
+          return NextResponse.redirect(newClientUrl);
         }
 
         // Check user type and redirect accordingly

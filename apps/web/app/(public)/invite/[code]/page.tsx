@@ -186,23 +186,12 @@ export default function ClientInvitePage() {
         flow: 'client_invite',
       }));
 
-      // Pass minimal params to callback to indicate client invite flow
-      const callbackUrl = `/auth/callback?flow=client_invite&coach_id=${coachId}`;
+      // Use auth provider method with proper URL construction (matches checkout flow)
+      const redirectUrl = new URL('/auth/callback', window.location.origin);
+      redirectUrl.searchParams.set('flow', 'client_invite');
+      if (coachId) redirectUrl.searchParams.set('coach_id', coachId);
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}${callbackUrl}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'email profile',
-        },
-      });
-
-      if (error) throw error;
-      // The redirect will happen automatically via OAuth
+      await signInWithGoogle({ redirectTo: redirectUrl.toString() });
     } catch (err: any) {
       toast.error(err.message || 'Failed to sign in with Google');
       setIsGoogleLoading(false);
@@ -220,19 +209,12 @@ export default function ClientInvitePage() {
         flow: 'client_invite',
       }));
 
-      // Pass minimal params to callback to indicate client invite flow
-      const callbackUrl = `/auth/callback?flow=client_invite&coach_id=${coachId}`;
+      // Use auth provider method with proper URL construction (matches checkout flow)
+      const redirectUrl = new URL('/auth/callback', window.location.origin);
+      redirectUrl.searchParams.set('flow', 'client_invite');
+      if (coachId) redirectUrl.searchParams.set('coach_id', coachId);
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: `${window.location.origin}${callbackUrl}`,
-          scopes: 'email name',
-        },
-      });
-
-      if (error) throw error;
-      // The redirect will happen automatically via OAuth
+      await signInWithApple({ redirectTo: redirectUrl.toString() });
     } catch (err: any) {
       toast.error(err.message || 'Failed to sign in with Apple');
       setIsAppleLoading(false);

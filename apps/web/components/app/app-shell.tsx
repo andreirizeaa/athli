@@ -100,7 +100,7 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
             setCurrentLanguage={setLocale}
           />
         )}
-        <div className="flex-1 overflow-y-auto min-h-0 relative">
+        <div className="flex-1 overflow-y-auto md:overflow-x-hidden min-h-0 md:min-w-0 relative">
           {children}
           <UnpaidInvoiceOverlay />
         </div>

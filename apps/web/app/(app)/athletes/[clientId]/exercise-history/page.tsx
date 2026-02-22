@@ -177,6 +177,7 @@ const formatCombinationLabel = (combo: string): string => {
 };
 
 const ClientProgressPage = () => {
+  const t = useTranslations();
   const params = useParams<{ clientId: string; contactId: string }>();
   const router = useRouter();
   const isInbox = !!params.contactId;

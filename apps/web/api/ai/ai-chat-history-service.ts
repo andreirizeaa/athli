@@ -9,7 +9,9 @@ export interface ChatMessageData {
   content: string;
   timestamp: string;
   toolCalls?: { tool: string; status: string; message?: string }[];
-  action?: { type: string; payload: any };
+  action?: { type: string; payload: any; confirmed?: boolean };
+  charts?: any[];
+  clientSelect?: any[];
 }
 
 export interface AiChat {
@@ -48,15 +50,20 @@ export async function deleteChat(id: string): Promise<void> {
   await axiosInstance.delete(`/ai/chats/${id}`);
 }
 
+export async function updateChatData(id: string, data: { messages: ChatMessageData[] }): Promise<AiChat> {
+  const { data: res } = await axiosInstance.put(`/ai/chats/${id}`, { data });
+  return res.data;
+}
+
 export async function appendMessage(
   chatId: string,
-  msg: { role: string; content: string; toolCalls?: any[]; action?: any },
+  msg: { role: string; content: string; toolCalls?: any[]; action?: any; charts?: any[]; clientSelect?: any[] },
 ): Promise<AiChat> {
   const { data } = await axiosInstance.post(`/ai/chats/${chatId}/messages`, msg);
   return data.data;
 }
 
-/** Ask a cheap model to summarize a message into a 50-60 char title */
+/** Ask a cheap model to summarize a message into a ≤40 char title */
 export async function summarizeTitle(message: string): Promise<string> {
   const { data } = await axiosInstance.post('/ai/summarize-title', { message });
   return data.data.title;
