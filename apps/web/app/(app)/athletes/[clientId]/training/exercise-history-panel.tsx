@@ -98,6 +98,7 @@ const formatCombinationLabel = (combo: string): string => {
 };
 
 export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coachId, onClose }: ExerciseHistoryPanelProps) => {
+    const t = useTranslations();
     const [history, setHistory] = useState<HistoryEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [sortAsc, setSortAsc] = useState(false); // false = newest first

@@ -73,7 +73,7 @@ export default function NewClientPage() {
         console.log('[New Client] Calling API', { coachId, invitationToken: invitationToken ? 'provided' : 'none' });
 
         // Call the new-client API endpoint
-        const response = await authService.newClient(coachId, token, invitationToken, onboardingId);
+        const response = await authService.newClient(coachId, token, invitationToken ?? undefined, onboardingId ?? undefined);
 
         console.log('[New Client] API response', { success: response.success, message: response.message });
 

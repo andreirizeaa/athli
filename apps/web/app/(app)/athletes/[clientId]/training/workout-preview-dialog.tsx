@@ -15,6 +15,7 @@ interface WorkoutPreviewDialogProps {
 }
 
 export const WorkoutPreviewDialog = ({ open, onOpenChange, workoutData }: WorkoutPreviewDialogProps) => {
+    const t = useTranslations();
     if (!workoutData) return null;
 
     const name = workoutData?.name || 'Untitled Workout';

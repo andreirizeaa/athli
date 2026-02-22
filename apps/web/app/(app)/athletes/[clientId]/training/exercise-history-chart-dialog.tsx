@@ -97,6 +97,7 @@ export const ExerciseHistoryChartDialog = ({
     exerciseType,
     history
 }: ExerciseHistoryChartDialogProps) => {
+    const t = useTranslations();
     const [sortAsc, setSortAsc] = useState(false);
     const [selectedCombination, setSelectedCombination] = useState<string>('');
     const [selectedMetric, setSelectedMetric] = useState<'field1' | 'field2'>('field1');
