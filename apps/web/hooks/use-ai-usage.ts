@@ -9,6 +9,9 @@ import {
 } from '@/api/billing/billing-service';
 import { useEntitlements } from '@/lib/permissions/entitlements-provider';
 
+// DEV ONLY: Force simulate unlimited AI access (bypass all checks)
+const FORCE_SIMULATE_UNLIMITED_AI = true;
+
 const DAILY_TRIAL_LIMIT = 5;
 
 /**
@@ -25,6 +28,27 @@ const DAILY_TRIAL_LIMIT = 5;
 export function useAiUsage() {
   const queryClient = useQueryClient();
   const { isOnTrial, hasAddon } = useEntitlements();
+
+  // DEV: Force unlimited access when simulating
+  if (FORCE_SIMULATE_UNLIMITED_AI) {
+    return {
+      usage: {
+        current_count: 0,
+        daily_limit: Infinity,
+        remaining: Infinity,
+        is_limited: false,
+      },
+      isLimited: false,
+      hasUnlimitedAccess: true,
+      remaining: Infinity,
+      dailyLimit: Infinity,
+      currentCount: 0,
+      hasReachedLimit: false,
+      isLoading: false,
+      checkBeforePrompt: async (): Promise<{ allowed: boolean; message?: string }> => ({ allowed: true }),
+      refetch: () => {},
+    };
+  }
 
   // Only fetch usage if on trial (paid users with addon have unlimited)
   const shouldTrackUsage = isOnTrial;
