@@ -14,12 +14,12 @@ import {
 
 function AssistantLayoutContent({ children }: { children: React.ReactNode }) {
   const t = useTranslations();
-  const { isOpen, isMobile, isMobileOpen, setMobileOpen } = useAssistantSidebar();
+  const { isOpen, isMobile, isMobileOpen, setMobileOpen, hasChats } = useAssistantSidebar();
 
   return (
     <div className="h-full w-full flex">
       {/* Mobile Sheet */}
-      {isMobile && (
+      {isMobile && hasChats && (
         <Sheet open={isMobileOpen} onOpenChange={setMobileOpen}>
           <SheetContent
             side="left"
@@ -35,16 +35,14 @@ function AssistantLayoutContent({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Desktop Sidebar */}
-      {!isMobile && (
+      {!isMobile && hasChats && (
         <div
           className={cn(
-            'border-r bg-background flex flex-col transition-[width] duration-200 ease-linear overflow-hidden',
-            isOpen ? 'w-[320px]' : 'w-0 border-r-0'
+            'border-r bg-background flex flex-col transition-all duration-300 ease-in-out overflow-hidden',
+            isOpen ? 'w-[320px]' : 'w-[64px]'
           )}
         >
-          <div className="min-w-[320px]">
-            <AssistantSidebar />
-          </div>
+          <AssistantSidebar />
         </div>
       )}
 

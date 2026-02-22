@@ -213,6 +213,7 @@ const SectionItem = memo(function SectionItem({
   exerciseRefs,
   handlersRef,
 }: SectionItemProps) {
+  const t = useTranslations();
   // Destructure handlers from ref - the ref is stable so memo works, but we get convenient access to handlers
   const {
     onToggleCollapse,

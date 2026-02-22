@@ -19,7 +19,7 @@ export interface ChatContext {
 }
 
 export interface StreamEvent {
-  type: 'thinking' | 'tool_call' | 'content' | 'action' | 'error' | 'done';
+  type: 'thinking' | 'tool_call' | 'content' | 'action' | 'chart' | 'client_select' | 'error' | 'done';
   data?: any;
 }
 
@@ -95,6 +95,39 @@ const extractActionFromToolResponse = (toolResponse: string): { type: string; pa
 };
 
 /**
+ * Extract chart payload from tool responses
+ */
+const extractChartFromToolResponse = (toolResponse: string): any | null => {
+  try {
+    const parsed = JSON.parse(toolResponse);
+    if (parsed.success && parsed.chart) {
+      return parsed.chart;
+    }
+  } catch {
+    // Not a JSON response or not a chart
+  }
+  return null;
+};
+
+/**
+ * Extract client selection options when search_clients or list_all_clients returns multiple matches.
+ * Works for both tools since they both return a `clients` array.
+ */
+const extractClientSelectFromToolResponse = (toolName: string, toolResponse: string): any[] | null => {
+  if (toolName !== 'search_clients' && toolName !== 'list_all_clients') return null;
+  try {
+    const parsed = JSON.parse(toolResponse);
+    const clients = parsed.clients;
+    if (Array.isArray(clients) && clients.length > 1) {
+      return clients;
+    }
+  } catch {
+    // Not valid JSON
+  }
+  return null;
+};
+
+/**
  * Run the AI agent with streaming
  */
 export const runAgent = async (
@@ -122,6 +155,8 @@ export const runAgent = async (
 
   let iterations = 0;
   let pendingAction: { type: string; payload: any } | null = null;
+  let pendingCharts: any[] = [];
+  let pendingClientSelect: any[] | null = null;
 
   // Send thinking event
   onStream({ type: 'thinking' });
@@ -150,6 +185,16 @@ export const runAgent = async (
           });
           // Small delay for smooth streaming effect
           await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+
+        // Emit any pending client selection cards
+        if (pendingClientSelect) {
+          onStream({ type: 'client_select', data: pendingClientSelect });
+        }
+
+        // Emit any pending charts
+        for (const chart of pendingCharts) {
+          onStream({ type: 'chart', data: chart });
         }
 
         // If we have a pending action, send it
@@ -201,12 +246,38 @@ export const runAgent = async (
             pendingAction = action;
           }
 
-          messages.push(
-            new ToolMessage({
-              tool_call_id: toolCall.id || '',
-              content: resultStr,
-            })
-          );
+          // Check if this is a chart payload
+          const chart = extractChartFromToolResponse(resultStr);
+          if (chart) {
+            pendingCharts.push(chart);
+          }
+
+          // Check if this is a multi-client selection
+          const clientSelect = extractClientSelectFromToolResponse(toolName, resultStr);
+          if (clientSelect) {
+            pendingClientSelect = clientSelect;
+            // Emit client_select immediately so cards appear while AI is still responding
+            onStream({ type: 'client_select', data: clientSelect });
+            // Send sanitized result to LLM (no IDs) so it can't skip selection
+            messages.push(
+              new ToolMessage({
+                tool_call_id: toolCall.id || '',
+                content: JSON.stringify({
+                  found: true,
+                  count: clientSelect.length,
+                  client_names: clientSelect.map((c: any) => c.name),
+                  message: `Found ${clientSelect.length} clients with similar names. Interactive selection cards are being displayed to the user. Say "I found a few clients named [search term]:" and STOP. Do NOT pick a client or call any other tools until the user selects one.`,
+                }),
+              })
+            );
+          } else {
+            messages.push(
+              new ToolMessage({
+                tool_call_id: toolCall.id || '',
+                content: resultStr,
+              })
+            );
+          }
 
           // Send tool complete status
           onStream({

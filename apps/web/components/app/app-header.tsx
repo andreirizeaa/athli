@@ -136,7 +136,7 @@ export function AppHeader({
               <TooltipTrigger asChild>
                 <Link
                   href="/settings/billing"
-                  className="hidden md:flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                  className="hidden md:flex items-center gap-1.5 rounded-md bg-[#d4a853] h-9 px-3 text-sm font-medium text-white hover:bg-[#c99b45] shadow-[0_0_12px_rgba(212,168,83,0.7)] transition-colors cursor-pointer"
                 >
                   <Clock className="size-3.5" />
                   <span>
@@ -146,8 +146,15 @@ export function AppHeader({
                   </span>
                 </Link>
               </TooltipTrigger>
-              <TooltipContent>
-                {t('trial.viewPlanDetails', { defaultValue: 'View plan details' })}
+              <TooltipContent className="text-left">
+                <p>
+                  {trialDaysRemaining === 1
+                    ? t('trial.tooltipExpiringOne')
+                    : t('trial.tooltipExpiring', { count: trialDaysRemaining })}
+                </p>
+                <p>
+                  {t('trial.tooltipClickToView')}
+                </p>
               </TooltipContent>
             </Tooltip>
           )}

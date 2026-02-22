@@ -101,6 +101,7 @@ const renderValue = (value: any) => {
 };
 
 export const WorkoutPreviewContent = ({ workoutData, onHistoryClick, postStats }: WorkoutPreviewContentProps) => {
+    const t = useTranslations();
     const [enrichedExercises, setEnrichedExercises] = useState<any[]>([]);
     const [isLoadingExercises, setIsLoadingExercises] = useState(false);
     const [selectedExercise, setSelectedExercise] = useState<any | null>(null);

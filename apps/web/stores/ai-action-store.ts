@@ -52,38 +52,42 @@ export const useAIActionStore = create<AIActionStore>((set) => ({
  * Helper to get redirect URL for an action type
  */
 export function getActionRedirectUrl(actionType: ActionType, payload?: any): string {
+  const clientId = payload?.clientId;
+
   switch (actionType) {
     case 'create_workout':
-      return '/library/workouts';
+      return clientId ? `/athletes/${clientId}/training` : '/library/training/workouts';
     case 'create_program':
-      return '/library/programs';
+      return '/library/training/programs';
     case 'create_section':
-      return '/library/sections';
+      return '/library/training/sections';
     case 'assign_workout':
-      return '/library/calendar';
+      return clientId ? `/athletes/${clientId}/training` : '/athletes';
     case 'assign_metric_to_client':
     case 'add_client_goal':
     case 'add_client_injury':
     case 'update_client_profile':
-      return payload?.clientId ? `/athletes/${payload.clientId}/overview` : '/athletes';
+      return clientId ? `/athletes/${clientId}/overview` : '/athletes';
     case 'create_checkin_template':
-      return '/check-ins';
+      return clientId ? `/athletes/${clientId}/check-in` : '/library/forms/check-ins';
     case 'create_metric':
-      return '/library/metrics';
+      return clientId ? `/athletes/${clientId}/metrics` : '/library/metrics';
     case 'draft_message':
       return '/inbox';
     default:
-      return '/library/workouts';
+      return '/library/training/workouts';
   }
 }
 
 /**
  * Helper to get action display name
  */
-export function getActionDisplayName(actionType: ActionType): string {
+export function getActionDisplayName(actionType: ActionType, payload?: any): string {
+  const hasClient = !!payload?.clientId;
+
   switch (actionType) {
     case 'create_workout':
-      return 'Add Workout to Library';
+      return hasClient ? 'Add to Training' : 'Add Workout to Library';
     case 'create_program':
       return 'Add Program to Library';
     case 'create_section':
@@ -101,9 +105,9 @@ export function getActionDisplayName(actionType: ActionType): string {
     case 'update_client_profile':
       return 'Update Profile';
     case 'create_checkin_template':
-      return 'Create Check-in';
+      return hasClient ? 'Create Check-in' : 'Add Check-in to Library';
     case 'create_metric':
-      return 'Create Metric';
+      return hasClient ? 'Track Metric' : 'Add Metric to Library';
     default:
       return 'Confirm';
   }

@@ -138,7 +138,7 @@ export const GoalsCard = ({ clientId, initialSelectedGoalId }: GoalsCardProps) =
 
   return (
     <>
-      <Card className="bg-background flex flex-col w-full flex-1 min-h-0">
+      <Card className="bg-background flex flex-col w-full flex-1 min-h-0 min-w-0 overflow-hidden">
         <CardHeader className="px-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle>{t('athletes.profile.goals')}</CardTitle>

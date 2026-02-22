@@ -26,7 +26,7 @@ export const createSearchClientsTool = (ctx: ToolContext) =>
       const supabase = getSupabaseClient();
       const { data: clients, error } = await supabase
         .from('coach_clients_view')
-        .select('client_id, full_name, email, goals, category, status')
+        .select('client_id, full_name, email, goals, category, status, avatar_url')
         .eq('coach_id', ctx.coachId)
         .eq('is_active', true)
         .eq('is_archived', false)
@@ -54,6 +54,7 @@ export const createSearchClientsTool = (ctx: ToolContext) =>
           goals: c.goals,
           category: c.category,
           status: c.status,
+          avatarUrl: c.avatar_url,
         })),
       });
     },
@@ -94,14 +95,14 @@ export const createGetClientProfileTool = (ctx: ToolContext) =>
       // Get goals
       const { data: goals } = await supabase
         .from('client_goals')
-        .select('*')
+        .select('id, goal, target_date, created_at')
         .eq('client_id', clientId)
         .eq('coach_id', ctx.coachId);
 
       // Get injuries
       const { data: injuries } = await supabase
         .from('client_injuries')
-        .select('*')
+        .select('id, injury, date, created_at')
         .eq('client_id', clientId)
         .eq('coach_id', ctx.coachId);
 
@@ -120,8 +121,18 @@ export const createGetClientProfileTool = (ctx: ToolContext) =>
               unitSystem: profile.unit_system,
             }
           : null,
-        goals: goals || [],
-        injuries: injuries || [],
+        goals: (goals || []).map((g) => ({
+          id: g.id,
+          goal: g.goal,
+          targetDate: g.target_date,
+          addedOn: g.created_at,
+        })),
+        injuries: (injuries || []).map((i) => ({
+          id: i.id,
+          injury: i.injury,
+          dateOccurred: i.date,
+          addedOn: i.created_at,
+        })),
       });
     },
     {
@@ -271,7 +282,7 @@ export const createListAllClientsTool = (ctx: ToolContext) =>
 
       const { data: clients, error } = await supabase
         .from('coach_clients_view')
-        .select('client_id, full_name, email, category, status, created_at')
+        .select('client_id, full_name, email, category, status, created_at, avatar_url')
         .eq('coach_id', ctx.coachId)
         .eq('is_active', true)
         .eq('is_archived', false)
@@ -291,6 +302,7 @@ export const createListAllClientsTool = (ctx: ToolContext) =>
             category: c.category,
             status: c.status,
             joinedAt: c.created_at,
+            avatarUrl: c.avatar_url,
           })) || [],
       });
     },
@@ -357,6 +369,194 @@ export const createGetInactiveClientsTool = (ctx: ToolContext) =>
         'Find clients who have not trained in the specified number of days. Useful for identifying clients who need outreach.',
       schema: z.object({
         days: z.number().optional().describe('Number of days to check for inactivity (default 7)'),
+      }),
+    }
+  );
+
+// ============================================================================
+// CLIENT EXERCISE HISTORY & HABITS TOOLS
+// ============================================================================
+
+export const createGetClientExerciseHistoryTool = (ctx: ToolContext) =>
+  tool(
+    async ({ clientId, exerciseId, limit = 20 }: { clientId: string; exerciseId?: string; limit?: number }) => {
+      const supabase = getSupabaseClient();
+
+      if (exerciseId) {
+        // Get detailed history for a specific exercise
+        const { data: entries, error } = await supabase
+          .from('client_training_exercise_history')
+          .select('date, workout_name, exercise_data')
+          .eq('coach_id', ctx.coachId)
+          .eq('client_id', clientId)
+          .eq('exercise_id', exerciseId)
+          .order('date', { ascending: false })
+          .limit(limit);
+
+        if (error) return JSON.stringify({ error: error.message });
+
+        return JSON.stringify({
+          clientId,
+          exerciseId,
+          count: entries?.length || 0,
+          history: entries?.map((e) => {
+            const data = e.exercise_data as any;
+            const sets = Array.isArray(data?.sets) ? data.sets : [];
+            return {
+              date: e.date,
+              workoutName: e.workout_name,
+              exerciseName: data?.name || 'Unknown',
+              sets: sets.map((s: any) => ({
+                field1: s.trackableField1 ? { label: s.trackableField1.label, prescribed: s.trackableField1.prescribed, completed: s.trackableField1.completed } : null,
+                field2: s.trackableField2 ? { label: s.trackableField2.label, prescribed: s.trackableField2.prescribed, completed: s.trackableField2.completed } : null,
+                completed: s.completed ?? false,
+              })),
+            };
+          }) || [],
+        });
+      } else {
+        // Get summary: unique exercises with most recent performance
+        const { data: entries, error } = await supabase
+          .from('client_training_exercise_history')
+          .select('exercise_id, date, workout_name, exercise_data')
+          .eq('coach_id', ctx.coachId)
+          .eq('client_id', clientId)
+          .order('date', { ascending: false })
+          .limit(200);
+
+        if (error) return JSON.stringify({ error: error.message });
+
+        // Group by exercise_id and keep only the most recent entry
+        const exerciseMap = new Map<string, any>();
+        for (const entry of entries || []) {
+          if (!exerciseMap.has(entry.exercise_id)) {
+            const data = entry.exercise_data as any;
+            const sets = Array.isArray(data?.sets) ? data.sets : [];
+            const firstSet = sets[0];
+            exerciseMap.set(entry.exercise_id, {
+              exerciseId: entry.exercise_id,
+              exerciseName: data?.name || 'Unknown',
+              lastPerformed: entry.date,
+              totalSessions: 1,
+              lastPerformance: firstSet ? {
+                field1: firstSet.trackableField1 ? `${firstSet.trackableField1.completed ?? firstSet.trackableField1.prescribed} ${firstSet.trackableField1.label || ''}` : null,
+                field2: firstSet.trackableField2 ? `${firstSet.trackableField2.completed ?? firstSet.trackableField2.prescribed} ${firstSet.trackableField2.label || ''}` : null,
+                sets: sets.length,
+              } : null,
+            });
+          } else {
+            exerciseMap.get(entry.exercise_id).totalSessions++;
+          }
+        }
+
+        const exercises = Array.from(exerciseMap.values());
+        return JSON.stringify({
+          clientId,
+          uniqueExercises: exercises.length,
+          exercises,
+          message: exercises.length > 0
+            ? `Client has performed ${exercises.length} unique exercises. Use exerciseId to get detailed history for any exercise.`
+            : 'No exercise history found for this client.',
+        });
+      }
+    },
+    {
+      name: 'get_client_exercise_history',
+      description:
+        "Get a client's exercise-level performance history. Without exerciseId, returns a summary of all unique exercises with last performance. With exerciseId, returns detailed set-by-set history for that exercise. Use this to analyze strength progression, exercise volume, and performance trends.",
+      schema: z.object({
+        clientId: z.string().describe('The client ID (UUID)'),
+        exerciseId: z.string().optional().describe('Specific exercise ID to get detailed history for. Omit to get a summary of all exercises.'),
+        limit: z.number().optional().describe('Max entries to return (default 20 for specific exercise, 200 for summary)'),
+      }),
+    }
+  );
+
+export const createGetClientHabitsTool = (ctx: ToolContext) =>
+  tool(
+    async ({ clientId }: { clientId: string }) => {
+      const supabase = getSupabaseClient();
+
+      // Get habit assignments with habit details
+      const { data: assignments, error: assignErr } = await supabase
+        .from('client_habit_assignments')
+        .select('id, coach_habit_id, is_active, sort_order, coach_habits(name, description, schedule_type)')
+        .eq('coach_id', ctx.coachId)
+        .eq('client_id', clientId)
+        .eq('is_active', true);
+
+      if (assignErr) return JSON.stringify({ error: assignErr.message });
+      if (!assignments || assignments.length === 0) {
+        return JSON.stringify({ clientId, habits: [], message: 'No habits assigned to this client.' });
+      }
+
+      // Get recent logs (last 30 days) for all habits
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: logs } = await supabase
+        .from('client_habit_logs')
+        .select('coach_habit_id, recorded_date, completed, value')
+        .eq('coach_id', ctx.coachId)
+        .eq('client_id', clientId)
+        .gte('recorded_date', thirtyDaysAgo.toISOString().split('T')[0])
+        .order('recorded_date', { ascending: false });
+
+      // Get streaks for each assignment
+      const habitsWithData = await Promise.all(
+        assignments.map(async (a) => {
+          const habitInfo = a.coach_habits as any;
+          const habitLogs = (logs || []).filter((l) => l.coach_habit_id === a.coach_habit_id);
+          const completedDays = habitLogs.filter((l) => l.completed).length;
+          const totalLogDays = habitLogs.length;
+
+          // Get streaks
+          let streaks = { longest_streak: 0, current_streak: 0 };
+          try {
+            const { data: streakData } = await supabase.rpc('calculate_habit_streaks', {
+              p_assignment_id: a.id,
+              p_client_id: clientId,
+              p_coach_id: ctx.coachId,
+            });
+            if (streakData && streakData.length > 0) {
+              streaks = streakData[0];
+            }
+          } catch {
+            // Streak calculation failed, continue with defaults
+          }
+
+          return {
+            assignmentId: a.id,
+            habitId: a.coach_habit_id,
+            name: habitInfo?.name || 'Unknown',
+            description: habitInfo?.description || '',
+            scheduleType: habitInfo?.schedule_type || 'daily',
+            last30Days: {
+              completedDays,
+              totalLogDays,
+              completionRate: totalLogDays > 0 ? `${Math.round((completedDays / totalLogDays) * 100)}%` : 'No data',
+            },
+            streaks: {
+              current: streaks.current_streak,
+              longest: streaks.longest_streak,
+            },
+          };
+        })
+      );
+
+      return JSON.stringify({
+        clientId,
+        habitCount: habitsWithData.length,
+        habits: habitsWithData,
+        message: `Client has ${habitsWithData.length} active habit(s). Completion rates and streaks are based on the last 30 days.`,
+      });
+    },
+    {
+      name: 'get_client_habits',
+      description:
+        "Get a client's assigned habits with completion rates (last 30 days) and current/longest streaks. Use this to assess habit adherence and consistency.",
+      schema: z.object({
+        clientId: z.string().describe('The client ID (UUID)'),
       }),
     }
   );
@@ -858,6 +1058,9 @@ interface CreateWorkoutInput {
   description?: string;
   type?: string;
   difficulty?: string;
+  clientId?: string;
+  clientName?: string;
+  date?: string;
   sections: Array<{
     name: string;
     type?: string;
@@ -951,6 +1154,8 @@ export const createCreateWorkoutTool = (ctx: ToolContext) =>
           type: type || 'strength',
           difficulty: difficulty || 'intermediate',
           totalExercises,
+          ...(input.clientId ? { clientId: input.clientId, clientName: input.clientName || 'Client' } : {}),
+          ...(input.date ? { date: input.date } : {}),
           sections: sections.map((section: any) => ({
             name: section.name,
             type: section.type || 'regular',
@@ -971,13 +1176,15 @@ export const createCreateWorkoutTool = (ctx: ToolContext) =>
             }),
           })),
         },
-        message: `Workout "${name}" ready to save with ${totalExercises} exercises in ${sections.length} section(s).`,
+        message: input.clientId
+          ? `Workout "${name}" ready to assign to ${input.clientName || 'client'} with ${totalExercises} exercises in ${sections.length} section(s).`
+          : `Workout "${name}" ready to save with ${totalExercises} exercises in ${sections.length} section(s).`,
       });
     },
     {
       name: 'create_workout',
       description:
-        'Create a new workout template. Requires prescribedExerciseId for each exercise (get IDs from get_exercise_catalog first). Returns a payload that the user must confirm before saving.',
+        'Create a workout. If the conversation is about a specific client, include clientId and clientName to assign the workout directly to them. Otherwise it will be added to the coach library. Requires prescribedExerciseId for each exercise (get IDs from get_exercise_catalog first). Returns a payload that the user must confirm before saving.',
       schema: z.object({
         name: z.string().describe('Workout name'),
         description: z.string().optional().describe('Workout description'),
@@ -989,6 +1196,9 @@ export const createCreateWorkoutTool = (ctx: ToolContext) =>
           .enum(['beginner', 'intermediate', 'advanced'])
           .optional()
           .describe('Difficulty level'),
+        clientId: z.string().optional().describe('If creating for a specific client, their ID (UUID). When provided, the workout is assigned directly to the client instead of the coach library.'),
+        clientName: z.string().optional().describe('Client name for display when clientId is provided'),
+        date: z.string().optional().describe('Date to assign the workout (ISO format, e.g., 2026-02-03). Defaults to today if not specified. Only used when clientId is provided.'),
         sections: z.array(workoutSectionSchema).describe('Workout sections with exercises'),
       }),
     }
@@ -1444,7 +1654,7 @@ interface CheckinQuestion {
 
 export const createCreateCheckinTemplateTool = (ctx: ToolContext) =>
   tool(
-    async ({ name, description, questions }: { name: string; description?: string; questions: CheckinQuestion[] }) => {
+    async ({ name, description, questions, clientId, clientName }: { name: string; description?: string; questions: CheckinQuestion[]; clientId?: string; clientName?: string }) => {
       if (!questions || questions.length === 0) {
         return JSON.stringify({
           success: false,
@@ -1462,17 +1672,22 @@ export const createCreateCheckinTemplateTool = (ctx: ToolContext) =>
             id: `q${index + 1}`,
             ...q,
           })),
+          ...(clientId ? { clientId, clientName: clientName || 'Client' } : {}),
         },
-        message: `Ready to create "${name}" check-in template with ${questions.length} question(s).`,
+        message: clientId
+          ? `Ready to create "${name}" check-in for ${clientName || 'client'} with ${questions.length} question(s).`
+          : `Ready to create "${name}" check-in template with ${questions.length} question(s).`,
       });
     },
     {
       name: 'create_checkin_template',
       description:
-        'Create a new check-in form template. Returns a payload that the user must confirm before saving.',
+        'Create a check-in form. If the conversation is about a specific client, include clientId and clientName to create it directly for them. Otherwise it will be added to the coach library. Returns a payload that the user must confirm before saving.',
       schema: z.object({
         name: z.string().describe('Check-in template name'),
         description: z.string().optional().describe('Description of the check-in'),
+        clientId: z.string().optional().describe('If creating for a specific client, their ID (UUID). When provided, the check-in is created directly for the client instead of the coach library.'),
+        clientName: z.string().optional().describe('Client name for display when clientId is provided'),
         questions: z.array(z.object({
           question: z.string().describe('The question text'),
           type: z.enum(['text', 'number', 'rating', 'yesNo', 'multipleChoice', 'scale', 'date']).describe('Question type: text (free text), number (numeric input), rating (1-5 stars), yesNo (yes/no toggle), multipleChoice (select from options), scale (custom range like 1-10), date (date picker)'),
@@ -1487,7 +1702,7 @@ export const createCreateCheckinTemplateTool = (ctx: ToolContext) =>
 
 export const createCreateMetricTool = (ctx: ToolContext) =>
   tool(
-    async ({ name, metricType, unit, description }: { name: string; metricType: string; unit?: string; description?: string }) => {
+    async ({ name, metricType, unit, description, clientId, clientName }: { name: string; metricType: string; unit?: string; description?: string; clientId?: string; clientName?: string }) => {
       return JSON.stringify({
         success: true,
         action: 'create_metric',
@@ -1496,20 +1711,59 @@ export const createCreateMetricTool = (ctx: ToolContext) =>
           metricType,
           unit: unit || '',
           description: description || '',
+          ...(clientId ? { clientId, clientName: clientName || 'Client' } : {}),
         },
-        message: `Ready to create "${name}" metric (${metricType}${unit ? `, unit: ${unit}` : ''}).`,
+        message: clientId
+          ? `Ready to track "${name}" for ${clientName || 'client'} (${metricType}${unit ? `, unit: ${unit}` : ''}).`
+          : `Ready to create "${name}" metric (${metricType}${unit ? `, unit: ${unit}` : ''}).`,
       });
     },
     {
       name: 'create_metric',
       description:
-        'Create a new trackable metric. Returns a payload that the user must confirm before saving.',
+        'Create a trackable metric. If the conversation is about a specific client, include clientId and clientName to assign the metric directly to them. Otherwise it will be added to the coach library. Returns a payload that the user must confirm before saving.',
       schema: z.object({
         name: z.string().describe('Metric name (e.g., "Body Weight", "Waist Circumference", "1RM Squat")'),
         metricType: z.enum(['weight', 'measurement', 'percentage', 'count', 'time', 'custom'])
           .describe('Type of metric'),
         unit: z.string().optional().describe('Unit of measurement (e.g., "kg", "cm", "lbs", "minutes")'),
         description: z.string().optional().describe('Description of what this metric tracks'),
+        clientId: z.string().optional().describe('If creating for a specific client, their ID (UUID). When provided, the metric is assigned directly to the client instead of the coach library.'),
+        clientName: z.string().optional().describe('Client name for display when clientId is provided'),
+      }),
+    }
+  );
+
+// ============================================================================
+// CHART VISUALIZATION TOOL
+// ============================================================================
+
+export const createGenerateChartTool = (ctx: ToolContext) =>
+  tool(
+    async ({ chartType, title, xAxisLabel, yAxisLabel, data, series }) => {
+      if (!data || data.length === 0) {
+        return JSON.stringify({ success: false, error: 'No data provided for chart' });
+      }
+      return JSON.stringify({
+        success: true,
+        chart: { type: chartType, title, xAxisLabel, yAxisLabel, data, series },
+      });
+    },
+    {
+      name: 'generate_chart',
+      description:
+        'Display a chart to visualize data. Use after fetching client data (exercise history, metrics, habits) to show trends and comparisons visually.',
+      schema: z.object({
+        chartType: z.enum(['line', 'bar', 'area']).describe('Chart type: line for trends, bar for comparisons, area for volume/cumulative data'),
+        title: z.string().describe('Descriptive chart title based on the actual data being shown'),
+        xAxisLabel: z.string().optional().describe('Label for the x-axis (e.g., "Date", "Week")'),
+        yAxisLabel: z.string().optional().describe('Label for the y-axis (e.g., "Weight (kg)", "Reps")'),
+        data: z.array(z.record(z.union([z.string(), z.number()]))).describe('Array of data points. Each object should have a label field for x-axis and numeric fields for values'),
+        series: z.array(z.object({
+          dataKey: z.string().describe('Key in the data objects that this series maps to'),
+          label: z.string().describe('Display label for this series in the legend'),
+          color: z.string().optional().describe('Optional color (e.g., "#8b5cf6"). Defaults to theme colors if omitted'),
+        })).describe('Series definitions mapping data keys to chart lines/bars/areas'),
       }),
     }
   );
@@ -1526,6 +1780,8 @@ export const createAllTools = (ctx: ToolContext) => [
   createGetClientWorkoutsTool(ctx),
   createGetClientMetricsTool(ctx),
   createGetClientCheckinsTool(ctx),
+  createGetClientExerciseHistoryTool(ctx),
+  createGetClientHabitsTool(ctx),
   createGetInactiveClientsTool(ctx),
 
   // Exercise tools
@@ -1559,4 +1815,7 @@ export const createAllTools = (ctx: ToolContext) => [
 
   // Analytics tools
   createAnalyzeClientProgressTool(ctx),
+
+  // Chart visualization
+  createGenerateChartTool(ctx),
 ];

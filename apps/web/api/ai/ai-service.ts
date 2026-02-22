@@ -25,14 +25,33 @@ export interface ChatRequest {
   conversationHistory: ConversationMessage[];
 }
 
+export interface ChartPayload {
+  type: 'line' | 'bar' | 'area';
+  title: string;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  data: Array<Record<string, string | number>>;
+  series: Array<{ dataKey: string; label: string; color?: string }>;
+}
+
+export interface ClientSelectOption {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  category?: string;
+  status?: string;
+}
+
 export interface StreamEvent {
-  type: 'thinking' | 'tool_call' | 'content' | 'action' | 'error' | 'done';
+  type: 'thinking' | 'tool_call' | 'content' | 'action' | 'chart' | 'client_select' | 'error' | 'done';
   data?: any;
 }
 
 export interface ActionPayload {
   type: 'create_workout' | 'create_section' | 'create_program' | 'assign_workout';
   payload: any;
+  confirmed?: boolean;
 }
 
 /**
