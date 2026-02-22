@@ -4,49 +4,27 @@ import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/general/utils";
-import { SquarePen, SearchIcon, MessageSquareIcon } from "lucide-react";
+import { SquarePen, SearchIcon, MessageSquareIcon, Trash2Icon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+    fetchChats,
+    deleteChat as deleteChatApi,
+    AiChatListItem,
+} from "@/api/ai/ai-chat-history-service";
 
-interface ChatSession {
-    id: string;
-    title: string;
-    lastMessage: string;
-    timestamp: string;
+function relativeDate(iso: string): string {
+    const ms = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(ms / 60_000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return `${days}d ago`;
+    return new Date(iso).toLocaleDateString();
 }
-
-const mockChats: ChatSession[] = [
-    {
-        id: "1",
-        title: "Training Plan Review",
-        lastMessage: "Here's the updated workout...",
-        timestamp: "2 hours ago"
-    },
-    {
-        id: "2",
-        title: "Client Progress Analysis",
-        lastMessage: "Based on the data provided...",
-        timestamp: "Yesterday"
-    },
-    {
-        id: "3",
-        title: "Nutrition Strategy",
-        lastMessage: "For cutting phase, I recommend...",
-        timestamp: "2 days ago"
-    },
-    {
-        id: "4",
-        title: "Recovery Protocol",
-        lastMessage: "The optimal recovery window...",
-        timestamp: "3 days ago"
-    },
-    {
-        id: "5",
-        title: "Periodization Planning",
-        lastMessage: "Let me break down the mesocycle...",
-        timestamp: "1 week ago"
-    }
-];
 
 interface AssistantSidebarProps {
     onChatClick?: () => void;
@@ -56,12 +34,22 @@ export function AssistantSidebar({ onChatClick }: AssistantSidebarProps) {
     const t = useTranslations();
     const router = useRouter();
     const pathname = usePathname();
+    const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState("");
 
-    const filteredChats = mockChats.filter(
-        (chat) =>
-            chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+    const { data: chats = [], isLoading } = useQuery({
+        queryKey: ["ai-chats"],
+        queryFn: fetchChats,
+        refetchInterval: 30_000,
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: deleteChatApi,
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ai-chats"] }),
+    });
+
+    const filtered = chats.filter((c) =>
+        c.title.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
     const handleNewChat = () => {
@@ -74,9 +62,13 @@ export function AssistantSidebar({ onChatClick }: AssistantSidebarProps) {
         onChatClick?.();
     };
 
-    const isActiveChat = (id: string) => {
-        return pathname === `/assistant/${id}`;
+    const handleDelete = (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        deleteMutation.mutate(id);
+        if (pathname === `/assistant/${id}`) router.push("/assistant");
     };
+
+    const isActive = (id: string) => pathname === `/assistant/${id}`;
 
     return (
         <div className="flex h-full w-full flex-col">
@@ -86,7 +78,7 @@ export function AssistantSidebar({ onChatClick }: AssistantSidebarProps) {
                 <Button
                     onClick={handleNewChat}
                     size="sm"
-                    title={t('assistant.newChat')}
+                    title="New chat"
                 >
                     <SquarePen className="h-4 w-4 mr-1" />
                     New
@@ -108,32 +100,38 @@ export function AssistantSidebar({ onChatClick }: AssistantSidebarProps) {
 
             {/* Chat List */}
             <div className="flex-1 overflow-y-auto">
-                {filteredChats.length === 0 ? (
+                {isLoading ? (
+                    <div className="p-4 text-center text-muted-foreground text-sm">Loading…</div>
+                ) : filtered.length === 0 ? (
                     <div className="p-4 text-center text-muted-foreground text-sm">
-                        No chats found
+                        {searchQuery ? "No chats found" : "No chats yet — start a new one!"}
                     </div>
                 ) : (
                     <div>
-                        {filteredChats.map((chat) => (
+                        {filtered.map((chat) => (
                             <button
                                 key={chat.id}
                                 onClick={() => handleChatClick(chat.id)}
                                 className={cn(
-                                    "w-full text-left px-4 py-3 border-b transition-colors hover:bg-accent cursor-pointer",
-                                    isActiveChat(chat.id) && "bg-accent"
+                                    "group w-full text-left px-4 py-3 border-b transition-colors hover:bg-accent cursor-pointer",
+                                    isActive(chat.id) && "bg-accent",
                                 )}
                             >
-                                <div className="flex items-center gap-2 mb-1">
+                                <div className="flex items-center gap-2 mb-0.5">
                                     <MessageSquareIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                    <span className="truncate text-sm font-medium">
+                                    <span className="truncate text-sm font-medium flex-1">
                                         {chat.title}
                                     </span>
+                                    <button
+                                        onClick={(e) => handleDelete(e, chat.id)}
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
+                                        title="Delete chat"
+                                    >
+                                        <Trash2Icon className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                                    </button>
                                 </div>
-                                <p className="line-clamp-1 text-xs text-muted-foreground pl-6">
-                                    {chat.lastMessage}
-                                </p>
-                                <span className="text-xs text-muted-foreground/60 pl-6">
-                                    {chat.timestamp}
+                                <span className="text-[11px] text-muted-foreground/60 pl-6">
+                                    {relativeDate(chat.updated_at)}
                                 </span>
                             </button>
                         ))}

@@ -71,6 +71,11 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
     const [activeCategory, setActiveCategory] = useState("");
 
     const [hasStartedChat, setHasStartedChat] = useState(!!chatId);
+
+    // When navigating to an existing chat, mark as started
+    useEffect(() => {
+        if (chatId) setHasStartedChat(true);
+    }, [chatId]);
     const [animationData, setAnimationData] = useState<object | null>(null);
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -78,17 +83,18 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
 
     const { toggle, isOpen, isMobile } = useAssistantSidebar();
 
-    // Use the AI chat hook
+    // Use the AI chat hook — pass chatId for history persistence
     const {
         messages,
         isStreaming,
+        isLoadingHistory,
         currentToolCall,
         pendingAction,
         error,
         sendMessage,
         stopStreaming,
         clearChat,
-    } = useAIChat();
+    } = useAIChat({ chatId });
 
     // Use workout hook for creating workouts
     const { createWorkout } = useCoachWorkouts();
