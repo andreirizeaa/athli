@@ -158,7 +158,7 @@ const AthliAssistantPage = () => {
         emptyState={
           <EmptyGridState
             title={t('home.athliAssistantEmptyStateTitle')}
-            subtitle="Automated tasks and reminders will appear here when there's something that needs your attention"
+            subtitle={t('common.automatedTasks')}
           />
         }
       />

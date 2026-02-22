@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import React from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -25,7 +26,7 @@ export const WorkoutPreviewDialog = ({ open, onOpenChange, workoutData }: Workou
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-5xl h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
                 <VisuallyHidden>
-                    <DialogTitle>Workout Preview</DialogTitle>
+                    <DialogTitle>{t('common.workoutPreview')}</DialogTitle>
                 </VisuallyHidden>
 
                 {/* Header */}

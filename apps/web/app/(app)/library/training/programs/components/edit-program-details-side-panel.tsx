@@ -113,7 +113,7 @@ export const EditProgramDetailsSidePanel = ({
             onOpenChange(false);
         } catch (error) {
             console.error('Failed to save program details:', error);
-            toast.error('Failed to save changes');
+            toast.error(t('toasts.failedSaveChanges'));
         } finally {
             setIsSaving(false);
         }

@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
@@ -404,7 +405,7 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
                                         </button>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>Close history panel</p>
+                                        <p>{t('common.closeHistoryPanel')}</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </div>
@@ -415,7 +416,7 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
                                     className="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors text-[10px] font-bold uppercase tracking-wider group/chart hover:bg-sidebar-foreground/10 text-sidebar-foreground/70 hover:text-sidebar-foreground cursor-pointer"
                                 >
                                     <BarChart3 className="size-3.5" />
-                                    <span>Chart view</span>
+                                    <span>{t('common.chartView')}</span>
                                 </button>
                             </div>
                             {/* Stats Summary - Dynamic Grid */}

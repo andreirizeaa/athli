@@ -45,7 +45,7 @@ const TimezoneCard = () => {
     try {
       await updateProfile({ timezone });
       setSavedTimezone(timezone);
-      toast.success('Timezone updated successfully');
+      toast.success(t('toasts.timezoneUpdated'));
     } catch (error: any) {
       toast.error(error.message || 'Failed to update timezone');
     } finally {
@@ -56,7 +56,7 @@ const TimezoneCard = () => {
   return (
     <Card className="bg-background max-w-3xl w-full">
       <CardHeader className="px-4">
-        <CardTitle>Timezone</CardTitle>
+        <CardTitle>{t('common.timezone')}</CardTitle>
       </CardHeader>
       <Separator className="w-full mt-[-8px]" />
       <CardContent className="px-0">
@@ -80,7 +80,7 @@ const TimezoneCard = () => {
               </PopoverTrigger>
               <PopoverContent className="w-72 p-0" align="end">
                 <Command>
-                  <CommandInput placeholder="Search timezone..." />
+                  <CommandInput placeholder={t('common.searchTimezone')} />
                   <CommandList className="max-h-[300px]">
                     <CommandEmpty>No timezone found.</CommandEmpty>
                     {TIMEZONE_GROUPS.map((group) => (
@@ -211,7 +211,7 @@ const ProfilePage = () => {
     const publicUrl = await uploadAndSetProfilePicture(file);
     setProfilePictureUrl(publicUrl);
     setSavedData(prev => ({ ...prev, profilePictureUrl: publicUrl }));
-    toast.success('Profile picture updated successfully');
+    toast.success(t('toasts.profilePictureUpdated'));
   };
 
   const handleSave = React.useCallback(async () => {
@@ -219,7 +219,7 @@ const ProfilePage = () => {
 
     // Validate name before saving
     if (!validateName()) {
-      toast.error('Name is required');
+      toast.error(t('toasts.nameRequired'));
       return;
     }
 
@@ -231,7 +231,7 @@ const ProfilePage = () => {
         name: nameRef.current.trim(),
       });
 
-      toast.success('Profile updated successfully');
+      toast.success(t('toasts.profileUpdated'));
 
       setSavedData({
         name: nameRef.current.trim(),
@@ -318,7 +318,7 @@ const ProfilePage = () => {
                         onChange={(e) => setName(e.target.value)}
                         className={cn("w-full sm:w-64", nameError && "border-destructive")}
                         disabled={isSaving}
-                        placeholder="Enter your full name"
+                        placeholder={t('common.enterFullName')}
                       />
                       {nameError && (
                         <span className="text-xs text-destructive mt-1">{nameError}</span>

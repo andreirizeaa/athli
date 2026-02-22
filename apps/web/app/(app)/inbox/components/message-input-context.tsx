@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import React from 'react';
 import { toast } from 'sonner';
@@ -216,7 +217,7 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
 
     // Show toast outside setAttachments callback to avoid double-firing in StrictMode
     if (showMaxFilesError) {
-      toast.error('Maximum 4 files per message');
+      toast.error(t('toasts.maxFilesPerMessage'));
     }
   }, []);
 
@@ -358,7 +359,7 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
       });
     } catch (error) {
       console.error('Failed to send message:', error);
-      toast.error('Failed to send message');
+      toast.error(t('toasts.failedSendMessage'));
       // On error, don't revoke - but also don't restore (message is lost)
       currentAttachments.forEach((att) => {
         if (att.preview) {

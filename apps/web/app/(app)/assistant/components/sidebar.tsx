@@ -84,7 +84,7 @@ export function AssistantSidebar({ onChatClick }: AssistantSidebarProps) {
                 <Button
                     onClick={handleNewChat}
                     size="sm"
-                    title="New chat"
+                    title={t('assistant.newChat')}
                 >
                     <SquarePen className="h-4 w-4 mr-1" />
                     New
@@ -96,7 +96,7 @@ export function AssistantSidebar({ onChatClick }: AssistantSidebarProps) {
                 <div className="relative">
                     <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                        placeholder="Search chats..."
+                        placeholder={t('assistant.searchChats')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-9"

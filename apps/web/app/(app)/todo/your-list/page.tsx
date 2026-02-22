@@ -279,7 +279,7 @@ const YourListPage = () => {
         emptyState={
           <EmptyGridState
             title={t('home.yourListEmptyStateTitle')}
-            subtitle="Add and organize tasks to keep track of your coaching work and client management"
+            subtitle={t('common.addOrganizeTasks')}
             action={
               <Button onClick={() => setIsAddTaskOpen(true)} className="gap-2">
                 <Plus className="size-4" />

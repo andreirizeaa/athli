@@ -335,7 +335,7 @@ const ComparePage = () => {
                 onValueChange={handleLeftInstanceChange}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a check-in" />
+                  <SelectValue placeholder={t('common.selectCheckin')} />
                 </SelectTrigger>
                 <SelectContent>
                   {instances
@@ -389,7 +389,7 @@ const ComparePage = () => {
                 onValueChange={handleRightInstanceChange}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a check-in" />
+                  <SelectValue placeholder={t('common.selectCheckin')} />
                 </SelectTrigger>
                 <SelectContent>
                   {instances

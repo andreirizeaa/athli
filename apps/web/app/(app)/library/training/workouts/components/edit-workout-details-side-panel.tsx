@@ -118,7 +118,7 @@ export const EditWorkoutDetailsSidePanel = ({
             onOpenChange(false);
         } catch (error) {
             console.error('Failed to save workout details:', error);
-            toast.error('Failed to save changes');
+            toast.error(t('toasts.failedSaveChanges'));
         } finally {
             setIsSaving(false);
         }

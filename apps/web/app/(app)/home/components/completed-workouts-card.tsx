@@ -52,7 +52,7 @@ export const CompletedWorkoutsCard = () => {
 
   if (error) {
     console.error('Error loading home data:', error);
-    toast.error('Failed to load workouts');
+    toast.error(t('toasts.failedLoadWorkouts'));
   }
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -113,7 +113,7 @@ export const CompletedWorkoutsCard = () => {
       }
     } catch (err) {
       console.error('Failed to fetch workout instance:', err);
-      toast.error('Failed to load workout details');
+      toast.error(t('toasts.failedLoadWorkoutDetails'));
     } finally {
       setIsLoadingWorkout(false);
     }
@@ -193,7 +193,7 @@ export const CompletedWorkoutsCard = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="completed">{t('home.completedWorkouts')}</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="in_progress">{t('common.inProgress')}</SelectItem>
                   <SelectItem value="missed">{t('home.missedWorkouts')}</SelectItem>
                 </SelectContent>
               </Select>
