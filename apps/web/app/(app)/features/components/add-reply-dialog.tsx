@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -33,6 +34,7 @@ export function AddReplyDialog({
   featureRequestId,
   onCreated,
 }: AddReplyDialogProps) {
+  const t = useTranslations();
   const { user } = useGlobalData();
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,12 +45,12 @@ export function AddReplyDialog({
     e.preventDefault();
 
     if (!user) {
-      toast.error('You must be logged in to reply');
+      toast.error(t('toasts.mustBeLoggedInReply'));
       return;
     }
 
     if (!isValid) {
-      toast.error('Please enter a message');
+      toast.error(t('toasts.enterMessage'));
       return;
     }
 
@@ -66,7 +68,7 @@ export function AddReplyDialog({
         }
       );
 
-      toast.success('Reply added!');
+      toast.success(t('toasts.replyAdded'));
       onCreated(newReply);
       handleClose();
     } catch (error: any) {
@@ -86,7 +88,7 @@ export function AddReplyDialog({
       <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add Reply</DialogTitle>
+            <DialogTitle>{t('common.addReply')}</DialogTitle>
             <DialogDescription>
               Share your thoughts or suggestions on this feature request.
             </DialogDescription>
@@ -101,7 +103,7 @@ export function AddReplyDialog({
                 id="message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Write your reply..."
+                placeholder={t('common.writeReply')}
                 disabled={isSubmitting}
                 rows={4}
                 autoFocus

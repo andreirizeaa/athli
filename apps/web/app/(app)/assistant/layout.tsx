@@ -26,8 +26,8 @@ function AssistantLayoutContent({ children }: { children: React.ReactNode }) {
             className="w-80 p-0 [&>button]:hidden"
           >
             <SheetHeader className="sr-only">
-              <SheetTitle>Chats</SheetTitle>
-              <SheetDescription>Chat history</SheetDescription>
+              <SheetTitle>{t('assistant.chats')}</SheetTitle>
+              <SheetDescription>{t('assistant.chatHistory')}</SheetDescription>
             </SheetHeader>
             <AssistantSidebar onChatClick={() => setMobileOpen(false)} />
           </SheetContent>

@@ -187,7 +187,7 @@ const ActivityPage = () => {
       const url = await startOnboarding();
       window.open(url, '_blank');
     } catch {
-      toast.error('Failed to start Stripe connection');
+      toast.error(t('toasts.failedStartStripeConnection'));
     }
   };
 
@@ -564,7 +564,7 @@ const ActivityPage = () => {
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Payments Add-on Required</DialogTitle>
+            <DialogTitle>{t('common.paymentsAddonRequired')}</DialogTitle>
             <DialogDescription>
               To connect Stripe and accept payments from your clients, you need to add the Payments add-on to your plan.
             </DialogDescription>

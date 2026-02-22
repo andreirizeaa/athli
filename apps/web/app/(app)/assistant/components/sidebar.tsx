@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/general/utils";
 import { SquarePen, SearchIcon, MessageSquareIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,7 @@ interface AssistantSidebarProps {
 }
 
 export function AssistantSidebar({ onChatClick }: AssistantSidebarProps) {
+    const t = useTranslations();
     const router = useRouter();
     const pathname = usePathname();
     const [searchQuery, setSearchQuery] = useState("");
@@ -84,7 +86,7 @@ export function AssistantSidebar({ onChatClick }: AssistantSidebarProps) {
                 <Button
                     onClick={handleNewChat}
                     size="sm"
-                    title="New chat"
+                    title={t('assistant.newChat')}
                 >
                     <SquarePen className="h-4 w-4 mr-1" />
                     New
@@ -96,7 +98,7 @@ export function AssistantSidebar({ onChatClick }: AssistantSidebarProps) {
                 <div className="relative">
                     <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                        placeholder="Search chats..."
+                        placeholder={t('assistant.searchChats')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-9"

@@ -365,7 +365,7 @@ export const ToDoCard = () => {
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
                 <Input
                   type="search"
-                  placeholder="Search..."
+                  placeholder={t('common.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-7 h-7 text-xs w-[200px]"

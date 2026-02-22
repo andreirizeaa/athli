@@ -458,7 +458,7 @@ const CheckInsPage = () => {
         emptyState={
           <EmptyGridState
             title={t('forms.checkIns.emptyState.title')}
-            subtitle="Create check-in forms to regularly collect feedback and monitor your clients' progress"
+            subtitle={t('common.createCheckinSubtitle')}
             action={
               <Button onClick={handleOpenAddCheckIn} className="gap-2">
                 <Plus className="size-4" />
@@ -599,7 +599,7 @@ const CheckInsPage = () => {
       <UpgradeDialog
         open={isUpgradeDialogOpen}
         onOpenChange={setIsUpgradeDialogOpen}
-        description="Assign check-in forms to track client progress with regular updates and insights."
+        description={t('common.assignCheckinDescription')}
         screenshot={{
           light: '/app-screenshots/client/check-ins/light.png',
           dark: '/app-screenshots/client/check-ins/dark.png',

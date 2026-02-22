@@ -732,11 +732,11 @@ export const SectionBuilder = ({
         processGeneratedWorkout(generated);
         setActiveBuilder('manual'); // Switch back to manual to see the results
       } else {
-        toast.error('Failed to generate workout');
+        toast.error(t('toasts.failedGenerateWorkout'));
       }
     } catch (error) {
       console.error('Failed to generate workout from AI', error);
-      toast.error('An error occurred during generation');
+      toast.error(t('toasts.errorDuringGeneration'));
     } finally {
       setIsGeneratingAi(false);
     }
@@ -838,7 +838,7 @@ Focus on proper form and progressive overload.`;
 
     // Validate workout title is not empty
     if (!workoutTitle || workoutTitle.trim() === '') {
-      toast.error('Please enter a workout name');
+      toast.error(t('toasts.enterWorkoutName'));
       if (onSaveError) onSaveError();
       return;
     }
@@ -859,7 +859,7 @@ Focus on proper form and progressive overload.`;
     });
 
     if (hasBlankExercises) {
-      toast.error('Please select an exercise for all exercise cards');
+      toast.error(t('toasts.selectExerciseForCards'));
       if (onSaveError) onSaveError();
       return;
     }
@@ -870,7 +870,7 @@ Focus on proper form and progressive overload.`;
       setValidationErrors(exerciseErrors);
       setSectionValidationErrors(sectionErrors);
 
-      toast.error('Please fill out all fields');
+      toast.error(t('toasts.fillAllFields'));
       if (onSaveError) onSaveError();
       return;
     }
@@ -888,7 +888,7 @@ Focus on proper form and progressive overload.`;
     } : null;
     const payload = buildWorkoutPayload(workoutSchema, updatedMeta);
     if (!payload) {
-      toast.error('Workout details are missing');
+      toast.error(t('toasts.workoutDetailsMissing'));
       if (onSaveError) onSaveError();
       return;
     }
@@ -926,7 +926,7 @@ Focus on proper form and progressive overload.`;
         }
       } catch (error) {
         setIsSaving(false);
-        toast.error('Failed to save workout');
+        toast.error(t('toasts.failedSaveWorkout'));
         if (onSaveError) onSaveError();
       }
     }
@@ -1923,7 +1923,7 @@ Focus on proper form and progressive overload.`;
                         )}
                       >
                         {draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === 0 && (
-                          <span>Drop your exercise here</span>
+                          <span>{t('common.dropExerciseHere')}</span>
                         )}
                       </div>
 
@@ -2103,7 +2103,7 @@ Focus on proper form and progressive overload.`;
                                     ) : draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === exerciseIndex + 1 ? (
                                       // Dragging and this is the drop slot - show drop zone
                                       <div className="my-2 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                        <span>Drop your exercise here</span>
+                                        <span>{t('common.dropExerciseHere')}</span>
                                       </div>
                                     ) : (
                                       // Show superset button (visible even when dragging, unless drop zone is showing here)
@@ -2126,7 +2126,7 @@ Focus on proper form and progressive overload.`;
                                 {/* Drop zone after the last exercise */}
                                 {section.exercises && exerciseIndex === section.exercises.length - 1 && draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === exerciseIndex + 1 && (
                                   <div className="my-2 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                    <span>Drop your exercise here</span>
+                                    <span>{t('common.dropExerciseHere')}</span>
                                   </div>
                                 )}
                               </div>
@@ -2368,7 +2368,7 @@ Focus on proper form and progressive overload.`;
               // Dragging a section and this is the drop slot - show drop zone
               // NOTE: In section-builder, exercises can ONLY be dropped inside sections (not at top level)
               <div className="h-14 my-2 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                <span>Drop section here</span>
+                <span>{t('common.dropSectionHere')}</span>
               </div>
             ) : (
               // Show superset button (visible while dragging, only hidden when drop zone shows at this slot)
@@ -2439,7 +2439,7 @@ Focus on proper form and progressive overload.`;
                         )}
                       >
                         <Sparkles className="size-4" />
-                        <span>Athli AI</span>
+                        <span>{t('common.athliAI')}</span>
                       </Button>
                       <Button
                         variant={activeBuilder === 'manual' ? 'default' : 'outline'}
@@ -2450,7 +2450,7 @@ Focus on proper form and progressive overload.`;
                         )}
                       >
                         <NotebookPen className="size-4" />
-                        <span>Manual</span>
+                        <span>{t('common.manual')}</span>
                       </Button>
                     </ButtonGroup>
                   </div>
@@ -2668,7 +2668,7 @@ Focus on proper form and progressive overload.`;
                         <div className="flex items-center gap-2 w-full">
                           <Input
                             className="flex-1 h-9 text-sm shadow-none"
-                            placeholder="Workout title"
+                            placeholder={t('common.workoutTitle')}
                             value={workoutTitle}
                             onChange={(e) => {
                               const newTitle = e.target.value;
@@ -2835,7 +2835,7 @@ Focus on proper form and progressive overload.`;
                                     <React.Fragment key={`superset-${supersetGroupId}`}>
                                       {showDropZoneBefore && (
                                         <div className="h-14 mb-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                          <span>Drop section here</span>
+                                          <span>{t('common.dropSectionHere')}</span>
                                         </div>
                                       )}
                                       <div className={cn(
@@ -2849,7 +2849,7 @@ Focus on proper form and progressive overload.`;
                                       </div>
                                       {showDropZoneAfter && (
                                         <div className="h-14 mt-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                          <span>Drop section here</span>
+                                          <span>{t('common.dropSectionHere')}</span>
                                         </div>
                                       )}
                                     </React.Fragment>
@@ -2892,7 +2892,7 @@ Focus on proper form and progressive overload.`;
                                     <React.Fragment key={item.itemType === 'section' ? item.section.id : item.exercise?.instanceId}>
                                       {showDropZoneBefore && (
                                         <div className="h-14 mb-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                          <span>Drop section here</span>
+                                          <span>{t('common.dropSectionHere')}</span>
                                         </div>
                                       )}
 
@@ -2905,7 +2905,7 @@ Focus on proper form and progressive overload.`;
 
                                       {showDropZoneAfter && (
                                         <div className="h-14 mt-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                          <span>Drop section here</span>
+                                          <span>{t('common.dropSectionHere')}</span>
                                         </div>
                                       )}
                                     </React.Fragment>
@@ -2937,7 +2937,7 @@ Focus on proper form and progressive overload.`;
                                     onClick={handleAddTopLevelExercise}
                                   >
                                     <Plus className="size-3" />
-                                    <span>Add exercise</span>
+                                    <span>{t('common.addExercise')}</span>
                                   </Button>
                                   <Button
                                     type="button"
@@ -2947,7 +2947,7 @@ Focus on proper form and progressive overload.`;
                                     onClick={() => setIsCreatingSection(true)}
                                   >
                                     <Plus className="size-3" />
-                                    <span>Create section</span>
+                                    <span>{t('common.createSection')}</span>
                                   </Button>
                                 </div>
                               </div>
@@ -2982,7 +2982,7 @@ Focus on proper form and progressive overload.`;
                                     onClick={() => setIsCreatingSection(true)}
                                   >
                                     <Plus className="size-4" />
-                                    <span>Create section</span>
+                                    <span>{t('common.createSection')}</span>
                                   </Button>
 
                                   <Button
@@ -2992,7 +2992,7 @@ Focus on proper form and progressive overload.`;
                                     onClick={handleAddTopLevelExercise}
                                   >
                                     <Plus className="size-4" />
-                                    <span>Add exercise</span>
+                                    <span>{t('common.addExercise')}</span>
                                   </Button>
                                 </div>
                               </div>
@@ -3090,7 +3090,7 @@ Focus on proper form and progressive overload.`;
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top">
-                      <p>Close</p>
+                      <p>{t('general.close')}</p>
                     </TooltipContent>
                   </Tooltip>
                   {/* Toggle chevron - position changes based on overview state */}

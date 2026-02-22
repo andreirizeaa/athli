@@ -289,7 +289,7 @@ const ProgramsPage = () => {
       setSelectedPrograms(new Set());
     } catch (error) {
       console.error('Failed to delete programs:', error);
-      toast.error('Failed to delete programs');
+      toast.error(t('toasts.failedDeletePrograms'));
     }
   };
 
@@ -303,13 +303,13 @@ const ProgramsPage = () => {
       if (program) {
         toast.success(`Successfully deleted ${program.program}`);
       } else {
-        toast.success('Successfully deleted program');
+        toast.success(t('toasts.programDeleted'));
       }
 
       setProgramToDelete(null);
     } catch (error) {
       console.error('Failed to delete program:', error);
-      toast.error('Failed to delete program');
+      toast.error(t('toasts.failedDeleteProgram'));
     }
   };
 

@@ -277,7 +277,7 @@ const ReferAndEarnPage = () => {
 
   const handleCopyReferralLink = async () => {
     if (!uniqueCode) {
-      toast.error('Unable to generate referral link. Please try again.');
+      toast.error(t('toasts.unableGenerateLink'));
       return;
     }
     const referralLink = `${window.location.origin}/referral/${uniqueCode}`;
@@ -289,7 +289,7 @@ const ReferAndEarnPage = () => {
 
   const handleCopyReferralCode = async () => {
     if (!uniqueCode) {
-      toast.error('Unable to generate referral code. Please try again.');
+      toast.error(t('toasts.unableGenerateCode'));
       return;
     }
     await copyToClipboard(uniqueCode, () => {

@@ -57,7 +57,7 @@ export const AthleteWorkoutsCard = ({ clientId }: AthleteWorkoutsCardProps) => {
     <Card className="bg-background flex flex-col flex-1 min-w-0 h-full">
       <CardHeader className="px-4 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <CardTitle>Athlete Workouts</CardTitle>
+          <CardTitle>{t('common.athleteWorkouts')}</CardTitle>
           <Button
             variant="outline"
             size="sm"

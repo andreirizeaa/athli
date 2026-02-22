@@ -206,7 +206,7 @@ const QuestionnairesPage = () => {
       setSelectedClientIds(new Set());
     } catch (error) {
       console.error('Failed to assign forms to clients:', error);
-      toast.error('Failed to assign questionnaires');
+      toast.error(t('toasts.failedAssignQuestionnaires'));
     }
   };
 
@@ -389,7 +389,7 @@ const QuestionnairesPage = () => {
         emptyState={
           <EmptyGridState
             title={t('forms.questionnaires.emptyState.title')}
-            subtitle="Build questionnaires to gather detailed information from your clients about their goals and preferences"
+            subtitle={t('common.createQuestionnaireSubtitle')}
             action={
               <Button onClick={handleOpenAddQuestionnaire} className="gap-2">
                 <Plus className="size-4" />
@@ -548,7 +548,7 @@ const QuestionnairesPage = () => {
             setSelectedClientIds(new Set());
           } catch (error) {
             console.error('Failed to assign forms to clients:', error);
-            toast.error('Failed to assign questionnaires');
+            toast.error(t('toasts.failedAssignQuestionnaires'));
             throw error; // Propagate to panel to show error if needed
           }
         }}
@@ -590,7 +590,7 @@ const QuestionnairesPage = () => {
       <UpgradeDialog
         open={isUpgradeDialogOpen}
         onOpenChange={setIsUpgradeDialogOpen}
-        description="Assign questionnaires to gather detailed information from your clients about their goals and preferences."
+        description={t('common.assignQuestionnaireDescription')}
         screenshot={{
           light: '/app-screenshots/client/questionnaires/light.png',
           dark: '/app-screenshots/client/questionnaires/dark.png',

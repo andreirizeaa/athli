@@ -157,7 +157,7 @@ const PackagesPage = () => {
       const url = await startOnboarding();
       window.open(url, '_blank');
     } catch {
-      toast.error('Failed to start Stripe connection');
+      toast.error(t('toasts.failedStartStripeConnection'));
     }
   };
 
@@ -194,7 +194,7 @@ const PackagesPage = () => {
       await togglePackage({ id: pkg.id, field: 'is_active', value: newIsActive });
       toast.success(pkg.is_active ? 'Package deactivated' : 'Package activated');
     } catch {
-      toast.error('Failed to update package');
+      toast.error(t('toasts.failedUpdatePackage'));
     }
   };
 
@@ -219,7 +219,7 @@ const PackagesPage = () => {
       );
       setSelectedIds(new Set());
     } catch {
-      toast.error('Failed to update packages');
+      toast.error(t('toasts.failedUpdatePackages'));
     }
   };
 

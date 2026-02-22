@@ -163,7 +163,7 @@ const SecurityPage = () => {
       if (emailError) throw emailError;
 
       // Show success message and close dialog
-      toast.success('Please confirm your new email address via the link sent to your inbox');
+      toast.success(t('toasts.confirmNewEmail'));
       setIsEmailDialogOpen(false);
 
       // Log out the user and redirect to login page immediately

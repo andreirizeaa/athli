@@ -1470,7 +1470,7 @@ const ClientTrainingCalendarPage = () => {
         }
         return updated;
       });
-      toast.error('Failed to duplicate workout');
+      toast.error(t('toasts.failedDuplicateWorkout'));
     } finally {
       // Remove loading state
       const loadingKey = `${targetDateKey}::${tempId}`;
@@ -1972,7 +1972,7 @@ const ClientTrainingCalendarPage = () => {
 
     } catch (error) {
       console.error('Failed to assign workouts:', error);
-      toast.error('Failed to save workouts');
+      toast.error(t('toasts.failedSaveWorkouts'));
     }
   };
 
@@ -2109,7 +2109,7 @@ const ClientTrainingCalendarPage = () => {
       });
 
       await Promise.all(promises);
-      toast.success('Successfully assigned program');
+      toast.success(t('toasts.programAssigned'));
 
     } catch (error) {
       console.error("Failed to assign program workouts", error);
@@ -2221,7 +2221,7 @@ const ClientTrainingCalendarPage = () => {
       console.error('Failed to fetch workout instance:', error);
       // Fall back to lightweight data if fetch fails (better than nothing)
       setFetchedWorkoutData((workout as any) || { items: [] });
-      toast.error('Failed to load full workout details');
+      toast.error(t('toasts.failedLoadFullWorkoutDetails'));
     } finally {
       setIsLoadingWorkoutData(false);
     }
@@ -2248,7 +2248,7 @@ const ClientTrainingCalendarPage = () => {
       setFetchedCompletedWorkoutData(fullWorkout);
     } catch (error) {
       console.error('Failed to fetch completed workout details:', error);
-      toast.error('Failed to load workout details');
+      toast.error(t('toasts.failedLoadWorkoutDetails'));
     } finally {
       setIsLoadingCompletedSummary(false);
     }
@@ -2275,7 +2275,7 @@ const ClientTrainingCalendarPage = () => {
       setFetchedInProgressWorkoutData(fullWorkout);
     } catch (error) {
       console.error('Failed to fetch in-progress workout details:', error);
-      toast.error('Failed to load workout details');
+      toast.error(t('toasts.failedLoadWorkoutDetails'));
     } finally {
       setIsLoadingInProgressSummary(false);
     }
@@ -2345,7 +2345,7 @@ const ClientTrainingCalendarPage = () => {
 
       } catch (error) {
         console.error('Failed to update workout:', error);
-        toast.error('Failed to update workout');
+        toast.error(t('toasts.failedUpdateWorkout'));
         // Revert on error by invalidating
         queryClient.invalidateQueries({
           queryKey: ['client-training-calendar', clientId]
@@ -2379,7 +2379,7 @@ const ClientTrainingCalendarPage = () => {
 
         // 3. Close dialog immediately
         setIsWorkoutBuilderOpen(false);
-        toast.success('Workout created successfully');
+        toast.success(t('toasts.workoutCreated'));
 
         // 4. Call API in background
         await apiAssignWorkout({
@@ -2399,7 +2399,7 @@ const ClientTrainingCalendarPage = () => {
 
       } catch (error) {
         console.error(error);
-        toast.error('Failed to create workout');
+        toast.error(t('toasts.failedCreateWorkout'));
         // Revert optimistic update on error
         queryClient.invalidateQueries({
           queryKey: ['client-training-calendar', clientId]

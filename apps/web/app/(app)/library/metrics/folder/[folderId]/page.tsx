@@ -186,7 +186,7 @@ const MetricFolderPage = () => {
                 }}
               >
                 <Move className="size-4 mr-2" />
-                <span>Move</span>
+                <span>{t('common.move')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={(e) => {
@@ -256,7 +256,7 @@ const MetricFolderPage = () => {
         });
         // Move the newly created metric to this folder (silent to avoid double toast)
         await moveMetric({ metricId: newMetric.id, folderId, silent: true });
-        toast.success('Metric added successfully');
+        toast.success(t('toasts.metricAdded'));
         handleCloseAddMetric();
       }
     } catch (error) {
@@ -329,7 +329,7 @@ const MetricFolderPage = () => {
 
   const handleAssignFolderToClients = () => {
     if (folderMetrics.length === 0) {
-      toast.error('This folder is empty');
+      toast.error(t('toasts.folderEmpty'));
       return;
     }
     setMetricsToAssign(folderMetrics);
@@ -468,7 +468,7 @@ const MetricFolderPage = () => {
               className="gap-2 border border-primary"
             >
               <Edit className="size-4" />
-              <span>Edit Folder</span>
+              <span>{t('common.editFolder')}</span>
             </Button>
             <Button
               variant="ghost"
@@ -476,7 +476,7 @@ const MetricFolderPage = () => {
               className="gap-2 border border-primary"
             >
               <UserPlus className="size-4" />
-              <span>Assign Folder</span>
+              <span>{t('common.assignFolder')}</span>
             </Button>
             <Button onClick={handleOpenAddMetric} className="gap-2">
               <Plus className="size-4" />
@@ -507,7 +507,7 @@ const MetricFolderPage = () => {
         emptyState={
           <EmptyGridState
             title="No metrics in this folder"
-            subtitle="Add metrics to this folder to organize your library"
+            subtitle={t('common.addMetricsToFolder')}
             action={
               <Button onClick={handleOpenAddMetric} className="gap-2">
                 <Plus className="size-4" />

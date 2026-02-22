@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -32,6 +33,7 @@ export function AddFeatureRequestDialog({
   onOpenChange,
   onCreated,
 }: AddFeatureRequestDialogProps) {
+  const t = useTranslations();
   const { user } = useGlobalData();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -43,12 +45,12 @@ export function AddFeatureRequestDialog({
     e.preventDefault();
 
     if (!user) {
-      toast.error('You must be logged in to create a feature request');
+      toast.error(t('toasts.mustBeLoggedIn'));
       return;
     }
 
     if (!isValid) {
-      toast.error('Please enter a title');
+      toast.error(t('toasts.enterTitle'));
       return;
     }
 
@@ -66,7 +68,7 @@ export function AddFeatureRequestDialog({
         }
       );
 
-      toast.success('Feature request created!');
+      toast.success(t('toasts.featureCreated'));
       onCreated(newRequest);
       handleClose();
     } catch (error: any) {
@@ -87,7 +89,7 @@ export function AddFeatureRequestDialog({
       <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>New Feature Request</DialogTitle>
+            <DialogTitle>{t('common.newFeatureRequest')}</DialogTitle>
             <DialogDescription>
               Share your ideas for new features or improvements.
             </DialogDescription>
@@ -102,19 +104,19 @@ export function AddFeatureRequestDialog({
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter a short, descriptive title"
+                placeholder={t('common.enterTitle')}
                 disabled={isSubmitting}
                 autoFocus
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('general.description')}</Label>
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Provide more details about your feature request (optional)"
+                placeholder={t('common.provideDetails')}
                 disabled={isSubmitting}
                 rows={4}
               />
