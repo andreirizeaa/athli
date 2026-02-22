@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import React, { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
@@ -433,7 +434,7 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick, postStats }
                                                 className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted transition-colors text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary group/history shrink-0"
                                             >
                                                 <History className="size-3.5" />
-                                                <span>History</span>
+                                                <span>{t('common.history')}</span>
                                             </button>
                                         </div>
 

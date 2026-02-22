@@ -383,7 +383,7 @@ const AthletesPage = () => {
       setSelectedAthletes(new Set());
       setIsUnarchiveConfirmOpen(false);
     } catch (error) {
-      toast.error('Failed to unarchive client(s)');
+      toast.error(t('toasts.failedUnarchive'));
       console.error(error);
     } finally {
       setIsUnarchiving(false);
@@ -566,7 +566,7 @@ const AthletesPage = () => {
       return;
     }
     if (!uniqueCode) {
-      toast.error('Unable to generate invite link. Please try again.');
+      toast.error(t('toasts.unableGenerateInvite'));
       return;
     }
     if (onboardings.length === 0) {
@@ -1304,7 +1304,7 @@ const AthletesPage = () => {
             <PopoverTrigger asChild>
               <Button variant="ghost" className="gap-2">
                 <Settings className="size-4" />
-                <span>Settings</span>
+                <span>{t('common.settings')}</span>
                 {showArchivedClients && (
                   <span className="size-[18px] bg-primary text-primary-foreground rounded-full text-[9px] flex items-center justify-center font-medium">1</span>
                 )}
@@ -1566,7 +1566,7 @@ const AthletesPage = () => {
       <Dialog open={isClientLimitDialogOpen} onOpenChange={setIsClientLimitDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
             <DialogDescription>
               You&apos;ve reached your limit of {clientLimit} {terminology.pluralLower}. Upgrade your plan to add more {terminology.pluralLower} and continue growing your coaching business.
             </DialogDescription>

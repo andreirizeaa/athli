@@ -186,7 +186,7 @@ const LibraryLayoutContent = ({ children }: LibraryLayoutProps) => {
           >
             <SheetHeader className="sr-only">
               <SheetTitle>{t('sidebar.links.library')}</SheetTitle>
-              <SheetDescription>Library navigation</SheetDescription>
+              <SheetDescription>{t('common.libraryNavigation')}</SheetDescription>
             </SheetHeader>
             <LibrarySidebarContent onLinkClick={() => setMobileOpen(false)} />
           </SheetContent>

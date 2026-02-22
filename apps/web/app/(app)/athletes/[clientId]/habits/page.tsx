@@ -488,7 +488,7 @@ const ClientHabitsPage = () => {
           clientId,
           coachId: user.id
         });
-        toast.success('Log updated successfully');
+        toast.success(t('toasts.logUpdated'));
         refetch();
         refreshData?.();
         setEditingLogId(null);
@@ -500,7 +500,7 @@ const ClientHabitsPage = () => {
         }
       } catch (error) {
         console.error(error);
-        toast.error('Failed to update log');
+        toast.error(t('toasts.failedUpdateLog'));
       }
     }
   };
@@ -514,7 +514,7 @@ const ClientHabitsPage = () => {
     if (!clientId || !user?.id) return;
     try {
       await deleteHabitLog(logId, clientId, user.id);
-      toast.success('Log deleted successfully');
+      toast.success(t('toasts.logDeleted'));
       refetch();
       refreshData?.();
       if (editingLogId === logId) {
@@ -528,7 +528,7 @@ const ClientHabitsPage = () => {
       }
     } catch (error) {
       console.error(error);
-      toast.error('Failed to delete log');
+      toast.error(t('toasts.failedDeleteLog'));
     }
   };
 
@@ -594,13 +594,13 @@ const ClientHabitsPage = () => {
         });
       }
 
-      toast.success('Habit saved successfully');
+      toast.success(t('toasts.habitSaved'));
       refetch();
       refreshData?.();
       handleCloseAddHabit();
     } catch (error) {
       console.error('Failed to add habit:', error);
-      toast.error('Failed to save habit');
+      toast.error(t('toasts.failedSaveHabit'));
     }
   };
 
@@ -615,7 +615,7 @@ const ClientHabitsPage = () => {
         clientId,
         coachId: user.id
       });
-      toast.success('Habit logged successfully');
+      toast.success(t('toasts.habitLogged'));
       refetch();
       refreshData?.();
       handleCloseLogHabit(); // Close modal
@@ -626,7 +626,7 @@ const ClientHabitsPage = () => {
       }
     } catch (error) {
       console.error('Failed to log habit:', error);
-      toast.error('Failed to log habit');
+      toast.error(t('toasts.failedLogHabit'));
     }
   };
 
@@ -642,13 +642,13 @@ const ClientHabitsPage = () => {
         clientId,
         coachId: user.id
       });
-      toast.success('Habit updated successfully');
+      toast.success(t('toasts.habitUpdated'));
       refetch();
       refreshData?.();
       handleCloseEditHabit();
     } catch (error) {
       console.error(error);
-      toast.error('Failed to update habit');
+      toast.error(t('toasts.failedUpdateHabit'));
     }
   };
 
@@ -662,14 +662,14 @@ const ClientHabitsPage = () => {
         coachId: user.id
       });
 
-      toast.success('Habit deleted successfully');
+      toast.success(t('toasts.habitDeleted'));
       refetch();
       refreshData?.();
       setSelectedHabitId(null);
       setIsDeleteDialogOpen(false);
     } catch (error) {
       console.error('Failed to delete habit:', error);
-      toast.error('Failed to delete habit');
+      toast.error(t('toasts.failedDeleteHabit'));
     }
   };
 
@@ -696,12 +696,12 @@ const ClientHabitsPage = () => {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center p-8">
         <EmptyGridState
-          title="No habits assigned"
+          title={t('common.noHabitsAssigned')}
           subtitle={hasHabitsMetricsAccess ? "This client hasn't been assigned any habits yet." : "Upgrade to Pro to assign habits to clients"}
           action={
             <Button onClick={handleOpenAddHabit} className="gap-2">
               <Plus className="size-4" />
-              <span>Assign Habit</span>
+              <span>{t('common.assignHabit')}</span>
             </Button>
           }
         />
@@ -716,7 +716,7 @@ const ClientHabitsPage = () => {
         <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Upgrade to Pro</DialogTitle>
+              <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
               <DialogDescription>
                 Track client habits and metrics with detailed analytics and progress tracking.
               </DialogDescription>
@@ -840,14 +840,14 @@ const ClientHabitsPage = () => {
                   className="gap-2 rounded-r-none border-r-0"
                 >
                   <FileText className="size-4" />
-                  <span>Log a Habit</span>
+                  <span>{t('common.logHabit')}</span>
                 </Button>
                 <Button
                   onClick={handleOpenAddHabit}
                   className="gap-2 rounded-l-none"
                 >
                   <Plus className="size-4" />
-                  <span>Assign Habit</span>
+                  <span>{t('common.assignHabit')}</span>
                 </Button>
               </ButtonGroup>
             </div>
@@ -1018,7 +1018,7 @@ const ClientHabitsPage = () => {
                       setIsLogHabitOpen(true);
                     }} className="gap-2" variant="outline">
                       <FileText className="size-4" />
-                      <span>Enter a Log</span>
+                      <span>{t('common.enterLog')}</span>
                     </Button>
                     <Button onClick={handleOpenEditHabit} className="gap-2" variant="outline">
                       <Edit className="size-4" />
@@ -1303,7 +1303,7 @@ const ClientHabitsPage = () => {
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
             <DialogDescription>
               Track client habits and metrics with detailed analytics and progress tracking.
             </DialogDescription>

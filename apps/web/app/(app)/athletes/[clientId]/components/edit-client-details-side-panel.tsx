@@ -178,11 +178,11 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
 
     const handleFileSelect = (file: File) => {
         if (!file.type.startsWith('image/')) {
-            toast.error('Please select an image file');
+            toast.error(t('common.selectImageFile'));
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
-            toast.error('Image size must be less than 5MB');
+            toast.error(t('common.imageSizeLimit'));
             return;
         }
         setUploadedFile(file);
@@ -285,7 +285,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
                             <p className="text-xs text-muted-foreground">Drag and drop an image to change</p>
                         </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>Change Picture</Button>
+                    <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>{t('common.changePicture')}</Button>
                     <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileInputChange} className="hidden" />
                 </div>
 
@@ -373,7 +373,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
                 </div>
 
                 <div className="space-y-2">
-                    <Label><span>Timezone</span></Label>
+                    <Label><span>{t('common.timezone')}</span></Label>
                     <Popover open={isTimezoneOpen} onOpenChange={setIsTimezoneOpen}>
                         <PopoverTrigger asChild>
                             <Button
@@ -392,7 +392,7 @@ export function EditClientDetailsSidePanel({ open, onOpenChange }: EditClientDet
                         </PopoverTrigger>
                         <PopoverContent className="w-72 p-0" align="start">
                             <Command>
-                                <CommandInput placeholder="Search timezone..." />
+                                <CommandInput placeholder={t('common.searchTimezone')} />
                                 <CommandList className="max-h-[300px]">
                                     <CommandEmpty>No timezone found.</CommandEmpty>
                                     {TIMEZONE_GROUPS.map((group) => (

@@ -411,9 +411,9 @@ export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: U
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Online">Online</SelectItem>
+                              <SelectItem value="Online">{t('common.online')}</SelectItem>
                               <SelectItem value="In-Person">In-Person</SelectItem>
-                              <SelectItem value="Hybrid">Hybrid</SelectItem>
+                              <SelectItem value="Hybrid">{t('common.hybrid')}</SelectItem>
                             </SelectContent>
                           </Select>
                         </TableCell>

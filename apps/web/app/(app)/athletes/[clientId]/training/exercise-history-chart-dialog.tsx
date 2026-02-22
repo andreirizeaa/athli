@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { format } from 'date-fns';
@@ -545,7 +546,7 @@ export const ExerciseHistoryChartDialog = ({
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Close chart view</p>
+                                    <p>{t('common.closeChartView')}</p>
                                 </TooltipContent>
                             </Tooltip>
                         </div>

@@ -188,7 +188,7 @@ const CouponsPage = () => {
       await toggleCoupon({ id: coupon.id, value: newIsActive });
       toast.success(coupon.is_active ? 'Coupon deactivated' : 'Coupon activated');
     } catch {
-      toast.error('Failed to update coupon');
+      toast.error(t('toasts.failedUpdateCoupon'));
     }
   };
 
@@ -202,7 +202,7 @@ const CouponsPage = () => {
       toast.success(`${selectedIds.size} coupon${selectedIds.size > 1 ? 's' : ''} deactivated`);
       setSelectedIds(new Set());
     } catch {
-      toast.error('Failed to update coupons');
+      toast.error(t('toasts.failedUpdateCoupons'));
     }
   };
 
@@ -434,7 +434,7 @@ const CouponsPage = () => {
                 onClick={handleBulkDeactivate}
                 className="gap-2"
               >
-                <span>Deactivate</span>
+                <span>{t('common.deactivate')}</span>
               </Button>
               <Button
                 variant="ghost"

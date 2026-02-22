@@ -658,7 +658,7 @@ const WorkoutsPage = () => {
       setSelectedWorkouts(new Set());
     } catch (error) {
       console.error('Failed to delete workouts:', error);
-      toast.error('Failed to delete workouts');
+      toast.error(t('toasts.failedDeleteWorkouts'));
     }
   };
 
@@ -678,7 +678,7 @@ const WorkoutsPage = () => {
       setWorkoutToDelete(null);
     } catch (error) {
       console.error('Failed to delete workout:', error);
-      toast.error('Failed to delete workout');
+      toast.error(t('toasts.failedDeleteWorkout'));
     }
   };
 
@@ -868,7 +868,7 @@ const WorkoutsPage = () => {
                                     autoplay
                                   />
                                 )}
-                                <span>Athli AI</span>
+                                <span>{t('common.athliAI')}</span>
                               </Button>
                               <Button onClick={handleOpenCreateWorkout} className="gap-2" aria-label={t('library.createWorkout')}>
                                 <Plus className="size-4" />
@@ -1076,11 +1076,11 @@ const WorkoutsPage = () => {
               try {
                 await editWorkout(selectedWorkoutForBuilder.id, payload);
                 await refreshWorkouts();
-                toast.success('Workout updated successfully');
+                toast.success(t('toasts.workoutUpdatedSuccessfully'));
                 setIsWorkoutBuilderOpen(false);
               } catch (error) {
                 console.error('Failed to update workout:', error);
-                toast.error('Failed to update workout');
+                toast.error(t('toasts.failedUpdateWorkout'));
               }
             }
           }}
@@ -1097,11 +1097,11 @@ const WorkoutsPage = () => {
           try {
             await createWorkout(payload);
             await refreshWorkouts();
-            toast.success('Workout created successfully');
+            toast.success(t('toasts.workoutCreated'));
             setIsAiBuilderOpen(false);
           } catch (error) {
             console.error('Failed to create workout:', error);
-            toast.error('Failed to create workout');
+            toast.error(t('toasts.failedCreateWorkout'));
           }
         }}
       />
@@ -1110,7 +1110,7 @@ const WorkoutsPage = () => {
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
             <DialogDescription>
               Generate workouts instantly with AI - describe what you need and let Athli AI build it for you.
             </DialogDescription>

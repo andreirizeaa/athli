@@ -91,7 +91,7 @@ export const EditSectionDetailsSidePanel = ({
             onOpenChange(false);
         } catch (error) {
             console.error('Failed to save section details:', error);
-            toast.error('Failed to save changes');
+            toast.error(t('toasts.failedSaveChanges'));
         } finally {
             setIsSaving(false);
         }

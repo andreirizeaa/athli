@@ -500,7 +500,7 @@ const ClientQuestionnairesPage = () => {
         emptyMessage={t('athletes.profile.questionnaires.emptyMessage')}
         emptyState={
           <EmptyGridState
-            title="No questionnaires assigned"
+            title={t('common.noQuestionnairesAssigned')}
             subtitle={hasQuestionnairesAccess ? "This client has no questionnaires assigned yet" : "Upgrade to Pro to assign forms to clients"}
             action={
               <Button onClick={handleAddQuestionnaire} className="gap-2">
@@ -576,7 +576,7 @@ const ClientQuestionnairesPage = () => {
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
             <DialogDescription>
               Assign questionnaires to gather detailed information from your clients.
             </DialogDescription>

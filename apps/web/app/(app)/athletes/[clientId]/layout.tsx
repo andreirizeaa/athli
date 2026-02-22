@@ -98,7 +98,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
       queryClient.invalidateQueries({ queryKey: ['client-profile', clientId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     } catch (err) {
-      toast.error('Failed to unarchive client');
+      toast.error(t('toasts.failedUnarchiveClient'));
       console.error(err);
     } finally {
       setIsUnarchiving(false);
@@ -239,13 +239,13 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
       });
     } catch (error) {
       console.error('Failed to resend invite:', error);
-      toast.error('Failed to resend invitation. Please try again.');
+      toast.error(t('toasts.failedResendInvitation'));
     }
   };
 
   const handleCopyInvite = () => {
     if (!uniqueCode) {
-      toast.error('Unable to generate invite link. Please try again.');
+      toast.error(t('toasts.unableGenerateInvite'));
       return;
     }
     if (onboardings.length === 0) {
@@ -261,7 +261,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
   const showSectionLoading = isLoading && useSectionLoader && !hideLoader;
 
   if (isLoading && !useSectionLoader && !hideLoader) {
-    return <FullScreenLoader subtitle="Pulling up the good stuff..." />;
+    return <FullScreenLoader subtitle={t('common.pullingUpGoodStuff')} />;
   }
 
   if ((error || !athlete) && !showSectionLoading) {
@@ -300,7 +300,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
 
   return (
     <div className="h-full w-full flex flex-col relative">
-      {showSectionLoading && <SectionLoader subtitle="Pulling up the good stuff..." />}
+      {showSectionLoading && <SectionLoader subtitle={t('common.pullingUpGoodStuff')} />}
       <div className="flex flex-1 min-h-0">
         <div className="flex-1 flex flex-col">
           <div className="w-full relative flex-shrink-0">

@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -26,6 +27,7 @@ import { useFeatureAccess } from '@/lib/permissions/feature-gate';
 // Screenshot preview component for upgrade prompt
 function ScreenshotPreview() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations();
   const [dims, setDims] = useState({ w: 0, h: 0 });
 
   useEffect(() => {
@@ -872,8 +874,8 @@ const ClientProgressPage = () => {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center p-8">
         <EmptyGridState
-          title="No exercise history"
-          subtitle="Complete workouts to see exercise progress and history here."
+          title={t('common.noExerciseHistory')}
+          subtitle={t('common.completeWorkoutsToSeeHistory')}
         />
       </div>
     );
@@ -890,7 +892,7 @@ const ClientProgressPage = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                 <Input
                   type="text"
-                  placeholder="Search exercises..."
+                  placeholder={t('common.searchExercises')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={cn('pl-9 w-full', searchQuery && 'pr-9')}
@@ -1394,7 +1396,7 @@ const ClientProgressPage = () => {
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <p>Select an exercise to view progress</p>
+              <p>{t('common.selectExerciseProgress')}</p>
             </div>
           )}
         </div>

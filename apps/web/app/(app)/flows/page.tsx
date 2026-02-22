@@ -220,7 +220,7 @@ const FlowsPage = () => {
                 className="gap-2"
               >
                 <Plus className="size-4" />
-                <span>Request a new flow</span>
+                <span>{t('common.requestNewFlow')}</span>
               </Button>
             </div>
             <Separator className="absolute bottom-[-1px] left-0 right-0" />
@@ -248,8 +248,8 @@ const FlowsPage = () => {
           emptyMessage={t('flows.emptyMessage')}
           emptyState={
             <EmptyGridState
-              title="No flows found"
-              subtitle="The default system flows seem to be missing."
+              title={t('common.noFlowsFound')}
+              subtitle={t('common.flowsMissing')}
             />
           }
           onRowClick={(row, event) => {
@@ -288,7 +288,7 @@ const FlowsPage = () => {
       <UpgradeDialog
         open={isUpgradeDialogOpen}
         onOpenChange={setIsUpgradeDialogOpen}
-        description="Publish automation flows to automatically respond to client actions like missed check-ins or completed workouts."
+        description={t('common.publishFlows')}
         screenshot={{
           light: '/app-screenshots/flows/light.png',
           dark: '/app-screenshots/flows/dark.png',

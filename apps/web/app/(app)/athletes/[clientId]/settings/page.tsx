@@ -81,7 +81,7 @@ const AthleteSettingsPage = () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       setIsUnarchiveModalOpen(false);
     } catch (error) {
-      toast.error('Failed to unarchive client');
+      toast.error(t('toasts.failedUnarchiveClient'));
     }
   };
 
@@ -116,7 +116,7 @@ const AthleteSettingsPage = () => {
         <Card className="bg-background max-w-3xl w-full">
           <CardHeader className="px-4">
             <div className="flex items-center justify-between">
-              <CardTitle>Restore Client</CardTitle>
+              <CardTitle>{t('common.restoreClient')}</CardTitle>
               <Button variant="outline" size="sm" className="h-7 text-xs gap-2 invisible">
                 <Pencil className="h-3 w-3" />
                 Edit
@@ -152,7 +152,7 @@ const AthleteSettingsPage = () => {
       <Card className="bg-background max-w-3xl w-full">
         <CardHeader className="px-4">
           <div className="flex items-center justify-between">
-            <CardTitle>Client Details</CardTitle>
+            <CardTitle>{t('common.clientDetails')}</CardTitle>
             <Button
               variant="outline"
               size="sm"
@@ -274,7 +274,7 @@ const AthleteSettingsPage = () => {
         onOpenChange={setIsUnarchiveModalOpen}
         onConfirm={handleUnarchive}
         title={`Unarchive ${clientName}`}
-        description="Are you sure you want to unarchive this client? They will regain access to the app immediately."
+        description={t('common.unarchiveConfirmation')}
         confirmText="Unarchive"
         variant="default"
         twoStep

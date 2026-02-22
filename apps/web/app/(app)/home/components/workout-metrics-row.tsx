@@ -97,11 +97,11 @@ export const WorkoutMetricsRow = ({
                     Readiness
                 </span>
                 <div className="flex flex-wrap items-center justify-center gap-3 md:gap-5">
-                    <ReadinessIcon value={readiness.sleep} icon={Moon} label="Sleep" />
-                    <ReadinessIcon value={readiness.mood} icon={Sun} label="Mood" />
-                    <ReadinessIcon value={readiness.energy} icon={Zap} label="Energy" />
-                    <ReadinessIcon value={readiness.stress} icon={Brain} label="Stress" inverted />
-                    <ReadinessIcon value={readiness.soreness} icon={Dumbbell} label="Soreness" inverted />
+                    <ReadinessIcon value={readiness.sleep} icon={Moon} label={t('common.sleep')} />
+                    <ReadinessIcon value={readiness.mood} icon={Sun} label={t('common.mood')} />
+                    <ReadinessIcon value={readiness.energy} icon={Zap} label={t('common.energy')} />
+                    <ReadinessIcon value={readiness.stress} icon={Brain} label={t('common.stress')} inverted />
+                    <ReadinessIcon value={readiness.soreness} icon={Dumbbell} label={t('common.soreness')} inverted />
                 </div>
             </div>
 

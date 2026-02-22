@@ -294,7 +294,7 @@ const ExercisesPage = () => {
       setSelectedExercises(new Set());
     } catch (error) {
       console.error('Failed to delete exercises:', error);
-      toast.error('Failed to delete exercises');
+      toast.error(t('toasts.failedDeleteExercises'));
     }
   };
 
@@ -308,13 +308,13 @@ const ExercisesPage = () => {
       if (exercise) {
         toast.success(`Successfully deleted ${exercise.program}`);
       } else {
-        toast.success('Successfully deleted exercise');
+        toast.success(t('toasts.exerciseDeleted'));
       }
 
       setExerciseToDelete(null);
     } catch (error) {
       console.error('Failed to delete exercise:', error);
-      toast.error('Failed to delete exercise');
+      toast.error(t('toasts.failedDeleteExercise'));
     }
   };
 
@@ -339,11 +339,11 @@ const ExercisesPage = () => {
     try {
       await duplicateExercises(Array.from(selectedExercises));
       await refreshExercises();
-      toast.success('Exercises duplicated successfully');
+      toast.success(t('toasts.exercisesDuplicated'));
       setSelectedExercises(new Set());
     } catch (error) {
       console.error('Failed to duplicate exercises:', error);
-      toast.error('Failed to duplicate exercises');
+      toast.error(t('toasts.failedDuplicateExercises'));
     } finally {
       setIsBulkDuplicating(false);
     }
@@ -911,11 +911,11 @@ const ExercisesPage = () => {
                     aria-label="Duplicate selected"
                   >
                     {isBulkDuplicating ? <Spinner className="size-4" /> : <Copy className="size-4" />}
-                    <span>Duplicate</span>
+                    <span>{t('common.duplicate')}</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Duplicate selected</p>
+                  <p>{t('common.duplicateSelected')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -1055,7 +1055,7 @@ const ExercisesPage = () => {
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
             <DialogDescription>
               Create custom exercises with video demonstrations, muscle groups, and difficulty levels to build your personal exercise library.
             </DialogDescription>

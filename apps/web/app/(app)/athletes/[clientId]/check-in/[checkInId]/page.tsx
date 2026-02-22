@@ -527,7 +527,7 @@ const ClientCheckInDetailPage = () => {
                 className="gap-2 rounded-r-none border-r-0"
               >
                 <GitCompare className="size-4" />
-                <span>Compare</span>
+                <span>{t('common.compare')}</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -537,7 +537,7 @@ const ClientCheckInDetailPage = () => {
                     ) : (
                       <>
                         <Download className="size-4" />
-                        <span>Download</span>
+                        <span>{t('common.download')}</span>
                         <ChevronDown className="size-4 ml-1" />
                       </>
                     )}

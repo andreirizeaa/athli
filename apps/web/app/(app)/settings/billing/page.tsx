@@ -207,7 +207,7 @@ const BillingPage = () => {
           <Card className="bg-background max-w-3xl w-full">
             <CardHeader className="px-4">
               <div className="flex items-center justify-between">
-                <CardTitle>Current Plan</CardTitle>
+                <CardTitle>{t('common.currentPlan')}</CardTitle>
                 {currentPlan.isTrial && (
                   <span className="px-2.5 py-0.5 text-sm font-medium rounded-sm border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
                     {trialDaysRemaining} days left in trial
@@ -407,7 +407,7 @@ const BillingPage = () => {
           {/* Active Clients Card */}
           <Card className="bg-background max-w-3xl w-full">
             <CardHeader className="px-4">
-              <CardTitle>Active Clients</CardTitle>
+              <CardTitle>{t('common.activeClients')}</CardTitle>
             </CardHeader>
             <Separator className="w-full mt-[-8px]" />
             <CardContent className="px-4 pt-3 pb-2">
@@ -463,7 +463,7 @@ const BillingPage = () => {
       <Dialog open={showTrialWarning} onOpenChange={setShowTrialWarning}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>You're on a Free Trial</DialogTitle>
+            <DialogTitle>{t('common.freeTrialDialog')}</DialogTitle>
             <DialogDescription>
               You currently have {trialDaysRemaining} days left on your free trial. If you proceed to purchase a plan, your free trial will end and billing will start immediately.
             </DialogDescription>

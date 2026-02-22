@@ -230,7 +230,7 @@ const DraggableWorkoutCard = ({
                 onCopy(week, day, workout);
               }}>
                 <Copy className="mr-2 size-3.5" />
-                <span>Copy</span>
+                <span>{t('general.copy')}</span>
               </DropdownMenuItem>
               <TooltipProvider>
                 <Tooltip>
@@ -247,13 +247,13 @@ const DraggableWorkoutCard = ({
                         className={isInLibrary ? 'opacity-50 cursor-not-allowed' : ''}
                       >
                         <Save className="mr-2 size-3.5" />
-                        <span>Save to Library</span>
+                        <span>{t('common.saveToLibrary')}</span>
                       </DropdownMenuItem>
                     </div>
                   </TooltipTrigger>
                   {isInLibrary && (
                     <TooltipContent side="left">
-                      <p>This workout is already saved</p>
+                      <p>{t('common.alreadySaved')}</p>
                     </TooltipContent>
                   )}
                 </Tooltip>
@@ -1009,7 +1009,7 @@ export const ProgramBuilder = ({
               </div>
             </TooltipTrigger>
             <TooltipContent side={tooltipSide} sideOffset={sideOffset}>
-              <p>Insert week</p>
+              <p>{t('common.insertWeek')}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -1083,7 +1083,7 @@ export const ProgramBuilder = ({
         toast.success(t('programs.edit.toast.updatedSuccessfully', { name: details.name }));
       } catch (error) {
         console.error('Failed to update program details:', error);
-        toast.error('Failed to update details');
+        toast.error(t('toasts.failedUpdateDetails'));
       }
     }
   };
@@ -1246,7 +1246,7 @@ export const ProgramBuilder = ({
 
     setIsWorkoutBuilderOpen(false);
     setEditingWorkout(null);
-    toast.success('Workout updated');
+    toast.success(t('toasts.workoutUpdated'));
     return Promise.resolve();
   };
 
@@ -1849,7 +1849,7 @@ export const ProgramBuilder = ({
               className="gap-2 border border-primary"
             >
               <Pencil className="size-4" />
-              <span>Edit details</span>
+              <span>{t('common.editDetails')}</span>
             </Button>
             <Button
               variant="ghost"

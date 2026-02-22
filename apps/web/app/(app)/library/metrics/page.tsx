@@ -220,7 +220,7 @@ const MetricsPage = () => {
                   }}
                 >
                   <Move className="size-4 mr-2" />
-                  <span>Move to folder</span>
+                  <span>{t('common.moveToFolder')}</span>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
@@ -517,7 +517,7 @@ const MetricsPage = () => {
     // Get all metrics in this folder
     const folderMetrics = metrics.filter(m => m.folder_id === folderId);
     if (folderMetrics.length === 0) {
-      toast.error('This folder is empty');
+      toast.error(t('toasts.folderEmpty'));
       return;
     }
     setFolderToAssign({ id: folder.id, name: folder.name });
@@ -542,7 +542,7 @@ const MetricsPage = () => {
               className="gap-2 border border-primary"
             >
               <FolderPlus className="size-4" />
-              <span>Create Folder</span>
+              <span>{t('common.createFolder')}</span>
             </Button>
             <Button onClick={handleOpenAddMetric} className="gap-2">
               <Plus className="size-4" />
@@ -595,7 +595,7 @@ const MetricsPage = () => {
         emptyState={
           <EmptyGridState
             title={t('metrics.emptyState.title')}
-            subtitle="Define custom metrics to track and measure your clients' performance and progress"
+            subtitle={t('common.defineMetricsSubtitle')}
             action={
               <Button onClick={handleOpenAddMetric} className="gap-2">
                 <Plus className="size-4" />
@@ -645,7 +645,7 @@ const MetricsPage = () => {
                   className="gap-2"
                 >
                   <Move className="size-4" />
-                  <span>Move</span>
+                  <span>{t('common.move')}</span>
                 </Button>
               )}
               <Button

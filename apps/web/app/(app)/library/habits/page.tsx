@@ -524,7 +524,7 @@ const HabitsPage = () => {
 
     const folderHabits = habits.filter(h => h.folderId === folderId);
     if (folderHabits.length === 0) {
-      toast.error('This folder is empty');
+      toast.error(t('toasts.folderEmpty'));
       return;
     }
     setFolderToAssign({ id: folder.id, name: folder.name });
@@ -635,7 +635,7 @@ const HabitsPage = () => {
               {folders.length > 0 && (
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setHabitToMove(row); }}>
                   <Move className="size-4 mr-2" />
-                  <span>Move to folder</span>
+                  <span>{t('common.moveToFolder')}</span>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setHabitToDelete(row.id); }} className="text-destructive focus:text-destructive">
@@ -769,7 +769,7 @@ const HabitsPage = () => {
             />
             <Button variant="ghost" onClick={() => setIsCreateFolderOpen(true)} className="gap-2 border border-primary">
               <FolderPlus className="size-4" />
-              <span>Create Folder</span>
+              <span>{t('common.createFolder')}</span>
             </Button>
             <Button onClick={handleOpenAddHabit} className="gap-2">
               <Plus className="size-4" />
@@ -822,7 +822,7 @@ const HabitsPage = () => {
         emptyState={
           <EmptyGridState
             title={t('habits.emptyState.title')}
-            subtitle="Create daily habits to help your clients build consistency and track their progress over time"
+            subtitle={t('common.createHabitsSubtitle')}
             action={<Button onClick={handleOpenAddHabit} className="gap-2"><Plus className="size-4" /><span>{t('habits.addHabit')}</span></Button>}
           />
         }
@@ -870,7 +870,7 @@ const HabitsPage = () => {
             <div className="flex flex-col gap-6 max-h-[calc(100vh-200px)] overflow-y-auto px-1 pt-1">
               <div className="relative mb-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input type="text" placeholder="Search habits..." value={librarySearchQuery} onChange={(e) => setLibrarySearchQuery(e.target.value)} className="pl-9" />
+                <Input type="text" placeholder={t('common.searchHabits')} value={librarySearchQuery} onChange={(e) => setLibrarySearchQuery(e.target.value)} className="pl-9" />
               </div>
               {filteredLibraryHabits.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground"><p>No habits found matching &quot;{librarySearchQuery}&quot;</p></div>

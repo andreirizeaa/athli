@@ -246,7 +246,7 @@ const ClientFilesPage = () => {
       }
     } catch (error) {
       console.error('Failed to assign files:', error);
-      toast.error('Failed to assign files');
+      toast.error(t('toasts.failedAssignFiles'));
     }
   };
 
@@ -700,7 +700,7 @@ const ClientFilesPage = () => {
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
             <DialogDescription>
               Upload and share files with your clients - training plans, nutrition guides, and resources.
             </DialogDescription>

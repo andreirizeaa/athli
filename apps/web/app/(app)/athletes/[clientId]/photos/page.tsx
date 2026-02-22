@@ -294,7 +294,7 @@ const ClientPhotosPage = () => {
         <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Upgrade to Pro</DialogTitle>
+              <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
               <DialogDescription>
                 Track client progress with photos - compare progress over time and visualize transformations.
               </DialogDescription>
@@ -476,7 +476,7 @@ const ClientPhotosPage = () => {
                   className="gap-2 rounded-l-none"
                 >
                   <Plus className="size-4" />
-                  <span>Add photo</span>
+                  <span>{t('common.addPhoto')}</span>
                 </Button>
               </ButtonGroup>
             </div>
@@ -767,7 +767,7 @@ const ClientPhotosPage = () => {
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground italic">
-                  <p>Select a date to view photos</p>
+                  <p>{t('common.selectDateViewPhotos')}</p>
                 </div>
               )
             ) : selectedGroupDate ? (
@@ -862,7 +862,7 @@ const ClientPhotosPage = () => {
               </Card>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground italic">
-                <p>Select a photo to view</p>
+                <p>{t('common.selectPhotoView')}</p>
               </div>
             )}
           </div>
@@ -898,7 +898,7 @@ const ClientPhotosPage = () => {
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Upgrade to Pro</DialogTitle>
+            <DialogTitle>{t('upgrade.toPro')}</DialogTitle>
             <DialogDescription>
               Track client progress with photos - compare progress over time and visualize transformations.
             </DialogDescription>

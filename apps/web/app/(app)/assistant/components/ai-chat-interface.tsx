@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { cn } from "@/lib/general/utils";
 import {
@@ -63,6 +64,7 @@ interface AIChatInterfaceProps {
 
 export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
     const router = useRouter();
+    const t = useTranslations();
     const [prompt, setPrompt] = useState("");
     const [files, setFiles] = useState<File[]>([]);
     const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -129,14 +131,14 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
             if (actionType === 'create_workout') {
                 const apiPayload = transformWorkoutPayload(payload);
                 await createWorkout(apiPayload as any);
-                toast.success('Workout added to your library!');
+                toast.success(t('toasts.workoutAddedToLibrary'));
                 setTimeout(() => {
                     router.push(getActionRedirectUrl(actionType, payload));
                 }, 500);
             } else if (actionType === 'create_section') {
                 // TODO: Implement section creation
                 const apiPayload = transformSectionPayload(payload);
-                toast.info('Section creation coming soon');
+                toast.info(t('toasts.sectionCreationComingSoon'));
             } else if (actionType === 'assign_workout') {
                 await assignWorkout({
                     workoutId: payload.workoutId,
@@ -195,7 +197,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                 }, 500);
             } else if (actionType === 'update_client_profile') {
                 // TODO: Implement client profile update when API is available
-                toast.info('Client profile updates are not yet supported via AI assistant');
+                toast.info(t('toasts.clientProfileNotSupported'));
             } else if (actionType === 'create_checkin_template') {
                 // First create the check-in
                 const checkIn = await addCheckIn({
@@ -266,7 +268,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                     router.push(getActionRedirectUrl(actionType, payload));
                 }, 500);
             } else {
-                toast.info('This action type is not yet supported');
+                toast.info(t('toasts.actionNotSupported'));
             }
         } catch (error: any) {
             console.error('Failed to execute action:', error);
@@ -401,7 +403,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                                                             className="rounded-full"
                                                             onClick={() => {
                                                                 navigator.clipboard.writeText(message.content);
-                                                                toast.success('Copied to clipboard');
+                                                                toast.success(t('toasts.copiedToClipboard'));
                                                             }}
                                                         >
                                                             <CopyIcon />
@@ -483,9 +485,9 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                                     <p className="font-medium text-foreground text-[11px]">Training</p>
                                 </div>
                                 <ul className="space-y-0.5 text-[10px] text-muted-foreground leading-tight">
-                                    <li>Create workouts & sections</li>
-                                    <li>Search exercises</li>
-                                    <li>Assign to clients</li>
+                                    <li>{t('assistant.capabilities.training.createWorkouts')}</li>
+                                    <li>{t('assistant.capabilities.training.searchExercises')}</li>
+                                    <li>{t('assistant.capabilities.training.assignToClients')}</li>
                                 </ul>
                             </div>
                             <div className="bg-muted/30 border border-border/50 rounded-lg p-3 space-y-1.5">
@@ -494,9 +496,9 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                                     <p className="font-medium text-foreground text-[11px]">Clients</p>
                                 </div>
                                 <ul className="space-y-0.5 text-[10px] text-muted-foreground leading-tight">
-                                    <li>View & search clients</li>
-                                    <li>Profiles, goals & injuries</li>
-                                    <li>Find inactive clients</li>
+                                    <li>{t('assistant.capabilities.clients.viewSearch')}</li>
+                                    <li>{t('assistant.capabilities.clients.profilesGoals')}</li>
+                                    <li>{t('assistant.capabilities.clients.findInactive')}</li>
                                 </ul>
                             </div>
                             <div className="bg-muted/30 border border-border/50 rounded-lg p-3 space-y-1.5">
@@ -505,9 +507,9 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                                     <p className="font-medium text-foreground text-[11px]">Analytics</p>
                                 </div>
                                 <ul className="space-y-0.5 text-[10px] text-muted-foreground leading-tight">
-                                    <li>Analyze progress</li>
-                                    <li>Completion rates</li>
-                                    <li>Metrics & check-ins</li>
+                                    <li>{t('assistant.capabilities.analytics.analyzeProgress')}</li>
+                                    <li>{t('assistant.capabilities.analytics.completionRates')}</li>
+                                    <li>{t('assistant.capabilities.analytics.metricsCheckins')}</li>
                                 </ul>
                             </div>
                             <div className="bg-muted/30 border border-border/50 rounded-lg p-3 space-y-1.5">
@@ -516,9 +518,9 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                                     <p className="font-medium text-foreground text-[11px]">Library</p>
                                 </div>
                                 <ul className="space-y-0.5 text-[10px] text-muted-foreground leading-tight">
-                                    <li>Browse workouts</li>
-                                    <li>Check-in templates</li>
-                                    <li>Tracked metrics</li>
+                                    <li>{t('assistant.capabilities.library.browseWorkouts')}</li>
+                                    <li>{t('assistant.capabilities.library.checkinTemplates')}</li>
+                                    <li>{t('assistant.capabilities.library.trackedMetrics')}</li>
                                 </ul>
                             </div>
                         </div>
@@ -540,7 +542,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                             </div>
                         )}
 
-                        <PromptInputTextarea placeholder="Ask me anything..." className="min-h-auto p-4" />
+                        <PromptInputTextarea placeholder={t('common.askMeAnything')} className="min-h-auto p-4" />
 
                         <PromptInputActions className="flex items-center justify-between gap-2 p-3">
                             <div className="flex items-center gap-2">
