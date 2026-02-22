@@ -67,7 +67,8 @@ export const aiHistoryController = {
     const userId = (req as any).userId;
     if (!userId) return unauthorized(res, { message: 'Not authenticated' });
     try {
-      const chat = await svc.getChat(req.params.id, userId);
+      const chatId = req.params.id as string;
+      const chat = await svc.getChat(chatId, userId);
       if (!chat) return res.status(404).json({ success: false, message: 'Chat not found' });
       res.json({ success: true, data: chat });
     } catch (err: any) {
@@ -86,7 +87,8 @@ export const aiHistoryController = {
       const updates: any = {};
       if (title) updates.title = title;
       if (data) updates.data = data;
-      const chat = await svc.updateChat(req.params.id, userId, updates);
+      const chatId = req.params.id as string;
+      const chat = await svc.updateChat(chatId, userId, updates);
       res.json({ success: true, data: chat });
     } catch (err: any) {
       console.error('ai-history update error:', err);
@@ -99,7 +101,8 @@ export const aiHistoryController = {
     const userId = (req as any).userId;
     if (!userId) return unauthorized(res, { message: 'Not authenticated' });
     try {
-      await svc.deleteChat(req.params.id, userId);
+      const chatId = req.params.id as string;
+      await svc.deleteChat(chatId, userId);
       res.json({ success: true });
     } catch (err: any) {
       console.error('ai-history delete error:', err);
@@ -114,7 +117,8 @@ export const aiHistoryController = {
     const { role, content, toolCalls, action, charts, clientSelect } = req.body;
     if (!role || !content) return badRequest(res, { message: 'role and content required' });
     try {
-      const chat = await svc.appendMessage(req.params.id, userId, {
+      const chatId = req.params.id as string;
+      const chat = await svc.appendMessage(chatId, userId, {
         role,
         content,
         timestamp: new Date().toISOString(),

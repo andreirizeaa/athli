@@ -75,6 +75,7 @@ export const MessageInputProvider: React.FC<MessageInputProviderProps> = ({
   selectedContactId,
   onSendMessage,
 }) => {
+  const t = useTranslations();
   // State
   const [messageInput, setMessageInput] = React.useState('');
   const [textareaHeight, setTextareaHeight] = React.useState(36);

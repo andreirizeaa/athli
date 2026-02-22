@@ -45,7 +45,7 @@ export function useAiUsage() {
       currentCount: 0,
       hasReachedLimit: false,
       isLoading: false,
-      checkBeforePrompt: async () => ({ allowed: true }),
+      checkBeforePrompt: async (): Promise<{ allowed: boolean; message?: string }> => ({ allowed: true }),
       refetch: () => {},
     };
   }
