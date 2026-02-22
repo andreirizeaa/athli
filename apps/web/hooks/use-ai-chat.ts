@@ -1,10 +1,32 @@
 /**
- * useAIChat Hook - Manages AI chat state and SSE streaming
+ * useAIChat Hook — Manages AI chat state, SSE streaming, and history persistence.
+ *
+ * When chatId is provided it loads the existing conversation from the backend.
+ * On the first user message of a brand-new chat it creates a record in ai_chats,
+ * generates an AI title, and updates the URL so the sidebar reflects the new chat.
  */
 
-import { useState, useCallback, useRef } from 'react';
-import { streamChat, ConversationMessage, ChatContext, StreamEvent, ActionPayload } from '@/api/ai/ai-service';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  streamChat,
+  ConversationMessage,
+  ChatContext,
+  StreamEvent,
+  ActionPayload,
+} from '@/api/ai/ai-service';
+import {
+  createChat,
+  fetchChat,
+  appendMessage as appendMessageApi,
+  summarizeTitle,
+  updateChatTitle,
+  ChatMessageData,
+} from '@/api/ai/ai-chat-history-service';
 import { v4 as uuidv4 } from 'uuid';
+
+// ── Types ──────────────────────────────────────────────────────────
 
 export interface ChatMessage {
   id: string;
@@ -22,12 +44,16 @@ export interface ToolCallStatus {
 }
 
 export interface UseAIChatOptions {
+  chatId?: string;
   onAction?: (action: ActionPayload) => void;
 }
+
+// ── Hook ───────────────────────────────────────────────────────────
 
 export function useAIChat(options?: UseAIChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [currentToolCall, setCurrentToolCall] = useState<ToolCallStatus | null>(null);
   const [pendingAction, setPendingAction] = useState<ActionPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,193 +61,209 @@ export function useAIChat(options?: UseAIChatOptions) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const sessionIdRef = useRef<string>(uuidv4());
   const streamingMessageRef = useRef<string>('');
+  const chatIdRef = useRef<string | null>(options?.chatId ?? null);
+  const titleGeneratedRef = useRef(false);
 
-  /**
-   * Send a message to the AI
-   */
-  const sendMessage = useCallback(async (
-    content: string,
-    context?: ChatContext
-  ) => {
-    if (!content.trim() || isStreaming) return;
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
-    setError(null);
-    setIsStreaming(true);
-    setPendingAction(null);
-    setCurrentToolCall(null);
+  // ── Load existing chat ───────────────────────────────────────────
 
-    // Add user message
-    const userMessage: ChatMessage = {
-      id: uuidv4(),
-      role: 'user',
-      content: content.trim(),
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-
-    // Create assistant message placeholder
-    const assistantMessageId = uuidv4();
-    const assistantMessage: ChatMessage = {
-      id: assistantMessageId,
-      role: 'assistant',
-      content: '',
-      timestamp: new Date(),
-      toolCalls: [],
-    };
-
-    setMessages(prev => [...prev, assistantMessage]);
-    streamingMessageRef.current = '';
-
-    // Build conversation history (last 10 messages)
-    const conversationHistory: ConversationMessage[] = messages
-      .slice(-10)
-      .map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
-
-    // Create abort controller
-    abortControllerRef.current = new AbortController();
-
-    try {
-      await streamChat(
-        {
-          message: content.trim(),
-          sessionId: sessionIdRef.current,
-          context: context || {},
-          conversationHistory,
-        },
-        (event: StreamEvent) => {
-          switch (event.type) {
-            case 'thinking':
-              // Already showing streaming indicator
-              break;
-
-            case 'tool_call':
-              if (event.data) {
-                const toolStatus: ToolCallStatus = {
-                  tool: event.data.tool,
-                  status: event.data.status,
-                  message: event.data.message,
-                };
-                setCurrentToolCall(toolStatus);
-
-                // Add to message's tool calls
-                if (event.data.status === 'calling') {
-                  setMessages(prev => prev.map(msg => {
-                    if (msg.id === assistantMessageId) {
-                      return {
-                        ...msg,
-                        toolCalls: [...(msg.toolCalls || []), toolStatus],
-                      };
-                    }
-                    return msg;
-                  }));
-                } else {
-                  // Update existing tool call status
-                  setMessages(prev => prev.map(msg => {
-                    if (msg.id === assistantMessageId && msg.toolCalls) {
-                      return {
-                        ...msg,
-                        toolCalls: msg.toolCalls.map(tc =>
-                          tc.tool === event.data.tool ? { ...tc, status: event.data.status } : tc
-                        ),
-                      };
-                    }
-                    return msg;
-                  }));
-                }
-
-                if (event.data.status === 'complete' || event.data.status === 'error') {
-                  setCurrentToolCall(null);
-                }
-              }
-              break;
-
-            case 'content':
-              if (event.data?.delta) {
-                streamingMessageRef.current += event.data.delta;
-                setMessages(prev => prev.map(msg => {
-                  if (msg.id === assistantMessageId) {
-                    return { ...msg, content: streamingMessageRef.current };
-                  }
-                  return msg;
-                }));
-              }
-              break;
-
-            case 'action':
-              if (event.data) {
-                const action: ActionPayload = {
-                  type: event.data.type,
-                  payload: event.data.payload,
-                };
-                setPendingAction(action);
-
-                // Add action to message
-                setMessages(prev => prev.map(msg => {
-                  if (msg.id === assistantMessageId) {
-                    return { ...msg, action };
-                  }
-                  return msg;
-                }));
-
-                // Notify parent if callback provided
-                options?.onAction?.(action);
-              }
-              break;
-
-            case 'error':
-              setError(event.data?.message || 'An error occurred');
-              break;
-
-            case 'done':
-              setIsStreaming(false);
-              setCurrentToolCall(null);
-              break;
-          }
-        },
-        abortControllerRef.current.signal
-      );
-    } catch (err: any) {
-      setError(err.message || 'Failed to send message');
-      setIsStreaming(false);
+  useEffect(() => {
+    if (!options?.chatId) {
+      chatIdRef.current = null;
+      titleGeneratedRef.current = false;
+      return;
     }
-  }, [messages, isStreaming, options]);
+    chatIdRef.current = options.chatId;
+    titleGeneratedRef.current = true; // existing chat already has a title
+    setIsLoadingHistory(true);
 
-  /**
-   * Stop the current streaming response
-   */
+    fetchChat(options.chatId)
+      .then((chat) => {
+        if (chat?.data?.messages) {
+          setMessages(
+            chat.data.messages.map((m: ChatMessageData, i: number) => ({
+              id: `loaded-${i}`,
+              role: m.role,
+              content: m.content,
+              timestamp: new Date(m.timestamp),
+              toolCalls: m.toolCalls as ToolCallStatus[] | undefined,
+              action: m.action as ActionPayload | undefined,
+            })),
+          );
+        }
+      })
+      .catch(() => setError('Failed to load chat history'))
+      .finally(() => setIsLoadingHistory(false));
+  }, [options?.chatId]);
+
+  // ── Persist helper ───────────────────────────────────────────────
+
+  const persist = useCallback(
+    async (role: 'user' | 'assistant', content: string, toolCalls?: ToolCallStatus[], action?: ActionPayload) => {
+      if (!chatIdRef.current) return;
+      try {
+        await appendMessageApi(chatIdRef.current, { role, content, toolCalls: toolCalls as any, action: action as any });
+        queryClient.invalidateQueries({ queryKey: ['ai-chats'] });
+      } catch (e) {
+        console.error('persist message failed', e);
+      }
+    },
+    [queryClient],
+  );
+
+  // ── Send a message ───────────────────────────────────────────────
+
+  const sendMessage = useCallback(
+    async (content: string, context?: ChatContext) => {
+      if (!content.trim() || isStreaming) return;
+
+      setError(null);
+      setIsStreaming(true);
+      setPendingAction(null);
+      setCurrentToolCall(null);
+
+      const trimmed = content.trim();
+
+      // Create a new chat record if we don't have one yet
+      if (!chatIdRef.current) {
+        try {
+          const chat = await createChat(); // default title, will be updated
+          chatIdRef.current = chat.id;
+          queryClient.invalidateQueries({ queryKey: ['ai-chats'] });
+          router.replace(`/assistant/${chat.id}`, { scroll: false });
+        } catch {
+          setError('Failed to create chat');
+          setIsStreaming(false);
+          return;
+        }
+      }
+
+      // Generate AI title in the background after the first user message
+      if (!titleGeneratedRef.current && chatIdRef.current) {
+        titleGeneratedRef.current = true;
+        const cid = chatIdRef.current;
+        summarizeTitle(trimmed)
+          .then((title) => updateChatTitle(cid, title))
+          .then(() => queryClient.invalidateQueries({ queryKey: ['ai-chats'] }))
+          .catch((e) => console.error('title generation failed', e));
+      }
+
+      // Add user message to UI
+      const userMsg: ChatMessage = { id: uuidv4(), role: 'user', content: trimmed, timestamp: new Date() };
+      setMessages((prev) => [...prev, userMsg]);
+      persist('user', trimmed);
+
+      // Placeholder for assistant response
+      const asstId = uuidv4();
+      setMessages((prev) => [...prev, { id: asstId, role: 'assistant', content: '', timestamp: new Date(), toolCalls: [] }]);
+      streamingMessageRef.current = '';
+
+      // Build conversation history (last 10 messages)
+      const conversationHistory: ConversationMessage[] = messages.slice(-10).map((m) => ({ role: m.role, content: m.content }));
+
+      abortControllerRef.current = new AbortController();
+
+      let finalToolCalls: ToolCallStatus[] = [];
+      let finalAction: ActionPayload | undefined;
+
+      try {
+        await streamChat(
+          { message: trimmed, sessionId: sessionIdRef.current, context: context || {}, conversationHistory },
+          (event: StreamEvent) => {
+            switch (event.type) {
+              case 'thinking':
+                break;
+
+              case 'tool_call':
+                if (event.data) {
+                  const ts: ToolCallStatus = { tool: event.data.tool, status: event.data.status, message: event.data.message };
+                  setCurrentToolCall(ts);
+                  if (event.data.status === 'calling') {
+                    finalToolCalls.push(ts);
+                    setMessages((prev) =>
+                      prev.map((m) => (m.id === asstId ? { ...m, toolCalls: [...(m.toolCalls || []), ts] } : m)),
+                    );
+                  } else {
+                    finalToolCalls = finalToolCalls.map((tc) => (tc.tool === event.data.tool ? { ...tc, status: event.data.status } : tc));
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === asstId && m.toolCalls
+                          ? { ...m, toolCalls: m.toolCalls.map((tc) => (tc.tool === event.data.tool ? { ...tc, status: event.data.status } : tc)) }
+                          : m,
+                      ),
+                    );
+                  }
+                  if (event.data.status === 'complete' || event.data.status === 'error') setCurrentToolCall(null);
+                }
+                break;
+
+              case 'content':
+                if (event.data?.delta) {
+                  streamingMessageRef.current += event.data.delta;
+                  setMessages((prev) => prev.map((m) => (m.id === asstId ? { ...m, content: streamingMessageRef.current } : m)));
+                }
+                break;
+
+              case 'action':
+                if (event.data) {
+                  const action: ActionPayload = { type: event.data.type, payload: event.data.payload };
+                  finalAction = action;
+                  setPendingAction(action);
+                  setMessages((prev) => prev.map((m) => (m.id === asstId ? { ...m, action } : m)));
+                  options?.onAction?.(action);
+                }
+                break;
+
+              case 'error':
+                setError(event.data?.message || 'An error occurred');
+                break;
+
+              case 'done':
+                setIsStreaming(false);
+                setCurrentToolCall(null);
+                // Persist assistant message (including tool calls & actions)
+                if (streamingMessageRef.current) {
+                  persist('assistant', streamingMessageRef.current, finalToolCalls, finalAction);
+                }
+                break;
+            }
+          },
+          abortControllerRef.current.signal,
+        );
+      } catch (err: any) {
+        setError(err.message || 'Failed to send message');
+        setIsStreaming(false);
+      }
+    },
+    [messages, isStreaming, options, persist, router, queryClient],
+  );
+
+  // ── Controls ─────────────────────────────────────────────────────
+
   const stopStreaming = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     setIsStreaming(false);
     setCurrentToolCall(null);
   }, []);
 
-  /**
-   * Clear the chat history
-   */
   const clearChat = useCallback(() => {
     setMessages([]);
     setPendingAction(null);
     setError(null);
+    chatIdRef.current = null;
+    titleGeneratedRef.current = false;
     sessionIdRef.current = uuidv4();
   }, []);
 
-  /**
-   * Clear the pending action
-   */
-  const clearAction = useCallback(() => {
-    setPendingAction(null);
-  }, []);
+  const clearAction = useCallback(() => setPendingAction(null), []);
 
   return {
     messages,
     isStreaming,
+    isLoadingHistory,
     currentToolCall,
     pendingAction,
     error,
