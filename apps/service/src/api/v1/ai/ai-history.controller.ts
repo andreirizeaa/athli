@@ -111,7 +111,7 @@ export const aiHistoryController = {
   appendMessage: async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     if (!userId) return unauthorized(res, { message: 'Not authenticated' });
-    const { role, content, toolCalls, action } = req.body;
+    const { role, content, toolCalls, action, charts, clientSelect } = req.body;
     if (!role || !content) return badRequest(res, { message: 'role and content required' });
     try {
       const chat = await svc.appendMessage(req.params.id, userId, {
@@ -120,6 +120,8 @@ export const aiHistoryController = {
         timestamp: new Date().toISOString(),
         toolCalls,
         action,
+        charts,
+        clientSelect,
       });
       res.json({ success: true, data: chat });
     } catch (err: any) {
@@ -133,7 +135,7 @@ export const aiHistoryController = {
    * Body: { message: string }
    * Returns: { title: string }
    *
-   * Uses a fast, cheap model to generate a 50-60 char summary title
+   * Uses a fast, cheap model to generate a ≤40 char summary title
    * from the user's first message in a chat.
    */
   summarizeTitle: async (req: Request, res: Response) => {
@@ -146,18 +148,19 @@ export const aiHistoryController = {
       const llm = getTitleLLM();
       const result = await llm.invoke([
         new SystemMessage(
-          'You are a title generator. Given the user\'s message, produce a short summary title for the conversation. ' +
-          'Rules: 50-60 characters max, no quotes, no colons, no emojis. Just a clear, natural title. ' +
-          'Reply with ONLY the title text, nothing else.',
+          'Generate a short chat title from the user message. ' +
+          'Rules: max 40 characters, no punctuation at all (no colons, periods, commas, dashes, exclamation marks), no quotes, no emojis. ' +
+          'Keep it casual and concise like a chat label. Reply with ONLY the title, nothing else.',
         ),
         new HumanMessage(message),
       ]);
-      const title = (typeof result.content === 'string' ? result.content : '').trim().slice(0, 60);
-      res.json({ success: true, data: { title: title || message.slice(0, 55) + '…' } });
+      const raw = (typeof result.content === 'string' ? result.content : '').trim().replace(/[^a-zA-Z0-9 ]/g, '').trim();
+      const title = raw.slice(0, 40);
+      res.json({ success: true, data: { title: title || message.slice(0, 37) + '...' } });
     } catch (err: any) {
       console.error('summarize-title error:', err);
       // Fallback: truncate the message
-      const fallback = message.slice(0, 55) + (message.length > 55 ? '…' : '');
+      const fallback = message.slice(0, 37) + (message.length > 37 ? '...' : '');
       res.json({ success: true, data: { title: fallback } });
     }
   },

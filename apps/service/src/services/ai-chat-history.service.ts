@@ -10,6 +10,8 @@ export interface ChatMessageData {
   timestamp: string;
   toolCalls?: { tool: string; status: string; message?: string }[];
   action?: { type: string; payload: any };
+  charts?: any[];
+  clientSelect?: any[];
 }
 
 export interface AiChat {

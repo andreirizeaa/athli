@@ -22,6 +22,7 @@ import { ProfilePictureDialog } from '@/components/profile/profile-picture-dialo
 import { TIMEZONE_GROUPS, TIMEZONE_OPTIONS } from '@athli/shared-types';
 
 const TimezoneCard = () => {
+  const t = useTranslations();
   const { user, updateProfile, isUpdating } = useUserProfile();
   const [timezone, setTimezone] = useState(user?.timezone || '');
   const [savedTimezone, setSavedTimezone] = useState(user?.timezone || '');

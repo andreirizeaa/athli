@@ -136,16 +136,21 @@ export default function FooterSection() {
                                 className="text-muted-foreground hover:text-primary block duration-150">
                                 <span>{t('pricing')}</span>
                             </Link>
-                            <Link
-                                href="/how-we-compare"
-                                className="text-muted-foreground hover:text-primary block duration-150">
-                                <span>{t('howWeCompare')}</span>
-                            </Link>
                             <a
                                 href="mailto:hello@athli.app"
                                 className="text-muted-foreground hover:text-primary block duration-150">
                                 <span>{t('contact')}</span>
                             </a>
+                            <Link
+                                href="/affiliate"
+                                className="text-muted-foreground hover:text-primary block duration-150">
+                                <span>{t('affiliate')}</span>
+                            </Link>
+                            <Link
+                                href="/how-we-compare"
+                                className="text-muted-foreground hover:text-primary block duration-150">
+                                <span>{t('howWeCompare')}</span>
+                            </Link>
                         </div>
                         <div className="space-y-4 text-sm">
                             <span className="block font-medium">{t('mobileApp')}</span>

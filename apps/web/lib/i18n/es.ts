@@ -2984,6 +2984,9 @@ export const esMessages = {
     tooltip: 'Período de prueba gratuito',
     viewPlanDetails: 'Ver detalles del plan',
     upgrade: 'Actualizar',
+    tooltipExpiringOne: 'Tu prueba gratuita expira en 1 día',
+    tooltipExpiring: 'Tu prueba gratuita expira en {count} días',
+    tooltipClickToView: 'Haz clic para ver los detalles de tu plan',
   },
   access: {
     blocked: {
@@ -3441,6 +3444,8 @@ export const esMessages = {
     chatHistory: 'Historial de chats',
     newChat: 'Nuevo chat',
     searchChats: 'Buscar chats...',
+    voiceInput: 'Entrada de voz',
+    stopListening: 'Dejar de escuchar',
     capabilities: {
       training: {
         createWorkouts: 'Crear entrenamientos y secciones',

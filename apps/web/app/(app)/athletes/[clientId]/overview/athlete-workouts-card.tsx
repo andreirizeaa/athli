@@ -54,7 +54,7 @@ export const AthleteWorkoutsCard = ({ clientId }: AthleteWorkoutsCardProps) => {
   };
 
   return (
-    <Card className="bg-background flex flex-col flex-1 min-w-0 h-full">
+    <Card className="bg-background flex flex-col flex-1 min-w-0 h-full w-full overflow-hidden">
       <CardHeader className="px-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle>{t('common.athleteWorkouts')}</CardTitle>

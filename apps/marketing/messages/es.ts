@@ -634,12 +634,59 @@ const messages = {
     faqs: 'Preguntas Frecuentes',
     pricing: 'Precios',
     howWeCompare: 'Cómo nos Comparamos',
+    affiliate: 'Programa de Afiliados',
     contact: 'Contacto',
     privacy: 'Privacidad',
     terms: 'Términos',
     copyright: 'Athli, Todos los derechos reservados',
     coach: 'Entrenador',
     client: 'Cliente',
+  },
+  affiliate: {
+    hero: {
+      badge: 'Gana $20 por referido',
+      title: 'Asóciate con Athli y Gana',
+      description: 'Únete a nuestro programa de afiliados y gana comisiones por cada entrenador que refieras a Athli. Ayuda a los entrenadores a descubrir la mejor plataforma de coaching mientras construyes una fuente de ingresos pasivos.',
+      cta: 'Solicitar ser Afiliado',
+      learnMore: 'Conocer Athli',
+    },
+    earnings: {
+      headline: 'Por cada referido exitoso',
+      description: 'Cuando un entrenador que refieras se registra y compra una suscripción, ganas $20. Sin límites, sin topes, solo recompensas directas por correr la voz.',
+    },
+    howItWorks: {
+      title: 'Cómo Funciona',
+      subtitle: 'Tres pasos simples para empezar a ganar',
+      step: 'Paso',
+      steps: {
+        share: {
+          title: 'Comparte tu enlace',
+          description: 'Obtén tu enlace único de afiliado y compártelo con entrenadores de tu red',
+        },
+        trial: {
+          title: 'Se suscriben',
+          description: 'Cuando un entrenador se registra usando tu enlace y compra una suscripción',
+        },
+        earn: {
+          title: 'Recibes tu pago',
+          description: 'Gana $20 por cada referido que se convierte en suscripción de pago',
+        },
+      },
+    },
+    benefits: {
+      title: '¿Por Qué Ser Afiliado de Athli?',
+      items: [
+        'Gana $20 por cada entrenador que se suscriba a través de tu referido',
+        'Sin límites de ganancias - refiere a tantos entrenadores como quieras',
+        'Pagos mensuales directamente a tu cuenta',
+        'Acceso a materiales de marketing y panel de afiliados',
+      ],
+    },
+    cta: {
+      title: '¿Listo para Empezar a Ganar?',
+      description: 'Únete a nuestro programa de afiliados hoy y comienza a ganar comisiones por cada entrenador que traigas a Athli.',
+      button: 'Solicitar Ahora',
+    },
   },
   pages: {
     pricing: {

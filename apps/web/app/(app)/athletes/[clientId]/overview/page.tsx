@@ -43,22 +43,22 @@ const ClientOverviewPage = () => {
   }, [searchParams, clientId, router]);
 
   return (
-    <div className="h-full w-full flex flex-col flex-1 min-h-0 p-4 gap-4 overflow-hidden">
+    <div className="h-full w-full flex flex-col flex-1 min-h-0">
       {clientId && (
-        <div className="w-full h-full flex gap-4 items-stretch">
-          <div className="flex flex-col gap-4 h-full flex-1 min-w-0">
-            <div className="h-1/2 min-h-0 flex">
+        <div className="flex-1 flex gap-4 items-stretch p-4 min-h-0">
+          <div className="flex flex-col gap-4 flex-1 md:min-w-0 min-h-0">
+            <div className="flex-1 min-h-0 flex">
               <ClientBioCard clientId={clientId} />
             </div>
-            <div className="h-1/2 min-h-0 flex">
+            <div className="flex-1 min-h-0 flex">
               <AthleteWorkoutsCard clientId={clientId} />
             </div>
           </div>
-          <div className="flex flex-col gap-4 h-full flex-1 min-w-0">
-            <div className="h-1/2 min-h-0 flex">
+          <div className="flex flex-col gap-4 flex-1 md:min-w-0 min-h-0">
+            <div className="flex-1 min-h-0 flex">
               <GoalsCard clientId={clientId} initialSelectedGoalId={initialGoalId} />
             </div>
-            <div className="h-1/2 min-h-0 flex">
+            <div className="flex-1 min-h-0 flex">
               <InjuryCard clientId={clientId} initialSelectedInjuryId={initialInjuryId} />
             </div>
           </div>

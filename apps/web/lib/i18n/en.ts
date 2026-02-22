@@ -3009,6 +3009,9 @@ export const enMessages = {
     tooltip: 'Free trial period',
     viewPlanDetails: 'View plan details',
     upgrade: 'Upgrade',
+    tooltipExpiringOne: 'Your free trial is expiring in 1 day',
+    tooltipExpiring: 'Your free trial is expiring in {count} days',
+    tooltipClickToView: 'Click to view your plan details',
   },
   access: {
     blocked: {
@@ -3442,6 +3445,8 @@ export const enMessages = {
     chatHistory: 'Chat history',
     newChat: 'New chat',
     searchChats: 'Search chats...',
+    voiceInput: 'Voice input',
+    stopListening: 'Stop listening',
     capabilities: {
       training: {
         createWorkouts: 'Create workouts & sections',

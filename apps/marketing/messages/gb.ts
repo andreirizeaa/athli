@@ -634,12 +634,59 @@ const messages = {
     faqs: 'FAQs',
     pricing: 'Pricing',
     howWeCompare: 'How We Compare',
+    affiliate: 'Affiliate Program',
     contact: 'Contact',
     privacy: 'Privacy',
     terms: 'Terms',
     copyright: 'Athli, All rights reserved',
     coach: 'Coach',
     client: 'Client',
+  },
+  affiliate: {
+    hero: {
+      badge: 'Earn $20 per referral',
+      title: 'Partner with Athli and Earn',
+      description: 'Join our affiliate program and earn royalties for every coach you refer to Athli. Help coaches discover the best coaching platform while building a passive income stream.',
+      cta: 'Apply to Become an Affiliate',
+      learnMore: 'Learn About Athli',
+    },
+    earnings: {
+      headline: 'For every successful referral',
+      description: 'When a coach you refer signs up and purchases a subscription, you earn $20. No caps, no limits, just straightforward rewards for spreading the word.',
+    },
+    howItWorks: {
+      title: 'How It Works',
+      subtitle: 'Three simple steps to start earning',
+      step: 'Step',
+      steps: {
+        share: {
+          title: 'Share your link',
+          description: 'Get your unique affiliate link and share it with coaches in your network',
+        },
+        trial: {
+          title: 'They subscribe',
+          description: 'When a coach signs up using your link and purchases a subscription',
+        },
+        earn: {
+          title: 'You get paid',
+          description: 'Earn $20 for every referral that converts to a paid subscription',
+        },
+      },
+    },
+    benefits: {
+      title: 'Why Become an Athli Affiliate?',
+      items: [
+        'Earn $20 for every coach who subscribes through your referral',
+        'No earning caps - refer as many coaches as you want',
+        'Monthly payouts directly to your account',
+        'Access to marketing materials and affiliate dashboard',
+      ],
+    },
+    cta: {
+      title: 'Ready to Start Earning?',
+      description: 'Join our affiliate program today and start earning royalties for every coach you bring to Athli.',
+      button: 'Apply Now',
+    },
   },
   pages: {
     pricing: {

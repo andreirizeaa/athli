@@ -80,50 +80,67 @@ export type PromptInputTextareaProps = {
     disableAutosize?: boolean;
 } & React.ComponentProps<typeof Textarea>;
 
-function PromptInputTextarea({
-    className,
-    onKeyDown,
-    disableAutosize = false,
-    ...props
-}: PromptInputTextareaProps) {
-    const { value, setValue, maxHeight, onSubmit, disabled } = usePromptInput();
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+const PromptInputTextarea = React.forwardRef<HTMLTextAreaElement, PromptInputTextareaProps>(
+    function PromptInputTextarea({
+        className,
+        onKeyDown,
+        disableAutosize = false,
+        ...props
+    }, forwardedRef) {
+        const { value, setValue, maxHeight, onSubmit, disabled } = usePromptInput();
+        const internalRef = useRef<HTMLTextAreaElement>(null);
+        const [isMounted, setIsMounted] = useState(false);
 
-    useEffect(() => {
-        if (disableAutosize) return;
+        // Merge internal and forwarded refs
+        const textareaRef = (forwardedRef as React.RefObject<HTMLTextAreaElement>) || internalRef;
 
-        if (!textareaRef.current) return;
-        textareaRef.current.style.height = "auto";
-        textareaRef.current.style.height =
-            typeof maxHeight === "number"
-                ? `${Math.min(textareaRef.current.scrollHeight, maxHeight)}px`
-                : `min(${textareaRef.current.scrollHeight}px, ${maxHeight})`;
-    }, [value, maxHeight, disableAutosize]);
+        // Track mount state to trigger initial sizing
+        useEffect(() => {
+            setIsMounted(true);
+        }, []);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            onSubmit?.();
-        }
-        onKeyDown?.(e);
-    };
+        // Auto-resize textarea based on content
+        useEffect(() => {
+            if (disableAutosize) return;
+            if (!textareaRef.current || !isMounted) return;
 
-    return (
-        <Textarea
-            ref={textareaRef}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className={cn(
-                "dark:bg-background min-h-[44px] w-full resize-none border-none bg-transparent shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0",
-                className
-            )}
-            rows={1}
-            disabled={disabled}
-            {...props}
-        />
-    );
-}
+            const textarea = textareaRef.current;
+            // Reset height to calculate proper scrollHeight
+            textarea.style.height = "0px";
+            const scrollHeight = textarea.scrollHeight;
+            // Apply constrained height (minimum 44px for single line)
+            const minHeight = 44;
+            const constrainedHeight = typeof maxHeight === "number"
+                ? Math.max(minHeight, Math.min(scrollHeight, maxHeight))
+                : Math.max(minHeight, scrollHeight);
+            textarea.style.height = `${constrainedHeight}px`;
+        }, [value, maxHeight, disableAutosize, isMounted, textareaRef]);
+
+        const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                onSubmit?.();
+            }
+            onKeyDown?.(e);
+        };
+
+        return (
+            <Textarea
+                ref={textareaRef}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className={cn(
+                    "dark:bg-background min-h-[44px] w-full resize-none border-none bg-transparent shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0",
+                    className
+                )}
+                rows={1}
+                disabled={disabled}
+                {...props}
+            />
+        );
+    }
+);
 
 type PromptInputActionsProps = React.HTMLAttributes<HTMLDivElement>;
 

@@ -22,6 +22,10 @@ import type {
 // Options: 'starter' | 'pro' | null
 const FORCE_SIMULATE_PLAN: 'starter' | 'pro' | null = null;
 
+// DEV ONLY: Force simulate specific addons (set to empty array to use real entitlements)
+// Options: 'ai_assistant' | 'automations' | 'payments'
+const FORCE_SIMULATE_ADDONS: AddonKey[] = ['ai_assistant'];
+
 // Re-export types for convenience
 export type { AddonKey, FeatureKey, CoachEntitlements };
 
@@ -196,10 +200,21 @@ export function EntitlementsProvider({ children }: EntitlementsProviderProps) {
     }
 
     // Use fetched entitlements or defaults
-    const entitlements: CoachEntitlements = fetchedEntitlements || {
+    let entitlements: CoachEntitlements = fetchedEntitlements || {
       ...DEFAULT_ENTITLEMENTS,
       coach_id: user?.id || '',
     };
+
+    // DEV: Apply simulated addons
+    if (FORCE_SIMULATE_ADDONS.length > 0) {
+      entitlements = {
+        ...entitlements,
+        has_ai_assistant: FORCE_SIMULATE_ADDONS.includes('ai_assistant') || entitlements.has_ai_assistant,
+        has_automations: FORCE_SIMULATE_ADDONS.includes('automations') || entitlements.has_automations,
+        has_payments: FORCE_SIMULATE_ADDONS.includes('payments') || entitlements.has_payments,
+      };
+      console.log('[Entitlements] SIMULATING addons:', FORCE_SIMULATE_ADDONS);
+    }
 
     console.log('[Entitlements] Current entitlements:', {
       source: fetchedEntitlements ? 'API' : 'DEFAULT',

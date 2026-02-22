@@ -96,19 +96,9 @@ export function formatStartupContext(context: StartupContext): string {
     output += `\n**Coach:** ${context.coachName}\n`;
   }
 
-  // Clients
-  output += `\n**Your Clients (${context.clients.length}):**\n`;
-  if (context.clients.length === 0) {
-    output += `- No clients yet\n`;
-  } else {
-    for (const client of context.clients) {
-      output += `- ${client.name} (ID: ${client.id}, ${client.category})`;
-      if (client.goals) {
-        output += ` - Goals: ${client.goals}`;
-      }
-      output += `\n`;
-    }
-  }
+  // Clients (count only — forces tool calls for client resolution)
+  output += `\n**Your Clients:** ${context.clients.length} active client${context.clients.length !== 1 ? 's' : ''}\n`;
+  output += `To find or list clients, call \`search_clients\` (by name) or \`list_all_clients\` (all).\n`;
 
   // Workouts
   output += `\n**Your Workout Templates (${context.workouts.length}):**\n`;
@@ -123,7 +113,7 @@ export function formatStartupContext(context: StartupContext): string {
     }
   }
 
-  output += `\n**IMPORTANT:** You already have this data. Do NOT call list_all_clients, search_clients, or get_coach_workouts unless the user explicitly asks you to refresh the data or you need more details about a specific client.\n`;
+  output += `\n**IMPORTANT:** Workout templates are pre-loaded above. For client information, always use \`search_clients\` or \`list_all_clients\` tools.\n`;
 
   return output;
 }

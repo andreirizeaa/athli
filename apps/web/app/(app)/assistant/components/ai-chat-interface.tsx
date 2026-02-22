@@ -11,12 +11,11 @@ import {
     FolderOpenIcon,
     GlobeIcon,
     MicIcon,
+    MicOffIcon,
     Paperclip,
-    PanelLeftIcon,
     SquareIcon,
-    ThumbsDownIcon,
-    ThumbsUpIcon,
     UsersIcon,
+    Check,
     X
 } from "lucide-react";
 import { CodeIcon, CopyIcon } from "@radix-ui/react-icons";
@@ -43,10 +42,14 @@ import { Markdown } from "@/components/ui/custom/prompt/markdown";
 import { PromptLoader } from "@/components/ui/custom/prompt/loader";
 import { PromptScrollButton } from "@/components/ui/custom/prompt/scroll-button";
 
+import { v4 as uuidv4 } from "uuid";
 import { useAIChat, ChatMessage, ToolCallStatus } from "@/hooks/use-ai-chat";
+import { useSpeechToText } from "@/hooks/use-speech-recognition";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { ToolStatus, ToolStatusList } from "./tool-status";
 import { ActionCard } from "./action-card";
+import { AIChart } from "./ai-chart";
+import { ClientSelectCards } from "./client-select-cards";
 import { useCoachWorkouts } from "@/hooks/use-coach-workouts";
 import { transformWorkoutPayload, transformSectionPayload } from "@/lib/ai-payload-transformer";
 import { ActionType, getActionRedirectUrl } from "@/stores/ai-action-store";
@@ -56,8 +59,6 @@ import { createAthleteGoal, createAthleteInjury } from "@/api/client/client-serv
 import { createMetric } from "@/api/coach/coach-metric-service";
 import { addCheckIn } from "@/api/coach/coach-check-in-service";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAssistantSidebar } from "../assistant-sidebar-context";
-
 interface AIChatInterfaceProps {
     chatId?: string;
 }
@@ -80,8 +81,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
 
     const containerRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
-
-    const { toggle, isOpen, isMobile } = useAssistantSidebar();
+    const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
     // Use the AI chat hook — pass chatId for history persistence
     const {
@@ -94,6 +94,8 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
         sendMessage,
         stopStreaming,
         clearChat,
+        markClientSelected,
+        markActionConfirmed,
     } = useAIChat({ chatId });
 
     // Use workout hook for creating workouts
@@ -104,6 +106,25 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
 
     // Query client for cache invalidation
     const queryClient = useQueryClient();
+
+    // Speech recognition
+    const {
+        isListening,
+        transcript,
+        isSupported: isSpeechSupported,
+        toggleListening,
+        resetTranscript,
+    } = useSpeechToText({
+        onError: (error) => toast.error(error),
+        continuous: true,
+    });
+
+    // Update prompt when transcript changes during listening
+    useEffect(() => {
+        if (isListening && transcript) {
+            setPrompt(transcript);
+        }
+    }, [transcript, isListening]);
 
     // Load animation
     useEffect(() => {
@@ -123,11 +144,12 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
         setPrompt("");
         setFiles([]);
         setHasStartedChat(true);
+        resetTranscript(); // Clear transcript after sending
 
         await sendMessage(messageToSend, {
             currentPage: window.location.pathname,
         });
-    }, [prompt, isStreaming, sendMessage]);
+    }, [prompt, isStreaming, sendMessage, resetTranscript]);
 
     // Handle confirming an action
     const handleConfirmAction = useCallback(async (actionType: ActionType, payload: any, modifiedPayload?: any) => {
@@ -136,8 +158,23 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
         try {
             if (actionType === 'create_workout') {
                 const apiPayload = transformWorkoutPayload(payload);
-                await createWorkout(apiPayload as any);
-                toast.success(t('toasts.workoutAddedToLibrary'));
+                if (payload.clientId) {
+                    // Client context: assign directly to client's training calendar
+                    const { assignWorkout: assignClientWorkout } = await import('@/api/client/client-training-service');
+                    const date = payload.date || new Date().toISOString().split('T')[0];
+                    await assignClientWorkout({
+                        clientId: payload.clientId,
+                        coachId: user?.id || '',
+                        date,
+                        workoutPayload: apiPayload,
+                        isNew: true,
+                    });
+                    toast.success(`Workout assigned to ${payload.clientName || 'client'}!`);
+                } else {
+                    // No client context: add to coach library
+                    await createWorkout(apiPayload as any);
+                    toast.success(t('toasts.workoutAddedToLibrary'));
+                }
                 setTimeout(() => {
                     router.push(getActionRedirectUrl(actionType, payload));
                 }, 500);
@@ -191,12 +228,63 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                     router.push(getActionRedirectUrl(actionType, payload));
                 }, 500);
             } else if (actionType === 'draft_message') {
-                // Send message via messaging API
-                const { default: axiosInstance } = await import('@/lib/axios');
-                await axiosInstance.post('/coach/messaging/broadcast', {
+                // Send message via broadcast API (supports attachments)
+                const { broadcastMessage } = await import('@/lib/messaging/messaging-api-client');
+                const messageId = uuidv4();
+                const idempotencyKey = uuidv4();
+                const hasAttachments = (finalPayload.attachments?.length ?? 0) > 0;
+
+                const broadcastResult = await broadcastMessage({
                     clientIds: [finalPayload.clientId],
                     content: finalPayload.message,
+                    attachmentCount: hasAttachments ? finalPayload.attachments.length : 0,
+                    messageIds: [messageId],
+                    idempotencyKeys: [idempotencyKey],
                 });
+
+                // Upload attachments if present
+                if (hasAttachments && broadcastResult.results.length > 0) {
+                    const { uploadAttachments } = await import('@/lib/messaging/upload-attachments');
+                    const { conversationId, messageId: realMessageId } = broadcastResult.results[0];
+
+                    const convertToBase64 = (file: File): Promise<string> => {
+                        return new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result as string);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(file);
+                        });
+                    };
+
+                    const getAttachmentType = (mimeType: string): 'image' | 'video' | 'pdf' | 'audio' => {
+                        if (mimeType.startsWith('image/')) return 'image';
+                        if (mimeType.startsWith('video/')) return 'video';
+                        if (mimeType === 'application/pdf') return 'pdf';
+                        if (mimeType.startsWith('audio/')) return 'audio';
+                        return 'image';
+                    };
+
+                    const attachmentsWithData = await Promise.all(
+                        finalPayload.attachments.map(async (file: File) => ({
+                            name: file.name,
+                            data: await convertToBase64(file),
+                            type: file.type,
+                            size: file.size,
+                            attachmentType: getAttachmentType(file.type),
+                        }))
+                    );
+
+                    const result = await uploadAttachments({
+                        conversationId,
+                        messageId: realMessageId,
+                        attachments: attachmentsWithData,
+                    });
+
+                    if (result.failedCount > 0) {
+                        console.warn('[draft_message] Some attachments failed to upload:', result.errors);
+                    }
+                }
+
                 toast.success(`Message sent to ${finalPayload.clientName}!`);
                 setTimeout(() => {
                     router.push(`/inbox/${finalPayload.clientId}/overview`);
@@ -205,49 +293,72 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                 // TODO: Implement client profile update when API is available
                 toast.info(t('toasts.clientProfileNotSupported'));
             } else if (actionType === 'create_checkin_template') {
-                // First create the check-in
-                const checkIn = await addCheckIn({
-                    name: payload.name,
-                    description: payload.description || '',
-                });
-                // Then add questions one by one if any
-                if (payload.questions && payload.questions.length > 0) {
-                    const { addQuestion } = await import('@/api/coach/coach-check-in-service');
-                    for (const q of payload.questions) {
-                        // Normalize the type to handle variations from the AI model
-                        // The model might return 'yes/no', 'Yes/No', 'multiple_choice', etc.
-                        const normalizeType = (type: string): string => {
-                            const lowered = type?.toLowerCase().replace(/[^a-z]/g, '') || '';
-                            const typeMap: Record<string, string> = {
-                                'text': 'text',
-                                'number': 'number',
-                                'rating': 'rating',
-                                'yesno': 'yesNo',
-                                'multiplechoice': 'multipleChoice',
-                                'scale': 'scale',
-                                'date': 'date',
-                                'images': 'images',
-                                'videos': 'videos',
-                                'signature': 'signature',
-                                'progressphoto': 'progressPhoto',
-                                'metrics': 'metrics',
-                            };
-                            return typeMap[lowered] || 'text';
-                        };
-                        await addQuestion({
-                            formId: checkIn.id,
-                            question: q.question,
-                            required: q.required || false,
-                            format: normalizeType(q.type),
-                            options: q.options || [],
-                            scaleFrom: q.scaleFrom,
-                            scaleTo: q.scaleTo,
-                        });
+                // Normalize question type to handle variations from the AI model
+                const normalizeType = (type: string): string => {
+                    const lowered = type?.toLowerCase().replace(/[^a-z]/g, '') || '';
+                    const typeMap: Record<string, string> = {
+                        'text': 'text',
+                        'number': 'number',
+                        'rating': 'rating',
+                        'yesno': 'yesNo',
+                        'multiplechoice': 'multipleChoice',
+                        'scale': 'scale',
+                        'date': 'date',
+                        'images': 'images',
+                        'videos': 'videos',
+                        'signature': 'signature',
+                        'progressphoto': 'progressPhoto',
+                        'metrics': 'metrics',
+                    };
+                    return typeMap[lowered] || 'text';
+                };
+
+                if (payload.clientId) {
+                    // Client context: create check-in directly for client
+                    const { createClientCheckIn } = await import('@/api/client/client-form-service');
+                    const questions = (payload.questions || []).map((q: any) => ({
+                        question: q.question,
+                        required: q.required || false,
+                        format: normalizeType(q.type),
+                        options: q.options || [],
+                        scaleFrom: q.scaleFrom,
+                        scaleTo: q.scaleTo,
+                    }));
+                    await createClientCheckIn({
+                        clientId: payload.clientId,
+                        coachId: user?.id || '',
+                        name: payload.name,
+                        description: payload.description || '',
+                        questions,
+                        scheduleConfig: payload.scheduleConfig || { type: 'check-in' },
+                        cronExpression: payload.cronExpression || '',
+                        status: 'live',
+                    });
+                    queryClient.invalidateQueries({ queryKey: ['client-check-ins'] });
+                    toast.success(`Check-in "${payload.name}" created for ${payload.clientName || 'client'}!`);
+                } else {
+                    // No client context: add to coach library
+                    const checkIn = await addCheckIn({
+                        name: payload.name,
+                        description: payload.description || '',
+                    });
+                    if (payload.questions && payload.questions.length > 0) {
+                        const { addQuestion } = await import('@/api/coach/coach-check-in-service');
+                        for (const q of payload.questions) {
+                            await addQuestion({
+                                formId: checkIn.id,
+                                question: q.question,
+                                required: q.required || false,
+                                format: normalizeType(q.type),
+                                options: q.options || [],
+                                scaleFrom: q.scaleFrom,
+                                scaleTo: q.scaleTo,
+                            });
+                        }
                     }
+                    queryClient.invalidateQueries({ queryKey: ['coach-check-ins'] });
+                    toast.success(`Check-in "${payload.name}" created!`);
                 }
-                // Invalidate check-ins cache
-                queryClient.invalidateQueries({ queryKey: ['coach-check-ins'] });
-                toast.success(`Check-in "${payload.name}" created!`);
                 setTimeout(() => {
                     router.push(getActionRedirectUrl(actionType, payload));
                 }, 500);
@@ -261,27 +372,47 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                     'time': 'duration',
                     'custom': 'number',
                 };
-                await createMetric({
-                    name: payload.name,
-                    value_kind: valueKindMap[payload.metricType] || 'number',
-                    unit: payload.unit || '',
-                    description: payload.description || '',
-                });
-                // Invalidate metrics cache so the new metric shows up without refresh
-                queryClient.invalidateQueries({ queryKey: ['coach-metrics'] });
-                toast.success(`Metric "${payload.name}" created!`);
+                const valueKind = valueKindMap[payload.metricType] || 'number';
+
+                if (payload.clientId) {
+                    // Client context: create metric directly for client
+                    const { assignMetric: assignClientMetric } = await import('@/api/client/client-metric-service');
+                    await assignClientMetric({
+                        clientId: payload.clientId,
+                        coachId: user?.id || '',
+                        name: payload.name,
+                        unit: payload.unit || '',
+                        description: payload.description || '',
+                        value_kind: valueKind,
+                    });
+                    queryClient.invalidateQueries({ queryKey: ['client-metrics'] });
+                    toast.success(`Metric "${payload.name}" assigned to ${payload.clientName || 'client'}!`);
+                } else {
+                    // No client context: add to coach library
+                    await createMetric({
+                        name: payload.name,
+                        value_kind: valueKind,
+                        unit: payload.unit || '',
+                        description: payload.description || '',
+                    });
+                    queryClient.invalidateQueries({ queryKey: ['coach-metrics'] });
+                    toast.success(`Metric "${payload.name}" created!`);
+                }
                 setTimeout(() => {
                     router.push(getActionRedirectUrl(actionType, payload));
                 }, 500);
             } else {
                 toast.info(t('toasts.actionNotSupported'));
             }
+
+            // Persist confirmed state for all action types
+            await markActionConfirmed(actionType);
         } catch (error: any) {
             console.error('Failed to execute action:', error);
             toast.error(error.message || 'Failed to save');
             throw error; // Re-throw to keep the action card in non-confirmed state
         }
-    }, [createWorkout, router, user?.id, queryClient]);
+    }, [createWorkout, router, user?.id, queryClient, markActionConfirmed]);
 
     // Handle file changes
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -332,26 +463,10 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
 
     return (
         <div className="flex h-full w-full flex-col">
-            {/* Header with sidebar toggle */}
-            <div className="flex items-center gap-2 px-4 py-2 border-b flex-shrink-0">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggle}
-                    className="size-8"
-                    title={isMobile ? "Open chats" : (isOpen ? "Hide sidebar" : "Show sidebar")}
-                >
-                    <PanelLeftIcon className="size-4" />
-                </Button>
-                <span className="text-sm font-medium text-muted-foreground">
-                    Lyra
-                </span>
-            </div>
-
             {/* Main chat area */}
-            <div className="mx-auto flex flex-1 w-full max-w-4xl flex-col items-center justify-center space-y-4 lg:p-4 overflow-hidden">
+            <div className="mx-auto flex flex-1 w-full max-w-4xl flex-col items-center justify-center px-4 pb-4 overflow-hidden">
                 <ChatContainer
-                    className={cn("relative w-full flex-1 space-y-4 pe-2 pt-10 md:pt-0", {
+                    className={cn("relative w-full flex-1 space-y-4 pe-2", {
                         hidden: !hasStartedChat
                     })}
                     ref={containerRef}
@@ -363,77 +478,92 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                         return (
                             <Message
                                 key={message.id}
-                                className={message.role === "user" ? "justify-end" : "justify-start"}>
-                                <div
-                                    className={cn("max-w-[85%] flex-1 sm:max-w-[75%]", {
-                                        "justify-end text-end": !isAssistant
-                                    })}>
-                                    {isAssistant ? (
-                                        <div className="space-y-2">
-                                            {/* Tool call status indicators */}
-                                            {message.toolCalls && message.toolCalls.length > 0 && (
-                                                <ToolStatusList toolCalls={message.toolCalls} />
-                                            )}
+                                className={message.role === "user" ? "justify-end mt-4 mb-4" : "justify-start"}>
+                                {isAssistant ? (
+                                    <div className="w-full space-y-2">
+                                        {/* Tool call status indicators — only while response is pending */}
+                                        {message.toolCalls && message.toolCalls.length > 0 && !message.content && (
+                                            <ToolStatusList toolCalls={message.toolCalls} />
+                                        )}
 
-                                            {/* Message content */}
-                                            {message.content && (
-                                                <div className="bg-muted text-foreground prose prose-sm dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-ul:text-foreground prose-ol:text-foreground prose-li:text-foreground max-w-none rounded-lg border p-4">
-                                                    <Markdown className={"space-y-4"}>{message.content}</Markdown>
-                                                </div>
-                                            )}
+                                        {/* Message content */}
+                                        {message.content && (
+                                            <div className="text-foreground prose prose-sm dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-ul:text-foreground prose-ol:text-foreground prose-li:text-foreground max-w-none">
+                                                <Markdown className={"space-y-4"}>{message.content}</Markdown>
+                                            </div>
+                                        )}
 
-                                            {/* Action card for executable actions */}
-                                            {message.action && (
-                                                <ActionCard
-                                                    actionType={message.action.type as ActionType}
-                                                    payload={message.action.payload}
-                                                    onConfirm={(modifiedPayload) => handleConfirmAction(
-                                                        message.action!.type as ActionType,
-                                                        message.action!.payload,
-                                                        modifiedPayload
-                                                    )}
-                                                />
-                                            )}
+                                        {/* Client selection cards */}
+                                        {message.clientSelect && (
+                                            <ClientSelectCards
+                                                clients={message.clientSelect}
+                                                selectedClientId={message.selectedClientId}
+                                                onSelect={({ id, name }) => {
+                                                    setPrompt('');
+                                                    markClientSelected(id);
+                                                    sendMessage(
+                                                        `I select the client "${name}" (client ID: ${id})`,
+                                                        { currentPage: window.location.pathname },
+                                                        name,
+                                                    );
+                                                }}
+                                            />
+                                        )}
 
-                                            {/* Message actions */}
-                                            {message.content && (
-                                                <MessageActions
-                                                    className={cn(
-                                                        "flex gap-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100",
-                                                        isLastMessage && "opacity-100"
-                                                    )}>
-                                                    <MessageAction tooltip="Copy" delayDuration={100}>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="rounded-full"
-                                                            onClick={() => {
-                                                                navigator.clipboard.writeText(message.content);
-                                                                toast.success(t('toasts.copiedToClipboard'));
-                                                            }}
-                                                        >
+                                        {/* Charts */}
+                                        {message.charts?.map((chart, i) => (
+                                            <AIChart key={i} chart={chart} />
+                                        ))}
+
+                                        {/* Action card for executable actions */}
+                                        {message.action && (
+                                            <ActionCard
+                                                actionType={message.action.type as ActionType}
+                                                payload={message.action.payload}
+                                                initialConfirmed={message.action.confirmed}
+                                                onConfirm={(modifiedPayload) => handleConfirmAction(
+                                                    message.action!.type as ActionType,
+                                                    message.action!.payload,
+                                                    modifiedPayload
+                                                )}
+                                            />
+                                        )}
+
+                                        {/* Message actions — only for plain text messages (no tool renders) */}
+                                        {message.content && !message.toolCalls?.length && !message.clientSelect && !message.charts?.length && !message.action && (
+                                            <MessageActions
+                                                className={cn(
+                                                    "flex gap-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100",
+                                                    isLastMessage && "opacity-100"
+                                                )}>
+                                                <MessageAction tooltip={copiedMessageId === message.id ? "Copied" : "Copy"} delayDuration={100}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="rounded-full"
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(message.content);
+                                                            setCopiedMessageId(message.id);
+                                                            setTimeout(() => setCopiedMessageId(null), 2000);
+                                                        }}
+                                                    >
+                                                        {copiedMessageId === message.id ? (
+                                                            <Check className="size-4 text-green-500" />
+                                                        ) : (
                                                             <CopyIcon />
-                                                        </Button>
-                                                    </MessageAction>
-                                                    <MessageAction tooltip="Upvote" delayDuration={100}>
-                                                        <Button variant="ghost" size="icon" className="rounded-full">
-                                                            <ThumbsUpIcon />
-                                                        </Button>
-                                                    </MessageAction>
-                                                    <MessageAction tooltip="Downvote" delayDuration={100}>
-                                                        <Button variant="ghost" size="icon" className="rounded-full">
-                                                            <ThumbsDownIcon />
-                                                        </Button>
-                                                    </MessageAction>
-                                                </MessageActions>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <MessageContent className="bg-primary text-primary-foreground inline-flex text-start">
+                                                        )}
+                                                    </Button>
+                                                </MessageAction>
+                                            </MessageActions>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="max-w-[85%] sm:max-w-[75%] justify-end text-end">
+                                        <MessageContent className="bg-primary text-primary-foreground inline-flex text-start text-sm py-2 rounded-xl">
                                             {message.content}
                                         </MessageContent>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </Message>
                         );
                     })}
@@ -448,7 +578,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                     {/* Loading indicator */}
                     {isStreaming && !currentToolCall && messages.length > 0 && (
                         <div className="ps-2 flex items-center gap-2">
-                            <div className="flex items-center gap-2 bg-muted/50 rounded-full px-4 py-2">
+                            <div className="flex items-center gap-2 bg-muted rounded-full px-4 py-2">
                                 <div className="relative flex h-3 w-3">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-3 w-3 bg-purple-500"></span>
@@ -569,9 +699,18 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
                             </div>
 
                             <div className="flex gap-2">
-                                <PromptInputAction tooltip="Voice input">
-                                    <Button variant="outline" size="icon" className="size-9 rounded-full">
-                                        <MicIcon size={18} />
+                                <PromptInputAction tooltip={isListening ? t('assistant.stopListening') : t('assistant.voiceInput')}>
+                                    <Button
+                                        variant={isListening ? "default" : "outline"}
+                                        size="icon"
+                                        className={cn(
+                                            "size-9 rounded-full transition-all",
+                                            isListening && "bg-red-500 hover:bg-red-600 animate-pulse"
+                                        )}
+                                        onClick={toggleListening}
+                                        disabled={!isSpeechSupported}
+                                    >
+                                        {isListening ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
                                     </Button>
                                 </PromptInputAction>
                                 <PromptInputAction tooltip={isStreaming ? "Stop generation" : "Send message"}>
@@ -591,7 +730,7 @@ export default function AIChatInterface({ chatId }: AIChatInterfaceProps) {
 
                 {/* Suggestion chips */}
                 {!hasStartedChat && (
-                    <div className="relative flex w-full flex-col items-center justify-center space-y-2">
+                    <div className="relative flex w-full flex-col items-center justify-center space-y-2 mt-4">
                         <div className="absolute top-0 left-0 h-[70px] w-full">
                             {showCategorySuggestions ? (
                                 <div className="flex w-full flex-col space-y-1">
