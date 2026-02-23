@@ -1,3 +1,9 @@
+/**
+ * @deprecated Use supabase-auth.ts (supabaseAuthenticate) instead.
+ * This middleware is kept for reference only. All routes have been migrated
+ * to use supabaseAuthenticate which verifies tokens via Supabase's getUser().
+ */
+
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { AppError } from './error-handler';
 import { authService } from '../services/auth.service';
