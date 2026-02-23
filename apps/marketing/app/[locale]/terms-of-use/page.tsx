@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import { setRequestLocale } from 'next-intl/server'
+import { Link } from '@/lib/i18n/navigation'
+import { ArrowLeft } from 'lucide-react'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
     const { locale } = await params
@@ -15,6 +17,13 @@ export default async function TermsOfUsePage({ params }: { params: Promise<{ loc
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="w-full max-w-4xl py-16 px-6 md:py-24 bg-white dark:bg-black">
+        <Link
+          href="/"
+          className="text-muted-foreground hover:text-foreground mb-8 inline-flex items-center gap-1.5 text-sm transition-colors"
+        >
+          <ArrowLeft className="size-3.5" />
+          Back to home
+        </Link>
         <h1 className="text-3xl font-semibold md:text-4xl text-black dark:text-zinc-50">
           Terms of Use
         </h1>
@@ -582,6 +591,14 @@ export default async function TermsOfUsePage({ params }: { params: Promise<{ loc
             </p>
           </div>
         </section>
+
+        <Link
+          href="/"
+          className="text-muted-foreground hover:text-foreground mt-12 inline-flex items-center gap-1.5 text-sm transition-colors"
+        >
+          <ArrowLeft className="size-3.5" />
+          Back to home
+        </Link>
       </main>
     </div>
   );

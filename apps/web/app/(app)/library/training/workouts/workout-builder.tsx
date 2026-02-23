@@ -1070,10 +1070,13 @@ export const WorkoutBuilder = ({
     }
   }, [isCreatingSection]);
 
-  // Sync activeBuilder with initialAiMode when dialog opens
+  // Sync activeBuilder with initialAiMode when dialog opens and clear AI input
   useEffect(() => {
     if (open) {
       setActiveBuilder(initialAiMode ? 'ai' : 'manual');
+      // Clear AI input when dialog opens
+      setAiPrompt('');
+      setSelectedFile(null);
     }
   }, [open, initialAiMode]);
 
@@ -2850,6 +2853,9 @@ Focus on proper form and progressive overload.`;
                             return;
                           }
                           setActiveBuilder('ai');
+                          // Clear AI input when switching to AI mode
+                          setAiPrompt('');
+                          setSelectedFile(null);
                         }}
                         className={cn(
                           'flex-1 gap-2 h-9',

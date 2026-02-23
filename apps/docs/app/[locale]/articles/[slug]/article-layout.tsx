@@ -24,9 +24,9 @@ export function ArticleLayout({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <div className="lg:grid lg:grid-cols-[1fr_220px] lg:gap-12">
+      <div className="lg:grid lg:grid-cols-[1fr_220px] lg:gap-0">
         {/* Main content */}
-        <div className="min-w-0">
+        <div className="min-w-0 rounded-l-xl bg-white p-6 sm:p-8 dark:bg-neutral-950 lg:border lg:border-r-0">
           {/* Breadcrumbs */}
           <nav className="flex items-center gap-1.5 text-sm text-foreground mb-6 flex-wrap">
             <Link href="/" className="hover:text-primary transition-colors">
@@ -87,7 +87,7 @@ export function ArticleLayout({
         </div>
 
         {/* Table of contents - sticky on desktop, aligned with content */}
-        <aside className="hidden lg:block pt-[140px]">
+        <aside className="hidden lg:block rounded-r-xl border border-l-0 bg-white pt-[140px] p-6 dark:bg-neutral-950">
           <div className="sticky top-20">
             <TableOfContents content={content} />
           </div>
