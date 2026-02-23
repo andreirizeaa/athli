@@ -13,6 +13,7 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 - 02-creating-your-account.md
 - 03-inviting-your-first-client.md
 - 04-plans-and-billing.md
+- getting-started/05-understanding-plans.md
 
 ### Collection: Training
 > Everything related to building and managing training for clients.
@@ -145,6 +146,10 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 **Section: Stripe**
 - (future) connecting-stripe.md
 - (future) managing-payouts-and-refunds.md
+
+**Section: Subscription Management**
+- coach-web/26-managing-subscription.md
+- coach-web/27-cancelling-reactivating.md
 
 ### Collection: Files and Resources
 > Sharing documents and files with clients.
