@@ -7,15 +7,17 @@ applications:
           commands:
             - nvm install 22
             - nvm use 22
-            - cd $CODEBUILD_SRC_DIR && npm ci
+            - echo "Current dir:" && pwd
+            - echo "CODEBUILD_SRC_DIR:" && echo "$CODEBUILD_SRC_DIR"
+            - cd "$CODEBUILD_SRC_DIR" && pwd && ls -la package-lock.json && npm ci
         build:
           commands:
-            - cd $CODEBUILD_SRC_DIR && npm run build --workspace=docs
+            - cd "$CODEBUILD_SRC_DIR" && npm run build --workspace=docs
       artifacts:
         baseDirectory: .next
         files:
           - '**/*'
       cache:
         paths:
-          - $CODEBUILD_SRC_DIR/node_modules/**/*
+          - node_modules/**/*
           - .next/cache/**/*
