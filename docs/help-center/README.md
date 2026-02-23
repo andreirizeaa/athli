@@ -14,15 +14,18 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 - 03-inviting-your-first-client.md
 - 04-plans-and-billing.md
 
-### Collection: Training and Programming
+### Collection: Training
 > Everything related to building and managing training for clients.
 
-**Section: Workouts**
+**Section: Workout Builder**
 - coach-web/04-workout-builder.md
 - (future) workout-builder-tips-and-tricks.md
 - (future) using-ai-to-generate-workouts.md
 
-**Section: Programs**
+**Section: Section Builder**
+- coach-web/25-section-builder.md
+
+**Section: Program Builder**
 - coach-web/03-training-programs.md
 - (future) assigning-programs-to-clients.md
 - (future) editing-a-clients-program.md
@@ -54,8 +57,8 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 **Section: Clients on Mobile (Coach)**
 - coach-mobile/03-client-management.md
 
-### Collection: Tracking and Progress
-> Tools for monitoring client progress over time.
+### Collection: Forms
+> Check-ins, questionnaires, and data collection from clients.
 
 **Section: Check-ins**
 - coach-web/06-check-ins.md
@@ -67,6 +70,9 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 **Section: Questionnaires**
 - coach-web/07-questionnaires.md
 - (future) creating-questionnaire-templates.md
+
+### Collection: Tracking and Progress
+> Tools for monitoring client progress over time.
 
 **Section: Habits**
 - coach-web/08-habits.md
