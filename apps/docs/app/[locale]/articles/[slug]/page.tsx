@@ -1,6 +1,6 @@
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
-import { getArticleContent, markdownToHtml, extractTitle } from '@/lib/articles';
+import { getArticleContent, extractTitle } from '@/lib/articles';
 import { findArticle, getAllArticles } from '@/lib/content';
 import { ArticleLayout } from './article-layout';
 
@@ -16,19 +16,18 @@ export default async function ArticlePage({
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const content = getArticleContent(slug);
+  const content = getArticleContent(slug, locale);
   if (!content) notFound();
 
   const info = findArticle(slug);
   if (!info) notFound();
 
   const title = extractTitle(content);
-  const html = markdownToHtml(content);
 
   return (
     <ArticleLayout
       title={title}
-      html={html}
+      content={content}
       collectionSlug={info.collection.slug}
       collectionTitleKey={info.collection.titleKey}
       sectionTitleKey={info.section?.titleKey}

@@ -636,6 +636,7 @@ const messages = {
     howWeCompare: 'How We Compare',
     affiliate: 'Affiliate Program',
     contact: 'Contact',
+    helpCentre: 'Help Centre',
     privacy: 'Privacy',
     terms: 'Terms',
     copyright: 'Athli, All rights reserved',

@@ -1,0 +1,24 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # Use Node 22 as specified in package.json
+        - nvm install 22
+        - nvm use 22
+        # Navigate to monorepo root and install all dependencies
+        - cd ../..
+        - npm ci
+    build:
+      commands:
+        # Build the specific app from monorepo root
+        - cd ../..
+        - npm run build --workspace=app
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - ../../node_modules/**/*
+      - .next/cache/**/*

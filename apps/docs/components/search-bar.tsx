@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Search, X, ArrowRight } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/lib/i18n/navigation';
-import { collections, findArticle } from '@/lib/content';
+import { findArticle } from '@/lib/content';
 
 type SearchResult = {
   slug: string;
@@ -15,6 +15,7 @@ type SearchResult = {
 
 export function SearchBar({ variant = 'hero' }: { variant?: 'hero' | 'header' }) {
   const t = useTranslations();
+  const locale = useLocale();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -24,11 +25,11 @@ export function SearchBar({ variant = 'hero' }: { variant?: 'hero' | 'header' })
 
   // Load search index
   useEffect(() => {
-    fetch('/api/search-index')
+    fetch(`/api/search-index?locale=${locale}`)
       .then((res) => res.json())
       .then((data) => setSearchIndex(data))
       .catch(() => {});
-  }, []);
+  }, [locale]);
 
   // Close on click outside
   useEffect(() => {
@@ -58,6 +59,59 @@ export function SearchBar({ variant = 'hero' }: { variant?: 'hero' | 'header' })
     return () => document.removeEventListener('keydown', handleKey);
   }, []);
 
+  // Fuzzy match - checks if query words match the start of any words in text
+  const fuzzyMatch = (text: string, query: string): boolean => {
+    const textLower = text.toLowerCase();
+    const queryLower = query.toLowerCase().trim();
+
+    // Direct inclusion check first
+    if (textLower.includes(queryLower)) return true;
+
+    // Split query into words and check if each word matches start of any word in text
+    const queryWords = queryLower.split(/\s+/).filter(w => w.length > 0);
+    const textWords = textLower.split(/\s+/);
+
+    return queryWords.every(qWord =>
+      textWords.some(tWord => tWord.startsWith(qWord))
+    );
+  };
+
+  // Find the sentence containing the match
+  const findMatchingSentence = (content: string, query: string): string => {
+    const contentLower = content.toLowerCase();
+    const queryLower = query.toLowerCase().trim();
+    const queryWords = queryLower.split(/\s+/).filter(w => w.length > 0);
+
+    // Split into sentences (roughly)
+    const sentences = content.split(/(?<=[.!?])\s+/);
+
+    // Find first sentence that contains any query word
+    for (const sentence of sentences) {
+      const sentenceLower = sentence.toLowerCase();
+      const hasMatch = queryWords.some(qWord => {
+        // Check if any word in sentence starts with query word
+        const words = sentenceLower.split(/\s+/);
+        return words.some(w => w.startsWith(qWord)) || sentenceLower.includes(qWord);
+      });
+
+      if (hasMatch) {
+        // Trim to reasonable length
+        if (sentence.length > 150) {
+          // Find where the match is and show context around it
+          const matchIdx = sentenceLower.indexOf(queryWords[0]);
+          if (matchIdx > 60) {
+            return '...' + sentence.slice(matchIdx - 40, matchIdx + 110).trim() + '...';
+          }
+          return sentence.slice(0, 150).trim() + '...';
+        }
+        return sentence.trim();
+      }
+    }
+
+    // Fallback to first 150 chars
+    return content.slice(0, 150).trim() + (content.length > 150 ? '...' : '');
+  };
+
   const handleSearch = (q: string) => {
     setQuery(q);
     if (q.length < 2) {
@@ -65,20 +119,44 @@ export function SearchBar({ variant = 'hero' }: { variant?: 'hero' | 'header' })
       return;
     }
 
-    const lower = q.toLowerCase();
-    const matched = searchIndex
-      .filter((item) => item.title.toLowerCase().includes(lower) || item.content.toLowerCase().includes(lower))
-      .slice(0, 8)
+    // Score and filter results
+    const scored = searchIndex
       .map((item) => {
-        const idx = item.content.toLowerCase().indexOf(lower);
-        const start = Math.max(0, idx - 40);
-        const end = Math.min(item.content.length, idx + q.length + 60);
-        const snippet = (start > 0 ? '...' : '') + item.content.slice(start, end) + (end < item.content.length ? '...' : '');
-        return { slug: item.slug, title: item.title, snippet, collectionSlug: item.collectionSlug };
-      });
+        let score = 0;
+        const queryLower = q.toLowerCase();
 
-    setResults(matched);
-    setIsOpen(matched.length > 0);
+        // Title exact match (highest priority)
+        if (item.title.toLowerCase().includes(queryLower)) {
+          score += 100;
+        }
+        // Title fuzzy match
+        else if (fuzzyMatch(item.title, q)) {
+          score += 50;
+        }
+
+        // Content exact match
+        if (item.content.toLowerCase().includes(queryLower)) {
+          score += 30;
+        }
+        // Content fuzzy match
+        else if (fuzzyMatch(item.content, q)) {
+          score += 10;
+        }
+
+        return { ...item, score };
+      })
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+      .map((item) => ({
+        slug: item.slug,
+        title: item.title,
+        snippet: findMatchingSentence(item.content, q),
+        collectionSlug: item.collectionSlug,
+      }));
+
+    setResults(scored);
+    setIsOpen(true);
   };
 
   const isHero = variant === 'hero';
@@ -107,28 +185,34 @@ export function SearchBar({ variant = 'hero' }: { variant?: 'hero' | 'header' })
         )}
       </div>
 
-      {isOpen && results.length > 0 && (
+      {isOpen && query.length >= 2 && (
         <div className="absolute top-full left-0 right-0 z-50 mt-2 rounded-xl border bg-background shadow-lg overflow-hidden max-h-[400px] overflow-y-auto">
-          {results.map((result) => {
-            const info = findArticle(result.slug);
-            return (
-              <Link
-                key={result.slug}
-                href={`/articles/${result.slug}`}
-                onClick={() => { setIsOpen(false); setQuery(''); }}
-                className="flex items-start gap-3 px-4 py-3 hover:bg-muted transition-colors border-b last:border-b-0"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{result.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{result.snippet}</p>
-                  {info && (
-                    <p className="text-[10px] text-muted-foreground/70 mt-1">{t(info.collection.titleKey)}</p>
-                  )}
-                </div>
-                <ArrowRight className="size-4 text-muted-foreground mt-1 shrink-0" />
-              </Link>
-            );
-          })}
+          {results.length > 0 ? (
+            results.map((result) => {
+              const info = findArticle(result.slug);
+              return (
+                <Link
+                  key={result.slug}
+                  href={`/articles/${result.slug}`}
+                  onClick={() => { setIsOpen(false); setQuery(''); }}
+                  className="flex items-start gap-3 px-4 py-3 hover:bg-muted transition-colors border-b last:border-b-0"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground text-left">{result.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1 text-left line-clamp-2">{result.snippet}</p>
+                    {info && (
+                      <p className="text-[10px] text-muted-foreground/70 mt-1.5 text-left">{t(info.collection.titleKey)}</p>
+                    )}
+                  </div>
+                  <ArrowRight className="size-4 text-muted-foreground mt-1 shrink-0" />
+                </Link>
+              );
+            })
+          ) : (
+            <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+              No results found for "{query}"
+            </div>
+          )}
         </div>
       )}
     </div>
