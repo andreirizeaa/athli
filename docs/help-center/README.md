@@ -13,7 +13,6 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 - 02-creating-your-account.md
 - 03-inviting-your-first-client.md
 - 04-plans-and-billing.md
-- getting-started/05-get-started-page.md
 
 ### Collection: Training and Programming
 > Everything related to building and managing training for clients.
