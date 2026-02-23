@@ -37,7 +37,7 @@ export function AuthLayout({ children, showHomeButton = true, rightContent, sing
 
         {/* Mobile Header - Sticky centered logo */}
         {showHomeButton && (
-          <div className="sticky top-0 z-20 flex items-center justify-center border-b bg-background/80 px-6 py-4 backdrop-blur-sm lg:hidden">
+          <div className="sticky top-0 z-20 flex items-center justify-center border-b bg-white/80 dark:bg-neutral-950/80 px-6 py-4 backdrop-blur-sm lg:hidden">
             <Link href={landingPageUrl}>
               <AthliLogo />
             </Link>
