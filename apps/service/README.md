@@ -159,8 +159,6 @@ The project uses **Supabase** as the primary database and authentication provide
 
 ## Deployment to Render
 
-See [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) for detailed instructions on deploying to Render.
-
 Quick steps:
 1. Connect your GitHub repository to Render
 2. Create a new Web Service

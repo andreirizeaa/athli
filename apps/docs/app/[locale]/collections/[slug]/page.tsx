@@ -1,5 +1,6 @@
+import type { Metadata } from 'next';
 import { useTranslations } from 'next-intl';
-import { setRequestLocale } from 'next-intl/server';
+import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { Link } from '@/lib/i18n/navigation';
@@ -8,6 +9,23 @@ import { ChevronLeft, FileText } from 'lucide-react';
 
 export function generateStaticParams() {
   return collections.map((c) => ({ slug: c.slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}): Promise<Metadata> {
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
+
+  const collection = getCollectionBySlug(slug);
+  if (!collection) return {};
+
+  const t = await getTranslations();
+  return {
+    title: `${t(collection.titleKey)} - Athli Help Center`,
+  };
 }
 
 export default async function CollectionPage({
@@ -72,14 +90,19 @@ function CollectionContent({ collection }: { collection: NonNullable<ReturnType<
         </div>
       )}
 
-      {/* Articles - grouped by section in single card */}
+      {/* Articles - grouped by section, one card per section */}
       {collection.sections && collection.sections.length > 0 && (
-        <div className="rounded-xl border bg-background overflow-hidden">
-          {collection.sections.flatMap((section) =>
-            section.articles.map((article) => (
-              <ArticleRow key={article.slug} article={article} />
-            ))
-          )}
+        <div className="space-y-6">
+          {collection.sections.map((section) => (
+            <div key={section.titleKey}>
+              <h2 className="mb-2 text-sm font-semibold text-muted-foreground">{t(section.titleKey)}</h2>
+              <div className="rounded-xl border bg-background overflow-hidden">
+                {section.articles.map((article) => (
+                  <ArticleRow key={article.slug} article={article} />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

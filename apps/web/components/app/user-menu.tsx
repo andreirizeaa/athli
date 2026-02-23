@@ -279,7 +279,7 @@ export function UserMenu({
         )}
         <DropdownMenuItem
           className={cn("cursor-pointer px-3 py-2", isChecklistComplete ? "" : "rounded-t-none", "rounded-b-none")}
-          onClick={() => window.open(process.env.NODE_ENV === 'development' ? 'http://localhost:3003' : 'https://docs.tryathli.com', '_blank')}
+          onClick={() => window.open(process.env.NEXT_PUBLIC_DOCS_URL || 'https://docs.tryathli.com', '_blank')}
         >
           <BookOpen className="mr-2 size-4" />
           <span>{t('sidebar.profile.helpArticles')}</span>

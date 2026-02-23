@@ -174,7 +174,7 @@ export function AppHeader({
                 size="icon"
                 className="md:hidden"
                 aria-label={t('sidebar.helpAndSupport.label') || 'Help and support'}
-                onClick={() => window.open(process.env.NODE_ENV === 'development' ? 'http://localhost:3003' : 'https://docs.tryathli.com', '_blank')}
+                onClick={() => window.open(process.env.NEXT_PUBLIC_DOCS_URL || 'https://docs.tryathli.com', '_blank')}
               >
                 <Headset className="size-4" />
               </Button>
@@ -185,7 +185,7 @@ export function AppHeader({
             variant="outline"
             className="hidden md:inline-flex gap-2"
             aria-label={t('sidebar.helpAndSupport.label') || 'Help and support'}
-            onClick={() => window.open(process.env.NODE_ENV === 'development' ? 'http://localhost:3003' : 'https://docs.tryathli.com', '_blank')}
+            onClick={() => window.open(process.env.NEXT_PUBLIC_DOCS_URL || 'https://docs.tryathli.com', '_blank')}
           >
             <Headset className="size-4" />
             {t('general.help')}

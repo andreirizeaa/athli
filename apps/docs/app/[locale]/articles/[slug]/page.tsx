@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { getArticleContent, extractTitle } from '@/lib/articles';
@@ -6,6 +7,21 @@ import { ArticleLayout } from './article-layout';
 
 export function generateStaticParams() {
   return getAllArticles().map((a) => ({ slug: a.slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const content = getArticleContent(slug, locale);
+  if (!content) return {};
+
+  const title = extractTitle(content);
+  return {
+    title: `${title} - Athli Help Center`,
+  };
 }
 
 export default async function ArticlePage({
