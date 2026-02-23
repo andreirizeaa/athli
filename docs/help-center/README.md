@@ -147,13 +147,6 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 - coach-web/17-files.md
 - (future) organizing-files-into-folders.md
 
-### Collection: Nutrition
-> Managing recipes, ingredients, and meal planning for clients.
-
-- coach-web/21-nutrition.md
-- (future) creating-meal-plans.md
-- (future) assigning-nutrition-to-clients.md
-
 ### Collection: Productivity
 > Task management and staying organized.
 
@@ -199,8 +192,6 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 - client-mobile/08-metrics.md
 - client-mobile/09-progress-photos.md
 - client-mobile/10-profile-and-settings.md
-- client-mobile/11-biometric-lock.md
-- client-mobile/12-archived-chats.md
 
 ## Writing Guidelines
 
