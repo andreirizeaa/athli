@@ -2,20 +2,21 @@ version: 1
 applications:
   - appRoot: apps/marketing
     frontend:
+      buildPath: /
       phases:
         preBuild:
           commands:
             - nvm install 22
             - nvm use 22
-            - cd ../.. && npm ci
+            - npm ci
         build:
           commands:
-            - cd ../.. && npm run build --workspace=www
+            - npm run build --workspace=www
       artifacts:
-        baseDirectory: .next
+        baseDirectory: apps/marketing/.next
         files:
           - '**/*'
       cache:
         paths:
-          - ../../node_modules/**/*
-          - .next/cache/**/*
+          - node_modules/**/*
+          - apps/marketing/.next/cache/**/*

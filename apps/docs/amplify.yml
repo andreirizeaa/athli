@@ -2,20 +2,21 @@ version: 1
 applications:
   - appRoot: apps/docs
     frontend:
+      buildPath: /
       phases:
         preBuild:
           commands:
             - nvm install 22
             - nvm use 22
-            - cd ../.. && npm ci
+            - npm ci
         build:
           commands:
-            - cd ../.. && npm run build --workspace=docs
+            - npm run build --workspace=docs
       artifacts:
-        baseDirectory: .next
+        baseDirectory: apps/docs/.next
         files:
           - '**/*'
       cache:
         paths:
-          - ../../node_modules/**/*
-          - .next/cache/**/*
+          - node_modules/**/*
+          - apps/docs/.next/cache/**/*
