@@ -81,8 +81,8 @@ export default function BillingScreen() {
   // Collect active add-ons
   const activeAddons = React.useMemo(() => {
     const addons: string[] = [];
-    if (entitlements?.automations) addons.push(t('settings.billing.automations'));
-    if (entitlements?.ai_assistant) addons.push(t('settings.billing.aiAssistant'));
+    if (entitlements?.has_automations) addons.push(t('settings.billing.automations'));
+    if (entitlements?.has_ai_assistant) addons.push(t('settings.billing.aiAssistant'));
     return addons;
   }, [entitlements, t]);
 

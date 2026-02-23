@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from 'pressto';
 import { useRouter } from 'expo-router';
@@ -63,7 +63,7 @@ export default function FeatureRequestsScreen() {
   const updateRequestUpvote = useFeatureRequestsStore((state) => state.updateRequestUpvote);
 
   // List ref for scrolling
-  const listRef = useRef<React.ElementRef<typeof FlashList<FeatureRequest>>>(null);
+  const listRef = useRef<FlashListRef<FeatureRequest>>(null);
 
   // Scroll to top when sort changes
   useEffect(() => {

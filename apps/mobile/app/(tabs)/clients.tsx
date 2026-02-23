@@ -272,7 +272,6 @@ export default function ClientsScreen() {
               renderItem={renderClientItem}
               keyExtractor={(item) => item.id}
               ListEmptyComponent={renderEmptyComponent}
-              estimatedItemSize={73}
             />
           </View>
         )}

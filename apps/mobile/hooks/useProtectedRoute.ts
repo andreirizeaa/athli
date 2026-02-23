@@ -14,7 +14,7 @@ import { useAppInitStore } from '@/stores/useAppInitStore';
  * - Authenticated users on /welcome → /(tabs)
  */
 export function useProtectedRoute() {
-  const segments = useSegments();
+  const segments = useSegments() as string[];
   const router = useRouter();
 
   const isAppReady = useAppInitStore((s) => s.isAppReady);

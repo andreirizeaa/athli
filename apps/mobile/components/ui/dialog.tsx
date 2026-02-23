@@ -94,7 +94,7 @@ export function Dialog({
                 <View style={disableCloseIcon ? { opacity: 0.4 } : undefined}>
                   <IconButton
                     icon={{ sf: 'xmark', IconComponent: X }}
-                    onPress={disableCloseIcon ? undefined : onClose}
+                    onPress={disableCloseIcon ? () => {} : onClose!}
                     size="sm"
                     color={themeColors.mutedText}
                     backgroundColor={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}

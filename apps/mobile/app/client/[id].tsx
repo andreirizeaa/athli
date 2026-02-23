@@ -33,11 +33,12 @@ import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { UpgradeDialog } from '@/components/permissions/upgrade-dialog';
+import type { FeatureKey, LegacyFeatureKey } from '@athli/shared-types/entitlements-schema';
 import { Avatar } from '@/components/ui/avatar';
 import { createNewChat } from '@/services/chats-service';
 
 // Feature gating map - which menu items require which features
-const FEATURE_GATES: Record<string, string> = {
+const FEATURE_GATES: Record<string, FeatureKey | LegacyFeatureKey> = {
   'progress': 'exercise_history',
   'metrics': 'habits_metrics',
   'habits': 'habits_metrics',

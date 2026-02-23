@@ -104,7 +104,7 @@ const getFieldsInfo = (history: HistoryEntry[]): { field1: string; field2: strin
   // Check for trackable fields first
   for (const entry of history) {
     const sets = entry.exercise_data?.sets || [];
-    for (const set of sets) {
+    for (const set of sets as any[]) {
       const label1 = set.trackableField1?.label;
       const label2 = set.trackableField2?.label;
 

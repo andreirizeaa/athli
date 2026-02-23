@@ -17,7 +17,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SearchBar } from '@/components/ui/search-bar';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { saveAthleteGoals } from '@/services/client/client-service';
+import { deleteAthleteGoal } from '@/services/client/client-service';
 import type { AthleteGoal } from '@/services/client/client-service';
 
 // Simple fuzzy search - checks if all characters appear in order
@@ -113,8 +113,7 @@ export default function ClientGoalsScreen() {
     if (!coachProfile?.id || !id) return;
 
     try {
-      const remainingGoals = goals.filter((g) => g.id !== goalId);
-      await saveAthleteGoals(id, coachProfile.id, remainingGoals);
+      await deleteAthleteGoal(id, coachProfile.id, goalId);
       haptics.success();
       refreshSection('goals');
     } catch (error) {

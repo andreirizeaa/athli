@@ -319,7 +319,7 @@ export default function SettingsScreen() {
         {isCoach && !isAthleteView && (
           <>
             <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.explore')}</Text>
-            <PressableScale onPress={handleViewClientArea} disabled={isSwitchingToClient}>
+            <PressableScale onPress={handleViewClientArea} enabled={!isSwitchingToClient}>
               <Card>
                 <View style={styles.profileRow}>
                   <View style={styles.optionIconContainer}>
