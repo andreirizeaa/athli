@@ -8,11 +8,8 @@ applications:
           commands:
             - nvm install 22
             - nvm use 22
-            - 'echo "npm_config_omit=${npm_config_omit:-unset}"'
-            - 'unset npm_config_omit NPM_CONFIG_OMIT; npm ci --include=optional'
-            - 'unset npm_config_omit NPM_CONFIG_OMIT; npm install --no-save --force @next/swc-linux-x64-gnu@16.0.7 @parcel/watcher-linux-x64-glibc@2.5.6 lightningcss-linux-x64-gnu@1.31.1 @tailwindcss/oxide-linux-x64-gnu@4.2.0 @img/sharp-linux-x64@0.34.5 @img/sharp-libvips-linux-x64@1.2.4'
-            - 'ls -la node_modules/@next/swc-linux-x64-gnu/'
-            - 'node -e "require(\"@next/swc-linux-x64-gnu\")" 2>&1 && echo "SWC binding verified" || (echo "FATAL: SWC binding failed to load" && exit 1)'
+            - npm ci --include=optional
+            - npm install --no-save --force @next/swc-linux-x64-gnu@16.0.7 @swc/core-linux-x64-gnu@1.15.11 @parcel/watcher-linux-x64-glibc@2.5.6 lightningcss-linux-x64-gnu@1.31.1 @tailwindcss/oxide-linux-x64-gnu@4.2.0 @img/sharp-linux-x64@0.34.5 @img/sharp-libvips-linux-x64@1.2.4
         build:
           commands:
             - npm run build --workspace=docs
