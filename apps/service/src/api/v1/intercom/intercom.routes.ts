@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { supabaseAuthenticate } from '../../../middlewares/supabase-auth';
+import { requireAuth } from '../../../middlewares/auth';
 import { intercomJWTController } from './intercom.controller';
 
 export const intercomRouter = Router();
@@ -30,5 +30,5 @@ export const intercomRouter = Router();
  *       500:
  *         description: Failed to generate JWT token
  */
-intercomRouter.get('/jwt', supabaseAuthenticate, intercomJWTController);
+intercomRouter.get('/jwt', ...requireAuth, intercomJWTController);
 
