@@ -333,6 +333,7 @@ export const en = {
       supersets: 'Supersets',
     },
     session: {
+      title: 'Session',
       set: 'SET',
       setTypes: {
         warmUp: {

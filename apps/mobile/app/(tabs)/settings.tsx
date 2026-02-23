@@ -174,6 +174,10 @@ export default function SettingsScreen() {
     handleOpenWebURL(`${marketingUrl}/privacy-policy`);
   };
 
+  const handleOpenHelpArticles = () => {
+    handleOpenWebURL('https://docs.tryathli.com');
+  };
+
   const handleOpenSupportEmail = () => {
     const email = 'support@tryathli.com';
     const subject = encodeURIComponent('Athli App Support Request');
@@ -354,6 +358,7 @@ export default function SettingsScreen() {
           <SettingsOption
             icon={<PlatformIcon sf="book" mdi="menu-book" IconComponent={BookOpen} size={iconSize} color={iconColor} />}
             title={t('profile.helpArticles')}
+            onPress={handleOpenHelpArticles}
           />
           <Separator />
           <SettingsOption
