@@ -122,21 +122,46 @@ const getWorkoutButtonLabel = (status: string | undefined, isPast: boolean, t: (
 const extractExercisePreviewItems = (workoutData: { items?: WorkoutItem[] } | undefined): ExercisePreviewItem[] => {
   if (!workoutData?.items) return [];
 
-  // First pass: collect all exercises with their superset IDs
-  const tempExercises: { exerciseId: string; supersetId: string | null }[] = [];
+  const result: ExercisePreviewItem[] = [];
+
+  // Helper to add exercises with superset linking
+  const addExercises = (exercises: { exerciseId: string; supersetId: string | null }[]) => {
+    exercises.forEach((ex, index) => {
+      const nextEx = index < exercises.length - 1 ? exercises[index + 1] : null;
+      const isLinkedToNext = ex.supersetId !== null && nextEx !== null && ex.supersetId === nextEx.supersetId;
+      result.push({
+        type: 'exercise',
+        exerciseId: ex.exerciseId,
+        isLinkedToNext,
+      });
+    });
+  };
 
   workoutData.items.forEach((item) => {
     if (item.itemType === 'exercise') {
-      tempExercises.push({
+      // Top-level exercise (no section)
+      result.push({
+        type: 'exercise',
         exerciseId: item.data.prescribedExerciseId,
-        supersetId: item.data.supersetId || null,
+        isLinkedToNext: false, // Will be recalculated if in superset
       });
     } else if (item.itemType === 'section') {
       const section = item.data;
+
+      // Add section header
+      result.push({
+        type: 'section-header',
+        sectionName: section.name || '',
+        sectionType: section.type,
+      });
+
+      // Collect section exercises
+      const sectionExercises: { exerciseId: string; supersetId: string | null }[] = [];
+
       if (section.type === 'regular' || section.type === 'auxiliary') {
         section.exercises.forEach((group) => {
           group.exercises.forEach((ex) => {
-            tempExercises.push({
+            sectionExercises.push({
               exerciseId: ex.prescribedExerciseId,
               supersetId: group.isSuperset && group.exercises.length > 1 ? (ex.supersetId || `group-${group.exercises[0].prescribedExerciseId}`) : null,
             });
@@ -145,7 +170,7 @@ const extractExercisePreviewItems = (workoutData: { items?: WorkoutItem[] } | un
       } else if (section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
         section.exercises.forEach((group) => {
           group.exercises.forEach((ex) => {
-            tempExercises.push({
+            sectionExercises.push({
               exerciseId: ex.prescribedExerciseId,
               supersetId: group.isSuperset && group.exercises.length > 1 ? (ex.supersetId || `group-${group.exercises[0].prescribedExerciseId}`) : null,
             });
@@ -153,7 +178,7 @@ const extractExercisePreviewItems = (workoutData: { items?: WorkoutItem[] } | un
         });
       } else if (section.type === 'amrap') {
         section.exercises.forEach((ex) => {
-          tempExercises.push({
+          sectionExercises.push({
             exerciseId: ex.prescribedExerciseId,
             supersetId: null,
           });
@@ -161,27 +186,20 @@ const extractExercisePreviewItems = (workoutData: { items?: WorkoutItem[] } | un
       } else if (section.type === 'circuits') {
         section.exercises.forEach((group) => {
           group.exercises.forEach((ex) => {
-            tempExercises.push({
+            sectionExercises.push({
               exerciseId: ex.prescribedExerciseId,
               supersetId: group.isSuperset && group.exercises.length > 1 ? (ex.supersetId || `group-${group.exercises[0].prescribedExerciseId}`) : null,
             });
           });
         });
       }
+
+      // Add section exercises with proper superset linking
+      addExercises(sectionExercises);
     }
   });
 
-  // Second pass: determine isLinkedToNext based on matching superset IDs
-  const exercises: ExercisePreviewItem[] = tempExercises.map((ex, index) => {
-    const nextEx = index < tempExercises.length - 1 ? tempExercises[index + 1] : null;
-    const isLinkedToNext = ex.supersetId !== null && nextEx !== null && ex.supersetId === nextEx.supersetId;
-    return {
-      exerciseId: ex.exerciseId,
-      isLinkedToNext,
-    };
-  });
-
-  return exercises;
+  return result;
 };
 
 // Memoized component for each day's workout content

@@ -95,13 +95,8 @@ export function SearchBar({ variant = 'hero' }: { variant?: 'hero' | 'header' })
       });
 
       if (hasMatch) {
-        // Trim to reasonable length
+        // Trim to reasonable length, never start with ellipsis
         if (sentence.length > 150) {
-          // Find where the match is and show context around it
-          const matchIdx = sentenceLower.indexOf(queryWords[0]);
-          if (matchIdx > 60) {
-            return '...' + sentence.slice(matchIdx - 40, matchIdx + 110).trim() + '...';
-          }
           return sentence.slice(0, 150).trim() + '...';
         }
         return sentence.trim();

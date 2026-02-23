@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Eye } from 'lucide-react-native';
 import SquircleView from 'react-native-fast-squircle';
 
 import { useThemePreference } from '@/stores';
@@ -14,6 +14,7 @@ type WorkoutSessionBottomNavProps = {
   bottomInset: number;
   onPrevious: () => void;
   onNext: () => void;
+  onShowOverview?: () => void;
 };
 
 export const WorkoutSessionBottomNav = ({
@@ -23,6 +24,7 @@ export const WorkoutSessionBottomNav = ({
   bottomInset,
   onPrevious,
   onNext,
+  onShowOverview,
 }: WorkoutSessionBottomNavProps) => {
   const { colors: themeColors } = useThemePreference();
 
@@ -35,14 +37,30 @@ export const WorkoutSessionBottomNav = ({
           { backgroundColor: themeColors.surfacePrimary },
         ]}
       >
-        <IconButton
-          icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-          onPress={onPrevious}
-          disabled={!canGoBack}
-          size="md"
-          variant="primary"
-        />
+        {/* Left side - fixed width to balance right side */}
+        <View style={styles.sideContainer}>
+          <View style={styles.navButtonGroup}>
+            <IconButton
+              icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
+              onPress={onPrevious}
+              disabled={!canGoBack}
+              size="md"
+              variant="primary"
+            />
+            {onShowOverview && (
+              <IconButton
+                icon={{ sf: 'eye', IconComponent: Eye }}
+                onPress={onShowOverview}
+                size="md"
+                color={themeColors.primary}
+                backgroundColor="transparent"
+                style={{ borderWidth: 1.5, borderColor: themeColors.primary }}
+              />
+            )}
+          </View>
+        </View>
 
+        {/* Center - timer */}
         <SquircleView
           cornerSmoothing={1}
           style={[
@@ -59,13 +77,16 @@ export const WorkoutSessionBottomNav = ({
           </Text>
         </SquircleView>
 
-        <IconButton
-          icon={{ sf: 'arrow.right', IconComponent: ChevronRight }}
-          onPress={onNext}
-          disabled={!canGoNext}
-          size="md"
-          variant="primary"
-        />
+        {/* Right side - fixed width to balance left side */}
+        <View style={[styles.sideContainer, styles.rightSide]}>
+          <IconButton
+            icon={{ sf: 'arrow.right', IconComponent: ChevronRight }}
+            onPress={onNext}
+            disabled={!canGoNext}
+            size="md"
+            variant="primary"
+          />
+        </View>
       </View>
       {/* Safe area fill at the bottom */}
       <View
@@ -100,6 +121,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     marginTop: -24,
+  },
+  sideContainer: {
+    flex: 1,
+  },
+  rightSide: {
+    alignItems: 'flex-end',
+  },
+  navButtonGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   safeAreaFill: {
     width: '100%',

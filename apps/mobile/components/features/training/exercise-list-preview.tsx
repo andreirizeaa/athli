@@ -2,14 +2,26 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useExerciseLookup } from '@/hooks/useAllExercises';
+import { typography } from '@/constants/typography';
 
 export type ExercisePreviewItem = {
+  type: 'exercise';
   exerciseId: string;
   isLinkedToNext: boolean; // true if this exercise is supersetted with the next one
+} | {
+  type: 'section-header';
+  sectionName: string;
+  sectionType: string;
+};
+
+// Legacy type for backwards compatibility
+export type LegacyExercisePreviewItem = {
+  exerciseId: string;
+  isLinkedToNext: boolean;
 };
 
 type ExerciseListPreviewProps = {
-  exercises: ExercisePreviewItem[];
+  exercises: (ExercisePreviewItem | LegacyExercisePreviewItem)[];
   themeColors: {
     primary: string;
     primaryForeground: string;
@@ -30,6 +42,16 @@ const getLetterLabel = (index: number): string => {
   return label;
 };
 
+// Type guard for section header
+const isSectionHeader = (item: ExercisePreviewItem | LegacyExercisePreviewItem): item is { type: 'section-header'; sectionName: string; sectionType: string } => {
+  return 'type' in item && item.type === 'section-header';
+};
+
+// Type guard for exercise item (handles both new and legacy formats)
+const isExerciseItem = (item: ExercisePreviewItem | LegacyExercisePreviewItem): item is { type?: 'exercise'; exerciseId: string; isLinkedToNext: boolean } => {
+  return 'exerciseId' in item;
+};
+
 export const ExerciseListPreview = ({
   exercises,
   themeColors
@@ -37,30 +59,41 @@ export const ExerciseListPreview = ({
   const { findExerciseById } = useExerciseLookup();
 
   // Calculate labels: A1, A2 for supersets, A, B, C for standalone exercises
+  // Only count exercise items, not section headers
   const labels = useMemo(() => {
-    const result: string[] = [];
+    const result: (string | null)[] = [];
     let letterIndex = 0;
     let numberInGroup = 1;
+    let prevWasExercise = false;
+    let prevIsLinkedToNext = false;
 
-    exercises.forEach((item, index) => {
-      const isLinkedToPrev = index > 0 && exercises[index - 1].isLinkedToNext;
+    exercises.forEach((item) => {
+      if (isSectionHeader(item)) {
+        result.push(null); // Section headers don't get labels
+        // Reset superset tracking when entering a new section
+        prevWasExercise = false;
+        prevIsLinkedToNext = false;
+        return;
+      }
+
+      const isLinkedToPrev = prevWasExercise && prevIsLinkedToNext;
       const isLinkedToNext = item.isLinkedToNext;
       const isInSuperset = isLinkedToPrev || isLinkedToNext;
 
       if (isLinkedToPrev) {
-        // Continue the current superset group
         numberInGroup++;
       } else {
-        // Start a new group (either standalone or new superset)
-        if (index > 0) {
+        if (prevWasExercise) {
           letterIndex++;
         }
         numberInGroup = 1;
       }
 
       const letter = getLetterLabel(letterIndex);
-      // Only show number if part of a superset
       result.push(isInSuperset ? `${letter}${numberInGroup}` : letter);
+
+      prevWasExercise = true;
+      prevIsLinkedToNext = isLinkedToNext;
     });
 
     return result;
@@ -70,13 +103,32 @@ export const ExerciseListPreview = ({
     return null;
   }
 
+  // Track previous exercise for connector logic
+  let prevWasExercise = false;
+  let prevIsLinkedToNext = false;
+
   return (
     <View style={styles.exerciseList}>
       {exercises.map((item, index) => {
-        const exercise = findExerciseById(item.exerciseId);
-        const isLinkedToPrev = index > 0 && exercises[index - 1].isLinkedToNext;
+        if (isSectionHeader(item)) {
+          prevWasExercise = false;
+          prevIsLinkedToNext = false;
 
-        return (
+          return (
+            <View key={`section-${index}`} style={styles.sectionHeader}>
+              <Text style={[styles.sectionName, { color: themeColors.mutedText }]}>
+                {item.sectionName || item.sectionType.toUpperCase()}
+              </Text>
+            </View>
+          );
+        }
+
+        if (!isExerciseItem(item)) return null;
+
+        const exercise = findExerciseById(item.exerciseId);
+        const isLinkedToPrev = prevWasExercise && prevIsLinkedToNext;
+
+        const element = (
           <React.Fragment key={`${item.exerciseId}-${index}`}>
             {/* Superset connector from previous exercise */}
             {isLinkedToPrev && (
@@ -90,12 +142,17 @@ export const ExerciseListPreview = ({
                   {labels[index]}
                 </Text>
               </View>
-              <Text style={[styles.exerciseName, { color: themeColors.text }]}>
+              <Text style={[styles.exerciseName, { color: themeColors.text }]} numberOfLines={2}>
                 {exercise?.name || `Exercise ${index + 1}`}
               </Text>
             </View>
           </React.Fragment>
         );
+
+        prevWasExercise = true;
+        prevIsLinkedToNext = item.isLinkedToNext;
+
+        return element;
       })}
     </View>
   );
@@ -126,7 +183,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     flex: 1,
-    flexWrap: 'wrap',
   },
   connectorLine: {
     width: 2,
@@ -134,5 +190,15 @@ const styles = StyleSheet.create({
     marginTop: -4,
     marginBottom: -4,
     marginLeft: 15, // Center under 32px circle: (32/2) - (2/2) = 15
+  },
+  sectionHeader: {
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  sectionName: {
+    ...typography.p3,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
