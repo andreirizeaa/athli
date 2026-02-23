@@ -12,6 +12,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Check, ChevronDown, Sun, Moon, Monitor } from 'lucide-react'
 import { useTheme } from 'next-themes'
 
+const DOCS_URL = process.env.NODE_ENV === 'development'
+    ? 'http://localhost:3003'
+    : 'https://docs.tryathli.com'
+
 const themeOptions = [
     { value: 'light', icon: Sun, label: 'Light' },
     { value: 'dark', icon: Moon, label: 'Dark' },
@@ -140,6 +144,13 @@ export default function FooterSection() {
                                 href="mailto:hello@athli.app"
                                 className="text-muted-foreground hover:text-primary block duration-150">
                                 <span>{t('contact')}</span>
+                            </a>
+                            <a
+                                href={DOCS_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-muted-foreground hover:text-primary block duration-150">
+                                <span>{t('helpCentre')}</span>
                             </a>
                             <Link
                                 href="/affiliate"

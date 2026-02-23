@@ -33,6 +33,7 @@ import {
   WorkoutSessionHeader,
   WorkoutSessionBottomNav,
   WorkoutSessionPageTitle,
+  SessionOverviewModal,
 } from '@/components/features/training/workout-session';
 import {
   WorkoutPre,
@@ -381,6 +382,9 @@ export default function WorkoutSessionModal() {
   const [phaseOverlayText, setPhaseOverlayText] = useState('');
   const phaseOverlayOpacity = useSharedValue(0);
 
+  // Session overview modal state
+  const [showSessionOverview, setShowSessionOverview] = useState(false);
+
   const { formattedTime, isPaused } = useWorkoutTimer(workoutData?.completedSummary ?? null);
   const { findExerciseById, findExercisesByIds, isLoading: isExerciseDataLoading } = useExerciseLookup();
 
@@ -693,8 +697,7 @@ export default function WorkoutSessionModal() {
     }
   }, [params.workoutId]);
 
-  // Set initial step - always start fresh at readiness
-  // Each workout session is a fresh start; resume functionality is not needed
+  // Set initial step - calculate based on completion status for resume
   useEffect(() => {
     console.log('[INIT] Initial step effect - hasSetInitialStep:', hasSetInitialStep.current, 'workoutData:', !!workoutData, 'pages.length:', pages.length);
     if (hasSetInitialStep.current) {
@@ -706,11 +709,21 @@ export default function WorkoutSessionModal() {
       return;
     }
 
-    // Always start fresh at readiness (step 1)
-    console.log('[INIT] Starting fresh workout at readiness');
-    setCurrentStep(1);
+    // Check if this is a resume (workout already in_progress with startedAt)
+    const isResume = workoutData.completedSummary?.status === 'in_progress' && workoutData.completedSummary?.startedAt;
+
+    if (isResume) {
+      // Calculate the initial step based on completion status
+      const initialStep = calculateInitialStep(pages, workoutData.items);
+      console.log('[INIT] Resuming workout at step:', initialStep);
+      setCurrentStep(initialStep);
+    } else {
+      // Fresh start at readiness (step 1)
+      console.log('[INIT] Starting fresh workout at readiness');
+      setCurrentStep(1);
+    }
     hasSetInitialStep.current = true;
-  }, [workoutData, pages]);
+  }, [workoutData, pages, calculateInitialStep]);
 
   // Parse workout on mount
   useEffect(() => {
@@ -729,15 +742,20 @@ export default function WorkoutSessionModal() {
         const migratedItems = migrateWorkoutPayload(rawItems);
 
         // Clean the payload to remove frontend-only fields (instanceKey, templateId, etc.)
-        // Always start with fresh completedSummary - each workout session is a new start
+        // Preserve completedSummary if resuming (has startedAt), otherwise use defaults
+        const existingCompletedSummary = parsed.completedSummary ?? nestedWorkoutData.completedSummary;
+        const shouldPreserveCompletedSummary = existingCompletedSummary?.status === 'in_progress' && existingCompletedSummary?.startedAt;
+
         const cleanedPayload = cleanWorkoutPayload({
           ...parsed,
           // Use top-level pre if set, otherwise use workout_data.pre
           pre: parsed.pre ?? nestedWorkoutData.pre ?? DEFAULT_EXECUTION_FIELDS.pre,
           // Use migrated items
           items: migratedItems,
-          // Always start fresh - ignore stale completedSummary from previous sessions
-          completedSummary: DEFAULT_EXECUTION_FIELDS.completedSummary,
+          // Preserve completedSummary if resuming, otherwise start fresh
+          completedSummary: shouldPreserveCompletedSummary
+            ? existingCompletedSummary
+            : DEFAULT_EXECUTION_FIELDS.completedSummary,
         });
         console.log('[PARSE] Set workoutData with fresh completedSummary');
         setWorkoutData(cleanedPayload);
@@ -2304,6 +2322,7 @@ export default function WorkoutSessionModal() {
       bottomInset={insets.bottom}
       onPrevious={handlePrevious}
       onNext={handleNext}
+      onShowOverview={() => setShowSessionOverview(true)}
     />
   );
 
@@ -2866,6 +2885,14 @@ export default function WorkoutSessionModal() {
         animatedStyle={completionOverlayAnimatedStyle}
         textAnimatedStyle={completionTextAnimatedStyle}
         showConfetti
+      />
+
+      {/* Session overview modal */}
+      <SessionOverviewModal
+        visible={showSessionOverview}
+        onClose={() => setShowSessionOverview(false)}
+        items={workoutData?.items || []}
+        currentItemIndex={currentPage.type === 'exercise' || currentPage.type === 'superset-round' ? currentPage.itemIndex : 0}
       />
     </View>
   );
