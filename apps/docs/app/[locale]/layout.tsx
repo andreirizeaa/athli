@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/lib/theme-provider';
 import { routing } from '@/lib/i18n/routing';
 import { localeMetadata } from '@/lib/i18n/locale-metadata';
 import { Header } from '@/components/header';
+import { Footer } from '@/components/footer';
 import '../globals.css';
 
 const geistSans = Geist({
@@ -55,6 +56,7 @@ export default async function LocaleLayout({
             <div className="relative z-10 flex min-h-full flex-col">
               <Header />
               <main className="flex-1">{children}</main>
+              <Footer />
             </div>
           </NextIntlClientProvider>
         </ThemeProvider>

@@ -4,6 +4,7 @@ const messages = {
     subtitle: 'Busca en nuestros art\u00EDculos de ayuda o navega por tema.',
     article: 'art\u00EDculo',
     articles: 'art\u00EDculos',
+    authorCount: '{count} autor',
   },
   search: {
     placeholder: 'Buscar art\u00EDculos...',
@@ -12,6 +13,11 @@ const messages = {
     helpCenter: 'Centro de Ayuda',
     allCollections: 'Todas las colecciones',
     backToCollection: 'Volver',
+  },
+  author: {
+    by: 'Por',
+    writtenBy: 'Escrito por',
+    name: 'Andrei',
   },
   collections: {
     gettingStarted: {
@@ -150,7 +156,35 @@ const messages = {
     clientHomeScreen: { title: 'Pantalla de Inicio (Cliente)', description: 'Resumen de la pantalla de inicio.' },
     clientTraining: { title: 'Entrenamiento (Cliente)', description: 'C\u00F3mo los clientes ven el entrenamiento.' },
     clientProgress: { title: 'Progreso (Cliente)', description: 'C\u00F3mo los clientes rastrean progreso.' },
-    clientMessaging: { title: 'Mensajer\u00EDa (Cliente)', description: 'C\u00F3mo los clientes chatean.' },
+    clientMessaging: { title: 'Mensajería (Cliente)', description: 'Cómo los clientes chatean.' },
+  },
+  footer: {
+    features: 'Funciones',
+    mobileApp: 'App Móvil',
+    company: 'Empresa',
+    legal: 'Legal',
+    faqs: 'Preguntas Frecuentes',
+    pricing: 'Precios',
+    howWeCompare: 'Comparativa',
+    affiliate: 'Programa de Afiliados',
+    contact: 'Contacto',
+    privacy: 'Privacidad',
+    terms: 'Términos',
+    copyright: 'Athli, Todos los derechos reservados',
+    coach: 'Entrenador',
+    client: 'Cliente',
+  },
+  features: {
+    automations: { label: 'Automatizaciones' },
+    forms: { label: 'Formularios' },
+    inbox: { label: 'Bandeja de entrada' },
+    metrics: { label: 'Métricas' },
+    habits: { label: 'Hábitos' },
+    'exercise-history': { label: 'Historial de Ejercicios' },
+    'progress-photos': { label: 'Fotos de Progreso' },
+    'client-training': { label: 'Entrenamiento de Clientes' },
+    workouts: { label: 'Entrenamientos' },
+    packages: { label: 'Paquetes' },
   },
 };
 

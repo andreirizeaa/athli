@@ -4,6 +4,7 @@ const messages = {
     subtitle: 'Search our help articles or browse by topic below.',
     article: 'article',
     articles: 'articles',
+    authorCount: '{count} author',
   },
   search: {
     placeholder: 'Search articles...',
@@ -12,6 +13,11 @@ const messages = {
     helpCenter: 'Help Center',
     allCollections: 'All collections',
     backToCollection: 'Back',
+  },
+  author: {
+    by: 'By',
+    writtenBy: 'Written by',
+    name: 'Andrei',
   },
   collections: {
     gettingStarted: {
@@ -151,6 +157,34 @@ const messages = {
     clientTraining: { title: 'Training (Client)', description: 'How clients view and complete training.' },
     clientProgress: { title: 'Progress (Client)', description: 'How clients track their progress.' },
     clientMessaging: { title: 'Messaging (Client)', description: 'How clients chat with their coach.' },
+  },
+  footer: {
+    features: 'Features',
+    mobileApp: 'Mobile App',
+    company: 'Company',
+    legal: 'Legal',
+    faqs: 'FAQs',
+    pricing: 'Pricing',
+    howWeCompare: 'How We Compare',
+    affiliate: 'Affiliate Program',
+    contact: 'Contact',
+    privacy: 'Privacy',
+    terms: 'Terms',
+    copyright: 'Athli, All rights reserved',
+    coach: 'Coach',
+    client: 'Client',
+  },
+  features: {
+    automations: { label: 'Automations' },
+    forms: { label: 'Forms' },
+    inbox: { label: 'Inbox' },
+    metrics: { label: 'Metrics' },
+    habits: { label: 'Habits' },
+    'exercise-history': { label: 'Exercise History' },
+    'progress-photos': { label: 'Progress Photos' },
+    'client-training': { label: 'Client Training' },
+    workouts: { label: 'Workouts' },
+    packages: { label: 'Packages' },
   },
 };
 

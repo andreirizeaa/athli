@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { buildSearchIndex } from '@/lib/articles';
 
-let cachedIndex: ReturnType<typeof buildSearchIndex> | null = null;
+const cachedIndex: Record<string, ReturnType<typeof buildSearchIndex>> = {};
 
-export async function GET() {
-  if (!cachedIndex) {
-    cachedIndex = buildSearchIndex();
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const locale = searchParams.get('locale') || 'en';
+
+  if (!cachedIndex[locale]) {
+    cachedIndex[locale] = buildSearchIndex(locale);
   }
-  return NextResponse.json(cachedIndex);
+  return NextResponse.json(cachedIndex[locale]);
 }
