@@ -1,0 +1,4633 @@
+# Athli - Complete Documentation
+
+> Athli is an all-in-one coaching platform for fitness coaches to manage clients, deliver training programs, track progress, and grow their business.
+
+Website: https://tryathli.com
+Web App: https://app.tryathli.com
+Help Center: https://docs.tryathli.com
+
+---
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "getting-started"
+--------------------------------------------------------------------------------
+
+# Welcome to Athli
+
+## What is Athli?
+
+Athli is an all-in-one coaching platform that helps fitness coaches manage their clients, build training programs, track progress, and grow their business. Whether you coach in person, online, or a mix of both, Athli gives you everything you need in one place.
+
+## Why use Athli?
+
+Running a coaching business means juggling a lot of tools. Spreadsheets for programming, messaging apps for communication, payment platforms for billing, and random apps for tracking. Athli brings all of that together so you can focus on what matters: coaching.
+
+## Who is Athli for?
+
+- **Personal trainers** managing multiple clients
+- **Online coaches** who need a professional client experience
+- **Gym owners** who want to offer digital coaching alongside in-person sessions
+- **Strength and conditioning coaches** who need detailed programming tools
+- **Nutrition coaches** who want to combine training and nutrition in one platform
+
+## Key Features
+
+### For Coaches (Web and Mobile)
+- **Client management** with profiles, goals, and injury tracking
+- **Workout builder** with drag-and-drop exercises and AI generation
+- **Training programs** with multi-week scheduling
+- **Check-ins and questionnaires** to collect regular client feedback
+- **Habit and metric tracking** for accountability
+- **Progress photos** with side-by-side comparison
+- **In-app messaging** with file sharing and reactions
+- **AI assistant** that can create workouts, search clients, and analyze data
+- **Automation flows** to handle missed check-ins and workout reminders
+- **Business tools** with packages, coupons, and Stripe payments
+- **Client onboarding flows** for a professional first impression
+
+### For Clients (Mobile App)
+- **Daily training view** with guided workout sessions
+- **Progress tracking** with charts and history
+- **Check-in submissions** with forms and ratings
+- **Habit logging** for daily accountability
+- **Direct messaging** with your coach
+- **Progress photos** with comparison tools
+
+## Getting Started
+
+1. [Create your account](02-creating-your-account.md)
+2. [Invite your first client](03-inviting-your-first-client.md)
+3. [Understand your plan](04-plans-and-billing.md)
+
+## Need Help?
+
+If you have questions that are not covered in these docs, reach out to us through the chat widget in the bottom right corner of the app. We are happy to help.
+
+---
+
+## FAQs
+
+**Is Athli available on desktop and mobile?**
+Yes. Coaches can use the web app on any browser and also have a mobile app. Clients use a dedicated mobile app available on iOS and Android.
+
+**Can I try Athli for free?**
+Yes. Athli offers a free trial so you can explore all the features before committing to a plan.
+
+**Is my data secure?**
+Yes. Athli uses industry-standard encryption, row-level security policies, and secure authentication. Your data and your clients' data are protected.
+
+**Can I import my existing clients?**
+Yes. You can add clients one by one or upload a CSV file with multiple clients at once.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "getting-started"
+--------------------------------------------------------------------------------
+
+# Creating Your Account
+
+## What is this?
+
+This guide walks you through signing up for Athli and setting up your coach profile for the first time.
+
+## Why it matters
+
+A complete profile helps your clients recognize you and builds trust. Your profile picture, name, and business details appear throughout the app when clients interact with your coaching.
+
+## Step-by-Step Guide
+
+### 1. Sign Up
+
+1. Go to the Athli website and click **Get Started**
+2. Enter your email address and create a password
+3. Check your inbox for a verification email
+4. Click the verification link to confirm your account
+
+> [Screenshot: Sign up page with email and password fields]
+
+### 2. Complete Your Profile
+
+After verifying your email, you will be taken to the onboarding flow:
+
+1. Enter your **full name**
+2. Upload a **profile picture** (recommended: square image, at least 200x200px)
+3. Select your **coaching category** (Online, Hybrid, or In Person)
+4. Set your **timezone** so scheduling works correctly
+
+> [Screenshot: Profile setup page during onboarding]
+
+### 3. Set Up Your Business (Optional)
+
+You can also configure your business details:
+
+1. Go to **Settings > Business > Company Information**
+2. Add your business name, logo, and description
+3. This information appears on your public coaching page and client-facing materials
+
+> [Screenshot: Business settings page]
+
+### 4. Explore the Dashboard
+
+Once setup is complete, you land on your **Home Dashboard**. From here you can:
+
+- See today's client workouts
+- View at-risk clients who may need attention
+- Check your to-do list
+- Access all features from the sidebar navigation
+
+> [Screenshot: Home dashboard with summary cards]
+
+## Things to Note
+
+- You can update your profile at any time from **Settings > Account > Profile**
+- Your email address is used for login and notifications. You can change it in **Settings > Account > Security**
+- If you signed up with Google, your profile picture is imported automatically
+
+## Common Problems
+
+**I did not receive the verification email**
+Check your spam folder. If it is still missing, try signing up again or contact support.
+
+**I want to change my email address after signing up**
+Go to **Settings > Account > Security** and update your email. You will need to verify the new address.
+
+**My profile picture is not uploading**
+Make sure the image is under 5MB and in JPG or PNG format.
+
+---
+
+## FAQs
+
+**Can I sign up with Google?**
+Yes. On the sign-up page, click the Google option to create your account using your Google credentials.
+
+**Can I have multiple coach accounts?**
+Each email address can only be linked to one account. If you need separate accounts, use different email addresses.
+
+**Is there a mobile app for coaches?**
+Yes. After creating your account on the web, you can download the Athli coach app and sign in with the same credentials.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "getting-started"
+--------------------------------------------------------------------------------
+
+# Inviting Your First Client
+
+## What is this?
+
+This guide shows you how to add clients to your Athli account so they can access their training, check-ins, and messaging through the client mobile app.
+
+## Why it matters
+
+Clients need an invite to join your coaching roster. Once invited, they get access to a dedicated mobile app where they can view workouts, log progress, submit check-ins, and message you directly.
+
+## Use Cases
+
+- Adding a new client who just signed up for your coaching
+- Onboarding a group of existing clients from another platform
+- Sending an invite link to a prospective client to get them started
+
+## Step-by-Step Guide
+
+### Method 1: Add a Single Client
+
+1. Go to the **Athletes** page from the sidebar
+2. Click the **Add Client** button in the top right
+3. Fill in the client's details:
+   - **Full name** (required)
+   - **Email address** (required)
+   - **Category** (Online, Hybrid, or In Person)
+   - **Goals** and any relevant notes
+4. Click **Send Invite**
+5. The client will receive an email with a link to download the app and create their account
+
+> [Screenshot: Add client side panel with form fields]
+
+### Method 2: Upload Multiple Clients (CSV)
+
+1. Go to the **Athletes** page
+2. Click the **Upload** button (next to Add Client)
+3. Download the CSV template if needed
+4. Fill in your client details in the spreadsheet
+5. Upload the completed CSV file
+6. Review the imported data and confirm
+7. All clients will receive invite emails
+
+> [Screenshot: CSV upload side panel with template download]
+
+### Method 3: Share an Invite Link
+
+1. Go to the **Athletes** page
+2. Click **Invite Link** to generate a shareable link
+3. Copy the link and send it to your client via email, WhatsApp, or any messaging app
+4. When the client opens the link, they are guided through creating their account and joining your roster
+
+> [Screenshot: Invite link dialog with copy button]
+
+## What Happens After the Client Joins
+
+Once the client accepts the invite and creates their account:
+
+1. They appear in your **Athletes** list with an "Active" status
+2. You can start assigning workouts, programs, and check-ins
+3. They can message you directly through the app
+4. Their profile is ready for you to customize with goals, injuries, and notes
+
+## Things to Note
+
+- Clients need the Athli mobile app (available on iOS and Android) to access their training
+- Each client needs a unique email address
+- Your plan determines how many active clients you can have. Check **Settings > Billing** for your limit
+- Archived clients do not count toward your client limit
+
+## Common Problems
+
+**The client says they did not receive the invite email**
+Ask them to check their spam folder. You can also resend the invite from the client's profile page.
+
+**I reached my client limit**
+You may need to upgrade your plan or archive inactive clients to free up spots.
+
+**The client created an account but does not appear in my list**
+Make sure they used the same email address you invited. If they signed up independently, they will not be linked to your account automatically.
+
+---
+
+## FAQs
+
+**Can clients use Athli on a web browser?**
+The client experience is designed for the mobile app. Coaches use the web app.
+
+**Can I remove a client?**
+Yes. Go to the client's profile, then **Settings**, and choose to archive or remove them.
+
+**Can a client have multiple coaches?**
+Currently, each client is linked to one coach account.
+
+**What information do I need to add a client?**
+At minimum, you need their full name and email address. Everything else is optional.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "getting-started"
+--------------------------------------------------------------------------------
+
+# Plans and Billing
+
+## What is this?
+
+Athli offers different subscription plans based on how many clients you coach and what features you need. This guide explains the available plans and how to manage your billing.
+
+## Why it matters
+
+Choosing the right plan means you get all the features you need without paying for things you do not use. You can upgrade, downgrade, or cancel at any time.
+
+## Step-by-Step Guide
+
+### Viewing Your Current Plan
+
+1. Go to **Settings** from the sidebar
+2. Click **Billing**
+3. You will see your current plan, active client count, and billing cycle
+
+> [Screenshot: Billing page showing current plan and client count]
+
+### Upgrading Your Plan
+
+1. Go to **Settings > Billing**
+2. Click **Change Plan**
+3. Select the plan you want to upgrade to
+4. Review the pricing and confirm
+5. Your new plan takes effect immediately
+
+> [Screenshot: Plan selection page with pricing cards]
+
+### Managing Add-ons
+
+Some features are available as add-ons:
+
+1. Go to **Settings > Billing**
+2. Scroll to the **Add-ons** section
+3. Toggle on any add-on you want (e.g., Payments)
+4. The cost is added to your monthly bill
+
+### Viewing Invoices
+
+1. Go to **Settings > Billing**
+2. Scroll to the **Invoices** section
+3. Click any invoice to download a PDF
+
+### Cancelling Your Subscription
+
+1. Go to **Settings > Billing**
+2. Click **Cancel Subscription**
+3. Your access continues until the end of the current billing period
+4. You can reactivate at any time before the period ends
+
+## Things to Note
+
+- Your free trial includes all features so you can explore before committing
+- Archived clients do not count toward your active client limit
+- Billing is handled through Stripe for secure payment processing
+- You can update your payment method at any time through the billing portal
+
+## Common Problems
+
+**I was charged but my plan has not updated**
+Billing updates can take a few minutes. Refresh the page and check again. If the issue continues, contact support.
+
+**I want to downgrade but I have too many active clients**
+You will need to archive clients until you are within the limit of the lower plan before downgrading.
+
+**My free trial expired and I lost access to features**
+Select a paid plan from **Settings > Billing** to restore access immediately.
+
+---
+
+## FAQs
+
+**Can I switch plans at any time?**
+Yes. Upgrades take effect immediately. Downgrades take effect at the next billing cycle.
+
+**Is there a discount for annual billing?**
+Check the billing page for current pricing options. Annual plans may offer savings compared to monthly billing.
+
+**What happens to my data if I cancel?**
+Your data is preserved. If you resubscribe, everything will be there as you left it.
+
+**Do my clients need to pay for the app?**
+No. The client mobile app is free for your clients. Only coaches pay for the platform.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "getting-started"
+--------------------------------------------------------------------------------
+
+# Understanding Athli Plans
+
+## What is this?
+
+Athli offers three subscription tiers designed for coaches at different stages of their business. Each plan includes a base number of clients, and you can add more clients or features as you grow.
+
+## Plans Overview
+
+### Starter (Free)
+
+The Starter plan is completely free and perfect for coaches just getting started.
+
+**Includes:**
+- Coach Mobile App (iOS and Android)
+- Client Mobile App (iOS and Android)
+- Workouts and Programs
+- Training Calendar
+- Exercise Library (1,700+ exercises)
+- Client Messaging
+- Up to 5 clients
+
+**Best for:** New coaches testing the platform or those with a small client base.
+
+### Pro (From $20/month)
+
+The Pro plan unlocks the tools most coaches need to run their business effectively.
+
+**Everything in Starter, plus:**
+- AI Workout Builder
+- Custom Exercises
+- Custom Workout Sections
+- Questionnaires
+- Check-ins
+- Habits and Metrics Tracking
+- 5GB On Demand Files
+
+**Best for:** Growing coaches who want advanced training tools and client tracking.
+
+### Max (From $99/month)
+
+The Max plan is built for established coaches managing larger client bases.
+
+**Everything in Pro, plus:**
+- Unlimited On Demand Files
+- Broadcast Messaging
+- AI Todo List
+- Priority Support
+- Lower extra client pricing
+
+**Best for:** Full-time coaches or coaching businesses with many active clients.
+
+## Client Slots
+
+Each plan comes with a base number of clients included. If you need more, you can add extra client slots:
+
+- Select the number of clients you want on the pricing page using the client slider
+- Extra clients are billed per client, per month
+- Max plan offers lower per-client pricing than Pro
+
+> [Screenshot: pricing page showing client slider with "I want to coach" selector]
+
+## Monthly vs Annual Billing
+
+You can choose to pay monthly or annually:
+
+- **Monthly:** Pay each month, cancel anytime
+- **Annual:** Save 17% compared to monthly billing
+
+Toggle between Monthly and Annual at the top of the pricing page to compare costs.
+
+> [Screenshot: pricing page showing monthly/annual toggle]
+
+## Add-ons
+
+Add-ons let you unlock specific premium features on top of any paid plan:
+
+### Automations
+Automated onboarding sequences, custom trigger-based flows, scheduled actions and reminders, and multi-step automation chains.
+
+### AI Assistant (Lyra)
+Your all-round coaching assistant. Generate workouts and programs, track client progress, ask questions about your clients, and find clients who need attention.
+
+### Payments
+Collect payments from clients via Stripe. Includes packages and subscription management, automated payment collection, revenue analytics, and coupons.
+
+Each add-on is billed separately and can be added or removed at any time from the billing page.
+
+> [Screenshot: add-ons section on pricing page showing Automations, AI Assistant, and Payments]
+
+## Free Trial
+
+When you first sign up, you get a free trial that includes all features across all plans (including add-ons). This lets you explore everything before committing to a plan.
+
+- Your trial countdown is shown on the billing page
+- When the trial ends, you will need to select a plan to continue using premium features
+- Starter plan features remain free forever
+
+## Comparing Plans
+
+To see a detailed feature-by-feature comparison:
+
+1. Go to the pricing page (either from the marketing site or **Settings > Billing > Change Plan**)
+2. Scroll down to **Compare Plans in Detail**
+3. Review every feature and which plans include it
+
+> [Screenshot: plan comparison table showing features across Starter, Pro, and Max]
+
+## FAQs
+
+**Can I start on Starter and upgrade later?**
+Yes. You can upgrade to Pro or Max at any time. Your data and clients carry over.
+
+**Do my clients pay anything?**
+No. The client mobile app is completely free. Only coaches pay for the platform.
+
+**What counts as an active client?**
+Any client that is not archived counts toward your client limit. Archive inactive clients to free up slots.
+
+**Can I try features before paying?**
+Yes. The free trial gives you access to all features so you can evaluate before choosing a plan.
+
+**Are prices in USD?**
+Yes. All Athli pricing is in USD.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Home Dashboard
+
+## What is this?
+
+The Home Dashboard is the first thing you see when you log in. It gives you a snapshot of what is happening across your coaching business today.
+
+## Why it is useful
+
+Instead of checking each client individually, the dashboard surfaces the most important information so you can quickly see who needs attention, what workouts are scheduled, and what tasks are pending.
+
+## Use Cases
+
+- Starting your day by reviewing which clients have workouts scheduled
+- Spotting at-risk clients who have missed workouts or check-ins
+- Checking completed workout summaries and client feedback
+- Managing your daily to-do list
+
+## Dashboard Cards
+
+### Today's Workouts
+Shows all client workouts scheduled for today. Each card displays the client name, workout name, completion status, and pre-workout metrics (sleep, mood, energy, stress, soreness) if the client has logged them.
+
+> [Screenshot: Today's workouts card showing client workout cards with status indicators]
+
+### At-Risk Clients
+Highlights clients who may need your attention based on missed workouts, overdue check-ins, or declining engagement.
+
+> [Screenshot: At-risk clients card with warning indicators]
+
+### Completed Workouts
+Shows recently completed workouts with client feedback and post-workout ratings. You can filter by status (completed, in progress, missed).
+
+> [Screenshot: Completed workouts card with filter dropdown]
+
+### To-Do List
+Your personal task list. Shows both automated tasks from Athli (like check-in reviews) and custom tasks you have added.
+
+> [Screenshot: To-do card with task items and checkboxes]
+
+### Summary Cards
+Quick stats at the top showing key numbers like active clients, workouts completed today, and pending check-ins.
+
+> [Screenshot: Summary cards row at top of dashboard]
+
+## Step-by-Step Guide
+
+### Viewing a Client's Workout Details
+
+1. Find the workout card on the dashboard
+2. Click on it to open the workout preview
+3. You can see all exercises, sets, reps, and any notes the client added
+4. Click **View Profile** to go to the client's full profile
+
+> [Screenshot: Workout preview dialog with exercise details]
+
+### Messaging a Client from the Dashboard
+
+1. Find the client's workout card
+2. Click the **Message** button
+3. A quick message input appears
+4. Type your message and send
+
+> [Screenshot: Quick message input on workout card]
+
+## Things to Note
+
+- The dashboard updates in real time as clients complete workouts
+- Pre-workout metrics (sleep, mood, etc.) are submitted by the client before starting their workout
+- The to-do list syncs between web and mobile
+
+---
+
+## FAQs
+
+**Can I customize what appears on the dashboard?**
+The dashboard shows a fixed set of cards that are designed to surface the most important daily information. Custom dashboards are not available yet.
+
+**Why are some clients not showing on the dashboard?**
+Only clients with workouts scheduled for today appear in the workout section. At-risk clients appear based on engagement patterns.
+
+**Can I see previous days?**
+The dashboard focuses on today. For historical data, go to the individual client's profile.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Client Management
+
+## What is this?
+
+The Athletes page is where you manage all your coaching clients. You can view, search, filter, add, archive, and organize your entire client roster.
+
+## Why it is useful
+
+As your coaching business grows, you need a central place to manage all your clients. The Athletes page gives you a bird's eye view of your roster and quick access to each client's profile, training, and progress.
+
+## Use Cases
+
+- Viewing all your active clients at a glance
+- Searching for a specific client by name
+- Adding new clients individually or in bulk
+- Archiving clients who are no longer active
+- Restoring previously archived clients
+
+## Step-by-Step Guide
+
+### Viewing Your Client List
+
+1. Click **Athletes** in the sidebar
+2. You will see a list of all your active clients
+3. Each client card shows their name, profile picture, category, and status
+4. Use the search bar at the top to find specific clients
+
+> [Screenshot: Athletes page with client list and search bar]
+
+### Adding a New Client
+
+1. Click the **Add Client** button in the top right
+2. Fill in the client's details (name, email, category)
+3. Optionally add goals, notes, and other information
+4. Click **Send Invite**
+5. The client receives an email invitation to join
+
+> [Screenshot: Add client side panel with form]
+
+### Viewing a Client's Profile
+
+1. Click on any client from the list
+2. You land on their **Overview** page
+3. From here, navigate to different sections using the tabs:
+   - **Overview** - Bio, goals, injuries, recent workouts
+   - **Training** - Weekly calendar with assigned workouts
+   - **Check-ins** - Submitted check-in forms
+   - **Habits** - Assigned habits and completion logs
+   - **Metrics** - Custom tracked metrics with charts
+   - **Photos** - Progress photos with comparison
+   - **Exercise History** - Performance data per exercise
+   - **Questionnaires** - Completed questionnaire submissions
+   - **Files** - Shared documents and files
+   - **Notes** - Private coaching notes
+   - **Settings** - Client-specific settings
+
+> [Screenshot: Client overview page with navigation tabs]
+
+### Editing Client Details
+
+1. Go to the client's profile
+2. Click the **Edit** button (pencil icon)
+3. Update their name, email, profile picture, category, or timezone
+4. Click **Save**
+
+> [Screenshot: Edit client details side panel]
+
+### Archiving a Client
+
+1. Go to the client's profile
+2. Click **Settings** in the navigation tabs
+3. Click **Archive Client**
+4. Confirm the action
+5. The client will no longer appear in your active list and will lose app access
+
+> [Screenshot: Client settings page with archive option]
+
+### Restoring Archived Clients
+
+1. On the Athletes page, click the **Restore** button
+2. A panel shows all archived clients
+3. Select the client(s) you want to restore
+4. Click **Restore**
+5. They regain access to the app immediately
+
+> [Screenshot: Restore clients side panel]
+
+### Uploading Clients via CSV
+
+1. Click the **Upload** button on the Athletes page
+2. Download the CSV template
+3. Fill in your client data (name, email, category)
+4. Upload the completed file
+5. Review and confirm the import
+
+> [Screenshot: CSV upload side panel with preview]
+
+## Client Profile Sections
+
+### Overview
+The overview page shows a summary of the client including their bio, goals, injuries, and recent workout activity.
+
+### Training
+A weekly calendar view where you can assign workouts, apply programs, and see completion status for each day.
+
+### Goals and Injuries
+Track client goals (e.g., "Lose 5kg", "Run a marathon") and any injuries that affect their training.
+
+## Things to Note
+
+- Archived clients do not count toward your plan's active client limit
+- Each client needs a unique email address
+- Changing a client's email will require them to verify the new address
+- You can resend invite emails from the client's settings page if they did not receive the original
+
+## Common Problems
+
+**A client is not appearing in my list**
+Check if they are archived. Also make sure they accepted the invite and created their account.
+
+**I accidentally archived a client**
+You can restore them immediately from the Restore panel. Their data is preserved.
+
+**The CSV upload is failing**
+Make sure your file matches the template format exactly. Check for extra columns, special characters, or encoding issues.
+
+---
+
+## FAQs
+
+**How many clients can I have?**
+This depends on your plan. Check **Settings > Billing** for your current limit.
+
+**Can I organize clients into groups?**
+Client categories (Online, Hybrid, In Person) help you filter your roster. Custom groups are not available yet.
+
+**Can I see when a client was last active?**
+The client list shows activity indicators. You can also check the At-Risk section on your dashboard.
+
+**Can I transfer a client to another coach?**
+This is not currently supported. The client would need to be invited by the other coach separately.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Training Programs
+
+## What is this?
+
+Training programs let you create multi-week structured plans that you can assign to clients. Instead of building each week from scratch, you design a program once and apply it to any client's training calendar.
+
+## Why it is useful
+
+Most coaching follows a structured progression. Programs save you time by letting you plan weeks of training in advance. When you assign a program, it automatically populates the client's calendar with the right workouts on the right days.
+
+## Use Cases
+
+- Creating a 12-week strength program for beginner clients
+- Building a periodized plan with progressive overload across weeks
+- Reusing the same program template for multiple clients
+- Modifying a program for a specific client without affecting the original
+
+## Step-by-Step Guide
+
+### Creating a New Program
+
+1. Go to **Library > Training > Programs**
+2. Click **New Program**
+3. Enter the program name, description, duration (number of weeks), and difficulty
+4. You land in the **Program Builder**
+
+> [Screenshot: New program form with name, description, and duration fields]
+
+### Using the Program Builder
+
+The program builder shows a weekly calendar grid. Each column is a day and each row is a week.
+
+1. Click on any day cell to add a workout
+2. You can:
+   - **Create a new workout** directly in the cell
+   - **Add an existing workout** from your library
+   - **Drag and drop** workouts between days
+3. Use the **Insert Week** button to add more weeks
+4. Click **Edit Details** to update the program name or description
+5. Click **Save** when you are done
+
+> [Screenshot: Program builder grid showing weeks and days with workout cards]
+
+### Duplicating a Week
+
+1. In the program builder, hover over a week row
+2. Click the **Copy** icon
+3. The week is duplicated below with all its workouts
+4. You can then modify individual workouts for progressive overload
+
+> [Screenshot: Week row with copy button highlighted]
+
+### Saving a Workout to Library
+
+If you build a workout inside the program builder that you want to reuse:
+
+1. Click on the workout card
+2. Click **Save to Library**
+3. The workout is now available in your workout library
+
+> [Screenshot: Workout card with save to library option]
+
+### Assigning a Program to a Client
+
+1. Go to the client's **Training** tab
+2. Click **Assign Program**
+3. Select the program from your library
+4. Choose the **start week** and **end week** (you can assign the full program or just part of it)
+5. Click **Assign**
+6. The workouts populate the client's calendar automatically
+
+> [Screenshot: Assign program side panel with week range selection]
+
+### Editing a Client's Program
+
+Once a program is assigned, you can still modify individual workouts for that client:
+
+1. Go to the client's Training tab
+2. Click on any workout day
+3. Make changes (add/remove exercises, adjust sets/reps)
+4. Changes only affect this client, not the original program template
+
+## Things to Note
+
+- Editing a workout in the program builder updates the template. It does not retroactively change workouts already assigned to clients
+- Programs can be any number of weeks
+- You can assign different programs to different clients at the same time
+- Deleting a program does not remove workouts that have already been assigned to clients
+
+## Common Problems
+
+**I assigned a program but the client's calendar is empty**
+Make sure you selected the correct date range. Also check that the program has workouts added to the days you expect.
+
+**I want to change a program after assigning it**
+Changes to the program template do not affect already-assigned workouts. Edit the client's individual workouts directly on their Training tab.
+
+**The program builder is not saving**
+Make sure all required fields are filled. Check for any unsaved changes before navigating away.
+
+---
+
+## FAQs
+
+**Can I assign the same program to multiple clients?**
+Yes. Programs are templates. You can assign them to as many clients as you want.
+
+**Can I schedule a program to start in the future?**
+Yes. When assigning a program, choose a future start date.
+
+**Can clients see the full program or just the current week?**
+Clients see their workouts week by week on their training calendar. They do not see the full program overview.
+
+**Can I create a program with rest days?**
+Yes. Simply leave those days empty in the program builder. Only days with workouts will show content.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Workout Builder
+
+## What is this?
+
+The Workout Builder is where you create and edit individual workouts. You can add exercises, organize them into sections, set reps and weights, and even use AI to generate workouts automatically.
+
+## Why it is useful
+
+Building workouts is the core of coaching. The workout builder gives you a flexible drag-and-drop interface to create anything from a simple circuit to a complex periodized session with supersets, drop sets, and custom sections.
+
+## Use Cases
+
+- Building a new workout from scratch with specific exercises
+- Using AI to generate a workout based on a description
+- Organizing exercises into supersets, circuits, or custom sections
+- Editing an existing workout to adjust volume or intensity
+- Saving a workout to your library for reuse
+
+## Step-by-Step Guide
+
+### Creating a New Workout
+
+1. Go to **Library > Training > Workouts**
+2. Click **New Workout**
+3. Enter the workout name
+4. You are now in the workout builder
+
+> [Screenshot: Empty workout builder with name field at top]
+
+### Adding Exercises
+
+You have two options:
+
+**Manual:**
+1. Click **Add Exercise**
+2. Search for an exercise by name or filter by muscle group
+3. Click the exercise to add it
+4. Set the number of sets, reps, weight, and rest time
+5. Repeat for each exercise
+
+> [Screenshot: Exercise search panel with filters and results]
+
+**AI Generated:**
+1. Click the **Athli AI** tab
+2. Describe the workout you want (e.g., "Upper body push workout, 4 exercises, 4 sets each")
+3. The AI generates a complete workout
+4. Review and edit as needed
+
+> [Screenshot: AI workout generation input with generated result]
+
+### Creating Sections
+
+Sections let you group exercises together (e.g., supersets, circuits, AMRAP blocks):
+
+1. Click **Create Section**
+2. Choose a section type (Superset, Circuit, AMRAP, EMOM, Tabata, etc.)
+3. Drag exercises into the section or add new ones
+4. Configure section-specific settings (rounds, rest between rounds, time cap)
+
+> [Screenshot: Section builder with exercises grouped in a superset]
+
+### Reordering Exercises
+
+1. Hover over an exercise card
+2. Click and hold the drag handle on the left
+3. Drag the exercise to its new position
+4. Release to drop
+
+> [Screenshot: Exercise card being dragged to new position]
+
+### Configuring Exercise Details
+
+Each exercise card has columns you can customize:
+
+- **Sets** - Number of sets
+- **Reps** - Rep count or rep range (e.g., "8-12")
+- **Weight** - Target weight or percentage
+- **Rest** - Rest time between sets
+- **Tempo** - Eccentric/pause/concentric timing
+- **RPE** - Rate of perceived exertion
+- **Notes** - Instructions for the client
+
+> [Screenshot: Exercise card with expanded column options]
+
+### Saving Your Workout
+
+1. Click **Save** in the top right
+2. If creating from a client's training page, the workout is assigned directly
+3. If creating from the library, it is saved to your workout library
+
+## Section Types Explained
+
+| Type | Description |
+|------|-------------|
+| Superset | Two exercises performed back to back with no rest between |
+| Triset | Three exercises performed back to back |
+| Circuit | Multiple exercises done in sequence as rounds |
+| Giant Set | Four or more exercises back to back |
+| AMRAP | As Many Reps As Possible in a time limit |
+| EMOM | Every Minute On the Minute |
+| Tabata | Timed intervals (typically 20s work, 10s rest) |
+| Drop Set | Progressive weight reduction within a set |
+
+## Things to Note
+
+- You can customize which columns appear for exercises in **Settings > App > Customisations**
+- The exercise library contains thousands of exercises with video demonstrations
+- You can create custom exercises if yours is not in the database
+- Workouts saved to the library can be reused across multiple clients
+
+## Common Problems
+
+**I cannot find an exercise in the library**
+Try different search terms. For example, search "bench press" instead of "flat barbell bench press". You can also create a custom exercise.
+
+**My workout is not saving**
+Make sure you have entered a workout name. Check that all exercises have at least a name and the required fields filled.
+
+**The AI generated workout does not match what I wanted**
+Be more specific in your description. Include details like number of exercises, sets, muscle groups, equipment available, and difficulty level.
+
+---
+
+## FAQs
+
+**Can I duplicate a workout?**
+Yes. On the workouts list page, click the menu on a workout and select **Duplicate**.
+
+**Can I add notes to the entire workout?**
+Each exercise has a notes field. For a general workout description, edit the workout details.
+
+**How many exercises can I add to a workout?**
+There is no hard limit. Add as many exercises as your workout requires.
+
+**Can clients see exercise demonstration videos?**
+Yes. If the exercise is from the built-in library, clients see video demonstrations in the mobile app.
+
+**Can I nest sections inside sections?**
+No. Sections are one level deep. You cannot put a superset inside a circuit.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Exercise Library
+
+## What is this?
+
+The Exercise Library is a searchable database of exercises that you use when building workouts. It includes thousands of built-in exercises with video demonstrations, and you can also create your own custom exercises.
+
+## Why it is useful
+
+Having a comprehensive exercise database means you spend less time describing movements to clients. Each exercise includes muscle group targeting and video demos so clients know exactly what to do.
+
+## Use Cases
+
+- Searching for exercises by name or muscle group when building workouts
+- Adding custom exercises that are specific to your coaching style
+- Browsing exercises to find alternatives or variations
+- Viewing exercise details and demonstration videos
+
+## Step-by-Step Guide
+
+### Browsing Exercises
+
+1. Go to **Library > Training > Exercises**
+2. Browse the full list or use the search bar to find specific exercises
+3. Filter by muscle group, equipment, or category
+4. Click any exercise to see its details and video demonstration
+
+> [Screenshot: Exercise library page with search bar and filter options]
+
+### Creating a Custom Exercise
+
+1. Go to **Library > Training > Exercises**
+2. Click **Add Exercise**
+3. Fill in the exercise name, target muscles, equipment needed, and category
+4. Optionally upload a custom video or image
+5. Click **Save**
+
+> [Screenshot: Add exercise form with fields]
+
+### Duplicating Exercises
+
+1. Select one or more exercises using the checkboxes
+2. Click **Duplicate Selected**
+3. The copies appear in your library ready to edit
+
+> [Screenshot: Exercise list with checkboxes and duplicate button]
+
+## Things to Note
+
+- Built-in exercises have professional video demonstrations sourced from MuscleWiki
+- Custom exercises are only visible to you and your clients
+- Deleting an exercise does not remove it from existing workouts
+- Exercise videos play within the client mobile app during workout sessions
+
+---
+
+## FAQs
+
+**Can I edit a built-in exercise?**
+No. Built-in exercises are read-only. You can duplicate them and modify the copy.
+
+**Do clients see exercise videos?**
+Yes. When a client taps an exercise during a workout, they see the demonstration video.
+
+**Can I import exercises from another platform?**
+Not directly. You would need to create them manually as custom exercises.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Check-ins
+
+## What is this?
+
+Check-ins are recurring forms that you assign to clients to collect regular feedback. Clients fill them out on a schedule (daily, weekly, etc.) and you can review their responses, track trends, and compare submissions over time.
+
+## Why it is useful
+
+Regular check-ins keep you informed about how your clients are feeling, recovering, and progressing. Instead of relying on clients to message you updates, check-ins create a structured feedback loop that makes sure nothing falls through the cracks.
+
+## Use Cases
+
+- Weekly progress check-ins asking about training, nutrition, and recovery
+- Daily wellness check-ins tracking mood, sleep, and energy
+- Monthly body measurement submissions
+- Post-program feedback surveys
+
+## Step-by-Step Guide
+
+### Creating a Check-in Template
+
+1. Go to **Library > Forms > Check-ins**
+2. Click **Create Check-in**
+3. Give it a name and description
+4. Add questions using different types:
+   - **Text** for open-ended answers
+   - **Number** for measurements
+   - **Rating** for scale-based feedback (e.g., 1-10)
+   - **Yes/No** for simple binary questions
+   - **Multiple Choice** for predefined options
+   - **Scale** for slider-based input
+5. Mark questions as required or optional
+6. Click **Save**
+
+> [Screenshot: Check-in builder with different question types]
+
+### Assigning a Check-in to a Client
+
+1. Go to the client's profile
+2. Click the **Check-ins** tab
+3. Click **Assign Check-in**
+4. Select a check-in template from your library
+5. Set the frequency (daily, weekly, biweekly, monthly)
+6. Choose the start date
+7. Click **Assign**
+
+> [Screenshot: Assign check-in dialog with frequency options]
+
+### Reviewing Submissions
+
+1. Go to the client's **Check-ins** tab
+2. You will see a list of all submissions with dates
+3. Click any submission to see the full responses
+4. Use the **Compare** feature to view two submissions side by side
+5. Use the **Download** button to export the data
+
+> [Screenshot: Check-in submission detail page with responses]
+
+### Comparing Check-ins Over Time
+
+1. Open a check-in submission
+2. Click **Compare**
+3. Select another submission date to compare against
+4. View the differences side by side
+
+> [Screenshot: Check-in comparison view with two dates]
+
+### Reviewing Check-ins from the Dashboard
+
+1. Go to the **Check-ins** page from the sidebar
+2. This shows all pending and recent check-in submissions across all clients
+3. Click any submission to review it directly
+
+> [Screenshot: Check-ins review page with submissions from multiple clients]
+
+## Things to Note
+
+- Clients receive a notification when a check-in is due
+- You can edit check-in templates at any time, but changes do not affect already-submitted responses
+- Check-in data is visible to both coach and client
+- Automation flows can trigger actions based on missed check-ins
+
+## Common Problems
+
+**The client says they did not receive a check-in notification**
+Check that push notifications are enabled on their device. Also verify the check-in frequency and start date.
+
+**I want to change the questions on a check-in that is already assigned**
+Edit the template in the Library. New submissions will use the updated questions. Past submissions are not affected.
+
+---
+
+## FAQs
+
+**Can I assign multiple check-ins to the same client?**
+Yes. You can assign different check-in templates with different frequencies.
+
+**Can clients submit check-ins late?**
+Yes. Clients can fill in a check-in after the due date.
+
+**Can I see trends across multiple check-ins?**
+Use the comparison feature to view two submissions side by side. Chart views may be available depending on the question type.
+
+**Can I export check-in data?**
+Yes. Use the Download button on any submission to export it.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Questionnaires
+
+## What is this?
+
+Questionnaires are one-time forms you send to clients to gather detailed information. Unlike check-ins which recur on a schedule, questionnaires are typically used for onboarding, assessments, or gathering specific data at a point in time.
+
+## Why it is useful
+
+When a new client joins, you need to learn about their history, goals, preferences, and any medical considerations. Questionnaires let you collect this in a structured format instead of a messy back-and-forth conversation.
+
+## Use Cases
+
+- New client intake forms collecting training history, goals, and medical information
+- Pre-assessment questionnaires before program changes
+- Feedback surveys after completing a program phase
+- Dietary preference forms for nutrition planning
+
+## Step-by-Step Guide
+
+### Creating a Questionnaire
+
+1. Go to **Library > Forms > Questionnaires**
+2. Click **Create Questionnaire**
+3. Add a name and description
+4. Build your questions (text, number, rating, yes/no, multiple choice, scale)
+5. Click **Save**
+
+> [Screenshot: Questionnaire builder with question types]
+
+### Assigning a Questionnaire
+
+1. Go to the client's profile
+2. Click the **Questionnaires** tab
+3. Click **Assign Questionnaire**
+4. Select the template
+5. Click **Assign**
+6. The client receives a notification to complete it
+
+> [Screenshot: Assign questionnaire dialog]
+
+### Reviewing Responses
+
+1. Go to the client's **Questionnaires** tab
+2. Click on any completed questionnaire
+3. Review all responses
+4. Download the submission if needed
+
+> [Screenshot: Completed questionnaire with responses]
+
+## Things to Note
+
+- Questionnaires are one-time submissions, not recurring
+- For recurring feedback, use Check-ins instead
+- You can include questionnaires in your onboarding flows for automatic assignment
+
+---
+
+## FAQs
+
+**What is the difference between check-ins and questionnaires?**
+Check-ins recur on a schedule (daily, weekly, etc.). Questionnaires are one-time submissions.
+
+**Can I reuse questionnaire templates?**
+Yes. Create once in the Library and assign to any client.
+
+**Can clients edit their response after submitting?**
+No. Once submitted, responses are final. The client would need to fill out a new questionnaire.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Habit Tracking
+
+## What is this?
+
+Habits are daily tasks you assign to clients to build consistency outside of training. Clients mark habits as complete each day, and you can track their adherence over time.
+
+## Why it is useful
+
+Great results come from consistent daily actions, not just workouts. Habit tracking helps you hold clients accountable for things like drinking water, sleeping 8 hours, eating enough protein, or taking supplements.
+
+## Use Cases
+
+- Assigning a "Drink 3L of water" daily habit
+- Tracking sleep consistency with a "Sleep by 10pm" habit
+- Monitoring nutrition habits like "Hit protein target"
+- Building mobility routines with a "10 min stretching" habit
+
+## Step-by-Step Guide
+
+### Creating a Habit
+
+1. Go to **Library > Habits**
+2. Click **Create Habit**
+3. Enter the habit name, description, and category
+4. Optionally organize into folders
+5. Click **Save**
+
+> [Screenshot: Create habit form]
+
+### Assigning a Habit to a Client
+
+1. Go to the client's profile
+2. Click the **Habits** tab
+3. Click **Assign Habit**
+4. Select a habit from your library
+5. Click **Assign**
+
+> [Screenshot: Assign habit dialog with library selection]
+
+### Viewing Habit Logs
+
+1. Go to the client's **Habits** tab
+2. You see all assigned habits with completion history
+3. Click on a habit to see detailed logs
+4. Use **Log a Habit** to manually log on the client's behalf
+
+> [Screenshot: Habit tab showing completion calendar and log entries]
+
+### Editing and Deleting Logs
+
+1. Click on a specific log entry
+2. Click **Edit** to update the value
+3. Click **Delete** to remove the log
+4. Confirm the action
+
+> [Screenshot: Habit log entry with edit and delete options]
+
+## Things to Note
+
+- Clients can log habits directly from their mobile app home screen
+- Habit reminders can be set up through automation flows
+- Habits are organized in folders in the library for easy management
+- You can see habit adherence rates in the client's profile
+
+---
+
+## FAQs
+
+**Can I assign the same habit to multiple clients?**
+Yes. Create the habit once in the library and assign it to any client.
+
+**Can clients add their own habits?**
+No. Only coaches can create and assign habits.
+
+**Can I track partial completion?**
+Habits are currently binary (done or not done). For more nuanced tracking, use metrics instead.
+
+**How far back can I see habit history?**
+All habit logs are stored and accessible from the client's Habits tab.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Custom Metrics
+
+## What is this?
+
+Metrics are custom data points you define and assign to clients for tracking over time. Unlike habits (which are binary), metrics capture numerical values like body weight, body fat percentage, waist circumference, or any custom measurement.
+
+## Why it is useful
+
+Tracking numbers over time shows real progress. Metrics give you charts and history so you and your client can see trends, celebrate wins, and identify areas that need attention.
+
+## Use Cases
+
+- Tracking body weight weekly
+- Monitoring body fat percentage monthly
+- Recording custom measurements (arms, chest, waist, thighs)
+- Tracking performance metrics like squat 1RM or sprint time
+- Monitoring sleep hours or daily step count
+
+## Step-by-Step Guide
+
+### Creating a Metric
+
+1. Go to **Library > Metrics**
+2. Click **Create Metric**
+3. Enter the metric name and type (weight, measurement, percentage, count, time, or custom)
+4. Set the unit of measurement (kg, lbs, cm, inches, etc.)
+5. Add a description (optional)
+6. Organize into folders if needed
+7. Click **Save**
+
+> [Screenshot: Create metric form with type and unit selection]
+
+### Assigning a Metric to a Client
+
+1. Go to the client's profile
+2. Click the **Metrics** tab
+3. Click **Assign Metric**
+4. Select from your library
+5. Click **Assign**
+
+> [Screenshot: Assign metric dialog]
+
+### Logging Metric Values
+
+1. Go to the client's **Metrics** tab
+2. Click **Log a Metric**
+3. Select the metric and enter the value
+4. The date defaults to today but you can change it
+5. Click **Save**
+
+> [Screenshot: Log metric form with value input]
+
+### Viewing Metric History and Charts
+
+1. Go to the client's **Metrics** tab
+2. Click on any assigned metric
+3. You see a chart showing the value over time
+4. Below the chart is a history of all logged values
+5. Edit or delete individual entries as needed
+
+> [Screenshot: Metric detail view with chart and history table]
+
+### Organizing Metrics into Folders
+
+1. Go to **Library > Metrics**
+2. Click **Create Folder**
+3. Name the folder
+4. Drag metrics into the folder or use **Move to Folder**
+
+> [Screenshot: Metrics library with folders]
+
+## Things to Note
+
+- Clients can log metric values from their mobile app
+- You can log values on behalf of your clients from their profile
+- Metric data is preserved even if you unassign the metric
+- Charts automatically adjust their scale based on the data
+
+## Common Problems
+
+**The chart is not showing data**
+Make sure at least two data points are logged. A single value will show a dot but no trend line.
+
+**I want to change the unit on an existing metric**
+Edit the metric in the Library. Note that existing logs keep their original values, so changing units on a metric with existing data may look inconsistent.
+
+---
+
+## FAQs
+
+**Can clients see their metric charts?**
+Yes. Clients see their metric history and charts in the mobile app.
+
+**Can I set target values for metrics?**
+This feature is not available yet. You can note targets in the metric description.
+
+**What is the difference between metrics and habits?**
+Habits are binary (done/not done). Metrics track numerical values over time.
+
+**Can I export metric data?**
+Metric data is viewable in chart and table format within the app. Export functionality may vary by plan.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Progress Photos
+
+## What is this?
+
+Progress photos let clients upload photos on a regular basis so you can visually track their physical transformation. You can compare photos from different dates side by side.
+
+## Why it is useful
+
+Numbers do not always tell the full story. A client's weight might stay the same while their body composition improves dramatically. Progress photos give you visual proof of change that you can share with your client for motivation.
+
+## Use Cases
+
+- Monthly physique progress tracking
+- Before and after comparisons for program evaluations
+- Visual documentation for client testimonials (with permission)
+- Tracking posture improvements over time
+
+## Step-by-Step Guide
+
+### Viewing Client Photos
+
+1. Go to the client's profile
+2. Click the **Photos** tab
+3. You see a calendar or date-based list of uploaded photos
+4. Click on a date to view the photos from that day
+
+> [Screenshot: Photos tab with date-based photo grid]
+
+### Adding Photos on Behalf of a Client
+
+1. On the client's Photos tab, click **Add Photo**
+2. Upload an image from your computer
+3. Select the date
+4. Click **Save**
+
+> [Screenshot: Add photo dialog with upload area]
+
+### Comparing Photos
+
+1. On the Photos tab, click **Compare**
+2. Select two dates to compare
+3. Photos from each date appear side by side
+4. Swipe or scroll between photos
+
+> [Screenshot: Photo comparison view with two dates side by side]
+
+## Things to Note
+
+- Clients can upload photos directly from the mobile app
+- Photos are stored securely and only visible to you and the client
+- Image files must be under 5MB
+- Supported formats: JPG, PNG
+
+## Common Problems
+
+**Photos are not uploading**
+Check the file size (must be under 5MB) and format (JPG or PNG only).
+
+**I want to delete a photo**
+Open the photo and use the delete option. This cannot be undone.
+
+---
+
+## FAQs
+
+**Can clients see their own progress photos?**
+Yes. Clients can view and upload photos from their mobile app.
+
+**Are photos backed up?**
+Yes. Photos are stored securely in the cloud and accessible from any device.
+
+**Can I download a client's photos?**
+Yes. Use the download option on any individual photo.
+
+**Can I compare more than two dates?**
+The comparison tool currently supports two dates at a time.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Messaging
+
+## What is this?
+
+The Inbox is Athli's built-in messaging system. It lets you communicate directly with your clients through text, images, files, audio messages, and reactions. All conversations are in one place so you do not need to use WhatsApp, email, or other apps.
+
+## Why it is useful
+
+Keeping all client communication inside your coaching platform means nothing gets lost. Messages are tied to client profiles so you have full context. You can also send broadcast messages to multiple clients at once.
+
+## Use Cases
+
+- Sending workout tips or motivation to individual clients
+- Sharing nutrition plans or training documents
+- Answering client questions about their program
+- Sending broadcast updates to all clients (e.g., holiday schedule changes)
+- Sharing images, videos, and files
+
+## Step-by-Step Guide
+
+### Sending a Message
+
+1. Click **Inbox** in the sidebar
+2. Select a client from the conversation list on the left
+3. Type your message in the input field at the bottom
+4. Press **Enter** or click **Send**
+
+> [Screenshot: Inbox page with conversation list and message thread]
+
+### Sending Files and Media
+
+1. In a conversation, click the **attachment** icon
+2. Select files from your computer (max 4 files per message)
+3. Supported types: images, videos, documents, PDFs
+4. Click **Send**
+
+> [Screenshot: Message input with attachment options]
+
+### Reacting to Messages
+
+1. Hover over any message
+2. Click the **reaction** icon
+3. Select an emoji reaction
+4. The reaction appears on the message
+
+> [Screenshot: Message with emoji reaction selector]
+
+### Replying to a Specific Message
+
+1. Hover over a message
+2. Click the **reply** icon
+3. The original message is quoted above your input
+4. Type your reply and send
+
+> [Screenshot: Reply preview above message input]
+
+### Sending a Broadcast Message
+
+1. In the Inbox, click the **Broadcast** button
+2. Select which clients should receive the message
+3. Type your message
+4. Click **Send to All**
+5. Each client receives the message as an individual conversation
+
+> [Screenshot: Broadcast side panel with client selection]
+
+### Viewing Client Profile from a Conversation
+
+1. In any conversation, click the client's name or avatar at the top
+2. A profile panel slides out on the right
+3. You can see their key information without leaving the chat
+
+> [Screenshot: Chat with client profile panel open on the right]
+
+## Things to Note
+
+- Messages sync in real time across web and mobile
+- Clients receive push notifications for new messages
+- You can archive conversations to keep your inbox clean
+- Message history is preserved even if a client is archived
+
+## Common Problems
+
+**Messages are not sending**
+Check your internet connection. If the issue continues, refresh the page.
+
+**The client says they did not receive my message**
+Make sure they have the app installed and push notifications enabled.
+
+**I accidentally sent a message to the wrong client**
+You can delete individual messages by hovering over them and clicking the delete option.
+
+---
+
+## FAQs
+
+**Can I send voice messages?**
+Yes. Audio messages are supported.
+
+**Is there a message character limit?**
+There is no strict character limit, but very long messages may be better sent as files.
+
+**Can I search through past messages?**
+You can scroll through conversation history. A search feature may be available depending on your plan.
+
+**Are messages encrypted?**
+Messages are transmitted over HTTPS and stored securely. End-to-end encryption is not currently available.
+
+**Can I message clients who have not accepted their invite yet?**
+No. The client must have an active account to receive messages.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# AI Assistant: Complete Guide
+
+## What is this?
+
+The AI Assistant is an intelligent coaching helper built into Athli. It understands your client data, workout library, and coaching business. You can chat with it in natural language to create workouts, search clients, analyze progress, draft messages, and much more. Think of it as a senior coaching assistant that knows everything about your clients and can take action on your behalf.
+
+## Why it is useful
+
+Instead of clicking through multiple pages to build a workout, look up a client's metrics, or find who has been inactive, you can simply ask. The AI saves you time on repetitive tasks and gives you quick access to insights across your entire coaching business.
+
+## Where to find it
+
+- **Web app**: Click **Assistant** in the sidebar for the full chat page, or click the AI icon in the top navigation for a side panel
+- **Mobile app**: Tap the **Assistant** option from the menu
+
+## Full List of Capabilities
+
+### Client Management
+
+| What you can ask | What it does |
+|---|---|
+| "Search for Sarah" | Finds clients by name with their profile details |
+| "Show me Sarah's profile" | Pulls up goals, injuries, category, and status |
+| "List all my clients" | Shows your full active client roster |
+| "Who has been inactive this week?" | Finds clients who missed workouts recently |
+| "Add a goal for Jake: Run a 5k by March" | Creates a goal on the client's profile |
+| "Add an injury for Sarah: Left knee strain" | Records an injury for training adjustments |
+| "Update Jake's category to Hybrid" | Modifies client profile details |
+
+> [Screenshot: AI finding inactive clients with results showing client names and days since last activity]
+
+### Training and Workouts
+
+| What you can ask | What it does |
+|---|---|
+| "Create an upper body push workout with 5 exercises" | Generates a complete workout with sets, reps, and rest |
+| "Build a leg day focusing on quads and glutes" | Creates a targeted workout based on muscle groups |
+| "Create a section: Superset with bench press and rows" | Builds a structured section with paired exercises |
+| "Show me my saved workouts" | Lists workouts from your library |
+| "Show me my programs" | Lists your training programs |
+| "Show me my saved sections" | Lists your section templates |
+| "Assign the Push Day workout to Sarah for Monday" | Assigns a workout to a client's calendar |
+| "Search for hamstring exercises with dumbbells" | Finds exercises matching your criteria |
+| "Browse the exercise catalog for back exercises" | Shows available exercises by muscle group |
+
+> [Screenshot: AI generating a workout with exercise cards showing sets, reps, and rest times]
+
+### Progress and Analytics
+
+| What you can ask | What it does |
+|---|---|
+| "What are Sarah's latest metrics?" | Shows recent metric values and trends |
+| "Show me Jake's check-in history" | Pulls up recent check-in submissions |
+| "How is Sarah's squat progressing?" | Shows exercise history with weight and rep trends |
+| "What are Jake's habit completion rates?" | Shows habit adherence data |
+| "Analyze Sarah's progress over the last month" | Comprehensive progress analysis across workouts, metrics, and habits |
+| "Generate a chart of Jake's body weight" | Creates a visual chart of metric data |
+
+> [Screenshot: AI showing a progress analysis with metrics summary and trend indicators]
+
+### Communication
+
+| What you can ask | What it does |
+|---|---|
+| "Draft a message to Sarah about her workout today" | Prepares a message you can review and send |
+| "Write a check-in reminder for Jake" | Drafts a friendly reminder message |
+| "Send an encouraging message to Sarah about hitting her PR" | Creates a motivational message based on context |
+
+> [Screenshot: AI showing a draft message card with edit and send options]
+
+### Library and Templates
+
+| What you can ask | What it does |
+|---|---|
+| "Show me all my check-in templates" | Lists your saved check-in forms |
+| "What metrics do I have set up?" | Shows your custom metrics library |
+| "Create a new check-in template for weekly progress" | Builds a check-in form with relevant questions |
+| "Create a new metric for tracking waist circumference" | Sets up a new metric with units |
+| "Assign the Body Weight metric to Jake" | Links a metric to a client for tracking |
+
+> [Screenshot: AI creating a check-in template with suggested questions]
+
+## Step-by-Step Guide
+
+### Starting a New Chat
+
+1. Click **Assistant** in the sidebar (web) or tap **Assistant** (mobile)
+2. You land on a new empty conversation
+3. Type your question or request and press Enter
+4. The AI processes your request and responds
+
+> [Screenshot: Empty assistant page with capability overview cards]
+
+### Understanding Action Cards
+
+When the AI proposes an action (like creating a workout or assigning a metric), it shows an **action card**:
+
+1. The card shows the full details of what will be created or changed
+2. Review the content carefully
+3. Click **Confirm** to execute the action
+4. Click **Edit** to modify the details before confirming
+5. Click **Dismiss** to cancel
+
+Action cards appear for:
+- Creating workouts and sections
+- Assigning workouts to clients
+- Drafting messages
+- Creating check-in templates and metrics
+- Adding goals and injuries
+- Assigning metrics to clients
+
+> [Screenshot: Action card for a generated workout showing exercises with confirm and edit buttons]
+
+### Chat History
+
+1. The sidebar shows all your past conversations
+2. Each chat has an AI-generated title summarizing the topic
+3. Click any previous chat to continue where you left off
+4. Click **New** to start a fresh conversation
+5. Use the search bar to find specific chats by title
+6. Delete chats you no longer need with the trash icon
+
+> [Screenshot: Chat sidebar showing conversation history with titles and dates]
+
+### Using the Side Panel (Web Only)
+
+1. Click the **AI icon** in the top navigation bar
+2. A chat panel opens on the right side of the screen
+3. The AI has context about the page you are currently viewing
+4. Ask questions related to what is on screen
+5. This is useful for quick questions without leaving your current page
+
+> [Screenshot: Side panel assistant open while viewing a client's training page]
+
+### Viewing Tool Activity
+
+When the AI is working on your request, you can see what it is doing:
+
+1. Tool indicators appear showing which data the AI is looking up
+2. For example: "Searching clients...", "Fetching workout data...", "Analyzing metrics..."
+3. This transparency helps you understand how the AI arrives at its answer
+
+> [Screenshot: AI processing with tool call indicators showing data being fetched]
+
+## Example Conversations
+
+### Quick Workout Creation
+**You**: "Create a full body workout for a beginner, 6 exercises, 3 sets each, bodyweight only"
+**AI**: Creates a workout card with exercises like squats, push-ups, lunges, planks, rows, and glute bridges with appropriate rep ranges.
+
+### Client Check-up
+**You**: "How is Sarah doing? Anything I should worry about?"
+**AI**: Pulls Sarah's recent workout completions, check-in responses, habit adherence, and metric trends. Highlights any concerns like declining completion rates or missed check-ins.
+
+### End of Week Review
+**You**: "Which clients missed workouts this week?"
+**AI**: Lists all clients who have incomplete workouts with the number of missed sessions.
+
+### Program Planning
+**You**: "Search for exercises that target the posterior chain using a barbell"
+**AI**: Returns a list of matching exercises from the catalog with descriptions and muscle groups.
+
+## Things to Note
+
+- The AI has read access to all your coaching data (clients, workouts, metrics, check-ins, habits, exercises)
+- It can create and assign content through action cards that require your confirmation
+- It does not have access to your messages, billing information, or private notes
+- Chat history is saved and persists across sessions
+- AI usage may be limited based on your plan
+- The AI generates a short title for each conversation automatically
+
+## Common Problems
+
+**The AI does not understand my request**
+Try being more specific. Include details like client names, exercise names, number of sets, or date ranges.
+
+**The AI gave incorrect data about a client**
+The AI uses the data available in your account. If something seems wrong, verify the data directly on the client's profile page.
+
+**Action cards are not appearing**
+Not all requests result in actions. The AI shows action cards only when it detects something actionable. Try phrasing your request as a command: "Create a workout..." rather than "Can you tell me about workouts?"
+
+**The AI is slow to respond**
+Complex requests that involve looking up data for multiple clients may take a few seconds. The tool activity indicators show what the AI is working on.
+
+**My chat history disappeared**
+Make sure you are logged into the correct account. Chat history is tied to your user account.
+
+---
+
+## FAQs
+
+**Is the AI assistant available on mobile?**
+Yes. The AI Assistant works on both web and the coach mobile app with the same capabilities.
+
+**Does the AI learn from my coaching style?**
+The AI uses your client data and coaching context for each conversation. It does not permanently "learn" from past interactions, but your chat history is available for reference.
+
+**Can the AI make changes without my permission?**
+No. Every action requires your explicit confirmation through an action card. The AI cannot modify data without you clicking Confirm.
+
+**Does the AI have access to my billing information?**
+No. The AI only accesses coaching-related data.
+
+**Can I undo an action the AI performed?**
+Once confirmed, you would need to manually reverse the change (delete the workout, remove the goal, etc.).
+
+**Is there a message length limit?**
+Yes. Messages are limited to 10,000 characters. This is more than enough for any coaching request.
+
+**Can the AI create training programs?**
+The AI can create individual workouts and sections. Full multi-week program creation is planned for the future.
+
+**Can the AI send messages to my clients directly?**
+The AI drafts messages for you to review. You confirm before anything is sent.
+
+**Is my conversation data private?**
+Yes. Your AI conversations are only accessible by you. They are not shared with other users or used to train AI models.
+
+**What happens if I am offline?**
+The AI requires an internet connection to process requests. You cannot use it offline.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Automations (Flows)
+
+## What is this?
+
+Flows are automation rules that trigger actions when certain events happen. For example, you can set up a flow that automatically sends a message when a client misses a check-in, or creates a task when a workout is completed.
+
+## Why it is useful
+
+As your client roster grows, you cannot manually follow up with every client for every missed workout or overdue check-in. Automations handle the repetitive tasks so you can focus on coaching.
+
+## Use Cases
+
+- Sending an automated reminder when a client misses a check-in
+- Creating a to-do item when a client completes a workout (so you can review it)
+- Sending encouragement when a client finishes a tough workout
+- Flagging clients who have missed multiple sessions in a row
+
+## Step-by-Step Guide
+
+### Viewing Your Flows
+
+1. Click **Flows** in the sidebar
+2. You see a list of available automation flows
+3. Each flow shows its trigger event, actions, and active/inactive status
+
+> [Screenshot: Flows page with list of automation flows]
+
+### Activating a Flow
+
+1. On the Flows page, find the flow you want to enable
+2. Click the **toggle** to activate it
+3. The flow starts running immediately for future events
+
+> [Screenshot: Flow card with active toggle]
+
+### Viewing Flow Details
+
+1. Click on any flow to see its configuration
+2. You can see the trigger condition, actions, and history of executions
+3. Review recent activity to make sure it is working as expected
+
+> [Screenshot: Flow detail page with trigger and action configuration]
+
+### Requesting a New Flow
+
+If you need an automation that does not exist yet:
+
+1. On the Flows page, click **Request a New Flow**
+2. Describe what you need
+3. The Athli team will review your request
+
+> [Screenshot: Request new flow button]
+
+## Available Flow Types
+
+- **Missed Check-in** - Triggers when a client does not submit a check-in by the due date
+- **Missed Workout** - Triggers when a client does not complete a scheduled workout
+- **Completed Workout** - Triggers when a client finishes a workout
+- **Client Onboarding** - Triggers when a new client joins (see Onboarding Flows)
+
+## Things to Note
+
+- Flows run automatically in the background
+- You can turn flows on and off at any time
+- Flow history shows you exactly when each automation ran and what it did
+- Flows are available on certain plans. Check your billing page for details
+
+---
+
+## FAQs
+
+**Can I create custom flows?**
+Currently, flows are predefined by the Athli team. You can request new flows using the request feature.
+
+**Do flows work for all clients?**
+Yes. Active flows apply to all your clients automatically.
+
+**Can I customize the message that gets sent?**
+Some flows allow message customization. Check the flow details for options.
+
+**Will I be notified when a flow runs?**
+You can see flow execution history on the flow detail page. Some flows create to-do items that appear on your dashboard.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Client Onboarding Flows
+
+## What is this?
+
+Onboarding flows let you create a structured welcome experience for new clients. When a client joins, the onboarding flow automatically assigns questionnaires, check-ins, programs, and sends welcome messages in a predefined sequence.
+
+## Why it is useful
+
+First impressions matter. A smooth onboarding experience makes clients feel taken care of from day one. Instead of manually sending forms and messages to each new client, the onboarding flow handles it automatically.
+
+## Use Cases
+
+- Automatically sending an intake questionnaire when a new client joins
+- Assigning a starter program on day one
+- Sending a welcome message sequence over the first week
+- Setting up recurring check-ins after the initial onboarding period
+
+## Step-by-Step Guide
+
+### Creating an Onboarding Flow
+
+1. Click **Onboarding** in the sidebar
+2. Click **Create Onboarding**
+3. Give it a name and description
+4. Add steps to the flow:
+   - **Assign questionnaire** at signup
+   - **Send message** on day 1
+   - **Assign program** after questionnaire is completed
+   - **Assign check-in** on week 2
+5. Set the timing for each step (immediately, after X days, after previous step)
+6. Click **Save and Activate**
+
+> [Screenshot: Onboarding builder with step sequence]
+
+### Assigning an Onboarding Flow to New Clients
+
+1. When adding a new client, select an onboarding flow
+2. Alternatively, you can set a default onboarding in your settings
+3. The flow starts automatically when the client creates their account
+
+> [Screenshot: Add client form with onboarding flow selection]
+
+### Monitoring Onboarding Progress
+
+1. Go to the **Onboarding** page
+2. You see all active onboarding processes
+3. Each shows the client name, current step, and completion status
+
+> [Screenshot: Onboarding page with active processes and progress indicators]
+
+## Things to Note
+
+- Each onboarding flow can have multiple steps with different timing
+- You can create different onboarding flows for different client types
+- Onboarding steps execute automatically based on the timeline you set
+- You can pause or cancel an onboarding for a specific client if needed
+
+---
+
+## FAQs
+
+**Can I have multiple onboarding flows?**
+Yes. Create different flows for different coaching packages or client types.
+
+**What happens if a client does not complete a step?**
+The flow continues to the next timed step. You will be notified of incomplete steps.
+
+**Can I edit an onboarding flow after activating it?**
+Yes. Changes apply to new onboardings. Clients already in progress continue with the original flow.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Business Packages and Payments
+
+## What is this?
+
+The Business section lets you create coaching packages, set prices, accept payments through Stripe, and manage your coaching business finances. Clients can purchase packages directly and pay you through the platform.
+
+## Why it is useful
+
+Getting paid should not be complicated. With Athli's built-in payment system, you can create professional packages, share them with clients, and receive payments without needing a separate payment platform.
+
+## Use Cases
+
+- Creating a monthly coaching subscription ($199/month)
+- Offering a one-time 12-week transformation package
+- Setting up different tiers (Basic, Premium, VIP)
+- Managing client payments and viewing transaction history
+
+## Step-by-Step Guide
+
+### Connecting Stripe
+
+Before you can accept payments, you need to connect your Stripe account:
+
+1. Go to **Business** in the sidebar
+2. Click **Connect Stripe**
+3. You will be redirected to Stripe to create or connect your account
+4. Complete the Stripe onboarding process
+5. Once connected, you can start creating packages
+
+> [Screenshot: Business page with Connect Stripe button]
+
+### Creating a Package
+
+1. Go to **Business > Packages**
+2. Click **Create Package**
+3. Fill in the details:
+   - **Name** (e.g., "Premium Monthly Coaching")
+   - **Description** of what is included
+   - **Price** and currency
+   - **Billing type** (one-time or recurring)
+   - **Duration** for recurring packages (monthly, quarterly, etc.)
+4. Click **Save**
+
+> [Screenshot: Create package form with pricing options]
+
+### Sharing Packages with Clients
+
+1. On the Packages page, click **Preview Packages**
+2. This shows the client-facing view of your packages
+3. Copy the link and share it with clients
+4. Clients can view your packages and purchase directly
+
+> [Screenshot: Package preview page as seen by clients]
+
+### Viewing Payment Activity
+
+1. Go to **Business > Activity**
+2. You see a list of all transactions, subscriptions, and payment events
+3. Filter by date, client, or status
+
+> [Screenshot: Activity page with transaction list]
+
+### Managing the Stripe Dashboard
+
+1. Go to **Business**
+2. Click **Stripe Dashboard**
+3. You are taken to your Stripe dashboard for detailed financial management
+4. Manage refunds, disputes, and payouts from Stripe directly
+
+## Things to Note
+
+- The Payments feature requires the Payments add-on on certain plans
+- Stripe handles all payment processing securely
+- Athli does not store credit card information
+- Payouts are managed through your Stripe account settings
+- You can deactivate packages without deleting them
+
+## Common Problems
+
+**Stripe connection failed**
+Make sure you complete all steps in the Stripe onboarding. If you have an existing Stripe account, make sure it is fully verified.
+
+**A client cannot see my packages**
+Check that the package is active (not deactivated) and that you are sharing the correct link.
+
+**I want to refund a payment**
+Process refunds through your Stripe Dashboard. Athli does not handle refunds directly.
+
+---
+
+## FAQs
+
+**What percentage does Athli take from payments?**
+Check the current pricing page for platform fees. Stripe also charges standard processing fees.
+
+**Can I offer free trials before charging?**
+Stripe supports trial periods on subscriptions. Configure this in your package settings.
+
+**Do I need a business account for Stripe?**
+No. You can use a personal Stripe account. Business accounts provide additional features.
+
+**Can I accept payments in different currencies?**
+Currency options depend on your Stripe account configuration and your country.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Coupons
+
+## What is this?
+
+Coupons let you create discount codes for your coaching packages. Clients can apply these codes at checkout to receive a percentage or fixed amount off the price.
+
+## Why it is useful
+
+Coupons are a great marketing tool for attracting new clients, running promotions, or rewarding loyal clients. They work directly with your Stripe-powered packages.
+
+## Use Cases
+
+- Offering 20% off for new clients with code "WELCOME20"
+- Running a holiday promotion with a limited-time discount
+- Giving existing clients a loyalty discount for renewal
+- Creating referral codes for clients who bring new business
+
+## Step-by-Step Guide
+
+### Creating a Coupon
+
+1. Go to **Business > Coupons**
+2. Click **Create Coupon**
+3. Set the discount type (percentage or fixed amount)
+4. Enter the discount value
+5. Optionally set an expiry date or usage limit
+6. Click **Create**
+
+> [Screenshot: Create coupon form with discount options]
+
+### Deactivating a Coupon
+
+1. On the Coupons page, find the coupon
+2. Click **Deactivate**
+3. The coupon can no longer be used at checkout
+
+> [Screenshot: Coupon list with deactivate option]
+
+## Things to Note
+
+- Coupons require Stripe to be connected
+- Deactivated coupons cannot be reactivated. Create a new one instead
+- Coupon codes are case-insensitive
+
+---
+
+## FAQs
+
+**Can I limit how many times a coupon is used?**
+Yes. You can set a usage limit when creating the coupon.
+
+**Can I create a coupon for a specific client?**
+Coupons are available to anyone who has the code. For a private discount, create a unique code and share it only with that client.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# File Sharing
+
+## What is this?
+
+The Files section lets you upload, organize, and share documents with your clients. You can share training plans, nutrition guides, contracts, or any other files your clients need.
+
+## Why it is useful
+
+Instead of emailing files back and forth, you can keep everything organized in one place within the client's profile. Clients can access shared files directly from their mobile app.
+
+## Use Cases
+
+- Sharing a PDF nutrition plan with a client
+- Uploading a training contract for reference
+- Providing educational resources about exercises or techniques
+- Sharing meal prep guides or recipe documents
+
+## Step-by-Step Guide
+
+### Uploading Files to the Library
+
+1. Go to **Library > Files**
+2. Click **Upload** and select files from your computer
+3. Organize files into folders for easy access
+
+> [Screenshot: Files library page with folders and upload button]
+
+### Sharing Files with a Client
+
+1. Go to the client's profile
+2. Click the **Files** tab
+3. Click **Add Files**
+4. Select files from your library or upload new ones
+5. The client can now access these files from their mobile app
+
+> [Screenshot: Client files tab with assigned files]
+
+### Creating and Managing Folders
+
+1. In the Files library, click **Create Folder**
+2. Name the folder
+3. Drag files into the folder or use **Move to Folder**
+4. Click **Edit Folder** to rename or delete
+
+> [Screenshot: Folder management with create and move options]
+
+## Things to Note
+
+- File size limits apply. Check your plan for specific limits
+- Clients can view files but cannot upload files back
+- Deleting a file from the library removes it from all client profiles where it was shared
+
+---
+
+## FAQs
+
+**What file types are supported?**
+Common formats including PDF, images (JPG, PNG), documents, and spreadsheets.
+
+**Can clients download files to their device?**
+Yes. Clients can view and download files from the mobile app.
+
+**Can I share files with multiple clients at once?**
+You would need to add the file to each client's profile individually.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# To-Do List
+
+## What is this?
+
+The To-Do section gives you a personal task list to manage your coaching work. It includes two views: tasks generated automatically by Athli (like check-in reviews), and your own custom tasks.
+
+## Why it is useful
+
+Coaching involves a lot of moving parts. The to-do list helps you keep track of things that need your attention so nothing slips through the cracks.
+
+## Use Cases
+
+- Reviewing check-in submissions that need your feedback
+- Following up with a client about their program changes
+- Remembering to create a new workout for next week
+- Tracking administrative tasks like sending invoices
+
+## Step-by-Step Guide
+
+### Viewing Automated Tasks (Athli Assistant)
+
+1. Click **To-Do** in the sidebar
+2. Select the **Athli Assistant** tab
+3. You see tasks created by automations and flows
+4. Complete tasks by checking them off
+
+> [Screenshot: To-do Athli Assistant tab with automated task list]
+
+### Managing Your Personal Tasks
+
+1. Click **To-Do** in the sidebar
+2. Select the **Your List** tab
+3. Click **Add Task** to create a new task
+4. Enter the task description
+5. Check off tasks as you complete them
+
+> [Screenshot: To-do Your List tab with personal tasks and add button]
+
+## Things to Note
+
+- Automated tasks are generated by your active flows
+- Personal tasks sync between web and mobile
+- Completed tasks are hidden but can be viewed in history
+
+---
+
+## FAQs
+
+**Can I set due dates on tasks?**
+Personal tasks are currently simple checkboxes without due dates.
+
+**Can I assign tasks to clients?**
+No. The to-do list is for your personal coaching management. Use check-ins and habits for client-facing tasks.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Settings
+
+## What is this?
+
+The Settings page lets you manage your account, profile, security, billing, business details, and app preferences.
+
+## Why it is useful
+
+Settings give you control over how Athli works for you. From updating your profile to managing your subscription, everything is accessible from one place.
+
+## Settings Sections
+
+### Account > Profile
+Update your display name, profile picture, and timezone.
+
+1. Go to **Settings > Account > Profile**
+2. Edit your name, upload a new profile picture, or change your timezone
+3. Click **Save**
+
+> [Screenshot: Profile settings page with name and timezone fields]
+
+### Account > Security
+Manage your email address, password, and security settings.
+
+1. Go to **Settings > Account > Security**
+2. Change your email (requires verification)
+3. Update your password
+
+> [Screenshot: Security settings page]
+
+### Account > Information
+View your account details and membership information.
+
+### Billing
+Manage your subscription, view invoices, and update payment methods. See the [Plans and Billing](../getting-started/04-plans-and-billing.md) guide for details.
+
+### Business > Company Information
+Set up your coaching business details including business name, description, and branding.
+
+1. Go to **Settings > Business > Company Information**
+2. Enter your business name and description
+3. Upload your logo and set brand colors
+
+> [Screenshot: Company information settings page]
+
+### Business > Branding
+Customize the visual appearance of your client-facing materials.
+
+### Business > Team
+Manage team members if you operate a coaching business with multiple staff.
+
+### App > Customisations
+Configure how the app behaves for your coaching style.
+
+1. Go to **Settings > App > Customisations**
+2. Choose which exercise columns to show in workouts (sets, reps, weight, RPE, tempo, etc.)
+3. Set your preferred defaults
+
+> [Screenshot: App customisations page with column toggles]
+
+### Notifications
+Control what notifications you receive and how you receive them.
+
+1. Go to **Settings > Notifications**
+2. Toggle notifications on or off for different event types
+3. Choose between push, email, or both
+
+> [Screenshot: Notification preferences page]
+
+### Danger Zone
+Account deletion and irreversible actions.
+
+1. Go to **Settings > Account > Danger**
+2. This section contains destructive actions like account deletion
+3. Proceed with extreme caution
+
+> [Screenshot: Danger zone settings with delete account option]
+
+## Things to Note
+
+- Changing your email requires verification of the new address
+- Business branding settings affect what your clients see
+- Timezone settings affect workout scheduling and check-in due dates
+- Notification settings apply across web and mobile
+
+---
+
+## FAQs
+
+**Can I change my email address?**
+Yes. Go to **Settings > Account > Security** and update your email. You will need to verify the new address.
+
+**How do I cancel my account?**
+Go to **Settings > Account > Danger** and follow the cancellation process. Your data is preserved in case you want to return.
+
+**Can I use a custom domain?**
+Custom domains are not currently supported.
+
+**How do I export my data?**
+Contact support for data export requests.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Refer and Earn
+
+## What is this?
+
+The Refer and Earn program lets you earn rewards by inviting other coaches to join Athli. When someone signs up using your referral link or code, you both benefit.
+
+## Why it is useful
+
+If you know other coaches who would benefit from Athli, referring them earns you credits or rewards. It is a simple way to give back to the coaching community while getting something in return.
+
+## Step-by-Step Guide
+
+### Getting Your Referral Link
+
+1. Click **Refer and Earn** in the sidebar
+2. Your unique referral link is displayed
+3. Click **Copy Link** to copy it to your clipboard
+4. Share it with other coaches via email, social media, or messaging
+
+> [Screenshot: Refer and earn page with referral link and copy button]
+
+### Getting Your Referral Code
+
+1. On the same page, you can also find your referral code
+2. Share this code for coaches who prefer entering a code during signup
+
+> [Screenshot: Referral code section]
+
+### Tracking Your Referrals
+
+1. The Refer and Earn page shows your referral statistics
+2. See how many people signed up using your link
+3. Track your earned rewards
+
+> [Screenshot: Referral stats showing signups and rewards]
+
+## Things to Note
+
+- Referral links are unique to your account
+- Both you and the referred coach receive benefits
+- Check the page for current reward details as they may change over time
+
+---
+
+## FAQs
+
+**Who can I refer?**
+Any coach who does not already have an Athli account.
+
+**When do I receive my reward?**
+Rewards are credited when the referred coach creates their account and meets the qualifying criteria.
+
+**Is there a limit on how many people I can refer?**
+No. Refer as many coaches as you want.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Business Sequences
+
+Sequences let you automate a series of actions that run after a client purchases a package. Think of them as post-purchase workflows: when a client buys a package linked to a sequence, Athli automatically executes the steps you defined.
+
+## What It Is
+
+A sequence is a visual workflow built with a flow editor. You define a trigger (like a payment event) and then chain together actions such as sending a message, assigning a questionnaire, adding habits, or waiting a set amount of time before the next step.
+
+## Why It Is Useful
+
+- Automate client onboarding after purchase
+- Ensure every new client gets the same welcome experience
+- Save time by eliminating repetitive manual setup
+- Create multi-step workflows with delays between actions
+
+## Where to Find It
+
+1. Go to **Business** in the sidebar.
+2. Select **Sequences**.
+
+> [Screenshot: sequences list page showing created sequences]
+
+## Creating a Sequence
+
+1. Click **Add Sequence**.
+2. Enter a name and optional description.
+3. Click **Save** to create the sequence.
+4. You will be taken to the flow editor.
+
+> [Screenshot: add sequence side panel with name and description fields]
+
+## Using the Flow Editor
+
+The flow editor is a visual canvas where you build your automation step by step.
+
+### Triggers
+
+Every sequence starts with a trigger. Available triggers include:
+
+| Trigger | Description |
+|---------|-------------|
+| Check-in completed | Fires when a client completes a check-in |
+| Missed workout | Fires when a client misses a scheduled workout |
+| Missed check-in | Fires when a client misses a check-in |
+| Missed habit log | Fires when a client misses a habit log |
+| Missed metric log | Fires when a client misses a metric log |
+| Inactive for 7 days | Fires when a client has been inactive for 7 days |
+
+### Actions
+
+After the trigger, you add actions that execute in order:
+
+| Action | Description |
+|--------|-------------|
+| Send message | Automatically send a chat message to the client |
+| Assign questionnaire | Assign a questionnaire from your library |
+| Assign check-in | Assign a check-in form |
+| Add file | Share a file with the client |
+| Add habit | Assign a habit for tracking |
+| Add metric | Assign a metric for tracking |
+| Wait | Pause the sequence for a specified duration before continuing |
+| Is check-in completed | Conditional check that branches based on completion |
+
+### Building a Flow
+
+1. Click the **trigger node** to select your trigger type.
+2. Click the **+** button below to add an action.
+3. Select an action type from the panel that appears.
+4. Configure the action (e.g., select which questionnaire to assign).
+5. Add more actions as needed, including **Wait** steps for delays.
+6. Your changes save automatically.
+
+> [Screenshot: flow editor with a trigger and multiple action nodes connected]
+
+## Linking a Sequence to a Package
+
+Once you create a sequence, you can link it to a business package so it runs automatically when a client purchases that package.
+
+1. Go to **Business > Packages**.
+2. Edit a package.
+3. In the sequence field, select your sequence.
+4. Save.
+
+> [Screenshot: package edit form with sequence dropdown]
+
+## Managing Sequences
+
+From the sequences list, you can:
+
+- **Search** sequences by name
+- **Edit** a sequence by clicking on it
+- **Delete** a sequence using the menu (note: sequences linked to packages cannot be deleted)
+
+## FAQs
+
+**Can I have multiple triggers in one sequence?**
+Each sequence has one trigger. Create separate sequences for different triggers.
+
+**What happens if I delete a sequence that is linked to a package?**
+Athli will prevent deletion and show an error. Unlink the sequence from the package first.
+
+**Can I test a sequence without a real purchase?**
+Currently, sequences run when the trigger condition is met. You can test by simulating the trigger action (e.g., completing a check-in for a test client).
+
+**Do actions run immediately or in order?**
+Actions run in order from top to bottom. Use **Wait** actions to add delays between steps.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Client Notes
+
+Client notes let you keep private records about each client. Notes are only visible to you as the coach and are never shared with the client.
+
+## What It Is
+
+A simple note-taking system attached to each client's profile. You can create, edit, and delete notes to track observations, session summaries, injury history, preferences, or anything else you want to remember.
+
+## Why It Is Useful
+
+- Keep a running record of client progress and observations
+- Track important details like injuries, preferences, or goals
+- Quickly reference past notes before a session
+- Stay organized across many clients
+
+## Where to Find It
+
+1. Go to a client's profile (click on any client from your client list).
+2. Select the **Notes** tab.
+
+> [Screenshot: client profile with Notes tab selected showing list of notes]
+
+## Creating a Note
+
+1. Click **Add Note** (the + button).
+2. Enter a title for the note.
+3. Write the note content in the text area.
+4. Click **Save**.
+
+> [Screenshot: create note side panel with title and content fields]
+
+## Viewing and Editing Notes
+
+1. Click on any note in the list to open it in the side panel.
+2. Edit the title or content directly.
+3. Changes are saved when you confirm.
+
+The notes list shows:
+- Note title
+- Creation date
+- A preview of the content
+
+> [Screenshot: note detail view in side panel with edit capability]
+
+## Deleting Notes
+
+**Single note:**
+1. Open the note.
+2. Click the delete icon.
+3. Confirm deletion.
+
+**Bulk delete:**
+1. Select multiple notes using the checkboxes.
+2. Click the delete button that appears.
+3. Confirm deletion.
+
+> [Screenshot: notes list with multiple notes selected and delete button visible]
+
+## Tips
+
+- Use descriptive titles so you can quickly scan your notes list (e.g., "Week 4 Check-in Summary" instead of "Note").
+- Add notes right after a session while details are fresh.
+- You can also access client notes from the inbox, so you can reference them while chatting.
+
+## FAQs
+
+**Can clients see my notes about them?**
+No. Client notes are completely private to you as the coach.
+
+**Is there a limit to how many notes I can create?**
+No, you can create as many notes as you need per client.
+
+**Can I search through notes?**
+The notes list displays all notes for a client with titles and dates, making it easy to find what you need.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Feature Requests
+
+The Feature Requests page lets you submit ideas for new features, vote on suggestions from other coaches, and discuss improvements with the Athli community.
+
+## What It Is
+
+A built-in feedback board where coaches can propose new features, upvote ideas they care about, and have conversations through replies. The most popular requests help the Athli team prioritize what to build next.
+
+## Why It Is Useful
+
+- Share your ideas directly with the Athli team
+- Vote on features that matter most to you
+- See what other coaches are requesting
+- Participate in discussions about proposed features
+
+## Where to Find It
+
+1. Click **Feature Requests** in the sidebar (or navigate to the Features page).
+
+> [Screenshot: feature requests page showing list of requests with vote counts]
+
+## Submitting a Feature Request
+
+1. Click the **+** button to open the submission dialog.
+2. Enter a title that clearly describes your idea.
+3. Add a detailed description explaining the feature and why it would be useful.
+4. Submit.
+
+> [Screenshot: add feature request dialog with title and description fields]
+
+## Voting on Requests
+
+- Click the **upvote** button on any request to show your support.
+- Click it again to remove your vote.
+- Requests can be sorted by popularity to see the most-voted ideas.
+
+> [Screenshot: feature request card with upvote button and vote count]
+
+## Viewing and Replying
+
+1. Click on any feature request to view its full details.
+2. See all replies from other coaches.
+3. Click **Reply** to add your thoughts or suggestions.
+4. You can sort replies by newest or oldest.
+
+> [Screenshot: feature request detail view with replies]
+
+## Sorting and Searching
+
+Use the controls at the top to:
+- **Search** for specific requests by keyword
+- **Sort by:** Newest, Oldest, Popular, or Yours (your own submissions)
+
+## Deleting
+
+- You can delete your own feature requests and replies.
+- Click the delete icon and confirm.
+
+## FAQs
+
+**Who can see my feature requests?**
+All coaches on the platform can see and vote on feature requests. They are community-wide.
+
+**How does voting affect development?**
+The Athli team uses vote counts and discussions to help prioritize the product roadmap. Popular requests get higher priority.
+
+**Can I edit a feature request after submitting?**
+Currently, you cannot edit after submission. Make sure your title and description are clear before submitting.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Section Builder
+
+## What is this?
+
+The Section Builder lets you create reusable workout sections in your library. A section is a group of exercises with a specific training format (regular sets, AMRAP, Tabata, HIIT, EMOM, or circuits) that you can save once and drop into any workout.
+
+## Why is it useful?
+
+- Build your go-to warm-ups, finishers, or circuits once and reuse them
+- Keep your programming consistent across clients
+- Save time by not rebuilding the same exercise combinations repeatedly
+- Share standardized sections across programs and workouts
+
+## Where to find it
+
+1. Go to **Library** in the sidebar.
+2. Select the **Training** tab.
+3. Click **Sections**.
+
+> [Screenshot: section library page showing list of saved sections]
+
+## Section Types
+
+Each section has a training format that determines how exercises are performed:
+
+| Type | Description |
+|------|-------------|
+| **Regular** | Standard strength training with sets, reps, and rest periods |
+| **AMRAP** | As Many Rounds/Reps As Possible within a time limit |
+| **Tabata** | High-intensity intervals: 20s work, 10s rest, 8 rounds |
+| **HIIT** | High-intensity interval training with customizable work/rest |
+| **EMOM** | Every Minute On the Minute with set duration |
+| **Circuits** | Circuit training with a set number of rounds |
+
+### Default Configurations
+
+Some section types come with preset defaults:
+- **Tabata:** 20s work, 10s rest, 8 rounds
+- **HIIT:** 40s work, 20s rest, 10 rounds
+- **EMOM:** 60s intervals, 10 minutes total
+- **Circuits:** 3 rounds
+
+You can customize all values when building the section.
+
+## Creating a Section
+
+1. Click **Add Section** from the sections library page.
+2. Enter a name and optional tags for organization.
+3. Select the section type (Regular, AMRAP, Tabata, etc.).
+4. Add exercises from your exercise library.
+5. Configure each exercise with sets, reps, weight, rest, or other relevant fields depending on the section type.
+6. Save the section.
+
+> [Screenshot: section builder with exercises added and type selected]
+
+## Adding Exercises to a Section
+
+- Click the **+** button to browse and add exercises from your library.
+- Drag exercises to reorder them within the section.
+- Create supersets by grouping exercises together.
+- Use the AI generator to auto-fill a section from a text prompt.
+
+> [Screenshot: exercise selection panel within the section builder]
+
+## Configuring Exercises
+
+Depending on the exercise type, you can set different fields per set:
+
+- **Weight and Reps** - For strength exercises (e.g., 4x10 @ 80kg)
+- **Reps Only** - For bodyweight or rep-based exercises
+- **Distance and Duration** - For cardio exercises (e.g., 400m in 2:00)
+
+Each exercise can have multiple sets with individual values. Use the link/unlink toggle to set all sets to the same value or customize each one.
+
+> [Screenshot: exercise card showing set configuration with linked values]
+
+## Using Sections in Workouts
+
+Once saved to your library, sections appear when building workouts:
+
+1. Open the **Workout Builder** (from a program, client training, or library).
+2. Click **Add Section**.
+3. Browse your saved sections and select one.
+4. The section, including all exercises and settings, is added to the workout.
+5. You can still customize it for the specific workout without affecting the library version.
+
+## Managing Sections
+
+From the sections library, you can:
+- **Search** by name or filter by type and tags
+- **Edit** any section by clicking on it
+- **Duplicate** a section to create a variation
+- **Delete** sections you no longer need (bulk delete supported)
+
+> [Screenshot: sections list with filters and bulk actions]
+
+## Tips
+
+- Name sections descriptively (e.g., "Upper Body Warm-Up" or "5-Min AMRAP Finisher") so they are easy to find later.
+- Use tags to categorize sections (e.g., "warm-up", "finisher", "legs").
+- Build a library of sections for different training phases and reuse them across programs.
+
+## FAQs
+
+**What is the difference between a section and a workout?**
+A workout is a complete training session. A section is a building block within a workout. One workout can contain multiple sections (e.g., a warm-up section, a main strength section, and a finisher circuit).
+
+**If I edit a library section, does it update in existing workouts?**
+No. Once a section is added to a workout, it becomes independent. Editing the library version does not change workouts that already use it.
+
+**Can I use AI to generate a section?**
+Yes. The section builder includes the same AI generation feature as the workout builder. Enter a text prompt and AI will suggest exercises and configuration.
+
+**Is there a limit to how many exercises a section can have?**
+There is no hard limit. Add as many exercises as needed for your training format.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Managing Your Subscription
+
+## What is this?
+
+This guide covers everything you need to know about managing your Athli subscription: viewing your current plan, changing plans, updating billing, and handling scheduled changes.
+
+## Viewing Your Current Plan
+
+1. Click your profile icon in the bottom-left of the sidebar.
+2. Select **Billing**, or go to **Settings > Billing**.
+3. You will see a summary of your current plan including:
+   - Plan name (Starter, Pro, or Max)
+   - Number of clients included
+   - Active add-ons
+   - Monthly price
+   - Billing interval (monthly or annual)
+   - Trial days remaining (if on trial)
+
+> [Screenshot: billing page showing current plan card with plan details and client usage bar]
+
+## Client Usage
+
+The billing page shows a progress bar indicating how many of your client slots are in use:
+
+- **Green zone:** Plenty of room
+- **Yellow zone:** Getting close to your limit
+- **Red zone:** At or near capacity
+
+If you reach your client limit, you will need to upgrade your plan or add extra client slots before inviting new clients.
+
+> [Screenshot: client usage progress bar on billing page]
+
+## Changing Your Plan
+
+### Upgrading
+
+1. Go to **Settings > Billing**.
+2. Click **Change Plan**.
+3. If you are on a trial, you will see a warning that selecting a plan ends your trial.
+4. The pricing page opens with all available plans.
+5. Select a plan, adjust client count if needed, and add any add-ons.
+6. Review the summary on the right side.
+7. Confirm and complete payment through Stripe.
+8. Your new plan takes effect immediately, and confetti celebrates your upgrade!
+
+> [Screenshot: pricing page in update mode showing plan cards with current plan highlighted]
+
+### Downgrading
+
+1. Go to **Settings > Billing**.
+2. Click **Change Plan**.
+3. Select a lower plan.
+4. If you have more active clients than the new plan allows, you will need to archive clients first.
+5. The downgrade is scheduled for the end of your current billing period.
+6. You keep your current plan features until the change takes effect.
+
+**Important:** Downgrades do not take effect immediately. You continue with your current plan until the billing period ends.
+
+> [Screenshot: billing page showing "Changes scheduled" badge with current and upcoming plan cards]
+
+### Scheduled Changes
+
+When you have a pending plan change (like a downgrade), the billing page shows two cards:
+
+- **Current Plan:** What you are on now, with the date it ends
+- **Upcoming Plan:** What your plan changes to on the next billing date
+
+You can cancel scheduled changes by updating your plan again before the effective date.
+
+## Managing Add-ons
+
+### Adding an Add-on
+
+1. Go to **Settings > Billing > Change Plan**.
+2. Scroll to the **Supercharge with Add-ons** section.
+3. Click **Add to my plan** on any add-on (Automations, AI Assistant, or Payments).
+4. The cost is added to your plan summary.
+5. Complete checkout.
+
+### Removing an Add-on
+
+1. On the billing page, find the add-on in your current plan details.
+2. Click the cancel option next to the add-on.
+3. The add-on is scheduled for removal at the end of your billing period.
+4. You keep access until then.
+
+### Reactivating a Cancelled Add-on
+
+If you cancelled an add-on but changed your mind:
+
+1. Go to the billing page.
+2. Find the add-on marked as "cancelling."
+3. Click **Reactivate** to undo the cancellation.
+4. The add-on continues as normal.
+
+> [Screenshot: billing page showing an add-on with "cancelling" status and reactivate option]
+
+## Viewing Invoices
+
+1. Go to **Settings > Billing**.
+2. Scroll to the **Invoices** section.
+3. You will see a table with all your invoices showing:
+   - Date
+   - Period
+   - Amount
+   - Status (Paid, Open, Draft, Void)
+   - Type (Subscription or Upgrade)
+4. Click **View** to open the invoice in Stripe, or **PDF** to download it.
+
+> [Screenshot: invoices table showing recent billing history]
+
+## Billing from Mobile
+
+You can also manage billing from the mobile app:
+
+1. Open the Athli coach app.
+2. Go to **Settings > Billing**.
+3. This opens the billing page in a web view.
+4. You can view your plan, change plans, and manage add-ons.
+5. After completing a change, tap **Done** to return to the app.
+
+## Payment Method
+
+Payments are processed through Stripe. To update your payment method:
+
+1. Go to **Settings > Billing**.
+2. Look for the option to manage your payment method (this opens the Stripe customer portal).
+3. Update your card or payment details.
+4. Changes take effect for the next billing cycle.
+
+## FAQs
+
+**When does an upgrade take effect?**
+Immediately. You get access to the new plan features right away.
+
+**When does a downgrade take effect?**
+At the end of your current billing period. You keep your current plan until then.
+
+**Can I switch from monthly to annual billing?**
+Yes. Go to Change Plan and select Annual billing. You will save 17% compared to monthly.
+
+**What happens if my payment fails?**
+Stripe will retry the payment automatically. If it continues to fail, your subscription may be paused. Update your payment method to resolve the issue.
+
+**Can I get a refund?**
+Contact support for refund requests. Refunds are handled on a case-by-case basis.
+
+**Do I lose my data if I downgrade?**
+No. Your data is preserved. However, features from the higher plan will become unavailable until you upgrade again.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-web"
+--------------------------------------------------------------------------------
+
+# Cancelling and Reactivating Your Subscription
+
+## What is this?
+
+This guide explains how to cancel your Athli subscription, what happens when you cancel, and how to reactivate if you change your mind.
+
+## Cancelling Your Subscription
+
+### How to Cancel
+
+1. Go to **Settings > Account > Danger Zone** (or **Settings > Billing**).
+2. Click **Cancel Subscription**.
+3. A confirmation dialog will appear explaining what happens next.
+4. Confirm the cancellation.
+
+> [Screenshot: cancel subscription confirmation dialog]
+
+### What Happens When You Cancel
+
+- Your subscription is **not cancelled immediately**. It is scheduled for cancellation at the end of your current billing period.
+- You keep full access to all your plan features until the cancellation date.
+- The billing page will show the cancellation date so you know exactly when access changes.
+- No further charges will be made after the current period.
+
+### After Cancellation Takes Effect
+
+- You drop down to the **Starter plan** (free).
+- Starter features remain available: workouts, programs, exercise library, messaging, up to 5 clients.
+- Premium features (check-ins, questionnaires, habits, metrics, AI tools, add-ons) become unavailable.
+- **Your data is NOT deleted.** Everything is preserved. If you resubscribe, all your data will be there exactly as you left it.
+- If you have more than 5 active clients, you will need to archive clients to get within the Starter limit.
+
+## Reactivating Your Subscription
+
+If you cancelled but your billing period has not ended yet, you can undo the cancellation:
+
+1. Go to **Settings > Billing**.
+2. You will see a notice that your subscription is scheduled for cancellation.
+3. Click **Reactivate**.
+4. Your subscription continues as normal, and the cancellation is undone.
+5. Billing resumes on the regular schedule.
+
+> [Screenshot: billing page showing reactivate option for a subscription scheduled for cancellation]
+
+### Resubscribing After Cancellation
+
+If your subscription has already ended:
+
+1. Go to **Settings > Billing**.
+2. Click **Change Plan**.
+3. Select your desired plan, client count, and add-ons.
+4. Complete checkout through Stripe.
+5. Your plan is activated immediately and all your previous data is still there.
+
+## Cancelling Individual Add-ons
+
+You can cancel add-ons without cancelling your entire subscription:
+
+1. Go to **Settings > Billing**.
+2. Find the add-on you want to remove.
+3. Click the cancel option next to it.
+4. The add-on is scheduled for removal at the end of your billing period.
+5. You keep access to the add-on until then.
+
+To undo an add-on cancellation, click **Reactivate** next to the add-on before the billing period ends.
+
+## Deleting Your Account
+
+Account deletion is separate from subscription cancellation:
+
+1. Go to **Settings > Account > Danger Zone**.
+2. You must cancel your subscription first if you have an active paid plan.
+3. Click **Delete Account**.
+4. Type the confirmation text to proceed.
+5. Your account and all data will be permanently deleted. This cannot be undone.
+
+**Warning:** Account deletion is permanent. Make sure you have exported any data you need before proceeding.
+
+> [Screenshot: danger zone page showing cancel subscription and delete account sections]
+
+## Timeline Summary
+
+| Action | When It Takes Effect |
+|--------|---------------------|
+| Cancel subscription | End of current billing period |
+| Reactivate cancelled subscription | Immediately (before period ends) |
+| Cancel an add-on | End of current billing period |
+| Reactivate cancelled add-on | Immediately (before period ends) |
+| Resubscribe after cancellation | Immediately |
+| Delete account | Immediately and permanently |
+
+## FAQs
+
+**Will I be charged after cancelling?**
+No. Once you cancel, no further charges are made. You keep access until the end of the period you already paid for.
+
+**Can I cancel during my free trial?**
+If you are on a free trial, it simply expires at the end of the trial period. No payment is taken.
+
+**What if I cancel by accident?**
+Click **Reactivate** on the billing page before your billing period ends to undo the cancellation.
+
+**How long is my data kept after cancelling?**
+Your data is preserved indefinitely. You can resubscribe at any time and pick up where you left off.
+
+**Can I cancel from the mobile app?**
+Yes. Go to Settings > Billing in the mobile app, which opens the billing page where you can manage your subscription.
+
+**Do my clients lose access when I cancel?**
+Your clients keep the free Starter-level experience. Premium features you assigned (check-ins, habits, metrics) become unavailable to them as well.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-mobile"
+--------------------------------------------------------------------------------
+
+# Coach Mobile App Overview
+
+## What is this?
+
+The Athli Coach mobile app gives you access to your coaching tools on the go. You can manage clients, review workouts, message athletes, and check your schedule from your phone.
+
+## Why it is useful
+
+Coaching does not stop when you leave your desk. The mobile app lets you stay connected with clients, review their workouts between sessions, and handle quick tasks without needing a computer.
+
+## Use Cases
+
+- Checking a client's workout completion between gym sessions
+- Responding to client messages on the go
+- Reviewing check-in submissions during your commute
+- Quickly looking up a client's profile before an in-person session
+
+## What is available on mobile vs web
+
+| Feature | Web | Mobile |
+|---------|-----|--------|
+| Dashboard | Yes | Yes |
+| Client management | Yes | Yes |
+| Training calendar | Yes | Yes |
+| Workout builder | Yes | Limited |
+| Program builder | Yes | No |
+| Messaging | Yes | Yes |
+| Check-in review | Yes | Yes |
+| Habit tracking | Yes | Yes |
+| Metric tracking | Yes | Yes |
+| Progress photos | Yes | Yes |
+| AI Assistant | Yes | Yes |
+| Library | Yes | Yes |
+| Business/Payments | Yes | No |
+| Automations/Flows | Yes | No |
+| Onboarding flows | Yes | No |
+| Settings | Yes | Partial |
+| To-do list | Yes | Yes |
+| Feature requests | Yes | Yes |
+
+## Things to Note
+
+- Some advanced features like the program builder and business packages are only available on the web
+- The mobile app syncs in real time with the web app
+- Push notifications are managed through the mobile app's settings
+- Download the app from the App Store (iOS) or Google Play (Android)
+
+---
+
+## FAQs
+
+**Do I need both the web and mobile app?**
+No. You can use either one. However, the web app has more advanced features. The mobile app is best for quick tasks and staying connected on the go.
+
+**Is my data the same on both?**
+Yes. Everything syncs in real time between web and mobile.
+
+**Can I build workouts on mobile?**
+You can view and make basic edits to workouts on mobile. For building complex workouts with sections and drag-and-drop, the web app is recommended.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-mobile"
+--------------------------------------------------------------------------------
+
+# Coach Mobile: Home and Dashboard
+
+## What is this?
+
+The Home screen on the coach mobile app shows you a summary of your day. See today's client workouts, review at-risk clients, and manage your to-do list.
+
+## Step-by-Step Guide
+
+### Viewing Today's Workouts
+
+1. Open the app and you land on the **Home** tab
+2. Scroll through the workout cards to see each client's scheduled workout
+3. Tap a card to view workout details, completion status, and client feedback
+
+> [Screenshot: Mobile home screen showing workout cards for today]
+
+### Checking At-Risk Clients
+
+1. On the Home screen, look for the at-risk section
+2. This highlights clients who have missed workouts or check-ins
+3. Tap a client to go directly to their profile
+
+> [Screenshot: At-risk clients section on mobile home]
+
+### Managing Your To-Do List
+
+1. Tap the **To-Do** option from the Home screen
+2. View automated tasks and your personal task list
+3. Tap to complete tasks or add new ones
+
+> [Screenshot: Mobile to-do list with task items]
+
+---
+
+## FAQs
+
+**Is the mobile dashboard the same as the web dashboard?**
+It shows similar information in a mobile-friendly layout. Some details may be condensed for the smaller screen.
+
+**Can I customize what appears on the home screen?**
+The home screen layout is fixed to show the most relevant daily information.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-mobile"
+--------------------------------------------------------------------------------
+
+# Coach Mobile: Client Management
+
+## What is this?
+
+The Clients tab on the coach mobile app lets you view your roster, access client profiles, and manage their training, check-ins, habits, metrics, and more.
+
+## Step-by-Step Guide
+
+### Viewing Your Client List
+
+1. Tap the **Clients** tab at the bottom of the screen
+2. You see all your active clients
+3. Use the search bar to find a specific client
+4. Tap a client to open their profile
+
+> [Screenshot: Mobile clients tab with client list and search]
+
+### Navigating a Client Profile
+
+Once you tap a client, you can access:
+
+- **Overview** with bio, goals, and injuries
+- **Training** calendar with assigned workouts
+- **Check-ins** and submissions
+- **Habits** and completion logs
+- **Metrics** with charts
+- **Photos** for progress tracking
+- **Exercise History** with performance data
+- **Files** shared with the client
+- **Notes** for private coaching notes
+
+> [Screenshot: Mobile client profile with navigation options]
+
+### Editing Client Details
+
+1. Open a client's profile
+2. Tap **Edit Details**
+3. Update their name, category, goals, or other information
+4. Tap **Save**
+
+> [Screenshot: Mobile edit client details screen]
+
+### Viewing a Client's Training Calendar
+
+1. Open a client's profile
+2. Tap **Training**
+3. Navigate between weeks using the arrows
+4. Tap any day to see the assigned workout
+5. Tap a workout to preview it or add a new one
+
+> [Screenshot: Mobile training calendar with weekly view]
+
+### Assigning a Workout to a Day
+
+1. On the training calendar, tap an empty day
+2. Choose to assign a workout from your library or create one
+3. Select the workout and confirm
+
+> [Screenshot: Mobile add workout to day dialog]
+
+## Things to Note
+
+- All changes sync instantly with the web app
+- Complex workout building (sections, drag-and-drop) is better done on web
+- You can view exercise history charts for each client to track progress
+
+---
+
+## FAQs
+
+**Can I add new clients from the mobile app?**
+This may be available through the add button. For bulk uploads and invite links, use the web app.
+
+**Can I archive clients from mobile?**
+Client archiving is available through the client's settings on their profile.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-mobile"
+--------------------------------------------------------------------------------
+
+# Coach Mobile: Training
+
+## What is this?
+
+The Training tab on the coach mobile app shows a calendar view of all your clients' workouts for each day. You can see who has workouts scheduled, what they are doing, and whether they have completed them.
+
+## Step-by-Step Guide
+
+### Viewing the Training Calendar
+
+1. Tap the **Training** tab at the bottom of the screen
+2. You see a daily view of all client workouts
+3. Swipe left/right to navigate between days
+4. Each client's workout is shown as a card with status indicators
+
+> [Screenshot: Mobile training calendar showing all clients for a day]
+
+### Previewing a Workout
+
+1. Tap any workout card
+2. A preview shows all exercises, sets, reps, and notes
+3. You can see if the client has completed the workout and their logged results
+
+> [Screenshot: Mobile workout preview with exercise details]
+
+### Reviewing Completed Workouts
+
+1. Completed workouts show a checkmark indicator
+2. Tap to see the client's logged sets, reps, and weights
+3. View post-workout metrics and notes the client added
+
+> [Screenshot: Completed workout review with client-logged data]
+
+## Things to Note
+
+- The training tab shows workouts across all clients for the selected day
+- For a single client's training calendar, go to their profile and tap Training
+- Use the web app for building complex programs and workouts
+
+---
+
+## FAQs
+
+**Can I reassign workouts from mobile?**
+You can add workouts to a client's day. For moving workouts between days, the web app is easier.
+
+**Can I see workout completion in real time?**
+Yes. When a client completes a workout, their card updates immediately.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-mobile"
+--------------------------------------------------------------------------------
+
+# Coach Mobile: Messaging
+
+## What is this?
+
+The Chats tab on the coach mobile app lets you message your clients directly. Send text, images, files, audio, and react to messages, all from your phone.
+
+## Step-by-Step Guide
+
+### Viewing Conversations
+
+1. Tap the **Chats** tab at the bottom of the screen
+2. You see a list of all client conversations
+3. Unread messages show a badge indicator
+4. Tap a conversation to open it
+
+> [Screenshot: Mobile chat list with conversations and unread badges]
+
+### Sending Messages
+
+1. Open a conversation
+2. Type your message in the input field
+3. Tap **Send**
+4. You can also attach images, files, or send audio messages using the icons next to the input
+
+> [Screenshot: Mobile chat conversation with message input]
+
+### Sending Attachments
+
+1. In a conversation, tap the **attachment** icon
+2. Choose from camera, photo library, or file picker
+3. Select the media or file
+4. Add an optional caption
+5. Tap **Send**
+
+> [Screenshot: Mobile attachment options sheet]
+
+### Viewing Archived Conversations
+
+1. On the Chats list, tap **Archived**
+2. View previously archived conversations
+3. Tap to unarchive and continue chatting
+
+> [Screenshot: Mobile archived conversations screen]
+
+## Things to Note
+
+- Messages sync between web and mobile in real time
+- Push notifications alert you to new messages
+- You can view shared documents and images within the chat
+
+---
+
+## FAQs
+
+**Can I send broadcast messages from mobile?**
+Broadcast messaging is available on the web app.
+
+**Can I delete a message I sent?**
+Yes. Long-press on a message to see options including delete.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-mobile"
+--------------------------------------------------------------------------------
+
+# Coach Mobile: Library
+
+## What is this?
+
+The Library tab on the coach mobile app gives you access to your workout and exercise library. Browse exercises, view exercise videos, and access your saved workouts.
+
+## Step-by-Step Guide
+
+### Browsing Exercises
+
+1. Tap the **Library** tab at the bottom of the screen
+2. Browse or search for exercises by name
+3. Filter by muscle group or equipment
+4. Tap an exercise to see details and a video demonstration
+
+> [Screenshot: Mobile exercise library with search and filters]
+
+### Viewing Exercise Details
+
+1. Tap any exercise from the library
+2. See the target muscles, equipment needed, and category
+3. Watch the demonstration video
+4. Use this information when planning workouts for clients
+
+> [Screenshot: Mobile exercise detail with video player]
+
+### Accessing Workouts
+
+1. In the Library, navigate to your saved workouts
+2. Browse or search by name
+3. Tap a workout to preview its exercises and structure
+
+> [Screenshot: Mobile workout library list]
+
+## Things to Note
+
+- The exercise library contains thousands of exercises with videos
+- Custom exercises you created on the web are also available here
+- For creating new workouts or exercises, the web app provides a better experience
+
+---
+
+## FAQs
+
+**Can I create exercises from the mobile app?**
+Exercise creation is best done on the web app where you have more editing tools.
+
+**Are exercise videos available offline?**
+No. Videos require an internet connection to stream.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-mobile"
+--------------------------------------------------------------------------------
+
+# Coach Mobile: AI Assistant
+
+## What is this?
+
+The AI Assistant is available on the coach mobile app so you can get quick answers, create workouts, and search your client data from anywhere.
+
+## Step-by-Step Guide
+
+### Opening the AI Assistant
+
+1. Tap the **Assistant** option from the menu or home screen
+2. You land on a chat interface
+3. Type your question or request
+4. The AI responds with context-aware answers
+
+> [Screenshot: Mobile AI assistant chat screen]
+
+### Example Requests
+
+- "Create an upper body workout with dumbbells"
+- "Show me clients who missed workouts this week"
+- "What exercises target the glutes?"
+- "How is Jake's squat progressing?"
+
+### Working with AI Responses
+
+1. Read the AI's response
+2. If it suggests an action (like creating a workout), review the details
+3. Confirm to execute the action or ask for modifications
+
+> [Screenshot: Mobile AI response with action card]
+
+## Things to Note
+
+- The mobile AI assistant has the same capabilities as the web version
+- Chat history syncs between web and mobile
+- AI usage limits are shared across both platforms
+
+---
+
+## FAQs
+
+**Does the AI have access to my client data on mobile?**
+Yes. The AI assistant works the same on mobile and web with access to your coaching data.
+
+**Can I use voice input?**
+Voice input depends on your device's keyboard. The AI processes text input.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "coach-mobile"
+--------------------------------------------------------------------------------
+
+# Coach Mobile: Settings
+
+## What is this?
+
+The Settings screen on the coach mobile app lets you manage your profile, notifications, preferences, and account details.
+
+## Step-by-Step Guide
+
+### Accessing Settings
+
+1. Tap the **Profile** or **Settings** tab at the bottom of the screen
+2. You see a list of setting categories
+
+> [Screenshot: Mobile settings screen with category list]
+
+### Editing Your Profile
+
+1. Tap **Edit Profile**
+2. Update your name, profile picture, or bio
+3. Tap **Save**
+
+> [Screenshot: Mobile edit profile screen]
+
+### Managing Notifications
+
+1. Tap **Notifications**
+2. Toggle push notifications on or off for different event types
+3. Choose which events you want to be notified about
+
+> [Screenshot: Mobile notification preferences]
+
+### Viewing Billing
+
+1. Tap **Billing**
+2. See your current plan and usage
+3. For plan changes, you will be directed to the web app
+
+> [Screenshot: Mobile billing overview]
+
+### Company Details
+
+1. Tap **Company Details**
+2. View and update your business information
+3. Edit business name and description
+
+> [Screenshot: Mobile company details screen]
+
+### Feature Requests
+
+1. Tap **Feature Requests**
+2. Browse existing requests and vote on ones you want
+3. Submit new feature requests directly from the app
+
+> [Screenshot: Mobile feature requests list]
+
+### Personal Details
+
+1. Tap **Personal Details**
+2. Update your timezone, preferences, and contact information
+
+> [Screenshot: Mobile personal details screen]
+
+## Things to Note
+
+- Some settings (like billing plan changes) redirect to the web app
+- Notification settings on mobile control push notifications specifically
+- Changes sync with the web app immediately
+
+---
+
+## FAQs
+
+**Can I change my plan from mobile?**
+You can view your plan from mobile. Plan changes are handled through the web app.
+
+**How do I enable push notifications?**
+Make sure notifications are enabled both in the app settings and in your device's system settings for Athli.
+
+**Can I set up biometric lock?**
+Yes. If your device supports it, you can enable biometric lock (Face ID or fingerprint) for app access from the settings.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "client-mobile"
+--------------------------------------------------------------------------------
+
+# Client App: Getting Started
+
+## What is this?
+
+The Athli client app is where you access everything your coach assigns to you. View workouts, submit check-ins, track habits, log metrics, message your coach, and monitor your progress all in one place.
+
+## Why it is useful
+
+Everything from your coach is in one app. No more searching through WhatsApp messages for your workout or trying to remember what your coach said about your check-in. It is all organized and easy to find.
+
+## Step-by-Step Guide
+
+### Downloading the App
+
+1. Go to the **App Store** (iPhone) or **Google Play** (Android)
+2. Search for **Athli**
+3. Download and install the app
+
+> [Screenshot: App Store listing for Athli client app]
+
+### Creating Your Account
+
+1. Open the app
+2. If your coach sent you an invite link, tap it to pre-fill your details
+3. Enter your email and create a password
+4. Complete your profile with your name and profile picture
+5. You are now connected to your coach
+
+> [Screenshot: Client sign up screen]
+
+### Navigating the App
+
+The app has tabs at the bottom for quick access:
+
+- **Home** - Your daily tasks, workouts, and overview
+- **Training** - Your workout calendar
+- **Progress** - Metrics, photos, and history
+- **Chats** - Messages with your coach
+- **Profile** - Your details and settings
+
+> [Screenshot: Client app home screen with bottom navigation tabs]
+
+## Things to Note
+
+- You need an invite from your coach to create an account
+- The app requires an internet connection for most features
+- Push notifications keep you informed about new workouts, messages, and check-ins
+- You can enable biometric lock (Face ID or fingerprint) for extra security
+
+## Common Problems
+
+**I did not receive an invite from my coach**
+Ask your coach to resend the invite email. Check your spam folder as well.
+
+**The app is not loading**
+Check your internet connection. Try closing and reopening the app.
+
+**I forgot my password**
+On the sign-in screen, tap **Forgot Password** and follow the steps to reset it.
+
+---
+
+## FAQs
+
+**Is the app free?**
+Yes. The client app is completely free. Your coach pays for the platform.
+
+**Can I use the app on a tablet?**
+The app is designed for phones but works on tablets as well.
+
+**Can I have multiple coaches?**
+Currently, each account is linked to one coach.
+
+**Can I use the app without a coach?**
+No. You need an invite from a coach to create an account and access features.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "client-mobile"
+--------------------------------------------------------------------------------
+
+# Client App: Home Screen
+
+## What is this?
+
+The Home screen is the first thing you see when you open the app. It shows your daily overview including today's workout, pending check-ins, habit reminders, and any messages from your coach.
+
+## Why it is useful
+
+Instead of navigating through different sections to figure out what you need to do today, the Home screen puts everything in one place. Open the app, see what is on your plate, and get started.
+
+## Use Cases
+
+- Checking what workout is scheduled for today
+- Seeing if you have any pending check-ins to submit
+- Reviewing habit reminders for the day
+- Quickly jumping to a message from your coach
+
+## Step-by-Step Guide
+
+### Viewing Your Daily Workout
+
+1. Open the app to the **Home** tab
+2. Your scheduled workout for today is displayed prominently
+3. It shows the workout name, number of exercises, and estimated duration
+4. Tap the workout card to start your session or preview the exercises
+
+> [Screenshot: Client home screen with today's workout card highlighted]
+
+### Checking Pending Tasks
+
+1. Below the workout card, you will see any pending items:
+   - Check-ins that are due
+   - Habits to log
+   - Questionnaires to complete
+2. Tap any item to go directly to it
+
+> [Screenshot: Home screen showing pending check-in and habit reminders]
+
+### Viewing Pre-Workout Metrics
+
+Before starting a workout, you may be asked to rate how you are feeling:
+
+1. Tap the workout card
+2. Before the session starts, rate your **sleep**, **mood**, **energy**, **stress**, and **soreness**
+3. These ratings help your coach understand how you are feeling and adjust your training
+
+> [Screenshot: Pre-workout metrics screen with rating sliders]
+
+### Quick Actions
+
+The Home screen may include quick action buttons for:
+
+- Starting today's workout
+- Sending a message to your coach
+- Logging a habit
+- Taking a progress photo
+
+> [Screenshot: Quick action buttons on home screen]
+
+## Things to Note
+
+- The Home screen updates daily based on what your coach has scheduled for you
+- If no workout is scheduled, the screen will show a rest day message
+- Push notifications also remind you about pending tasks
+- Pre-workout metrics are optional but help your coach make better decisions
+
+## Common Problems
+
+**My home screen shows no workout**
+Your coach may not have scheduled a workout for today. This is normal on rest days. Check the Training tab for upcoming workouts.
+
+**I do not see any check-ins or habits**
+Your coach needs to assign these to you first. If you think something is missing, message your coach.
+
+---
+
+## FAQs
+
+**Can I see tomorrow's workout?**
+Yes. Go to the **Training** tab and navigate to the next day.
+
+**What happens if I skip the pre-workout metrics?**
+You can still start the workout. The metrics are optional but recommended.
+
+**Can I rearrange items on the home screen?**
+No. The home screen layout is fixed and shows items based on what your coach has assigned.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "client-mobile"
+--------------------------------------------------------------------------------
+
+# Client App: Viewing and Completing Workouts
+
+## What is this?
+
+The Training tab shows your weekly workout calendar. You can see what workouts your coach has scheduled, preview exercises, and complete guided workout sessions with built-in tracking.
+
+## Why it is useful
+
+Your coach plans your training so you do not have to. The app walks you through each exercise with video demos, tracks your sets and reps, and sends your results back to your coach automatically.
+
+## Step-by-Step Guide
+
+### Viewing Your Weekly Schedule
+
+1. Tap the **Training** tab
+2. You see a weekly calendar with dots on days that have workouts
+3. Tap a day to see the workout assigned
+4. Days without workouts are rest days
+
+> [Screenshot: Training tab weekly calendar with workout indicators]
+
+### Previewing a Workout
+
+1. Tap a day that has a workout
+2. The workout preview shows all exercises, sets, reps, and any notes from your coach
+3. Each exercise shows the target muscles and has a video demo you can watch
+4. Scroll through to see the full session before starting
+
+> [Screenshot: Workout preview showing exercise list with sets and reps]
+
+### Starting a Workout Session
+
+1. On the workout preview, tap **Start Workout**
+2. You may be asked to rate your pre-workout metrics (sleep, mood, energy, stress, soreness)
+3. The app guides you through each exercise one at a time
+4. For each set:
+   - Log the weight you used
+   - Log the reps you completed
+   - Tap **Complete Set** to move to the next one
+5. Rest timers start automatically between sets if configured
+
+> [Screenshot: Active workout session showing current exercise with set logging]
+
+### Viewing Exercise Demos
+
+1. During a workout, tap the **video icon** on any exercise
+2. A demonstration video plays showing proper form
+3. Close the video to return to your session
+
+> [Screenshot: Exercise video demo playing during workout]
+
+### Completing a Workout
+
+1. After finishing all exercises, tap **Complete Workout**
+2. You may be asked for post-workout feedback (rating, notes)
+3. Your results are saved and sent to your coach
+4. The workout shows as completed on your calendar
+
+> [Screenshot: Workout completion screen with feedback option]
+
+### Viewing Past Workouts
+
+1. On the Training tab, navigate to a past day
+2. Tap the completed workout to see your logged results
+3. Compare your performance across weeks
+
+> [Screenshot: Completed workout showing logged weights and reps]
+
+## Things to Note
+
+- Your coach can see everything you log in real time
+- If you skip a set or exercise, it still counts toward your workout data
+- You can pause a workout and come back to it later
+- Workout notes from your coach appear next to each exercise
+
+## Common Problems
+
+**The workout is not showing for today**
+Your coach may not have scheduled one. Check with them if you expected a workout.
+
+**I logged the wrong weight or reps**
+You can edit individual sets during the session. After completing, ask your coach to adjust if needed.
+
+**The app crashed during my workout**
+Reopen the app. Your progress should be saved. If not, manually log your remaining sets.
+
+---
+
+## FAQs
+
+**Can I do the exercises in a different order?**
+The app presents exercises in the order your coach set. You can scroll ahead if needed.
+
+**Can I add my own exercises to the workout?**
+No. Only your coach can modify the workout content.
+
+**Do I need internet to do a workout?**
+You need internet to start the session and sync results. Brief disconnections during the workout should not cause data loss.
+
+**What if I cannot complete all the sets?**
+Log what you did. Your coach will see the partial completion and can adjust future workouts.
+
+**Can I repeat a workout from a previous day?**
+Each workout is tied to a specific day. Ask your coach if you want to redo a session.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "client-mobile"
+--------------------------------------------------------------------------------
+
+# Client App: Progress Tracking
+
+## What is this?
+
+The Progress tab is your personal dashboard for tracking how you are improving over time. It brings together your metrics, exercise history, and overall trends so you can see the bigger picture of your fitness journey.
+
+## Why it is useful
+
+Day to day it can be hard to see progress. The Progress tab gives you charts and data that show how far you have come. Seeing your squat go up by 20kg over 3 months or your body weight trend downward is powerful motivation.
+
+## Step-by-Step Guide
+
+### Viewing Your Progress Overview
+
+1. Tap the **Progress** tab at the bottom of the screen
+2. You see a summary of your tracked metrics and recent activity
+3. Scroll to explore different data points
+
+> [Screenshot: Progress tab overview with summary cards]
+
+### Viewing Metric Charts
+
+1. On the Progress tab, tap any metric (e.g., Body Weight, Body Fat)
+2. A chart shows your values over time
+3. Swipe left and right to change the time range
+4. Tap individual data points to see exact values and dates
+
+> [Screenshot: Metric chart showing body weight trend over 3 months]
+
+### Viewing Exercise History
+
+1. On the Progress tab, navigate to **Exercise History**
+2. Browse or search for a specific exercise
+3. Tap an exercise to see your performance history
+4. View charts showing weight, reps, and volume progression over time
+
+> [Screenshot: Exercise history list with search bar]
+
+### Viewing Exercise Detail Charts
+
+1. After selecting an exercise, you see a chart of your best sets
+2. Below the chart is a log of every time you performed that exercise
+3. Each entry shows the date, sets, reps, and weights used
+4. This helps you and your coach track strength progression
+
+> [Screenshot: Exercise detail page with performance chart and log history]
+
+### Comparing Progress Over Time
+
+1. Use the date range controls to zoom in or out on your data
+2. Compare current metrics to where you started
+3. Share your progress with your coach through the chat if you want to celebrate a win
+
+> [Screenshot: Progress comparison showing start vs current values]
+
+## Things to Note
+
+- Progress data comes from your workout logs and metric entries
+- The more consistently you log your workouts, the more useful the charts become
+- Your coach can also see all your progress data from their side
+- Exercise history only shows exercises you have actually completed (not just assigned)
+
+## Common Problems
+
+**My progress charts are empty**
+You need to complete workouts and log your sets with weights and reps. Charts populate as data is recorded over time.
+
+**An exercise is missing from my history**
+Make sure you completed the workout containing that exercise and logged your sets. Skipped exercises do not appear in history.
+
+**The numbers do not look right**
+Double check the units (kg vs lbs). If you logged incorrect values during a workout, ask your coach to help correct them.
+
+---
+
+## FAQs
+
+**How far back does my history go?**
+All data from when you started using the app is stored and accessible.
+
+**Can I see my progress for a specific time period?**
+Yes. Use the date range controls on charts to focus on a specific window.
+
+**Can my coach see my progress data?**
+Yes. Your coach has full access to your metrics, exercise history, and progress charts.
+
+**Can I export my progress data?**
+Export options depend on the features available. Ask your coach if you need data exported.
+
+**What counts as "progress"?**
+Any data you log: workout performance (weights, reps), metric values (body weight, measurements), and habit completion rates.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "client-mobile"
+--------------------------------------------------------------------------------
+
+# Client App: Messaging Your Coach
+
+## What is this?
+
+The Chats tab lets you message your coach directly from the app. Send text, photos, videos, files, and audio messages all in one place.
+
+## Why it is useful
+
+Having all your coaching communication in one app means you do not need to search through WhatsApp or email for that nutrition plan your coach sent last week. Everything stays organized and connected to your coaching experience.
+
+## Step-by-Step Guide
+
+### Opening Your Chat
+
+1. Tap the **Chats** tab at the bottom of the screen
+2. Tap your coach's conversation
+3. You see your full message history
+
+> [Screenshot: Client chats tab showing conversation with coach]
+
+### Sending a Message
+
+1. Type your message in the input field at the bottom
+2. Tap **Send**
+3. Your coach receives a notification
+
+> [Screenshot: Chat conversation with message input field]
+
+### Sending Photos and Files
+
+1. Tap the **attachment** icon next to the input field
+2. Choose from:
+   - **Camera** to take a new photo
+   - **Photo Library** to select existing photos
+   - **Files** to share a document
+3. Add an optional caption
+4. Tap **Send**
+
+> [Screenshot: Attachment options showing camera, photo library, and files]
+
+### Sending Audio Messages
+
+1. Tap and hold the **microphone** icon
+2. Record your message
+3. Release to send
+
+> [Screenshot: Audio message recording indicator]
+
+### Reacting to Messages
+
+1. Long press on any message
+2. Select an emoji reaction
+3. The reaction appears on the message
+
+> [Screenshot: Message with reaction emoji options]
+
+### Viewing Shared Media
+
+1. In a conversation, you can scroll back through shared photos, videos, and files
+2. Tap any media to view it full screen
+3. Download files to your device if needed
+
+> [Screenshot: Shared media viewer in chat]
+
+## Things to Note
+
+- Messages sync in real time between your app and your coach's web/mobile app
+- Push notifications alert you when your coach sends a message
+- You can send up to 4 files per message
+- Message history is preserved even if you log out and back in
+
+## Common Problems
+
+**My message is not sending**
+Check your internet connection. Try closing and reopening the app.
+
+**I cannot see photos my coach sent**
+Make sure the app has permission to access your photos and storage. Check your device settings.
+
+**I am not getting notifications for new messages**
+Go to your device settings and make sure notifications are enabled for Athli. Also check in-app notification settings.
+
+---
+
+## FAQs
+
+**Can I delete a message I sent?**
+Yes. Long press on your message and select delete.
+
+**Can I message my coach at any time?**
+Yes. Your coach will respond when they are available. Messages are delivered instantly.
+
+**Is my chat private?**
+Yes. Only you and your coach can see your conversation.
+
+**Can I share my workout results in the chat?**
+You can send screenshots or describe your results. Your coach also sees your workout data directly in their app.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "client-mobile"
+--------------------------------------------------------------------------------
+
+# Client App: Submitting Check-ins
+
+## What is this?
+
+Check-ins are recurring forms your coach assigns to you. They ask about how you are feeling, your recovery, nutrition, or other aspects of your training. You fill them out on a regular schedule (daily, weekly, etc.) and your coach reviews your responses.
+
+## Why it is useful
+
+Check-ins give your coach insight into how you are doing beyond just your workouts. Maybe your sleep has been poor, your stress is high, or your nutrition has been off track. This information helps your coach adjust your training and provide better support.
+
+## Step-by-Step Guide
+
+### Finding Your Pending Check-ins
+
+1. Open the app to the **Home** tab
+2. Pending check-ins appear as a task card
+3. You may also receive a push notification when a check-in is due
+4. Tap the check-in to open it
+
+> [Screenshot: Home screen showing pending check-in notification card]
+
+### Filling Out a Check-in
+
+1. Tap the check-in to open the form
+2. Answer each question:
+   - **Text questions** - type your answer
+   - **Rating questions** - select a value on the scale
+   - **Yes/No questions** - tap your answer
+   - **Multiple choice** - select one or more options
+   - **Number questions** - enter a value
+3. Scroll through all questions
+4. Tap **Submit** when done
+
+> [Screenshot: Check-in form with different question types being filled out]
+
+### Viewing Past Check-in Submissions
+
+1. Navigate to your **Check-ins** section (from Home or Profile)
+2. You see a list of all your past submissions with dates
+3. Tap any submission to review your answers
+
+> [Screenshot: Check-in history list with past submissions]
+
+## Things to Note
+
+- Check-ins have a schedule set by your coach (daily, weekly, biweekly, or monthly)
+- Submitting on time helps your coach stay informed and make timely adjustments
+- You can submit a check-in late if you missed the due date
+- Once submitted, you cannot edit your responses
+- Your coach can compare your check-ins over time to spot trends
+
+## Common Problems
+
+**I do not see any check-ins**
+Your coach needs to assign them first. If you think one is missing, message your coach.
+
+**I accidentally submitted before finishing**
+Unfortunately, submissions are final. Let your coach know and they can take note of any missing information.
+
+**The check-in notification did not appear**
+Make sure push notifications are enabled for Athli in your device settings.
+
+---
+
+## FAQs
+
+**How often do I need to submit check-ins?**
+This depends on what your coach has set up. Common schedules are daily or weekly.
+
+**Can I see what my coach thinks of my check-in?**
+Your coach may follow up in the chat with feedback based on your check-in responses.
+
+**Do I have to answer every question?**
+Questions marked as required must be answered. Optional questions can be skipped.
+
+**What if I forget to submit?**
+Your coach will be able to see that a check-in was missed. Try to submit as soon as you remember.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "client-mobile"
+--------------------------------------------------------------------------------
+
+# Client App: Daily Habit Tracking
+
+## What is this?
+
+Habits are daily tasks your coach assigns to help you build consistency. Things like drinking enough water, hitting your protein target, getting enough sleep, or doing your mobility routine. You mark each habit as done each day.
+
+## Why it is useful
+
+Big results come from small daily actions. Habit tracking keeps you accountable and helps your coach see how consistent you are outside of your workouts. Over time, you build routines that support your training goals.
+
+## Step-by-Step Guide
+
+### Viewing Your Habits
+
+1. On the **Home** tab, your assigned habits appear as daily tasks
+2. Each habit shows its name and whether you have completed it today
+3. You can also find habits in your profile section
+
+> [Screenshot: Home screen showing daily habits with checkboxes]
+
+### Logging a Habit
+
+1. Tap the habit you want to log
+2. Tap **Complete** or check the box to mark it as done for today
+3. The habit updates immediately
+
+> [Screenshot: Habit being marked as complete with checkmark animation]
+
+### Viewing Your Habit History
+
+1. Navigate to your habits section
+2. You see a calendar or streak view showing which days you completed each habit
+3. This helps you see your consistency patterns over time
+
+> [Screenshot: Habit history showing completion calendar with streaks]
+
+## Things to Note
+
+- Habits reset each day so you need to log them daily
+- Your coach can see your habit completion rates
+- Consistent habit completion helps your coach understand your commitment level
+- Push notifications can remind you about daily habits
+
+## Common Problems
+
+**I forgot to log a habit yesterday**
+Ask your coach if they can log it on your behalf. You may not be able to log for past dates.
+
+**I do not have any habits assigned**
+Your coach needs to set them up. Message your coach if you think habits would help you.
+
+---
+
+## FAQs
+
+**Can I add my own habits?**
+No. Habits are assigned by your coach to keep your tracking aligned with your coaching plan.
+
+**Do habits count on rest days?**
+Yes. Habits like nutrition, sleep, and water intake apply every day, not just training days.
+
+**Can I see my weekly or monthly completion rate?**
+Your habit history shows daily completion. Your coach can see overall adherence rates.
+
+**What happens if I miss a day?**
+Nothing bad happens in the app. The day simply shows as incomplete. Try to stay consistent.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "client-mobile"
+--------------------------------------------------------------------------------
+
+# Client App: Logging Metrics
+
+## What is this?
+
+Metrics are numerical values your coach asks you to track over time. Things like body weight, body fat percentage, waist measurement, or any custom data point your coach sets up. You log values regularly and the app shows your trend in a chart.
+
+## Why it is useful
+
+Numbers do not lie. Tracking metrics gives you and your coach an objective view of your progress. Even when the mirror or the scale feels discouraging day to day, charts showing a 3-month trend tell a much more accurate story.
+
+## Step-by-Step Guide
+
+### Viewing Your Assigned Metrics
+
+1. Navigate to the **Progress** tab or your metrics section
+2. You see a list of all metrics your coach has assigned
+3. Each metric shows the latest value and when it was last logged
+
+> [Screenshot: Metrics list showing assigned metrics with latest values]
+
+### Logging a Metric Value
+
+1. Tap the metric you want to log (e.g., Body Weight)
+2. Enter the value
+3. The date defaults to today but you can change it if needed
+4. Tap **Save**
+5. The new value appears on your chart immediately
+
+> [Screenshot: Metric logging screen with value input and save button]
+
+### Viewing Your Metric Charts
+
+1. Tap any metric to see its chart
+2. The chart shows all your logged values over time as a trend line
+3. Tap individual points to see exact values and dates
+4. Use the time range to zoom in on specific periods
+
+> [Screenshot: Metric chart showing body weight trend with data points]
+
+### Logging Multiple Metrics
+
+If your coach has assigned several metrics, you can log them one after another:
+
+1. Log the first metric and save
+2. Go back to the list and tap the next one
+3. Repeat until all are logged
+
+> [Screenshot: Metrics list with some showing "logged today" indicators]
+
+## Things to Note
+
+- Log metrics at the same time of day for consistent data (e.g., body weight first thing in the morning)
+- Your coach can see all your logged values and charts
+- The more data points you log, the more useful the trend charts become
+- One or two data points will not show a meaningful trend. Aim for at least a few weeks of data
+
+## Common Problems
+
+**My chart is not showing a trend line**
+You need at least two data points to see a trend. Keep logging regularly.
+
+**I entered the wrong value**
+Contact your coach to correct it. They can edit or delete log entries from their side.
+
+**I am not sure what unit to use**
+Check the metric description set by your coach. It will specify if values should be in kg, lbs, cm, inches, etc.
+
+---
+
+## FAQs
+
+**How often should I log my metrics?**
+Follow your coach's guidance. Common frequencies are daily (for weight) or weekly (for measurements).
+
+**Can I log a metric for a past date?**
+Yes. When logging a value, you can change the date before saving.
+
+**Can I see my starting value vs current value?**
+Yes. The chart shows your full history. Scroll to the beginning to see where you started.
+
+**What is the difference between metrics and habits?**
+Habits are binary (done or not done). Metrics are numbers that you track over time (like weight or measurements).
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "client-mobile"
+--------------------------------------------------------------------------------
+
+# Client App: Progress Photos
+
+## What is this?
+
+Progress photos let you take and upload photos on a regular basis to visually document your transformation. Your coach can view your photos and compare them across different dates.
+
+## Why it is useful
+
+The scale does not always reflect reality. You might be building muscle while losing fat, which means the number stays the same but your body looks completely different. Progress photos capture changes that numbers miss and are one of the most motivating tools in your fitness journey.
+
+## Step-by-Step Guide
+
+### Taking a Progress Photo
+
+1. Navigate to the **Progress Photos** section
+2. Tap **Take Photo** or **Add Photo**
+3. Use your camera to take a new photo, or select one from your photo library
+4. The photo is saved and tagged with today's date
+5. Tap **Save**
+
+> [Screenshot: Progress photo capture screen with camera and library options]
+
+### Viewing Your Photos
+
+1. Go to the Progress Photos section
+2. You see your photos organized by date
+3. Tap any date to view the photos from that day
+4. Swipe through multiple photos if you took more than one
+
+> [Screenshot: Photo timeline showing photos organized by date]
+
+### Comparing Photos
+
+1. In the Progress Photos section, tap **Compare**
+2. Select two dates to compare side by side
+3. Your photos from each date appear next to each other
+4. This makes it easy to see visual changes over time
+
+> [Screenshot: Side-by-side photo comparison with two different dates]
+
+### Tips for Better Progress Photos
+
+- Take photos at the same time of day (morning is best)
+- Use the same lighting and background each time
+- Wear the same or similar clothing
+- Take front, side, and back shots for a full picture
+- Stay consistent with your photo schedule (weekly or biweekly works well)
+
+## Things to Note
+
+- Your photos are private and only visible to you and your coach
+- Photos are stored securely in the cloud
+- Try to keep a consistent schedule for the most useful comparisons
+- Image files should be under 5MB
+
+## Common Problems
+
+**My photo is not uploading**
+Check your internet connection and make sure the file is under 5MB. Try taking a new photo with the in-app camera.
+
+**I want to delete a photo**
+Open the photo and look for the delete option. Be careful as this cannot be undone.
+
+**The comparison does not look right**
+Make sure you are comparing photos taken in similar conditions (lighting, pose, clothing).
+
+---
+
+## FAQs
+
+**Can my coach see all my progress photos?**
+Yes. Your coach has access to your photos for tracking purposes.
+
+**How often should I take progress photos?**
+Once a week or every two weeks is a good frequency. Monthly is fine for slower body composition changes.
+
+**Can I add photos from my camera roll?**
+Yes. You can select existing photos from your device when adding a progress photo.
+
+**Are my photos backed up?**
+Yes. Photos are stored in the cloud and accessible even if you switch devices.
+
+
+--------------------------------------------------------------------------------
+source: "https://docs.tryathli.com"
+section: "client-mobile"
+--------------------------------------------------------------------------------
+
+# Client App: Profile and Settings
+
+## What is this?
+
+The Profile tab lets you manage your personal details, view your coaching information, adjust app settings, and control notifications.
+
+## Why it is useful
+
+Keeping your profile up to date helps your coach personalize your training. Settings let you control how the app works for you, from notifications to security preferences.
+
+## Step-by-Step Guide
+
+### Viewing Your Profile
+
+1. Tap the **Profile** tab at the bottom of the screen
+2. You see your name, profile picture, and coaching information
+3. Below that are links to your goals, injuries, and personal details
+
+> [Screenshot: Client profile screen showing name, photo, and info sections]
+
+### Editing Your Profile
+
+1. On the Profile tab, tap **Edit Profile**
+2. Update your name or profile picture
+3. Tap **Save**
+
+> [Screenshot: Edit profile screen with name and photo fields]
+
+### Viewing Your Goals and Injuries
+
+1. On the Profile tab, tap **Goals** or **Injuries**
+2. See the goals your coach has set or that you have discussed together
+3. Injuries are tracked so your coach can program around them
+
+> [Screenshot: Goals section showing active fitness goals]
+
+### Managing Notifications
+
+1. On the Profile tab, tap **Settings** or **Notifications**
+2. Toggle push notifications on or off for different types:
+   - New messages from your coach
+   - Workout reminders
+   - Check-in reminders
+   - Habit reminders
+3. Make sure notifications are also enabled in your device system settings
+
+> [Screenshot: Notification settings with toggle switches for each type]
+
+### Enabling Biometric Lock
+
+1. Go to **Settings** from the Profile tab
+2. Find the **Security** or **Biometric Lock** option
+3. Enable Face ID or fingerprint lock
+4. The app will require biometric verification when you open it
+
+> [Screenshot: Security settings with biometric lock toggle]
+
+### Changing Your Password
+
+1. Go to **Settings > Security**
+2. Tap **Change Password**
+3. Enter your current password and your new password
+4. Tap **Save**
+
+> [Screenshot: Change password screen]
+
+### Logging Out
+
+1. Go to **Settings** from the Profile tab
+2. Scroll to the bottom
+3. Tap **Log Out**
+4. Confirm the action
+
+> [Screenshot: Settings screen with log out button at bottom]
+
+## Things to Note
+
+- Your coach can also update some of your profile details from their side
+- Keeping your timezone accurate helps with workout scheduling and check-in reminders
+- Biometric lock adds an extra layer of privacy for your coaching data
+- Logging out does not delete your data. You can log back in at any time
+
+## Common Problems
+
+**I cannot change my email address**
+Email changes need to be verified. If you are having issues, contact your coach or support.
+
+**Push notifications are not working**
+Check both the in-app settings and your device system settings. Make sure Athli is allowed to send notifications. On Android, also check battery optimization settings as they can block notifications.
+
+**I forgot my password**
+On the login screen, tap **Forgot Password** and follow the reset steps.
+
+---
+
+## FAQs
+
+**Can I delete my account?**
+Contact your coach or support to request account deletion.
+
+**Can I change my coach?**
+Your account is linked to one coach. To switch coaches, your new coach would need to invite you to their account.
+
+**Is my data private?**
+Yes. Your data is only visible to you and your coach. It is not shared with other clients or third parties.
+
+**Can I use the app on multiple devices?**
+Yes. Log in with your credentials on any device and your data syncs automatically.
+
+**What happens if my coach deactivates my account?**
+You will lose access to the app. Your data is preserved and can be restored if the coach reactivates your account.
+
+
