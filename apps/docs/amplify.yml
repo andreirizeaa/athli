@@ -10,6 +10,7 @@ applications:
             - nvm use 22
             - npm config delete omit
             - npm ci --include=optional
+            - npm install --no-save @next/swc-linux-x64-gnu@16.0.7 @parcel/watcher-linux-x64-glibc@2.5.6 lightningcss-linux-x64-gnu@1.31.1 @tailwindcss/oxide-linux-x64-gnu@4.2.0 @img/sharp-linux-x64@0.34.5
         build:
           commands:
             - npm run build --workspace=docs
