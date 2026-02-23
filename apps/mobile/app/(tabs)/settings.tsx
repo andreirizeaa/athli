@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Platform, StyleSheet, Text, View, Linking, ActivityIndicator, InteractionManager, Alert } from 'react-native';
+import { Platform, StyleSheet, Text, View, ActivityIndicator, InteractionManager, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { PressableScale } from 'pressto';
@@ -178,13 +178,8 @@ export default function SettingsScreen() {
     handleOpenWebURL('https://docs.tryathli.com');
   };
 
-  const handleOpenSupportEmail = () => {
-    const email = 'support@tryathli.com';
-    const subject = encodeURIComponent('Athli App Support Request');
-    const body = encodeURIComponent('Hi Athli Support Team,\n\nI need help with:\n\n');
-    Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch((err) =>
-      console.error('Failed to open email:', err)
-    );
+  const handleOpenChat = () => {
+    handleOpenWebURL('https://tawk.to/chat/699cd9ad9f81c11c340d9f77/1ji6b4jm3');
   };
 
   const handleLogout = () => {
@@ -364,7 +359,7 @@ export default function SettingsScreen() {
           <SettingsOption
             icon={<PlatformIcon sf="envelope" mdi="email" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
             title={t('profile.supportEmail')}
-            onPress={handleOpenSupportEmail}
+            onPress={handleOpenChat}
           />
           <Separator />
           <SettingsOption

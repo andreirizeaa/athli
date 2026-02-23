@@ -1,5 +1,16 @@
 'use client';
 
+declare global {
+  interface Window {
+    Tawk_API?: {
+      maximize: () => void;
+      minimize: () => void;
+      hideWidget: () => void;
+      showWidget: () => void;
+    };
+  }
+}
+
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -174,7 +185,7 @@ export function AppHeader({
                 size="icon"
                 className="md:hidden"
                 aria-label={t('sidebar.helpAndSupport.label') || 'Help and support'}
-                onClick={() => window.open(process.env.NEXT_PUBLIC_DOCS_URL || 'https://docs.tryathli.com', '_blank')}
+                onClick={() => { window.Tawk_API?.maximize(); }}
               >
                 <Headset className="size-4" />
               </Button>
@@ -185,7 +196,7 @@ export function AppHeader({
             variant="outline"
             className="hidden md:inline-flex gap-2"
             aria-label={t('sidebar.helpAndSupport.label') || 'Help and support'}
-            onClick={() => window.open(process.env.NEXT_PUBLIC_DOCS_URL || 'https://docs.tryathli.com', '_blank')}
+            onClick={() => { window.Tawk_API?.maximize(); }}
           >
             <Headset className="size-4" />
             {t('general.help')}
