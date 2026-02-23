@@ -29,8 +29,8 @@ const PUSH_TOKEN_STORAGE_KEY = 'expo_push_token';
 export function usePushNotifications() {
   const router = useRouter();
   const { isAuthenticated, userType, userId } = useAuth();
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
+  const notificationListener = useRef<Notifications.Subscription>(undefined);
+  const responseListener = useRef<Notifications.Subscription>(undefined);
   const hasRegistered = useRef(false);
 
   // Handle notification tap - navigate to relevant screen

@@ -108,7 +108,7 @@ export default function InvoicesScreen() {
 
       return (
         <View>
-          <PressableScale onPress={() => handleInvoicePress(item)} disabled={!hasUrl}>
+          <PressableScale onPress={() => handleInvoicePress(item)} enabled={!!hasUrl}>
             <View style={[styles.rowContent, { backgroundColor: themeColors.backgroundPrimary }]}>
               <SquircleView cornerSmoothing={1} style={[styles.iconContainer, { backgroundColor: themeColors.surfacePrimary }]}>
                 <PlatformIcon

@@ -93,6 +93,10 @@ export type ThemeColors = {
   success: string;
   warning: string;
   error: string;
+  /** Alias for backgroundPrimary */
+  background: string;
+  /** Alias for error */
+  destructive: string;
 };
 
 export function resolveEffectiveScheme(
@@ -114,6 +118,18 @@ export function createPresetPalette(
   preset: PresetValue,
   scheme: 'light' | 'dark',
 ): ThemeColors {
+  const base = _createPresetPaletteBase(preset, scheme);
+  return {
+    ...base,
+    background: base.backgroundPrimary,
+    destructive: base.error,
+  };
+}
+
+function _createPresetPaletteBase(
+  preset: PresetValue,
+  scheme: 'light' | 'dark',
+): Omit<ThemeColors, 'background' | 'destructive'> {
   if (preset === 'underground') {
     if (scheme === 'dark') {
       return {

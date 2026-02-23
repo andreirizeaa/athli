@@ -17,7 +17,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { SearchBar } from '@/components/ui/search-bar';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { saveAthleteInjuries } from '@/services/client/client-service';
+import { deleteAthleteInjury } from '@/services/client/client-service';
 import type { AthleteInjury } from '@/services/client/client-service';
 
 // Simple fuzzy search - checks if all characters appear in order
@@ -113,8 +113,7 @@ export default function ClientInjuriesScreen() {
     if (!coachProfile?.id || !id) return;
 
     try {
-      const remainingInjuries = injuries.filter((i) => i.id !== injuryId);
-      await saveAthleteInjuries(id, coachProfile.id, remainingInjuries);
+      await deleteAthleteInjury(id, coachProfile.id, injuryId);
       haptics.success();
       refreshSection('injuries');
     } catch (error) {

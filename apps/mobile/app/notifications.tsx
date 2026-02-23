@@ -205,7 +205,7 @@ export default function NotificationsScreen() {
                   },
                 ]}
                 onPress={() => setShowUnreadOnly(!showUnreadOnly)}
-                disabled={unreadCount === 0 && !showUnreadOnly}
+                enabled={!(unreadCount === 0 && !showUnreadOnly)}
               >
                 <Text style={[styles.filterButtonText, { color: primaryColor }]}>
                   {showUnreadOnly ? t('notifications.showAll') : t('notifications.showUnread')}

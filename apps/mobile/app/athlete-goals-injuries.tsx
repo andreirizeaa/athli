@@ -482,7 +482,6 @@ export default function AthleteGoalsInjuriesScreen() {
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={() => renderEmptyState(true)}
           showsVerticalScrollIndicator={false}
-          estimatedItemSize={70}
         />
       ) : (
         <FlashList<AthleteInjury>
@@ -493,7 +492,6 @@ export default function AthleteGoalsInjuriesScreen() {
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={() => renderEmptyState(false)}
           showsVerticalScrollIndicator={false}
-          estimatedItemSize={70}
         />
       )}
 
