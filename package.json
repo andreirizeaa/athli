@@ -42,8 +42,9 @@
     "turbo": "latest"
   },
   "optionalDependencies": {
-    "@parcel/watcher-linux-x64-glibc": "2.5.6",
     "@next/swc-linux-x64-gnu": "16.0.7",
+    "@swc/core-linux-x64-gnu": "1.15.11",
+    "@parcel/watcher-linux-x64-glibc": "2.5.6",
     "lightningcss-linux-x64-gnu": "1.31.1",
     "@tailwindcss/oxide-linux-x64-gnu": "4.2.0",
     "@img/sharp-linux-x64": "0.34.5",
