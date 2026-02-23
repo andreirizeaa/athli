@@ -1,14 +1,15 @@
 version: 1
 applications:
-  - appRoot: apps/marketing
+  - appRoot: .
     frontend:
-      buildPath: /
       phases:
         preBuild:
           commands:
             - nvm install 22
             - nvm use 22
-            - npm ci
+            - npm config set omit optional false
+            - npm config set optional true
+            - npm ci --include=optional
         build:
           commands:
             - npm run build --workspace=www
@@ -18,4 +19,5 @@ applications:
           - '**/*'
       cache:
         paths:
+          - node_modules/**/*
           - apps/marketing/.next/cache/**/*
