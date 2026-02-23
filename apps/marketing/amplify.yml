@@ -8,9 +8,7 @@ applications:
           commands:
             - nvm install 22
             - nvm use 22
-            - rm -rf node_modules
-            - npm install
-            - npm install --no-save --os=linux --cpu=x64 --libc=glibc lightningcss @parcel/watcher @tailwindcss/oxide
+            - npm ci
         build:
           commands:
             - npm run build --workspace=www
