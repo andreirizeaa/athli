@@ -10,7 +10,7 @@ applications:
             - nvm use 22
             - rm -rf node_modules
             - npm install
-            - npm install --no-save --platform=linux --libc=glibc --arch=x64 lightningcss @parcel/watcher
+            - npm install --no-save --platform=linux --libc=glibc --arch=x64 lightningcss @parcel/watcher @tailwindcss/oxide
         build:
           commands:
             - npm run build --workspace=docs
