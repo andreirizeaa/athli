@@ -149,10 +149,12 @@ export default function ProfileTabScreen() {
     handleOpenWebURL(`${marketingUrl}/privacy-policy`);
   };
 
-  const handleOpenSupportEmail = () => {
-    Linking.openURL('mailto:support@tryathli.com').catch((err) =>
-      console.error('Failed to open email:', err)
-    );
+  const handleOpenChat = () => {
+    handleOpenWebURL('https://tawk.to/chat/699cd9ad9f81c11c340d9f77/1ji6b4jm3');
+  };
+
+  const handleOpenHelpArticles = () => {
+    handleOpenWebURL('https://docs.tryathli.com');
   };
 
   const handleLogout = () => {
@@ -449,12 +451,13 @@ export default function ProfileTabScreen() {
           <SettingsOption
             icon={<PlatformIcon sf="book" IconComponent={BookOpen} size={iconSize} color={iconColor} />}
             title={t('profile.helpArticles')}
+            onPress={handleOpenHelpArticles}
           />
           <Separator />
           <SettingsOption
             icon={<PlatformIcon sf="envelope" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
             title={t('profile.supportEmail')}
-            onPress={handleOpenSupportEmail}
+            onPress={handleOpenChat}
           />
           <Separator />
           <SettingsOption

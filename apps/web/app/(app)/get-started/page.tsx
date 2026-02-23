@@ -39,6 +39,7 @@ import { useCoachFlows } from '@/hooks/use-coach-flows';
 import { useCoachChecklist } from '@/hooks/use-coach-checklist';
 import { useTerminology } from '@/hooks/use-terminology';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { AppStoreButton, GooglePlayButton } from '@/components/public/app-store-buttons';
 
 interface AccordionCardProps {
   number: number;
@@ -168,16 +169,13 @@ const FeatureImagePreview = ({ imagePath, alt }: { imagePath: string; alt: strin
   }, []);
 
   return (
-    <div className="relative mt-3 mb-4" style={{ perspective: '1000px' }}>
+    <div className="relative mt-3 mb-4">
       {/* Purple glow background */}
       <div className="absolute inset-x-0 inset-y-1 bg-gradient-to-r from-purple-500/15 via-indigo-500/15 to-purple-500/15 blur-md -z-10" />
       <div
         ref={containerRef}
         className="relative rounded-xl overflow-hidden"
-        style={{
-          transform: 'rotateY(-6deg) rotateX(3deg)',
-          transformStyle: 'preserve-3d',
-        }}
+        style={{}}
       >
         <AnimatedBorder width={dims.w} height={dims.h} />
         <img
@@ -186,6 +184,59 @@ const FeatureImagePreview = ({ imagePath, alt }: { imagePath: string; alt: strin
           className="w-full h-auto transition-all duration-300 rounded-xl"
         />
       </div>
+    </div>
+  );
+};
+
+/**
+ * Fan layout of 3 mobile screenshots — centre straight in front, left & right tilted behind
+ */
+const MobileScreenshotFan = ({
+  images,
+  theme,
+}: {
+  images: { left: string; center: string; right: string };
+  theme: 'light' | 'dark';
+}) => {
+  const src = (base: string) => `${base}/${theme}.png`;
+
+  return (
+    <div className="relative flex items-center justify-center py-4" style={{ height: 260 }}>
+      {/* Left – tilted, behind */}
+      <img
+        src={src(images.left)}
+        alt=""
+        className="absolute rounded-2xl shadow-lg object-cover"
+        style={{
+          height: 220,
+          width: 'auto',
+          transform: 'rotate(-10deg) translateX(-90%) translateY(-4%)',
+          zIndex: 1,
+        }}
+      />
+      {/* Centre – straight, in front */}
+      <img
+        src={src(images.center)}
+        alt=""
+        className="relative rounded-2xl shadow-xl object-cover"
+        style={{
+          height: 240,
+          width: 'auto',
+          zIndex: 3,
+        }}
+      />
+      {/* Right – tilted, behind */}
+      <img
+        src={src(images.right)}
+        alt=""
+        className="absolute rounded-2xl shadow-lg object-cover"
+        style={{
+          height: 220,
+          width: 'auto',
+          transform: 'rotate(10deg) translateX(90%) translateY(-4%)',
+          zIndex: 1,
+        }}
+      />
     </div>
   );
 };
@@ -396,13 +447,20 @@ const GetStartedPage = () => {
               exploredLabel={t('explored', { count: clientAppProgress, total: 1 })}
             >
               <div className="text-sm text-muted-foreground text-center">
+                <MobileScreenshotFan
+                  theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+                  images={{
+                    left: '/mobile/client/workouts',
+                    center: '/mobile/client/home',
+                    right: '/mobile/client/habits',
+                  }}
+                />
                 <p className="mb-3 leading-relaxed max-w-[90%] mx-auto">
                   {t('cards.clientApp.description')}
                 </p>
-                <div className="flex justify-center flex-col items-center gap-2">
-                  <Button size="sm" variant="default">
-                    {t('cards.clientApp.button')}
-                  </Button>
+                <div className="flex justify-center items-center gap-3">
+                  <AppStoreButton href="#" />
+                  <GooglePlayButton href="#" />
                 </div>
               </div>
             </AccordionCard>
@@ -555,13 +613,20 @@ const GetStartedPage = () => {
               exploredLabel={t('explored', { count: coachAppProgress, total: 1 })}
             >
               <div className="text-sm text-muted-foreground text-center">
+                <MobileScreenshotFan
+                  theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+                  images={{
+                    left: '/mobile/coach/training',
+                    center: '/mobile/coach/home',
+                    right: '/mobile/coach/metrics',
+                  }}
+                />
                 <p className="mb-3 leading-relaxed max-w-[90%] mx-auto">
                   {t('cards.coachApp.description')}
                 </p>
-                <div className="flex justify-center flex-col items-center gap-2">
-                  <Button size="sm" variant="default">
-                    {t('cards.coachApp.button')}
-                  </Button>
+                <div className="flex justify-center items-center gap-3">
+                  <AppStoreButton href="#" />
+                  <GooglePlayButton href="#" />
                 </div>
               </div>
             </AccordionCard>
@@ -640,7 +705,7 @@ const GetStartedPage = () => {
             {/* Help Articles Card */}
             <div
               className="relative rounded-xl bg-card border border-border shadow-sm p-6 flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow group overflow-hidden"
-              onClick={() => window.open('https://help.athli.com', '_blank')}
+              onClick={() => window.open(process.env.NEXT_PUBLIC_DOCS_URL || 'https://docs.tryathli.com', '_blank')}
             >
               {/* Internal Card Glows */}
               <div className="pointer-events-none absolute inset-0 overflow-hidden">

@@ -12,7 +12,9 @@ import { useTheme } from 'next-themes';
 import { AppStoreButton, GooglePlayButton } from '@/components/app-store-buttons';
 
 const MARKETING_URL =
-  process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://athli.app';
+  process.env.NODE_ENV === 'development'
+    ? 'http://localhost:3000'
+    : (process.env.NEXT_PUBLIC_MARKETING_URL ?? 'https://tryathli.com');
 
 const featureKeys = [
   'automations',

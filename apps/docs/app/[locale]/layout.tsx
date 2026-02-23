@@ -4,6 +4,7 @@ import { getMessages, setRequestLocale } from 'next-intl/server';
 import { ThemeProvider } from '@/lib/theme-provider';
 import { routing } from '@/lib/i18n/routing';
 import { localeMetadata } from '@/lib/i18n/locale-metadata';
+import Script from 'next/script';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import '../globals.css';
@@ -60,6 +61,27 @@ export default async function LocaleLayout({
             </div>
           </NextIntlClientProvider>
         </ThemeProvider>
+        <Script id="tawk-to" strategy="lazyOnload">{`
+          var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+          Tawk_API.onBeforeLoad = function(){ Tawk_API.hideWidget(); };
+          Tawk_API.onChatMinimized = function(){ Tawk_API.hideWidget(); };
+          Tawk_API.onChatMaximized = function(){
+            document.addEventListener('click', function dismissTawk(e){
+              if(!e.target.closest('iframe[src*="tawk"]')){
+                Tawk_API.minimize();
+                document.removeEventListener('click', dismissTawk);
+              }
+            });
+          };
+          (function(){
+            var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+            s1.async=true;
+            s1.src='https://embed.tawk.to/699cd9ad9f81c11c340d9f77/1ji6b4jm3';
+            s1.charset='UTF-8';
+            s1.setAttribute('crossorigin','*');
+            s0.parentNode.insertBefore(s1,s0);
+          })();
+        `}</Script>
       </body>
     </html>
   );
