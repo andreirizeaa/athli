@@ -13,6 +13,7 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 - 02-creating-your-account.md
 - 03-inviting-your-first-client.md
 - 04-plans-and-billing.md
+- getting-started/05-get-started-page.md
 
 ### Collection: Training and Programming
 > Everything related to building and managing training for clients.
@@ -49,7 +50,7 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 **Section: Client Profiles**
 - (future) client-overview-and-bio.md
 - (future) goals-and-injuries.md
-- (future) client-notes.md
+- coach-web/23-client-notes.md
 
 **Section: Clients on Mobile (Coach)**
 - coach-mobile/03-client-management.md
@@ -122,6 +123,9 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 - coach-web/14-onboarding-flows.md
 - (future) creating-an-onboarding-sequence.md
 
+**Section: Business Sequences**
+- coach-web/22-business-sequences.md
+
 ### Collection: Business and Payments
 > Managing packages, payments, coupons, and your coaching business.
 
@@ -142,6 +146,13 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 
 - coach-web/17-files.md
 - (future) organizing-files-into-folders.md
+
+### Collection: Nutrition
+> Managing recipes, ingredients, and meal planning for clients.
+
+- coach-web/21-nutrition.md
+- (future) creating-meal-plans.md
+- (future) assigning-nutrition-to-clients.md
 
 ### Collection: Productivity
 > Task management and staying organized.
@@ -170,6 +181,11 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 
 - coach-web/20-refer-and-earn.md
 
+### Collection: Feature Requests
+> Submitting ideas and voting on platform improvements.
+
+- coach-web/24-feature-requests.md
+
 ### Collection: Client App Guide
 > Help articles specifically for clients using the mobile app.
 
@@ -183,6 +199,8 @@ Intercom uses **Collections** (top-level groups) and **Sections** (sub-groups wi
 - client-mobile/08-metrics.md
 - client-mobile/09-progress-photos.md
 - client-mobile/10-profile-and-settings.md
+- client-mobile/11-biometric-lock.md
+- client-mobile/12-archived-chats.md
 
 ## Writing Guidelines
 
