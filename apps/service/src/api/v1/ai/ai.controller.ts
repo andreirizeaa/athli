@@ -27,6 +27,34 @@ export const aiController = {
       return;
     }
 
+    // ── Input sanitization ───────────────────────────────────────────
+    // 1. Enforce length limit (10k chars is generous for a chat message)
+    if (message.length > 10_000) {
+      badRequest(res, { message: 'Message too long (max 10,000 characters)' });
+      return;
+    }
+
+    // 2. Strip control characters (keep newlines/tabs for formatting)
+    const sanitizedMessage = message.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').trim();
+
+    if (!sanitizedMessage) {
+      badRequest(res, { message: 'Message is empty after sanitization' });
+      return;
+    }
+
+    // 3. Validate conversationHistory size to prevent context-stuffing
+    const maxHistoryMessages = 50;
+    const maxHistoryMessageLength = 10_000;
+    const validatedHistory = Array.isArray(conversationHistory)
+      ? conversationHistory
+          .slice(-maxHistoryMessages)
+          .filter((msg: any) => msg.role && msg.content && typeof msg.content === 'string')
+          .map((msg: any) => ({
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content.slice(0, maxHistoryMessageLength),
+          }))
+      : [];
+
     // Set up SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -45,15 +73,8 @@ export const aiController = {
       }
     };
 
-    // Parse conversation history
-    const history: ConversationMessage[] = Array.isArray(conversationHistory)
-      ? conversationHistory
-          .filter((msg: any) => msg.role && msg.content)
-          .map((msg: any) => ({
-            role: msg.role as 'user' | 'assistant',
-            content: msg.content,
-          }))
-      : [];
+    // Use validated history from sanitization above
+    const history: ConversationMessage[] = validatedHistory;
 
     // Parse context
     const chatContext: ChatContext = {
@@ -79,7 +100,7 @@ export const aiController = {
 
     try {
       // Run the agent with streaming
-      await runAgent(message, history, chatContext, toolContext, sendEvent);
+      await runAgent(sanitizedMessage, history, chatContext, toolContext, sendEvent);
     } catch (error: any) {
       console.error('AI chat error:', error);
       sendEvent({

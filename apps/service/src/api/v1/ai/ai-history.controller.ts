@@ -116,11 +116,17 @@ export const aiHistoryController = {
     if (!userId) return unauthorized(res, { message: 'Not authenticated' });
     const { role, content, toolCalls, action, charts, clientSelect } = req.body;
     if (!role || !content) return badRequest(res, { message: 'role and content required' });
+
+    // Sanitize inputs
+    if (typeof content !== 'string' || content.length > 50_000) {
+      return badRequest(res, { message: 'Invalid content' });
+    }
+    const sanitizedContent = content.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').trim();
     try {
       const chatId = req.params.id as string;
       const chat = await svc.appendMessage(chatId, userId, {
         role,
-        content,
+        content: sanitizedContent,
         timestamp: new Date().toISOString(),
         toolCalls,
         action,
@@ -146,7 +152,11 @@ export const aiHistoryController = {
     const userId = (req as any).userId;
     if (!userId) return unauthorized(res, { message: 'Not authenticated' });
     const { message } = req.body;
-    if (!message) return badRequest(res, { message: 'message is required' });
+    if (!message || typeof message !== 'string') return badRequest(res, { message: 'message is required' });
+
+    // Limit input to title generation — only need first 500 chars
+    const sanitizedMessage = message.slice(0, 500).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').trim();
+    if (!sanitizedMessage) return badRequest(res, { message: 'message is empty' });
 
     try {
       const llm = getTitleLLM();
@@ -156,7 +166,7 @@ export const aiHistoryController = {
           'Rules: max 40 characters, no punctuation at all (no colons, periods, commas, dashes, exclamation marks), no quotes, no emojis. ' +
           'Keep it casual and concise like a chat label. Reply with ONLY the title, nothing else.',
         ),
-        new HumanMessage(message),
+        new HumanMessage(sanitizedMessage),
       ]);
       const raw = (typeof result.content === 'string' ? result.content : '').trim().replace(/[^a-zA-Z0-9 ]/g, '').trim();
       const title = raw.slice(0, 40);
