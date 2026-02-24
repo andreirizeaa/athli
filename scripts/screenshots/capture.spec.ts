@@ -9,11 +9,24 @@ function ensureDir(dir: string) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-// Take a named screenshot
+// Take a named screenshot in both light and dark mode
 async function snap(page: Page, category: string, name: string) {
-  const dir = path.join(SCREENSHOT_DIR, category);
-  ensureDir(dir);
-  await page.screenshot({ path: path.join(dir, `${name}.png`), fullPage: false });
+  // Light mode
+  const lightDir = path.join(SCREENSHOT_DIR, 'light', category);
+  ensureDir(lightDir);
+  await page.evaluate(() => document.documentElement.classList.remove('dark'));
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: path.join(lightDir, `${name}.png`), fullPage: false });
+
+  // Dark mode
+  const darkDir = path.join(SCREENSHOT_DIR, 'dark', category);
+  ensureDir(darkDir);
+  await page.evaluate(() => document.documentElement.classList.add('dark'));
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: path.join(darkDir, `${name}.png`), fullPage: false });
+
+  // Reset to light
+  await page.evaluate(() => document.documentElement.classList.remove('dark'));
 }
 
 // Wait for page to be fully loaded and stable
