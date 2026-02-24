@@ -1,0 +1,89 @@
+# Athli
+
+> Athli is an all-in-one coaching platform for fitness coaches to manage clients, deliver training programs, track progress, and grow their business.
+
+Athli provides coaches with tools to build workouts, create training programs, track client habits and metrics, manage check-ins, automate onboarding, handle payments via Stripe, and communicate with clients through built-in messaging. It includes a coach web app, coach mobile app, and client mobile app.
+
+## Documentation
+
+- [Welcome to Athli](https://docs.tryathli.com/articles/welcome-to-athli): Introduction to the Athli coaching platform and what it offers.
+- [Creating Your Account](https://docs.tryathli.com/articles/creating-your-account): How to sign up and set up your coach profile.
+- [Inviting Your First Client](https://docs.tryathli.com/articles/inviting-your-first-client): Send your first client invitation and get started coaching.
+- [Plans and Billing](https://docs.tryathli.com/articles/plans-and-billing): Overview of subscription plans and billing management.
+- [Understanding Athli Plans](https://docs.tryathli.com/articles/understanding-plans): Detailed breakdown of Starter (free), Pro, and Max plans with features and pricing.
+
+## Training
+
+- [Workout Builder](https://docs.tryathli.com/articles/workout-builder): Create and edit workouts with the drag-and-drop builder, AI generation, supersets, and custom sections.
+- [Section Builder](https://docs.tryathli.com/articles/section-builder): Build reusable workout sections (Regular, AMRAP, Tabata, HIIT, EMOM, Circuits) for your library.
+- [Training Programs](https://docs.tryathli.com/articles/training-programs): Create multi-week structured training programs and assign them to clients.
+- [Exercise Library](https://docs.tryathli.com/articles/exercise-library): Browse 1,700+ exercises with video demos, or create your own custom exercises.
+
+## Client Management
+
+- [Client Management](https://docs.tryathli.com/articles/client-management): Add, edit, archive, and organise your coaching roster.
+- [Client Notes](https://docs.tryathli.com/articles/client-notes): Keep private notes about each client for tracking observations and session summaries.
+
+## Forms
+
+- [Check-ins](https://docs.tryathli.com/articles/check-ins): Create recurring check-in forms to collect regular client feedback and track trends.
+- [Questionnaires](https://docs.tryathli.com/articles/questionnaires): Create one-time questionnaires for onboarding, assessments, or gathering specific data.
+
+## Tracking and Progress
+
+- [Habits](https://docs.tryathli.com/articles/habits): Assign and track daily habits with streaks and completion tracking.
+- [Metrics](https://docs.tryathli.com/articles/metrics): Track weight, body measurements, and custom metrics over time with charts.
+- [Progress Photos](https://docs.tryathli.com/articles/progress-photos): Capture and compare client progress photos side by side.
+
+## Communication
+
+- [Messaging](https://docs.tryathli.com/articles/messaging): Real-time chat with clients, file sharing, voice messages, and reactions.
+
+## AI Assistant
+
+- [AI Assistant](https://docs.tryathli.com/articles/ai-assistant): AI-powered coaching assistant that generates workouts, analyses client progress, and answers questions about your clients.
+
+## Automation
+
+- [Automations](https://docs.tryathli.com/articles/automations): Set up automated flows triggered by client activity.
+- [Onboarding Flows](https://docs.tryathli.com/articles/onboarding-flows): Automate client onboarding with questionnaires, welcome messages, and habit assignments.
+- [Business Sequences](https://docs.tryathli.com/articles/business-sequences): Build post-purchase automation workflows with visual flow editor, triggers, and actions.
+
+## Business and Payments
+
+- [Business Packages](https://docs.tryathli.com/articles/business-packages): Create and sell coaching packages with Stripe integration.
+- [Coupons](https://docs.tryathli.com/articles/coupons): Create discount coupons for your coaching packages.
+- [Managing Your Subscription](https://docs.tryathli.com/articles/managing-subscription): Change plans, manage add-ons, view invoices, and update billing.
+- [Cancelling and Reactivating](https://docs.tryathli.com/articles/cancelling-reactivating): Cancel, reactivate, or delete your account.
+
+## Files and Productivity
+
+- [Files](https://docs.tryathli.com/articles/files): Upload and share documents and files with clients.
+- [Todo List](https://docs.tryathli.com/articles/todo-list): Manage tasks with automated and personal task tracking.
+
+## Account and Settings
+
+- [Settings](https://docs.tryathli.com/articles/settings): Configure your account, profile, notifications, and app preferences.
+- [Refer and Earn](https://docs.tryathli.com/articles/refer-and-earn): Earn rewards by referring other coaches to Athli.
+- [Feature Requests](https://docs.tryathli.com/articles/feature-requests): Submit ideas and vote on platform improvements.
+
+## Client Mobile App
+
+- [Getting Started (Client)](https://docs.tryathli.com/articles/client-getting-started): How clients download the app and get started.
+- [Home Screen (Client)](https://docs.tryathli.com/articles/client-home-screen): Overview of the client home screen and navigation.
+- [Training (Client)](https://docs.tryathli.com/articles/client-training): How clients view, log, and complete their training.
+- [Progress (Client)](https://docs.tryathli.com/articles/client-progress): How clients track their progress with photos, metrics, and check-ins.
+- [Messaging (Client)](https://docs.tryathli.com/articles/client-messaging): How clients communicate with their coach.
+
+## Coach Mobile App
+
+- [Mobile Overview](https://docs.tryathli.com/articles/mobile-overview): Overview of the coach mobile app for iOS and Android.
+- [Training (Coach Mobile)](https://docs.tryathli.com/articles/training-mobile-coach): Manage training from the coach mobile app.
+- [Messaging (Coach Mobile)](https://docs.tryathli.com/articles/messaging-mobile-coach): Message clients from the mobile app.
+- [AI Assistant (Mobile)](https://docs.tryathli.com/articles/ai-assistant-mobile): Use the AI coaching assistant from mobile.
+
+## Links
+
+- [Website](https://tryathli.com)
+- [Web App](https://app.tryathli.com)
+- [Help Center](https://docs.tryathli.com)
