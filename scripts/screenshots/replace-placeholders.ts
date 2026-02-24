@@ -34,18 +34,22 @@ function processFile(filePath: string) {
       return line;
     }
 
-    const screenshotPath = path.join(SCREENSHOT_DIR, screenshotFile);
-    if (!fs.existsSync(screenshotPath)) {
-      console.warn(`  ⚠ File missing: ${screenshotFile} for "${description}"`);
+    const lightPath = path.join(SCREENSHOT_DIR, 'light', screenshotFile);
+    const darkPath = path.join(SCREENSHOT_DIR, 'dark', screenshotFile);
+
+    if (!fs.existsSync(lightPath) && !fs.existsSync(darkPath)) {
+      console.warn(`  ⚠ Files missing: ${screenshotFile} for "${description}"`);
       return line;
     }
 
-    // Calculate relative path from the markdown file to the screenshot
+    // Calculate relative paths from the markdown file to the screenshots
     const relDir = path.dirname(filePath);
-    const relPath = path.relative(relDir, screenshotPath).replace(/\\/g, '/');
+    const relLightPath = path.relative(relDir, lightPath).replace(/\\/g, '/');
+    const relDarkPath = path.relative(relDir, darkPath).replace(/\\/g, '/');
 
     modified = true;
-    return `![${description}](${relPath})`;
+    // Use a picture element approach with light/dark variants
+    return `<picture>\n  <source media="(prefers-color-scheme: dark)" srcset="${relDarkPath}">\n  <img alt="${description}" src="${relLightPath}">\n</picture>`;
   });
 
   if (modified) {
