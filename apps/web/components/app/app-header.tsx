@@ -30,6 +30,7 @@ import {
 import { useSidebar } from '@/components/ui/sidebar';
 import { SearchComponent } from './search';
 import { UserMenu } from './user-menu';
+import { SeedDataButton } from './seed-data-button';
 import { NotificationSidePanel } from './notification-side-panel';
 import { useCoachNotifications } from '@/hooks/use-coach-notifications';
 import { useAccess } from '@/lib/permissions';
@@ -257,6 +258,7 @@ export function AppHeader({
             )}
             Lyra
           </Button>
+          <SeedDataButton />
           <UserMenu
             isThemeMounted={isThemeMounted}
             currentLanguage={currentLanguage}
