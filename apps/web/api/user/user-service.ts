@@ -132,3 +132,17 @@ export async function seedDemoData(): Promise<{ seeded: boolean }> {
     });
     return data.data;
 }
+
+export async function seedScreenshotData(): Promise<{ clientsCreated: number }> {
+    const data = await apiFetch('/user/seed-screenshot-data', {
+        method: 'POST',
+    });
+    return data.data;
+}
+
+export async function cleanScreenshotData(): Promise<{ clientsRemoved: number }> {
+    const data = await apiFetch('/user/clean-screenshot-data', {
+        method: 'POST',
+    });
+    return data.data;
+}

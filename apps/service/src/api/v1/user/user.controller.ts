@@ -369,6 +369,54 @@ export class UserController {
       return internalError(res, { message: 'Failed to seed demo data' });
     }
   });
+
+  /**
+   * Seed rich screenshot data (development only)
+   */
+  seedScreenshotData = asyncHandler(async (req: Request, res: Response) => {
+    if (process.env.NODE_ENV === 'production') {
+      return unauthorized(res, { message: 'Not available in production' });
+    }
+
+    const userId = (req as any).userId;
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    try {
+      const { screenshotSeedService } = await import('../../../services/screenshot-seed.service');
+      const result = await screenshotSeedService.seedScreenshotData(userId);
+      success(res, { message: `Created ${result.clientsCreated} demo clients`, data: result });
+    } catch (error: any) {
+      console.error('Failed to seed screenshot data:', error);
+      return internalError(res, { message: 'Failed to seed screenshot data' });
+    }
+  });
+
+  /**
+   * Clean screenshot data (development only)
+   */
+  cleanScreenshotData = asyncHandler(async (req: Request, res: Response) => {
+    if (process.env.NODE_ENV === 'production') {
+      return unauthorized(res, { message: 'Not available in production' });
+    }
+
+    const userId = (req as any).userId;
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    try {
+      const { screenshotSeedService } = await import('../../../services/screenshot-seed.service');
+      const result = await screenshotSeedService.cleanScreenshotData(userId);
+      success(res, { message: `Removed ${result.clientsRemoved} demo clients`, data: result });
+    } catch (error: any) {
+      console.error('Failed to clean screenshot data:', error);
+      return internalError(res, { message: 'Failed to clean screenshot data' });
+    }
+  });
 }
 
 export const userController = new UserController();

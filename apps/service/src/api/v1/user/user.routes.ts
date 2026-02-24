@@ -224,3 +224,33 @@ userRouter.post('/generate-avatar', supabaseAuthenticate, userController.generat
  *         description: Demo data seeded successfully (or already exists)
  */
 userRouter.post('/seed-demo-data', supabaseAuthenticate, userController.seedDemoData);
+
+/**
+ * @openapi
+ * /api/v1/user/seed-screenshot-data:
+ *   post:
+ *     summary: Seed rich demo data for documentation screenshots
+ *     description: Creates 8 demo clients with varied data (habits, metrics, notes, messages, goals). Only works in development.
+ *     tags: [User]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Screenshot data seeded successfully
+ */
+userRouter.post('/seed-screenshot-data', supabaseAuthenticate, userController.seedScreenshotData);
+
+/**
+ * @openapi
+ * /api/v1/user/clean-screenshot-data:
+ *   post:
+ *     summary: Remove screenshot demo data
+ *     description: Removes all demo clients created by seed-screenshot-data. Only works in development.
+ *     tags: [User]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Screenshot data cleaned successfully
+ */
+userRouter.post('/clean-screenshot-data', supabaseAuthenticate, userController.cleanScreenshotData);
