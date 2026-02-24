@@ -16,7 +16,7 @@ La pantalla de Configuracion en la aplicacion movil de coach te permite gestiona
 ### Editar tu Perfil
 
 1. Toca **Editar Perfil**
-2. Actualiza tu nombre, foto de perfil o biografia
+2. Actualiza tus datos personales (nombre, foto de perfil, biografia, zona horaria, informacion de contacto) y detalles de la empresa (nombre del negocio, descripcion)
 3. Toca **Guardar**
 
 > [Captura de pantalla: Pantalla de editar perfil movil]
@@ -37,14 +37,6 @@ La pantalla de Configuracion en la aplicacion movil de coach te permite gestiona
 
 > [Captura de pantalla: Resumen de facturacion movil]
 
-### Detalles de la Empresa
-
-1. Toca **Detalles de la Empresa**
-2. Ve y actualiza la informacion de tu negocio
-3. Edita el nombre y descripcion del negocio
-
-> [Captura de pantalla: Pantalla de detalles de empresa movil]
-
 ### Solicitudes de Funciones
 
 1. Toca **Solicitudes de Funciones**
@@ -53,17 +45,10 @@ La pantalla de Configuracion en la aplicacion movil de coach te permite gestiona
 
 > [Captura de pantalla: Lista de solicitudes de funciones movil]
 
-### Detalles Personales
-
-1. Toca **Detalles Personales**
-2. Actualiza tu zona horaria, preferencias e informacion de contacto
-
-> [Captura de pantalla: Pantalla de detalles personales movil]
-
 ## Cosas a Tener en Cuenta
 
 - Algunas configuraciones (como cambios de plan de facturacion) redirigen a la aplicacion web
-- La configuracion de notificaciones en movil controla las notificaciones push especificamente
+- La configuracion de notificaciones en movil incluye opciones tanto para notificaciones push como por correo electronico
 - Los cambios se sincronizan con la aplicacion web inmediatamente
 
 ---

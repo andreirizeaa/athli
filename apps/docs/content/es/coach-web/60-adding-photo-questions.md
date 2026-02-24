@@ -15,43 +15,33 @@ Las fotos te dan contexto visual que los numeros y el texto no pueden capturar. 
 1. Ve a **Biblioteca > Formularios > Check-ins**
 2. Abre un check-in existente o crea uno nuevo
 3. Haz clic en **Agregar Pregunta**
-4. Selecciona el tipo de pregunta **Foto**
-5. Ingresa el texto de la pregunta (ej., "Sube una foto de progreso de frente")
+4. Selecciona el tipo de pregunta **Foto de Progreso**
+5. Ingresa el texto de la pregunta (ej., "Sube tus fotos de progreso")
 6. Opcionalmente activa **Requerido** si la foto es obligatoria
 7. Haz clic en **Guardar**
 
-> [Screenshot: Adding a photo question to a check-in form]
+> [Screenshot 1: Agregar un tipo de pregunta de foto de progreso a un check-in]
 
-### Configurar Preguntas con Foto
+### Configurar la Pregunta de Foto de Progreso
 
-- Puedes agregar multiples preguntas con foto en un solo check-in (ej., foto de frente, foto de lado, foto de espalda)
-- Cada pregunta con foto acepta una imagen por envio
-- Agrega una descripcion clara para que los clientes sepan exactamente que foto tomar
-- Marca las preguntas con foto como opcionales si quieres que los clientes las envien solo cuando sea conveniente
-
-> [Screenshot: Check-in with multiple photo questions configured]
+- Cada check-in soporta una pregunta de foto de progreso
+- La pregunta de foto de progreso solicita al cliente subir tres imagenes: frente, lado y espalda
+- Agrega una descripcion clara para que los clientes sepan que poses tomar
+- Marca la pregunta como opcional si quieres que los clientes envien fotos solo cuando sea conveniente
 
 ### Como los Clientes Envian Fotos
 
 1. El cliente abre el check-in en su aplicacion movil
 2. Llegan a la pregunta con foto y tocan el area de carga
-3. Pueden tomar una nueva foto con su camara o seleccionar una de su galeria
-4. La foto se adjunta a su envio de check-in
+3. Se les solicita subir tres fotos: frente, lado y espalda
+4. Pueden tomar nuevas fotos con su camara o seleccionar de su galeria
 5. Continuan con las preguntas restantes y envian
 
 ### Revisar Fotos Enviadas
 
-1. Ve a la pestana de **Check-ins** del cliente
-2. Abre un envio de check-in completado
-3. Desplazate hasta la pregunta con foto para ver la imagen enviada
-4. Haz clic en la foto para verla en tamano completo
-5. Usa la funcion **Comparar** para ver fotos de diferentes fechas de envio una al lado de la otra
+Las fotos de progreso enviadas a traves de check-ins se sincronizan con la pagina de **Fotos** del cliente. Navega a la pestana **Fotos** del cliente para ver, comparar y rastrear fotos de progreso a lo largo del tiempo.
 
-> [Screenshot: Reviewing a submitted photo in a check-in response]
-
-### Preguntas con Foto vs. Fotos de Progreso
-
-Las preguntas con foto en check-ins son mejores para fotos casuales y contextuales enviadas junto con otros datos. Para seguimiento dedicado y estructurado de composicion corporal con herramientas de comparacion, usa la funcion de **Fotos de Progreso** en su lugar. Las fotos de progreso proporcionan una galeria disenada especificamente con categorias de poses y comparaciones lado a lado.
+> [Screenshot 2: Pagina de comparacion de fotos mostrando fotos de progreso lado a lado]
 
 ## Cosas a Tener en Cuenta
 
@@ -66,7 +56,7 @@ Las preguntas con foto en check-ins son mejores para fotos casuales y contextual
 
 ### ¿Pueden los clientes subir multiples fotos por pregunta?
 
-Cada pregunta con foto acepta una imagen. Agrega multiples preguntas con foto si necesitas varias fotos en un solo check-in.
+La pregunta de foto de progreso solicita a los clientes tres fotos (frente, lado y espalda) en una sola pregunta.
 
 ### ¿Que formatos de archivo se admiten?
 
@@ -74,8 +64,4 @@ Se admiten formatos de imagen estandar incluyendo JPEG y PNG. Los clientes puede
 
 ### ¿Puedo descargar las fotos enviadas?
 
-Puedes ver y guardar fotos desde la pagina de detalle del envio de check-in.
-
-### ¿Debo usar preguntas con foto o la funcion de Fotos de Progreso?
-
-Usa preguntas con foto para check-ins visuales rapidos junto con otros datos. Usa la funcion dedicada de Fotos de Progreso para seguimiento estructurado de composicion corporal con categorias de poses y herramientas de comparacion.
+Puedes ver y guardar fotos desde la pagina de Fotos del cliente.

@@ -20,7 +20,7 @@ Without syncing, clients would need to submit a check-in and then separately log
 6. Select the metric you want to sync to from the dropdown
 7. Click **Save**
 
-> [Screenshot: Number question with Link to Metric dropdown showing available metrics]
+> [Screenshot 1: Number question with Link to Metric dropdown showing available metrics]
 
 ### How the Sync Works
 
@@ -30,28 +30,13 @@ Without syncing, clients would need to submit a check-in and then separately log
 4. The value is automatically logged to the linked metric with the submission date
 5. The metric chart updates to include the new data point
 
-> [Screenshot: Metric chart showing data points synced from check-in submissions]
+> [Screenshot 2: Metric chart showing data points synced from check-in submissions]
 
 ### Requirements for Syncing
 
 - The check-in question must be a **Number** type. Text, Rating, Yes/No, Multiple Choice, and Scale questions cannot be synced to metrics.
 - The metric must already exist in your library and be assigned to the client.
 - One question can be linked to one metric at a time.
-
-### Verifying the Sync
-
-1. After a client submits a check-in with a linked question, go to their **Metrics** tab
-2. Open the linked metric
-3. You should see the new data point in the chart and history
-4. The log entry will show it was synced from a check-in
-
-> [Screenshot: Metric history entry showing source as check-in sync]
-
-### Common Sync Scenarios
-
-- **Body weight check-in**: Add a Number question "What is your weight today?" and link it to the client's weight metric
-- **Sleep tracking**: Add a Number question "How many hours did you sleep?" and link it to a sleep hours metric
-- **Measurements**: Add Number questions for waist, chest, or arm measurements and link each to the corresponding metric
 
 ## Things to Note
 

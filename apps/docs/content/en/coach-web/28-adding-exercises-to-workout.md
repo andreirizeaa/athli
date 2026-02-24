@@ -2,31 +2,39 @@
 
 ## What is this?
 
-The exercise picker is the primary way you add exercises to a workout in the Workout Builder. It gives you access to a full library of built-in and custom exercises, with search and filtering tools so you can quickly find exactly what you need.
+There are two ways to add exercises to a workout in the Workout Builder: dragging from the exercise panel on the left, or clicking the Add Exercise button to insert an empty exercise card.
 
 ## Why is it useful?
 
-Instead of typing exercise names manually, the exercise picker lets you browse a curated library complete with muscle group tags, equipment filters, and professional demo videos. You can add multiple exercises at once, saving time when building out a full session.
+Both methods give you access to your full library of built-in and custom exercises. Dragging from the left panel lets you browse and filter exercises visually before placing them, while the Add Exercise button is a quick way to add an exercise card and search for what you need inline.
 
 ## Step-by-Step Guide
 
+### Drag from the Left Panel
+
+The left panel in the Workout Builder displays your exercise library. You can filter exercises by muscle group or equipment to find what you need, then drag an exercise directly into the workout at the position you want.
+
+1. Open the Workout Builder for the workout you want to edit.
+2. Use the left panel to browse your exercise library.
+3. **Filter by muscle group**: Use the muscle group filter to narrow results to exercises targeting a specific area such as Chest, Back, Shoulders, Legs, or Arms.
+4. **Filter by equipment**: Select an equipment filter (e.g., Barbell, Dumbbell, Cable, Bodyweight) to show only exercises that use that equipment.
+5. Drag the exercise from the left panel and drop it into the workout at the desired position.
+6. Configure the exercise with sets, reps, weight, rest time, and any other columns you have enabled.
+
+> [Screenshot 1: Left exercise panel with filters and an exercise being dragged into the workout]
+
+### Click Add Exercise
+
+Click the **Add Exercise** button to insert an empty exercise card into the workout. Then search for the exercise you want directly within that card.
+
 1. Open the Workout Builder for the workout you want to edit.
 2. Click the **Add Exercise** button at the bottom of the workout or within a section.
-3. The exercise picker modal will appear with a search bar and filter options.
-4. **Search by name**: Type the exercise name (e.g., "Bench Press") into the search bar. Results update as you type.
-5. **Filter by muscle group**: Use the muscle group filter to narrow results to exercises targeting a specific area such as Chest, Back, Shoulders, Legs, or Arms.
-6. **Filter by equipment**: Select an equipment filter (e.g., Barbell, Dumbbell, Cable, Bodyweight) to show only exercises that use that equipment.
-7. **Select exercises**: Click on an exercise to add it to the workout. You can select multiple exercises before closing the picker.
-8. Close the exercise picker. Your selected exercises now appear in the workout.
-9. **Configure each exercise**: For each added exercise, set the number of sets, reps, weight, rest time, and any other columns you have enabled.
+3. An empty exercise card appears in the workout.
+4. Search for the exercise by name within the card.
+5. Select the exercise from the search results.
+6. Configure the exercise with sets, reps, weight, rest time, and any other columns you have enabled.
 
-> [Screenshot: Exercise picker modal showing search bar and muscle group filters]
-
-### Adding Multiple Exercises at Once
-
-Rather than opening and closing the picker for each exercise, you can select several exercises in one session. Each selected exercise is added to the workout in the order you pick them. This is particularly useful when building a full workout from scratch.
-
-> [Screenshot: Multiple exercises selected in the exercise picker]
+> [Screenshot 2: Empty exercise card with search field to find an exercise]
 
 ### Configuring After Adding
 

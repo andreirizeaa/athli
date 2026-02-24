@@ -125,10 +125,12 @@ export default function CheckInsScreen() {
     router.push({
       pathname: '/modals/athlete/form-review-modal',
       params: {
-        questionnaireId: review.checkin_log_id,
+        questionnaireId: review.coach_checkin_id,
         questionnaireName: review.checkin_name,
         clientId: review.client_id,
+        coachId: review.coach_id,
         formType: 'checkIn',
+        logId: review.checkin_log_id,
         completedAt: review.created_at,
       },
     });

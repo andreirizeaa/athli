@@ -23,8 +23,6 @@ Entender como se manejan tus datos genera confianza y te ayuda a tomar decisione
 - Proporciona servicios adicionales en la nube utilizados por la plataforma
 - Soporta funciones especificas de la plataforma y tareas de procesamiento
 
-> [Screenshot: Overview diagram of Athli infrastructure and data flow]
-
 ### Procesamiento de Pagos
 
 **Stripe**
@@ -34,8 +32,6 @@ Entender como se manejan tus datos genera confianza y te ayuda a tomar decisione
 - Athli no almacena, ve ni tiene acceso a la informacion de tarjetas de credito
 - Stripe cumple con PCI-DSS, cumpliendo con el estandar mas alto para seguridad de datos de pago
 - Gestiona pagos, reembolsos y disputas directamente a traves de tu Stripe Dashboard
-
-> [Screenshot: Stripe checkout page during a client purchase]
 
 ### Analiticas
 

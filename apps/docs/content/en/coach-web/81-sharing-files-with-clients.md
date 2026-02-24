@@ -16,7 +16,7 @@ Instead of emailing documents back and forth, you can keep everything organized 
 2. Click **Upload** and select files from your computer
 3. Files are stored in your library and ready to be shared
 
-> [Screenshot: Files library with upload button and list of uploaded documents]
+> [Screenshot 1: Files library with upload button and list of uploaded documents]
 
 ### Sharing Files with a Client
 
@@ -26,7 +26,7 @@ Instead of emailing documents back and forth, you can keep everything organized 
 4. Select files from your existing library or upload new ones
 5. The selected files are now shared with the client
 
-> [Screenshot: Client profile Files tab with Add Files button and shared documents]
+> [Screenshot 2: Client profile Files tab with Add Files button and shared documents]
 
 ### What Clients See
 
@@ -44,7 +44,7 @@ Instead of emailing documents back and forth, you can keep everything organized 
 4. Click remove or unlink to take it off the client's profile
 5. The file remains in your library for use with other clients
 
-> [Screenshot: Client files tab showing option to remove a shared file]
+> [Screenshot 3: Client files tab showing option to remove a shared file]
 
 ## Things to Note
 

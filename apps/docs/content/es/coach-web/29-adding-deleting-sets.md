@@ -17,7 +17,7 @@ Diferentes objetivos de entrenamiento requieren diferentes configuraciones de se
 3. Aparece una nueva fila de serie con valores predeterminados. Ajusta repeticiones, peso, descanso y otros campos segun sea necesario.
 4. Repite para agregar tantas series como necesites.
 
-> [Screenshot: Add Set button below an exercise's set rows]
+> [Screenshot 1: Add Set button below an exercise's set rows]
 
 ### Eliminar Series
 
@@ -26,7 +26,7 @@ Diferentes objetivos de entrenamiento requieren diferentes configuraciones de se
 3. Haz clic en el icono **Eliminar** (icono de papelera o "x") en el lado derecho de la fila de la serie.
 4. La serie se elimina inmediatamente. Si el ejercicio tiene solo una serie restante, esa serie no puede ser eliminada sin eliminar el ejercicio completo.
 
-> [Screenshot: Delete icon visible on a set row]
+> [Screenshot 2: Delete icon visible on a set row]
 
 ### Vincular y Desvincular Series
 
@@ -39,7 +39,7 @@ Cuando las series estan **desvinculadas**, cada serie tiene valores independient
 3. Cuando estan vinculadas, editar cualquier valor de serie actualiza todas las series.
 4. Cuando estan desvinculadas, cada fila de serie puede editarse independientemente.
 
-> [Screenshot: Linked vs unlinked sets comparison]
+> [Screenshot 3: Linked vs unlinked sets comparison]
 
 ## Cosas a Tener en Cuenta
 

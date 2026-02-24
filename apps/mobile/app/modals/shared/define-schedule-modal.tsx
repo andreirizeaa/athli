@@ -230,6 +230,9 @@ export default function DefineScheduleModal() {
         const initial = initialStateRef.current;
         const currentSelectedDaysArray = Array.from(selectedDays).sort();
 
+        // Check if we had no existing schedule data when modal opened
+        const hadNoSchedule = !scheduleData;
+
         // Compare against initial state to detect changes
         let changes = false;
         if (initial) {
@@ -264,9 +267,10 @@ export default function DefineScheduleModal() {
 
         return {
             hasChanges: changes,
-            canComplete: valid && changes,
+            // Allow completing if valid AND (there are changes OR no schedule existed before)
+            canComplete: valid && (changes || hadNoSchedule),
         };
-    }, [frequency, selectedDays, monthlyOption, specificDay]);
+    }, [frequency, selectedDays, monthlyOption, specificDay, scheduleData]);
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {

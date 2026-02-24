@@ -13,7 +13,7 @@ The Training tab on the coach mobile app shows a calendar view of all your clien
 3. Swipe left/right to navigate between days
 4. Each client's workout is shown as a card with status indicators
 
-> [Screenshot: Mobile training calendar showing all clients for a day]
+> [Screenshot 1: Mobile training calendar showing all clients for a day]
 
 ### Previewing a Workout
 
@@ -21,7 +21,7 @@ The Training tab on the coach mobile app shows a calendar view of all your clien
 2. A preview shows all exercises, sets, reps, and notes
 3. You can see if the client has completed the workout and their logged results
 
-> [Screenshot: Mobile workout preview with exercise details]
+> [Screenshot 2: Mobile workout preview with exercise details]
 
 ### Reviewing Completed Workouts
 
@@ -29,7 +29,7 @@ The Training tab on the coach mobile app shows a calendar view of all your clien
 2. Tap to see the client's logged sets, reps, and weights
 3. View post-workout metrics and notes the client added
 
-> [Screenshot: Completed workout review with client-logged data]
+> [Screenshot 3: Completed workout review with client-logged data]
 
 ## Things to Note
 

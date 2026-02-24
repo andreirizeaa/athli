@@ -18,7 +18,7 @@ A sequence is a visual workflow built with a flow editor. You define a trigger (
 1. Go to **Business** in the sidebar.
 2. Select **Sequences**.
 
-> [Screenshot: sequences list page showing created sequences]
+> [Screenshot 1: sequences list page showing created sequences]
 
 ## Creating a Sequence
 
@@ -27,7 +27,7 @@ A sequence is a visual workflow built with a flow editor. You define a trigger (
 3. Click **Save** to create the sequence.
 4. You will be taken to the flow editor.
 
-> [Screenshot: add sequence side panel with name and description fields]
+> [Screenshot 2: add sequence side panel with name and description fields]
 
 ## Using the Flow Editor
 
@@ -70,7 +70,7 @@ After the trigger, you add actions that execute in order:
 5. Add more actions as needed, including **Wait** steps for delays.
 6. Your changes save automatically.
 
-> [Screenshot: flow editor with a trigger and multiple action nodes connected]
+> [Screenshot 3: flow editor with a trigger and multiple action nodes connected]
 
 ## Linking a Sequence to a Package
 
@@ -81,7 +81,7 @@ Once you create a sequence, you can link it to a business package so it runs aut
 3. In the sequence field, select your sequence.
 4. Save.
 
-> [Screenshot: package edit form with sequence dropdown]
+> [Screenshot 4: package edit form with sequence dropdown]
 
 ## Managing Sequences
 

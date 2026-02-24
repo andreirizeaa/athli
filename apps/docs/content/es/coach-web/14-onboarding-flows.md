@@ -30,7 +30,7 @@ Las primeras impresiones importan. Una experiencia de incorporacion fluida hace 
 5. Establece el tiempo para cada paso (inmediatamente, despues de X dias, despues del paso anterior)
 6. Haz clic en **Guardar y Activar**
 
-> [Screenshot: Constructor de incorporacion con secuencia de pasos]
+> [Screenshot 1: Constructor de incorporacion con secuencia de pasos]
 
 ### Asignar un Flujo de Incorporacion a Nuevos Clientes
 
@@ -38,15 +38,7 @@ Las primeras impresiones importan. Una experiencia de incorporacion fluida hace 
 2. Alternativamente, puedes establecer una incorporacion predeterminada en tu configuracion
 3. El flujo comienza automaticamente cuando el cliente crea su cuenta
 
-> [Screenshot: Formulario de agregar cliente con seleccion de flujo de incorporacion]
-
-### Monitorear el Progreso de Incorporacion
-
-1. Ve a la pagina de **Incorporacion**
-2. Veras todos los procesos de incorporacion activos
-3. Cada uno muestra el nombre del cliente, paso actual y estado de completado
-
-> [Screenshot: Pagina de incorporacion con procesos activos e indicadores de progreso]
+> [Screenshot 2: Formulario de agregar cliente con seleccion de flujo de incorporacion]
 
 ## Cosas a Tener en Cuenta
 

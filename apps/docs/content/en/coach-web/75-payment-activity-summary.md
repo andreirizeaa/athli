@@ -17,7 +17,7 @@ Keeping track of your coaching income is essential. The Activity page provides a
 3. Each entry shows the client name, package, amount, date, and status
 4. Use the filters to narrow results by date range, client, or payment status
 
-> [Screenshot: Activity page with list of transactions and filter options]
+> [Screenshot 1: Activity page with list of transactions and filter options]
 
 ### Understanding Payment Statuses
 
@@ -34,7 +34,7 @@ Keeping track of your coaching income is essential. The Activity page provides a
 3. You are taken directly to your Stripe account
 4. From there, you can manage all financial details
 
-> [Screenshot: Stripe Dashboard link in the Business section]
+> [Screenshot 2: Stripe Dashboard link in the Business section]
 
 ### Managing Refunds
 
@@ -51,7 +51,7 @@ Athli does not handle refunds directly. All refund processing must go through yo
 2. See active subscriptions, renewals, and cancellations
 3. For subscription management details, visit the Stripe Dashboard
 
-> [Screenshot: Activity page filtered to show subscription events]
+> [Screenshot 3: Activity page filtered to show subscription events]
 
 ## Things to Note
 

@@ -51,22 +51,20 @@ import { SectionBuilder } from './section-builder';
 import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
 import { DEFAULT_EXECUTION_FIELDS } from '@/components/training/workout-schema';
 
-type ColumnId = 'description' | 'sectionType' | 'totalExercises' | 'created' | 'actions';
+type ColumnId = 'description' | 'sectionType' | 'totalExercises' | 'actions';
 
 const COLUMN_ORDER: ColumnId[] = [
   'description',
   'sectionType',
   'totalExercises',
-  'created',
   'actions',
 ];
 
 const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): string => {
   const widths: Record<ColumnId, { class: string; pixel: string }> = {
-    description: { class: 'min-w-[250px]', pixel: '250px' },
-    sectionType: { class: 'min-w-[140px]', pixel: '140px' },
-    totalExercises: { class: 'min-w-[170px]', pixel: '170px' },
-    created: { class: 'min-w-[130px]', pixel: '130px' },
+    description: { class: 'min-w-[380px]', pixel: '380px' },
+    sectionType: { class: 'min-w-[200px]', pixel: '200px' },
+    totalExercises: { class: 'min-w-[220px]', pixel: '220px' },
     actions: { class: 'w-[100px]', pixel: '100px' },
   };
 

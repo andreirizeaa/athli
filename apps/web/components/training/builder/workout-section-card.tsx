@@ -385,34 +385,34 @@ export const WorkoutSectionCard = ({
                           </div>
 
                           {/* Slot between this exercise and the next */}
-                          <div
-                            onDragOver={(e) => onSlotDragOver?.(e, exerciseIndex + 1)}
-                            onDragLeave={onSlotDragLeave}
-                            onDrop={(e) => onSlotDrop?.(e, exerciseIndex + 1)}
-                            className={cn(
-                              'transition-all w-full',
-                              draggedExercise &&
+                          {!(isLinkedToNext) && (
+                            <div
+                              onDragOver={(e) => onSlotDragOver?.(e, exerciseIndex + 1)}
+                              onDragLeave={onSlotDragLeave}
+                              onDrop={(e) => onSlotDrop?.(e, exerciseIndex + 1)}
+                              className={cn(
+                                'transition-all w-full',
+                                draggedExercise &&
+                                  dragOverSlot &&
+                                  dragOverSlot.sectionId === section.id &&
+                                  dragOverSlot.slotIndex === exerciseIndex + 1
+                                  ? 'my-1 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm'
+                                  : 'h-1'
+                              )}
+                            >
+                              {draggedExercise &&
                                 dragOverSlot &&
                                 dragOverSlot.sectionId === section.id &&
-                                dragOverSlot.slotIndex === exerciseIndex + 1
-                                ? 'my-1 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm'
-                                : isLinkedToNext
-                                  ? 'h-0'
-                                  : 'h-1'
-                            )}
-                          >
-                            {draggedExercise &&
-                              dragOverSlot &&
-                              dragOverSlot.sectionId === section.id &&
-                              dragOverSlot.slotIndex === exerciseIndex + 1 && (
-                                <span>Drop your exercise here</span>
-                              )}
-                          </div>
+                                dragOverSlot.slotIndex === exerciseIndex + 1 && (
+                                  <span>Drop your exercise here</span>
+                                )}
+                            </div>
+                          )}
                           {exercises &&
                             exerciseIndex < exercises.length - 1 && (
                               <>
                                 {isLinkedToNext ? (
-                                  <div className="relative flex items-center justify-center bg-background border-x py-1">
+                                  <div className="relative flex items-center justify-center bg-background border-x py-1 -mb-2">
                                     <Separator className="absolute w-full" />
                                     <Button
                                       type="button"

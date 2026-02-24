@@ -20,7 +20,7 @@ Ask the AI to generate complete workouts:
 
 The AI generates a workout and shows it in an **action card** for your review.
 
-> [Screenshot: AI-generated workout action card with exercises, sets, reps, and rest times]
+> [Screenshot 1: AI-generated workout action card with exercises, sets, reps, and rest times]
 
 ### Building Sections
 
@@ -32,7 +32,7 @@ Ask the AI to create structured workout sections:
 
 Sections are reusable building blocks you can add to multiple workouts.
 
-> [Screenshot: Action card showing a superset section with paired exercises]
+> [Screenshot 2: Action card showing a superset section with paired exercises]
 
 ### Browsing Your Library
 
@@ -42,7 +42,7 @@ Ask the AI to show items from your saved library:
 - **"Show me my programs"** - Lists your training programs
 - **"Show me my saved sections"** - Lists your section templates
 
-> [Screenshot: AI listing saved workouts from the library]
+> [Screenshot 3: AI listing saved workouts from the library]
 
 ### Searching Exercises
 
@@ -61,7 +61,7 @@ Ask the AI to assign training directly:
 
 The AI shows an action card with the assignment details for your confirmation.
 
-> [Screenshot: Action card confirming workout assignment to a client on a specific date]
+> [Screenshot 4: Action card confirming workout assignment to a client on a specific date]
 
 ## Things to Note
 

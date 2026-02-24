@@ -16,29 +16,29 @@ Everything from your coach is in one app. No more searching through WhatsApp mes
 2. Search for **Athli**
 3. Download and install the app
 
-> [Screenshot: App Store listing for Athli client app]
+> [AppStoreButtons]
 
-### Creating Your Account
+### Joining Your Coach's Program
 
-1. Open the app
-2. If your coach sent you an invite link, tap it to pre-fill your details
-3. Enter your email and create a password
-4. Complete your profile with your name and profile picture
-5. You are now connected to your coach
+Your coach will send you a link to join their program. Tap the link to create your account.
 
-> [Screenshot: Client sign up screen]
+1. Tap the invite link from your coach
+2. Enter your details and create a password
+3. Download the app and sign in
+4. You are now connected to your coach and ready to go
+
+> [Screenshot 1: Client sign up screen]
 
 ### Navigating the App
 
-The app has tabs at the bottom for quick access:
+The app has four tabs at the bottom for quick access:
 
-- **Home** - Your daily tasks, workouts, and overview
+- **Home** - Your daily tasks, workouts, coach messages, and overview
 - **Training** - Your workout calendar
-- **Progress** - Metrics, photos, and history
-- **Chats** - Messages with your coach
-- **Profile** - Your details and settings
+- **Progress** - Metrics, habits, photos, and history
+- **Profile** - Your details, coach profile, and settings
 
-> [Screenshot: Client app home screen with bottom navigation tabs]
+> [Screenshot 2: Client app home screen with bottom navigation tabs (mobile)]
 
 ## Things to Note
 
@@ -50,12 +50,15 @@ The app has tabs at the bottom for quick access:
 ## Common Problems
 
 **I did not receive an invite from my coach**
+
 Ask your coach to resend the invite email. Check your spam folder as well.
 
 **The app is not loading**
+
 Check your internet connection. Try closing and reopening the app.
 
 **I forgot my password**
+
 On the sign-in screen, tap **Forgot Password** and follow the steps to reset it.
 
 ---

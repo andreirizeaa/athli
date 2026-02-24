@@ -26,7 +26,7 @@ Los cupones son una excelente herramienta de marketing para atraer nuevos client
 5. Opcionalmente establece una fecha de expiracion o limite de uso
 6. Haz clic en **Crear**
 
-> [Screenshot: Formulario de crear cupon con opciones de descuento]
+> [Screenshot 1: Formulario de crear cupon con opciones de descuento]
 
 ### Desactivar un Cupon
 
@@ -34,7 +34,7 @@ Los cupones son una excelente herramienta de marketing para atraer nuevos client
 2. Haz clic en **Desactivar**
 3. El cupon ya no puede ser usado al momento de pagar
 
-> [Screenshot: Lista de cupones con opcion de desactivar]
+> [Screenshot 2: Lista de cupones con opcion de desactivar]
 
 ## Cosas a Tener en Cuenta
 

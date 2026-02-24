@@ -19,7 +19,7 @@ Antes de poder vender paquetes de coaching o aceptar cualquier pago a traves de 
 5. Una vez que la incorporacion este completa, seras redirigido de vuelta a Athli
 6. Tu cuenta de Stripe ahora esta conectada y puedes empezar a crear paquetes
 
-> [Screenshot: Business page showing the Connect Stripe button]
+> [Screenshot 1: Business page showing the Connect Stripe button]
 
 ### Elegir un Tipo de Cuenta
 
@@ -35,7 +35,7 @@ Antes de poder vender paquetes de coaching o aceptar cualquier pago a traves de 
 3. Desde Stripe, configura tu calendario de pagos (diario, semanal, mensual)
 4. Establece tu cuenta bancaria preferida para recibir fondos
 
-> [Screenshot: Stripe Dashboard link in the Business section]
+> [Screenshot 2: Stripe Dashboard link in the Business section]
 
 ## Cosas a Tener en Cuenta
 

@@ -25,7 +25,7 @@ When a new client joins, you need to learn about their history, goals, preferenc
 4. Build your questions (text, number, rating, yes/no, multiple choice, scale)
 5. Click **Save**
 
-> [Screenshot: Questionnaire builder with question types]
+> [Screenshot 1: Questionnaire builder with question types]
 
 ### Assigning a Questionnaire
 
@@ -36,22 +36,34 @@ When a new client joins, you need to learn about their history, goals, preferenc
 5. Click **Assign**
 6. The client receives a notification to complete it
 
-> [Screenshot: Assign questionnaire dialog]
+> [Screenshot 2: Assign questionnaire dialog]
 
 ### Reviewing Responses
 
-1. Go to the client's **Questionnaires** tab
-2. Click on any completed questionnaire
-3. Review all responses
-4. Download the submission if needed
+Once a client completes a questionnaire, their responses appear in the **Response** tab on the questionnaire detail page. Each question is displayed with the client's answer below it.
 
-> [Screenshot: Completed questionnaire with responses]
+1. Go to the client's **Questionnaires** tab
+2. Click on any completed questionnaire to open its detail page
+3. Select the **Response** tab
+4. Review all questions and answers displayed in a card format
+
+> [Screenshot 3: Completed questionnaire with responses]
+
+### Downloading a Questionnaire as PDF
+
+You can download a completed questionnaire as a PDF. The download button is available on all tabs once the questionnaire has been completed.
+
+1. Click the **Download** button in the top-right of the questionnaire detail page
+2. The PDF includes the form name, client details, completion date, all questions, and the client's answers
+
+> [Screenshot 4: Questionnaire detail page with download button]
 
 ## Things to Note
 
 - Questionnaires are one-time submissions, not recurring
 - For recurring feedback, use Check-ins instead
 - You can include questionnaires in your onboarding flows for automatic assignment
+- The download button is visible on all tabs (Builder, Response) as long as the questionnaire has been completed
 
 ---
 
@@ -68,3 +80,7 @@ Yes. Create once in the Library and assign to any client.
 ### Can clients edit their response after submitting?
 
 No. Once submitted, responses are final. The client would need to fill out a new questionnaire.
+
+### Can I export questionnaire data?
+
+Yes. Use the Download button on any tab to export the completed questionnaire as a PDF.

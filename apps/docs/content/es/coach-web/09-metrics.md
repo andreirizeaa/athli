@@ -28,7 +28,7 @@ Rastrear numeros a lo largo del tiempo muestra progreso real. Las metricas te da
 6. Organiza en carpetas si es necesario
 7. Haz clic en **Guardar**
 
-> [Screenshot: Formulario de crear metrica con seleccion de tipo y unidad]
+> [Screenshot 1: Formulario de crear metrica con seleccion de tipo y unidad]
 
 ### Asignar una Metrica a un Cliente
 
@@ -38,7 +38,7 @@ Rastrear numeros a lo largo del tiempo muestra progreso real. Las metricas te da
 4. Selecciona de tu biblioteca
 5. Haz clic en **Asignar**
 
-> [Screenshot: Dialogo de asignar metrica]
+> [Screenshot 2: Dialogo de asignar metrica]
 
 ### Registrar Valores de Metricas
 
@@ -48,7 +48,7 @@ Rastrear numeros a lo largo del tiempo muestra progreso real. Las metricas te da
 4. La fecha se establece por defecto a hoy pero puedes cambiarla
 5. Haz clic en **Guardar**
 
-> [Screenshot: Formulario de registrar metrica con entrada de valor]
+> [Screenshot 3: Formulario de registrar metrica con entrada de valor]
 
 ### Ver Historial de Metricas y Graficos
 
@@ -58,7 +58,7 @@ Rastrear numeros a lo largo del tiempo muestra progreso real. Las metricas te da
 4. Debajo del grafico hay un historial de todos los valores registrados
 5. Edita o elimina entradas individuales segun sea necesario
 
-> [Screenshot: Vista de detalle de metrica con grafico y tabla de historial]
+> [Screenshot 4: Vista de detalle de metrica con grafico y tabla de historial]
 
 ### Organizar Metricas en Carpetas
 
@@ -67,7 +67,7 @@ Rastrear numeros a lo largo del tiempo muestra progreso real. Las metricas te da
 3. Nombra la carpeta
 4. Arrastra metricas a la carpeta o usa **Mover a Carpeta**
 
-> [Screenshot: Biblioteca de metricas con carpetas]
+> [Screenshot 5: Biblioteca de metricas con carpetas]
 
 ## Cosas a Tener en Cuenta
 

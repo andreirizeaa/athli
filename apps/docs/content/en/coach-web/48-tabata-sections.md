@@ -21,7 +21,7 @@ Tabata is a high-intensity interval protocol named after Dr. Izumi Tabata, who d
 3. Select **Tabata** as the section type.
 4. Give the section a name (e.g., "Tabata Finisher" or "Core Tabata").
 
-> [Screenshot: section type selector with Tabata highlighted]
+> [Screenshot 1: section type selector with Tabata highlighted]
 
 ### Default Configuration
 
@@ -34,7 +34,7 @@ When you select Tabata, the following defaults are applied:
 | Rounds | 8 |
 | **Total Time** | **4 minutes** |
 
-> [Screenshot: Tabata section header showing work, rest, and round fields with default values]
+> [Screenshot 2: Tabata section header showing work, rest, and round fields with default values]
 
 ### Customizing the Tabata
 
@@ -53,7 +53,7 @@ The total time updates automatically based on your changes.
 3. If you add a single exercise, the client performs it for all 8 rounds.
 4. If you add multiple exercises, the client alternates between them across rounds.
 
-> [Screenshot: Tabata section with two exercises alternating across 8 rounds]
+> [Screenshot 3: Tabata section with two exercises alternating across 8 rounds]
 
 ### How Clients Execute a Tabata
 

@@ -21,7 +21,7 @@ When the AI proposes an action, it displays an **action card** with full details
    - **Edit** - Modify the details before confirming
    - **Dismiss** - Cancel the action entirely
 
-> [Screenshot: Action card for a generated workout showing exercises with Confirm, Edit, and Dismiss buttons]
+> [Screenshot 1: Action card for a generated workout showing exercises with Confirm, Edit, and Dismiss buttons]
 
 ### When Action Cards Appear
 
@@ -44,7 +44,7 @@ Read-only requests like "Show me Sarah's metrics" do not produce action cards si
 4. Click any previous chat to continue where you left off
 5. Click **New** to start a fresh conversation
 
-> [Screenshot: Chat sidebar showing conversation history with titles and dates]
+> [Screenshot 2: Chat sidebar showing conversation history with titles and dates]
 
 ### Searching Past Conversations
 
@@ -59,7 +59,7 @@ Read-only requests like "Show me Sarah's metrics" do not produce action cards si
 2. Click the **trash icon** to delete
 3. Deleted conversations cannot be recovered
 
-> [Screenshot: Chat sidebar with trash icon visible on hover]
+> [Screenshot 3: Chat sidebar with trash icon visible on hover]
 
 ### Using the Side Panel (Web Only)
 
@@ -69,7 +69,7 @@ Read-only requests like "Show me Sarah's metrics" do not produce action cards si
 4. Ask questions related to what is on screen without leaving your current page
 5. Tool activity indicators show what data the AI is looking up in real time
 
-> [Screenshot: Side panel open on the right while viewing a client training page]
+> [Screenshot 4: Side panel open on the right while viewing a client training page]
 
 ## Things to Note
 

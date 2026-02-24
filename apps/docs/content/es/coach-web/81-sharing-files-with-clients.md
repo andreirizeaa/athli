@@ -16,7 +16,7 @@ En lugar de enviar documentos por correo electronico de un lado a otro, puedes m
 2. Haz clic en **Subir** y selecciona archivos desde tu computadora
 3. Los archivos se almacenan en tu biblioteca y estan listos para ser compartidos
 
-> [Screenshot: Files library with upload button and list of uploaded documents]
+> [Screenshot 1: Files library with upload button and list of uploaded documents]
 
 ### Compartir Archivos con un Cliente
 
@@ -26,7 +26,7 @@ En lugar de enviar documentos por correo electronico de un lado a otro, puedes m
 4. Selecciona archivos de tu biblioteca existente o sube nuevos
 5. Los archivos seleccionados ahora estan compartidos con el cliente
 
-> [Screenshot: Client profile Files tab with Add Files button and shared documents]
+> [Screenshot 2: Client profile Files tab with Add Files button and shared documents]
 
 ### Lo que ven los Clientes
 
@@ -44,7 +44,7 @@ En lugar de enviar documentos por correo electronico de un lado a otro, puedes m
 4. Haz clic en eliminar o desvincular para quitarlo del perfil del cliente
 5. El archivo permanece en tu biblioteca para uso con otros clientes
 
-> [Screenshot: Client files tab showing option to remove a shared file]
+> [Screenshot 3: Client files tab showing option to remove a shared file]
 
 ## Cosas a Tener en Cuenta
 

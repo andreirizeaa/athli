@@ -18,7 +18,7 @@ Ask the AI to show recent metric values and trends:
 - **"Show me Jake's body weight over the last 3 months"** - Displays metric history
 - **"What is Sarah's current body fat percentage?"** - Pulls a specific metric
 
-> [Screenshot: AI showing client metrics with recent values and trend indicators]
+> [Screenshot 1: AI showing client metrics with recent values and trend indicators]
 
 ### Reviewing Check-In History
 
@@ -28,7 +28,7 @@ Ask the AI to pull up check-in submissions:
 - **"What did Sarah report in her last check-in?"** - Shows the most recent submission
 - **"How has Jake's energy level been this month?"** - Tracks a specific check-in field over time
 
-> [Screenshot: AI displaying check-in history with response summaries]
+> [Screenshot 2: AI displaying check-in history with response summaries]
 
 ### Analyzing Exercise Performance
 
@@ -46,7 +46,7 @@ Ask the AI to report on habit completion:
 - **"How consistent has Sarah been with her water intake habit?"** - Checks a specific habit
 - **"Which clients have low habit completion this week?"** - Identifies clients who need attention
 
-> [Screenshot: AI showing habit completion rates with percentage breakdowns]
+> [Screenshot 3: AI showing habit completion rates with percentage breakdowns]
 
 ### Running Comprehensive Analysis
 
@@ -63,7 +63,7 @@ Ask the AI to create charts from metric data:
 - **"Generate a chart of Jake's body weight"** - Creates a visual line chart of the metric over time
 - **"Chart Sarah's squat progress"** - Visualizes exercise performance
 
-> [Screenshot: AI-generated line chart showing body weight trend over time]
+> [Screenshot 4: AI-generated line chart showing body weight trend over time]
 
 ## Things to Note
 

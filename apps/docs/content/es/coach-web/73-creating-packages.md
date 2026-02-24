@@ -22,7 +22,7 @@ Los paquetes te permiten presentar profesionalmente tus servicios de coaching co
    - **Duracion** para paquetes recurrentes (mensual, trimestral, anual, etc.)
 4. Haz clic en **Guardar**
 
-> [Screenshot: Create package form with name, description, price, and billing type fields]
+> [Screenshot 1: Create package form with name, description, price, and billing type fields]
 
 ### Configurar Diferentes Niveles
 
@@ -34,7 +34,7 @@ Puedes crear multiples paquetes para ofrecer diferentes niveles de servicio:
 
 Cada nivel puede tener su propio precio, descripcion y automatizacion vinculada.
 
-> [Screenshot: Packages list showing multiple tiers with different prices]
+> [Screenshot 2: Packages list showing multiple tiers with different prices]
 
 ### Vincular una Secuencia a un Paquete
 

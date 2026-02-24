@@ -18,7 +18,7 @@ Ask the AI to write messages for specific clients:
 - **"Write a check-in reminder for Jake"** - Drafts a friendly reminder to complete a check-in
 - **"Send an encouraging message to Sarah about hitting her PR"** - Creates a motivational message using performance context
 
-> [Screenshot: AI draft message action card with message content and send button]
+> [Screenshot 1: AI draft message action card with message content and send button]
 
 ### Reviewing and Sending
 
@@ -30,7 +30,7 @@ Ask the AI to write messages for specific clients:
 
 All messages are drafts until you explicitly confirm. The AI never sends messages directly.
 
-> [Screenshot: Action card with Confirm, Edit, and Dismiss options for a draft message]
+> [Screenshot 2: Action card with Confirm, Edit, and Dismiss options for a draft message]
 
 ### Types of Messages You Can Request
 

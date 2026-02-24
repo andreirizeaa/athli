@@ -25,7 +25,7 @@ Keeping all client communication inside your coaching platform means nothing get
 3. Type your message in the input field at the bottom
 4. Press **Enter** or click **Send**
 
-> [Screenshot: Inbox page with conversation list and message thread]
+> [Screenshot 1: Inbox page with conversation list and message thread]
 
 ### Sending Files and Media
 
@@ -34,7 +34,7 @@ Keeping all client communication inside your coaching platform means nothing get
 3. Supported types: images, videos, documents, PDFs
 4. Click **Send**
 
-> [Screenshot: Message input with attachment options]
+> [Screenshot 2: Message input with attachment options]
 
 ### Reacting to Messages
 
@@ -43,7 +43,7 @@ Keeping all client communication inside your coaching platform means nothing get
 3. Select an emoji reaction
 4. The reaction appears on the message
 
-> [Screenshot: Message with emoji reaction selector]
+> [Screenshot 3: Message with emoji reaction selector]
 
 ### Replying to a Specific Message
 
@@ -52,7 +52,7 @@ Keeping all client communication inside your coaching platform means nothing get
 3. The original message is quoted above your input
 4. Type your reply and send
 
-> [Screenshot: Reply preview above message input]
+> [Screenshot 4: Reply preview above message input]
 
 ### Sending a Broadcast Message
 
@@ -62,7 +62,7 @@ Keeping all client communication inside your coaching platform means nothing get
 4. Click **Send to All**
 5. Each client receives the message as an individual conversation
 
-> [Screenshot: Broadcast side panel with client selection]
+> [Screenshot 5: Broadcast side panel with client selection]
 
 ### Viewing Client Profile from a Conversation
 
@@ -70,7 +70,7 @@ Keeping all client communication inside your coaching platform means nothing get
 2. A profile panel slides out on the right
 3. You can see their key information without leaving the chat
 
-> [Screenshot: Chat with client profile panel open on the right]
+> [Screenshot 6: Chat with client profile panel open on the right]
 
 ## Things to Note
 

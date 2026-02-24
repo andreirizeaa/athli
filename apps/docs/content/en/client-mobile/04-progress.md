@@ -16,7 +16,7 @@ Day to day it can be hard to see progress. The Progress tab gives you charts and
 2. You see a summary of your tracked metrics and recent activity
 3. Scroll to explore different data points
 
-> [Screenshot: Progress tab overview with summary cards]
+> [Screenshot 1: Progress tab overview with summary cards]
 
 ### Viewing Metric Charts
 
@@ -25,33 +25,36 @@ Day to day it can be hard to see progress. The Progress tab gives you charts and
 3. Swipe left and right to change the time range
 4. Tap individual data points to see exact values and dates
 
-> [Screenshot: Metric chart showing body weight trend over 3 months]
+> [Screenshot 2: Metric chart showing body weight trend over 3 months]
 
 ### Viewing Exercise History
 
 1. On the Progress tab, navigate to **Exercise History**
 2. Browse or search for a specific exercise
 3. Tap an exercise to see your performance history
-4. View charts showing weight, reps, and volume progression over time
+4. You see a chart of your best sets with weight, reps, and volume progression over time
+5. Below the chart is a log of every time you performed that exercise showing the date, sets, reps, and weights used
+6. This helps you and your coach track strength progression
 
-> [Screenshot: Exercise history list with search bar]
+> [Screenshot 3: Exercise detail page with performance chart and log history]
 
-### Viewing Exercise Detail Charts
+### Progress Photos
 
-1. After selecting an exercise, you see a chart of your best sets
-2. Below the chart is a log of every time you performed that exercise
-3. Each entry shows the date, sets, reps, and weights used
-4. This helps you and your coach track strength progression
+1. On the Progress tab, navigate to **Progress Photos**
+2. Tap **Add Photo** to take or upload a new progress photo
+3. Photos are organised by date so you can compare side by side over time
+4. Your coach can also view your progress photos from their side
 
-> [Screenshot: Exercise detail page with performance chart and log history]
+> [Screenshot 4: Progress photos gallery showing photos over time]
 
-### Comparing Progress Over Time
+### Habits
 
-1. Use the date range controls to zoom in or out on your data
-2. Compare current metrics to where you started
-3. Share your progress with your coach through the chat if you want to celebrate a win
+1. On the Progress tab, navigate to **Habits**
+2. View the habits your coach has assigned to you
+3. Tap a habit to mark it as completed for the day
+4. Track your streaks and completion rates over time
 
-> [Screenshot: Progress comparison showing start vs current values]
+> [Screenshot 5: Habits tracking screen showing daily habits and completion status]
 
 ## Things to Note
 

@@ -35,7 +35,9 @@ export interface Question {
 
 export interface QuestionAnswer {
   questionId: string;
-  answer: string | string[] | number | Date | null;
+  answer: string | string[] | number | boolean | Date | null;
+  /** Legacy field – some API responses use `value` instead of `answer`. */
+  value?: string | string[] | number | boolean | Date | null;
 }
 
 // =============================================================================
@@ -186,6 +188,7 @@ export interface FormTemplate {
 
 export interface AddCoachReviewData {
   clientId: string;
+  coachId: string;
   checkInId: string;
   instanceId: string;
   review: string;
@@ -193,19 +196,15 @@ export interface AddCoachReviewData {
 
 export interface UpdateCoachReviewData {
   clientId: string;
+  coachId: string;
   checkInId: string;
   instanceId: string;
   review: string;
 }
 
 export interface CoachReview {
-  id: string;
-  clientId: string;
-  checkInId: string;
-  instanceId: string;
   review: string;
   createdAt: Date;
-  updatedAt: Date;
 }
 
 // =============================================================================

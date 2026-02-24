@@ -46,18 +46,7 @@ Diferentes ejercicios requieren diferentes metricas. Una sentadilla con barra ne
 4. Selecciona el campo deseado. La columna se actualiza inmediatamente.
 5. Repite para columnas adicionales segun sea necesario.
 
-> [Screenshot: Column header dropdown showing available trackable fields]
-
-### Personalizar Columnas Predeterminadas
-
-Puedes establecer tus columnas predeterminadas preferidas para que cada nuevo ejercicio comience con los campos que mas usas:
-
-1. Navega a **Ajustes > App > Personalizaciones**.
-2. Localiza la configuracion de columnas predeterminadas.
-3. Selecciona los campos que quieres como predeterminados (por ejemplo, Reps, Kg, RPE).
-4. Guarda tus ajustes. Todos los ejercicios recien agregados usaran estos predeterminados.
-
-> [Screenshot: Settings page showing default column customisation]
+> [Screenshot 1: Column header dropdown showing available trackable fields]
 
 ## Cosas a Tener en Cuenta
 
@@ -65,7 +54,6 @@ Puedes establecer tus columnas predeterminadas preferidas para que cada nuevo ej
 - El modificador "(Optional)" hace que un campo este disponible pero no requiere que el cliente lo complete.
 - Establecer una columna en "None" la oculta completamente para ese ejercicio.
 - Diferentes ejercicios en el mismo entrenamiento pueden tener diferentes configuraciones de columnas.
-- Los cambios a las columnas predeterminadas en Ajustes solo afectan a los ejercicios recien agregados, no a los existentes.
 
 ## Preguntas Frecuentes
 

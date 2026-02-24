@@ -21,7 +21,7 @@ Una seccion de Circuito te permite agrupar ejercicios que se realizan en secuenc
 3. Selecciona **Circuito** como tipo de seccion.
 4. Dale un nombre a la seccion (ej., "Circuito de Cuerpo Completo" o "Quemador de Tren Superior").
 
-> [Screenshot: section type selector with Circuit highlighted]
+> [Screenshot 1: section type selector with Circuit highlighted]
 
 ### Establecer el Numero de Rondas
 
@@ -30,7 +30,7 @@ El valor por defecto es 3 rondas. Para cambiarlo:
 1. Localiza el campo de **Rondas** en el encabezado de la seccion.
 2. Ingresa el numero deseado de rondas (ej., 4 o 5).
 
-> [Screenshot: Circuit section header showing the rounds field set to 3]
+> [Screenshot 2: Circuit section header showing the rounds field set to 3]
 
 ### Agregar Ejercicios
 
@@ -39,7 +39,7 @@ El valor por defecto es 3 rondas. Para cambiarlo:
 3. Para cada ejercicio, establece las repeticiones o duracion objetivo.
 4. Reordena los ejercicios arrastrandolos para crear la secuencia que deseas.
 
-> [Screenshot: Circuit section with five exercises listed in order with rep targets]
+> [Screenshot 3: Circuit section with five exercises listed in order with rep targets]
 
 ### Configurar Descanso Entre Rondas
 

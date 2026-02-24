@@ -1,5 +1,4 @@
-import { useTranslations } from 'next-intl';
-import { setRequestLocale } from 'next-intl/server';
+import { setRequestLocale, getTranslations } from 'next-intl/server';
 import Image from 'next/image';
 import { SearchBar } from '@/components/search-bar';
 import { collections } from '@/lib/content';
@@ -8,12 +7,7 @@ import { Link } from '@/lib/i18n/navigation';
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
-
-  return <HomeContent />;
-}
-
-function HomeContent() {
-  const t = useTranslations();
+  const t = await getTranslations();
 
   return (
     <div>
@@ -50,10 +44,10 @@ function HomeContent() {
               <Link
                 key={collection.slug}
                 href={href}
-                className="group flex flex-col rounded-xl border bg-background p-5 transition-all hover:border-foreground/20 hover:shadow-sm"
+                className="group flex flex-col rounded-xl border bg-background p-5 transition-colors hover:border-foreground/20 hover:shadow-sm"
               >
                 <div className="flex size-10 items-center justify-center rounded-lg border bg-muted">
-                  <Icon className="size-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  <Icon className="size-5 text-foreground transition-colors" />
                 </div>
                 <h2 className="mt-4 font-semibold text-foreground">{t(collection.titleKey)}</h2>
                 <p className="mt-1 text-sm text-muted-foreground line-clamp-2">

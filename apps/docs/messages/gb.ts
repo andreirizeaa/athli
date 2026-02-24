@@ -97,6 +97,7 @@ const messages = {
     clientsMobileCoach: 'Clients (Coach Mobile)',
     checkIns: 'Check-ins',
     questionnaires: 'Questionnaires',
+    formBuilderMobile: 'Form Builder (Mobile)',
     habits: 'Habits',
     metrics: 'Metrics',
     progressPhotos: 'Progress Photos',
@@ -186,7 +187,12 @@ const messages = {
 
     // Forms > Questionnaires
     questionnaires: { title: 'Questionnaires Overview', description: 'Create one-time questionnaires for clients.' },
-    questionnairesForOnboarding: { title: 'Questionnaires for Onboarding', description: 'Use questionnaires in client onboarding flows.' },
+
+    // Forms > Form Builder (Mobile)
+    checkInBuilderMobile: { title: 'Building Check-ins on Mobile', description: 'Create recurring check-in forms from your phone.' },
+    questionnaireBuilderMobile: { title: 'Building Questionnaires on Mobile', description: 'Create one-time questionnaire forms from your phone.' },
+    assigningFormsMobile: { title: 'Assigning Forms to Clients on Mobile', description: 'Assign check-ins and questionnaires to clients from your phone.' },
+    reviewingCheckInsMobile: { title: 'Reviewing Check-ins on Mobile', description: 'Review client check-in submissions and leave coach comments from your phone.' },
 
     // Tracking > Habits
     habits: { title: 'Habits Overview', description: 'Assign and track daily habits.' },
@@ -256,11 +262,11 @@ const messages = {
     featureRequests: { title: 'Feature Requests', description: 'Submit ideas and vote on platform improvements.' },
 
     // Client App Guide
-    clientGettingStarted: { title: 'Getting Started (Client)', description: 'How clients get started with Athli.' },
-    clientHomeScreen: { title: 'Home Screen (Client)', description: 'Overview of the client home screen.' },
-    clientTraining: { title: 'Training (Client)', description: 'How clients view and complete training.' },
-    clientProgress: { title: 'Progress (Client)', description: 'How clients track their progress.' },
-    clientMessaging: { title: 'Messaging (Client)', description: 'How clients chat with their coach.' },
+    clientGettingStarted: { title: 'Getting Started', description: 'How clients get started with Athli.' },
+    clientHomeScreen: { title: 'Home Screen', description: 'Overview of the client home screen.' },
+    clientTraining: { title: 'Training', description: 'How clients view and complete training.' },
+    clientProgress: { title: 'Progress', description: 'How clients track their progress.' },
+    clientMessaging: { title: 'Messaging', description: 'How clients chat with their coach.' },
 
     // Data & Privacy
     thirdPartyIntegrations: { title: 'Third-Party Integrations and Data Processing', description: 'How your data is processed by third-party services.' },

@@ -21,7 +21,7 @@ AMRAP significa Tantas Rondas (o Repeticiones) Como Sea Posible. En una seccion 
 3. Selecciona **AMRAP** como tipo de seccion.
 4. Dale un nombre a la seccion (ej., "Finalizador AMRAP de 8 Min").
 
-> [Screenshot: section type selector with AMRAP highlighted]
+> [Screenshot 1: section type selector with AMRAP highlighted]
 
 ### Establecer el Limite de Tiempo
 
@@ -29,7 +29,7 @@ AMRAP significa Tantas Rondas (o Repeticiones) Como Sea Posible. En una seccion 
 2. Ingresa la duracion total en minutos (ej., 8 minutos, 12 minutos, 20 minutos).
 3. Este es el tiempo total de trabajo. Cuando el temporizador llega a cero, el cliente se detiene.
 
-> [Screenshot: AMRAP section header showing the time cap field set to 8 minutes]
+> [Screenshot 2: AMRAP section header showing the time cap field set to 8 minutes]
 
 ### Agregar Ejercicios
 
@@ -38,7 +38,7 @@ AMRAP significa Tantas Rondas (o Repeticiones) Como Sea Posible. En una seccion 
 3. Para cada ejercicio, establece las repeticiones objetivo por ronda (ej., 10 flexiones, 15 sentadillas al aire, 20 abdominales).
 4. Los clientes recorreran estos ejercicios en orden, repitiendo desde el principio en cada ronda.
 
-> [Screenshot: AMRAP section with three exercises and rep targets listed]
+> [Screenshot 3: AMRAP section with three exercises and rep targets listed]
 
 ### Como los Clientes Ejecutan un AMRAP
 

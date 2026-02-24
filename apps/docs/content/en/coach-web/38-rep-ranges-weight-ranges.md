@@ -18,7 +18,7 @@ Not every training day feels the same. A client's strength and energy levels var
 4. The set now displays "8-12" in the reps column.
 5. In the mobile app, the client sees this range and logs the actual reps they completed.
 
-> [Screenshot: Reps field showing "8-12" as a rep range]
+> [Screenshot 1: Reps field showing "8-12" as a rep range]
 
 ### Setting a Weight Range
 
@@ -27,17 +27,7 @@ Not every training day feels the same. A client's strength and energy levels var
 3. The set now displays "20-25" in the weight column, with the unit (kg or lbs) based on your settings.
 4. The client chooses a weight within this range during their workout and logs the actual weight used.
 
-> [Screenshot: Weight field showing "20-25" as a weight range]
-
-### Using Percentages
-
-For percentage-based programming (common in strength and powerlifting programmes):
-
-1. Enter the percentage value in the weight field (e.g., "75%").
-2. This indicates the client should use 75% of their one-rep max (1RM) for that exercise.
-3. Clients need to know their 1RM to calculate the working weight.
-
-> [Screenshot: Weight field showing a percentage value]
+> [Screenshot 2: Weight field showing "20-25" as a weight range]
 
 ### How Clients See Ranges in the Mobile App
 
@@ -51,7 +41,6 @@ When a client opens a workout with rep or weight ranges:
 
 - Rep ranges encourage clients to train with appropriate intensity rather than fixating on a single number.
 - Weight ranges are particularly useful during the first few weeks with a new client when you are still calibrating their working weights.
-- Percentage-based prescriptions require clients to have established baseline strength numbers (1RM or estimated 1RM).
 - Both the prescribed range and the actual logged values are stored, so you can review whether clients consistently hit the top, middle, or bottom of the range.
 - You can mix fixed values and ranges within the same exercise. For example, fixed weight with a rep range, or fixed reps with a weight range.
 

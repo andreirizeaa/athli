@@ -24,7 +24,7 @@ Los check-ins consistentes crean un ciclo de retroalimentacion confiable entre t
 6. Establece la **fecha de inicio** para el primer check-in
 7. Haz clic en **Asignar**
 
-> [Screenshot: Assign check-in dialog with frequency and start date options]
+> [Screenshot 1: Assign check-in dialog with frequency and start date options]
 
 ### Como los Clientes Reciben Check-ins
 
@@ -32,8 +32,6 @@ Los check-ins consistentes crean un ciclo de retroalimentacion confiable entre t
 2. Abren la aplicacion movil y navegan al check-in
 3. Completan todas las preguntas y envian
 4. Tu recibes el envio y puedes revisarlo desde el panel o el perfil del cliente
-
-> [Screenshot: Client mobile view showing a pending check-in notification]
 
 ### Asignar Multiples Check-ins
 
@@ -45,16 +43,12 @@ Puedes asignar multiples plantillas de check-in al mismo cliente, cada una con s
 
 Cada uno opera independientemente en su propio horario.
 
-> [Screenshot: Client check-ins tab showing multiple assigned check-ins with different frequencies]
-
 ### Revisar Envios Pendientes
 
 1. Ve a la pagina de **Check-ins** desde la barra lateral
 2. Esto muestra todos los check-ins pendientes y recientemente enviados de todos tus clientes
 3. Filtra por estado para ver que clientes aun no han enviado
 4. Haz clic en cualquier entrada para ver el envio o enviar un recordatorio
-
-> [Screenshot: Dashboard check-ins page with pending and submitted entries]
 
 ### Envios Tardios
 

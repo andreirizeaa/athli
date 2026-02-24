@@ -22,7 +22,7 @@ Building workouts from scratch takes time, especially when you manage many clien
 8. Edit anything that needs adjustment: swap exercises, change rep ranges, adjust weights, add or remove sections.
 9. Save the workout when you are satisfied.
 
-> [Screenshot: Athli AI tab open in the Workout Builder with a text prompt]
+> [Screenshot 1: Athli AI tab open in the Workout Builder with a text prompt]
 
 ### Tips for Better AI Prompts
 
@@ -44,7 +44,7 @@ The quality of the generated workout depends on the specificity of your prompt. 
 | "Leg day with a 10-minute EMOM finisher, advanced" | Heavy leg compounds followed by a timed EMOM conditioning block |
 | "Quick 30-minute bodyweight workout for a beginner" | Simple bodyweight exercises with manageable volume |
 
-> [Screenshot: Generated workout appearing in the Workout Builder after an AI prompt]
+> [Screenshot 2: Generated workout appearing in the Workout Builder after an AI prompt]
 
 ### Reviewing and Editing the Generated Workout
 

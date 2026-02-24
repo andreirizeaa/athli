@@ -21,10 +21,10 @@ Los numeros no siempre cuentan toda la historia. El peso de un cliente puede man
 
 1. Ve al perfil del cliente
 2. Haz clic en la pestana **Fotos**
-3. Veras un calendario o lista basada en fechas de fotos subidas
-4. Haz clic en una fecha para ver las fotos de ese dia
+3. Veras una lista basada en entradas de fotos subidas
+4. Haz clic en cualquier entrada para ver las fotos de esa fecha
 
-> [Screenshot: Pestana de fotos con cuadricula de fotos por fecha]
+> [Screenshot 1: Pestana de fotos mostrando lista de fotos por entrada]
 
 ### Agregar Fotos en Nombre de un Cliente
 
@@ -33,16 +33,15 @@ Los numeros no siempre cuentan toda la historia. El peso de un cliente puede man
 3. Selecciona la fecha
 4. Haz clic en **Guardar**
 
-> [Screenshot: Dialogo de agregar foto con area de carga]
+> [Screenshot 2: Dialogo de agregar foto con area de carga]
 
 ### Comparar Fotos
 
-1. En la pestana Fotos, haz clic en **Comparar**
+1. En la pestana Fotos, haz clic en **Comparar** para abrir la pagina de comparacion
 2. Selecciona dos fechas para comparar
 3. Las fotos de cada fecha aparecen lado a lado
-4. Desliza o desplazate entre las fotos
 
-> [Screenshot: Vista de comparacion de fotos con dos fechas lado a lado]
+> [Screenshot 3: Vista de comparacion de fotos con dos fechas lado a lado]
 
 ## Cosas a Tener en Cuenta
 

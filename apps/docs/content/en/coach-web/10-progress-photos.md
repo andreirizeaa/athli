@@ -21,10 +21,10 @@ Numbers do not always tell the full story. A client's weight might stay the same
 
 1. Go to the client's profile
 2. Click the **Photos** tab
-3. You see a calendar or date-based list of uploaded photos
-4. Click on a date to view the photos from that day
+3. You see an entry-based list of uploaded photos
+4. Click on any entry to view the photos from that date
 
-> [Screenshot: Photos tab with date-based photo grid]
+> [Screenshot 1: Photos tab showing entry-based photo list]
 
 ### Adding Photos on Behalf of a Client
 
@@ -33,16 +33,15 @@ Numbers do not always tell the full story. A client's weight might stay the same
 3. Select the date
 4. Click **Save**
 
-> [Screenshot: Add photo dialog with upload area]
+> [Screenshot 2: Add photo dialog with upload area]
 
 ### Comparing Photos
 
-1. On the Photos tab, click **Compare**
+1. On the Photos tab, click **Compare** to open the comparison page
 2. Select two dates to compare
 3. Photos from each date appear side by side
-4. Swipe or scroll between photos
 
-> [Screenshot: Photo comparison view with two dates side by side]
+> [Screenshot 3: Photo comparison view with two dates side by side]
 
 ## Things to Note
 

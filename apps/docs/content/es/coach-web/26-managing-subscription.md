@@ -16,7 +16,7 @@ Esta guia cubre todo lo que necesitas saber sobre gestionar tu suscripcion de At
    - Intervalo de facturacion (mensual o anual)
    - Dias de prueba restantes (si estas en prueba)
 
-> [Screenshot: billing page showing current plan card with plan details and client usage bar]
+> [Screenshot 1: billing page showing current plan card with plan details and client usage bar]
 
 ## Uso de Clientes
 
@@ -28,7 +28,7 @@ La pagina de facturacion muestra una barra de progreso indicando cuantos de tus 
 
 Si alcanzas tu limite de clientes, necesitaras mejorar tu plan o agregar espacios de clientes adicionales antes de invitar nuevos clientes.
 
-> [Screenshot: client usage progress bar on billing page]
+> [Screenshot 2: client usage progress bar on billing page]
 
 ## Cambiar tu Plan
 
@@ -43,7 +43,7 @@ Si alcanzas tu limite de clientes, necesitaras mejorar tu plan o agregar espacio
 7. Confirma y completa el pago a traves de Stripe.
 8. Tu nuevo plan entra en vigor inmediatamente, ¡y confeti celebra tu mejora!
 
-> [Screenshot: pricing page in update mode showing plan cards with current plan highlighted]
+> [Screenshot 3: pricing page in update mode showing plan cards with current plan highlighted]
 
 ### Degradar
 
@@ -56,7 +56,7 @@ Si alcanzas tu limite de clientes, necesitaras mejorar tu plan o agregar espacio
 
 **Importante:** Las degradaciones no entran en vigor inmediatamente. Continuas con tu plan actual hasta que termine el periodo de facturacion.
 
-> [Screenshot: billing page showing "Changes scheduled" badge with current and upcoming plan cards]
+> [Screenshot 4: billing page showing "Changes scheduled" badge with current and upcoming plan cards]
 
 ### Cambios Programados
 
@@ -93,7 +93,7 @@ Si cancelaste un complemento pero cambiaste de opinion:
 3. Haz clic en **Reactivar** para deshacer la cancelacion.
 4. El complemento continua con normalidad.
 
-> [Screenshot: billing page showing an add-on with "cancelling" status and reactivate option]
+> [Screenshot 5: billing page showing an add-on with "cancelling" status and reactivate option]
 
 ## Ver Facturas
 
@@ -107,7 +107,7 @@ Si cancelaste un complemento pero cambiaste de opinion:
    - Tipo (Suscripcion o Mejora)
 4. Haz clic en **Ver** para abrir la factura en Stripe, o **PDF** para descargarla.
 
-> [Screenshot: invoices table showing recent billing history]
+> [Screenshot 6: invoices table showing recent billing history]
 
 ## Facturacion desde Movil
 

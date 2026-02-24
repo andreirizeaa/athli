@@ -8,16 +8,29 @@ interface DownloadQuestionnaireOptions {
   clientId: string;
   coachId: string;
   resolvedMediaUrls?: Record<string, string>;
+  formType?: 'questionnaire' | 'check-in';
+  /** For check-ins: the assignment ID (required when formType is 'check-in') */
+  checkInId?: string;
+  /** For check-ins: the specific submission/log ID */
+  submissionId?: string;
 }
 
 /**
- * Downloads a questionnaire PDF from the backend API.
+ * Downloads a questionnaire or check-in PDF from the backend API.
  */
 export const downloadQuestionnaire = async (options: DownloadQuestionnaireOptions): Promise<void> => {
-  const { questionnaire, clientName, clientId, coachId } = options;
+  const { questionnaire, clientName, clientId, coachId, formType = 'questionnaire', checkInId, submissionId } = options;
+
+  let url: string;
+  if (formType === 'check-in') {
+    const id = checkInId || questionnaire.id;
+    url = `/client/forms/check-ins/${id}/pdf${submissionId ? `?submissionId=${submissionId}` : ''}`;
+  } else {
+    url = `/client/forms/questionnaires/${questionnaire.id}/pdf`;
+  }
 
   const response = await axiosInstance.get(
-    `/client/forms/questionnaires/${questionnaire.id}/pdf`,
+    url,
     {
       headers: {
         'x-client-id': clientId,
@@ -29,12 +42,12 @@ export const downloadQuestionnaire = async (options: DownloadQuestionnaireOption
 
   // Trigger browser download
   const blob = new Blob([response.data], { type: 'application/pdf' });
-  const url = URL.createObjectURL(blob);
+  const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
+  a.href = blobUrl;
   a.download = `${questionnaire.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${clientName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(blobUrl);
 };

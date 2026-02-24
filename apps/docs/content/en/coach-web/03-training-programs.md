@@ -21,10 +21,11 @@ Most coaching follows a structured progression. Programs save you time by lettin
 
 1. Go to **Library > Training > Programs**
 2. Click **New Program**
-3. Enter the program name, description, duration (number of weeks), and difficulty
-4. You land in the **Program Builder**
+3. A side panel opens — enter the program name, description, duration (number of weeks), and difficulty
+4. Save to create the program
+5. Click on the newly created program in the grid to open the **Program Builder**
 
-> [Screenshot: New program form with name, description, and duration fields]
+> [Screenshot 1: Side panel for creating a new program with name, description, and duration fields]
 
 ### Using the Program Builder
 
@@ -39,7 +40,7 @@ The program builder shows a weekly calendar grid. Each column is a day and each 
 4. Click **Edit Details** to update the program name or description
 5. Click **Save** when you are done
 
-> [Screenshot: Program builder grid showing weeks and days with workout cards]
+> [Screenshot 2: Program builder grid showing weeks and days with workout cards]
 
 ### Duplicating a Week
 
@@ -48,7 +49,7 @@ The program builder shows a weekly calendar grid. Each column is a day and each 
 3. The week is duplicated below with all its workouts
 4. You can then modify individual workouts for progressive overload
 
-> [Screenshot: Week row with copy button highlighted]
+> [Screenshot 3: Week row with copy button highlighted]
 
 ### Saving a Workout to Library
 
@@ -58,7 +59,7 @@ If you build a workout inside the program builder that you want to reuse:
 2. Click **Save to Library**
 3. The workout is now available in your workout library
 
-> [Screenshot: Workout card with save to library option]
+> [Screenshot 4: Workout card with save to library option]
 
 ### Assigning a Program to a Client
 
@@ -69,7 +70,7 @@ If you build a workout inside the program builder that you want to reuse:
 5. Click **Assign**
 6. The workouts populate the client's calendar automatically
 
-> [Screenshot: Assign program side panel with week range selection]
+> [Screenshot 5: Assign program side panel with week range selection]
 
 ### Editing a Client's Program
 

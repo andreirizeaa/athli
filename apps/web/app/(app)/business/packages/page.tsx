@@ -19,8 +19,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AddPackageSidePanel, type PackageFormData } from '@/components/business/add-package-side-panel';
+import { copyToClipboard } from '@/components/app/invite-link-dialog';
 import { PackageRedemptionsDialog } from '@/components/business/package-redemptions-dialog';
 import { useStripeConnection, useCoachPackages, useAllPackageStats } from '@/hooks/use-coach-packages';
+import { usePlatformSettings } from '@/hooks/use-platform-settings';
 import { DEFAULT_PACKAGE_IMAGE } from '@/lib/constants/package-presets';
 import type { CoachPackage } from '@athli/shared-types';
 import { useAddonAccess } from '@/lib/permissions/feature-gate';
@@ -136,6 +138,7 @@ const PackagesPage = () => {
   } = useCoachPackages();
 
   const { data: packageStats } = useAllPackageStats();
+  const { uniqueCode } = usePlatformSettings();
   const { hasAccess: hasPaymentsAddon } = useAddonAccess('payments');
 
   const isConnected = stripeAccount?.onboarding_complete && stripeAccount?.charges_enabled;
@@ -396,10 +399,13 @@ const PackagesPage = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {isConnected && (
+              {uniqueCode && (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
+                    const url = `${window.location.origin}/auth/checkout/${uniqueCode}/${row.id}`;
+                    copyToClipboard(url);
+                    toast.success(t('business.packages.toast.linkCopied'));
                   }}
                 >
                   <Share2 className="h-4 w-4 mr-2" />

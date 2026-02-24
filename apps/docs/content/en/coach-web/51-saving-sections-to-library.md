@@ -20,12 +20,13 @@ The section library is where you store reusable workout sections. Instead of reb
 2. Select the **Training** tab.
 3. Click **Sections**.
 4. Click **Add Section**.
-5. Enter a name, select the section type (Regular, AMRAP, Tabata, HIIT, EMOM, or Circuit).
-6. Add exercises and configure sets, reps, weight, or timing as needed.
-7. Add optional tags for organization (e.g., "warm-up", "finisher", "legs", "upper body").
-8. Click **Save**.
+5. A side panel opens — enter a name, select the section type (Regular, AMRAP, Tabata, HIIT, EMOM, or Circuit), and add optional tags for organization (e.g., "warm-up", "finisher", "legs", "upper body").
+6. Save to create the section.
+7. Click on the newly created section in the grid to open the section builder.
+8. Add exercises and configure sets, reps, weight, or timing as needed.
+9. Save the section.
 
-> [Screenshot: section library page with the Add Section button and list of saved sections]
+> [Screenshot 1: section library page with the Add Section button and list of saved sections]
 
 ### Saving a Section from a Workout
 
@@ -37,7 +38,7 @@ If you build a section inside the workout builder that you want to reuse later:
 4. Click **Save**.
 5. The section is now available in your library for future use.
 
-> [Screenshot: section menu inside workout builder with Save to Library option]
+> [Screenshot 2: section menu inside workout builder with Save to Library option]
 
 ### Using Saved Sections in Workouts
 
@@ -48,7 +49,7 @@ If you build a section inside the workout builder that you want to reuse later:
 5. The section, including all exercises and configuration, is inserted into the workout.
 6. You can customize the added section for the specific workout without affecting the library version.
 
-> [Screenshot: Add Section panel showing library sections with search and type filter]
+> [Screenshot 3: Add Section panel showing library sections with search and type filter]
 
 ### Managing Your Section Library
 
@@ -60,7 +61,7 @@ From the **Library > Training > Sections** page, you can:
 - **Duplicate** a section to create a variation without modifying the original.
 - **Delete** sections you no longer need. Bulk delete is supported for cleaning up multiple sections at once.
 
-> [Screenshot: sections list with search bar, type filter, and bulk action buttons]
+> [Screenshot 4: sections list with search bar, type filter, and bulk action buttons]
 
 ## Things to Note
 

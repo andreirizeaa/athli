@@ -18,7 +18,7 @@ Una secuencia es un flujo de trabajo visual construido con un editor de flujos. 
 1. Ve a **Negocio** en la barra lateral.
 2. Selecciona **Secuencias**.
 
-> [Screenshot: sequences list page showing created sequences]
+> [Screenshot 1: sequences list page showing created sequences]
 
 ## Crear una Secuencia
 
@@ -27,7 +27,7 @@ Una secuencia es un flujo de trabajo visual construido con un editor de flujos. 
 3. Haz clic en **Guardar** para crear la secuencia.
 4. Seras llevado al editor de flujos.
 
-> [Screenshot: add sequence side panel with name and description fields]
+> [Screenshot 2: add sequence side panel with name and description fields]
 
 ## Usar el Editor de Flujos
 
@@ -70,7 +70,7 @@ Despues del disparador, agregas acciones que se ejecutan en orden:
 5. Agrega mas acciones segun sea necesario, incluyendo pasos de **Esperar** para retrasos.
 6. Tus cambios se guardan automaticamente.
 
-> [Screenshot: flow editor with a trigger and multiple action nodes connected]
+> [Screenshot 3: flow editor with a trigger and multiple action nodes connected]
 
 ## Vincular una Secuencia a un Paquete
 
@@ -81,7 +81,7 @@ Una vez que creas una secuencia, puedes vincularla a un paquete de negocio para 
 3. En el campo de secuencia, selecciona tu secuencia.
 4. Guarda.
 
-> [Screenshot: package edit form with sequence dropdown]
+> [Screenshot 4: package edit form with sequence dropdown]
 
 ## Gestionar Secuencias
 

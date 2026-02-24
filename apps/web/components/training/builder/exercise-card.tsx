@@ -251,6 +251,7 @@ const SelectCell = ({
   placeholder = '-',
   disabled = false,
   hasError = false,
+  valueClassName,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -259,6 +260,7 @@ const SelectCell = ({
   placeholder?: string;
   disabled?: boolean;
   hasError?: boolean;
+  valueClassName?: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -275,7 +277,9 @@ const SelectCell = ({
         )}
         onClick={() => !disabled && setIsOpen(true)}
       >
-        <SelectValue placeholder={disabled ? '' : placeholder}>{value ? displayValue : null}</SelectValue>
+        <SelectValue placeholder={disabled ? '' : placeholder}>
+          {value ? <span className={valueClassName}>{displayValue}</span> : null}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {options.map((option) => (
@@ -1596,7 +1600,7 @@ export const ExerciseCard = memo(function ExerciseCard({
               <Table className="text-[11px] leading-tight w-full" style={{ tableLayout: 'fixed' }}>
                 <TableHeader className="bg-transparent">
                   <TableRow className="h-10 hover:bg-transparent">
-                    <TableHead className="text-left h-10 py-0 px-2 w-[60px] text-sm text-muted-foreground font-normal">Type</TableHead>
+                    <TableHead className="text-left h-10 py-0 px-2 w-[66px] text-sm text-muted-foreground font-normal">Type</TableHead>
                     {/* Column 1 with dropdown */}
                     <TableHead className="text-center h-10 py-0 px-2 hover:bg-muted transition-colors">
                       <div className="flex items-center justify-center gap-0.5">
@@ -1640,7 +1644,7 @@ export const ExerciseCard = memo(function ExerciseCard({
                               <SelectValue />
                             </SelectTrigger>
                           )}
-                          <SelectContent className="max-h-[200px] overflow-y-auto">
+                          <SelectContent>
                             {COLUMN_OPTIONS.map(opt => (
                               <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                             ))}
@@ -1691,7 +1695,7 @@ export const ExerciseCard = memo(function ExerciseCard({
                               <SelectValue />
                             </SelectTrigger>
                           )}
-                          <SelectContent className="max-h-[200px] overflow-y-auto">
+                          <SelectContent>
                             {COLUMN_OPTIONS.map(opt => (
                               <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                             ))}
@@ -1708,7 +1712,7 @@ export const ExerciseCard = memo(function ExerciseCard({
                       key={`set-${set.setNumber}`}
                       className="h-10 bg-background"
                     >
-                      <TableCell className="py-0 px-0 w-[60px] pl-2">
+                      <TableCell className="py-0 px-0 w-[66px] pl-2">
                         <SelectCell
                           value={set.type}
                           onChange={(value) => handleSetChange(index, 'type', value as SetData['type'])}
@@ -1723,6 +1727,12 @@ export const ExerciseCard = memo(function ExerciseCard({
                               set.type === 'normal' ? 'R' :
                                 set.type === 'failure' ? 'F' :
                                   set.type === 'dropset' ? 'D' : ''
+                          }
+                          valueClassName={
+                            set.type === 'warmUp' ? 'text-amber-500 font-bold' :
+                              set.type === 'normal' ? 'text-green-500 font-bold' :
+                                set.type === 'failure' ? 'text-red-500 font-bold' :
+                                  set.type === 'dropset' ? 'text-blue-500 font-bold' : 'font-bold'
                           }
                         />
                       </TableCell>

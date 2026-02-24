@@ -16,7 +16,7 @@ This guide covers everything you need to know about managing your Athli subscrip
    - Billing interval (monthly or annual)
    - Trial days remaining (if on trial)
 
-> [Screenshot: billing page showing current plan card with plan details and client usage bar]
+> [Screenshot 1: billing page showing current plan card with plan details and client usage bar]
 
 ## Client Usage
 
@@ -28,7 +28,7 @@ The billing page shows a progress bar indicating how many of your client slots a
 
 If you reach your client limit, you will need to upgrade your plan or add extra client slots before inviting new clients.
 
-> [Screenshot: client usage progress bar on billing page]
+> [Screenshot 2: client usage progress bar on billing page]
 
 ## Changing Your Plan
 
@@ -43,7 +43,7 @@ If you reach your client limit, you will need to upgrade your plan or add extra 
 7. Confirm and complete payment through Stripe.
 8. Your new plan takes effect immediately, and confetti celebrates your upgrade!
 
-> [Screenshot: pricing page in update mode showing plan cards with current plan highlighted]
+> [Screenshot 3: pricing page in update mode showing plan cards with current plan highlighted]
 
 ### Downgrading
 
@@ -56,7 +56,7 @@ If you reach your client limit, you will need to upgrade your plan or add extra 
 
 **Important:** Downgrades do not take effect immediately. You continue with your current plan until the billing period ends.
 
-> [Screenshot: billing page showing "Changes scheduled" badge with current and upcoming plan cards]
+> [Screenshot 4: billing page showing "Changes scheduled" badge with current and upcoming plan cards]
 
 ### Scheduled Changes
 
@@ -93,7 +93,7 @@ If you cancelled an add-on but changed your mind:
 3. Click **Reactivate** to undo the cancellation.
 4. The add-on continues as normal.
 
-> [Screenshot: billing page showing an add-on with "cancelling" status and reactivate option]
+> [Screenshot 5: billing page showing an add-on with "cancelling" status and reactivate option]
 
 ## Viewing Invoices
 
@@ -107,7 +107,7 @@ If you cancelled an add-on but changed your mind:
    - Type (Subscription or Upgrade)
 4. Click **View** to open the invoice in Stripe, or **PDF** to download it.
 
-> [Screenshot: invoices table showing recent billing history]
+> [Screenshot 6: invoices table showing recent billing history]
 
 ## Billing from Mobile
 

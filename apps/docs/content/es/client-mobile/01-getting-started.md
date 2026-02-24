@@ -16,27 +16,27 @@ Todo de tu entrenador esta en una app. No mas buscar en mensajes de WhatsApp tu 
 2. Busca **Athli**
 3. Descarga e instala la app
 
-> [Captura de pantalla: Lista de la App Store para la app de cliente Athli]
+> [AppStoreButtons]
 
-### Crear Tu Cuenta
+### Unirse al Programa de Tu Entrenador
 
-1. Abre la app
-2. Si tu entrenador te envio un enlace de invitacion, tocalo para prellenar tus datos
-3. Ingresa tu correo electronico y crea una contrasena
-4. Completa tu perfil con tu nombre y foto de perfil
-5. Ahora estas conectado con tu entrenador
+Tu entrenador te enviara un enlace para unirte a su programa. Toca el enlace para crear tu cuenta.
+
+1. Toca el enlace de invitacion de tu entrenador
+2. Ingresa tus datos y crea una contrasena
+3. Descarga la app e inicia sesion
+4. Ahora estas conectado con tu entrenador y listo para empezar
 
 > [Captura de pantalla: Pantalla de registro del cliente]
 
 ### Navegar la App
 
-La app tiene pestanas en la parte inferior para acceso rapido:
+La app tiene cuatro pestanas en la parte inferior para acceso rapido:
 
-- **Inicio** - Tus tareas diarias, entrenamientos y resumen general
+- **Inicio** - Tus tareas diarias, entrenamientos, mensajes del entrenador y resumen general
 - **Entrenamiento** - Tu calendario de entrenamientos
-- **Progreso** - Metricas, fotos e historial
-- **Chats** - Mensajes con tu entrenador
-- **Perfil** - Tus datos y configuracion
+- **Progreso** - Metricas, habitos, fotos e historial
+- **Perfil** - Tus datos, perfil del entrenador y configuracion
 
 > [Captura de pantalla: Pantalla de inicio de la app del cliente con pestanas de navegacion inferior]
 
@@ -50,12 +50,15 @@ La app tiene pestanas en la parte inferior para acceso rapido:
 ## Problemas Comunes
 
 **No recibi una invitacion de mi entrenador**
+
 Pide a tu entrenador que reenvie el correo de invitacion. Revisa tu carpeta de spam tambien.
 
 **La app no carga**
+
 Verifica tu conexion a internet. Intenta cerrar y volver a abrir la app.
 
 **Olvide mi contrasena**
+
 En la pantalla de inicio de sesion, toca **Olvide mi Contrasena** y sigue los pasos para restablecerla.
 
 ---

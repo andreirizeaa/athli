@@ -16,23 +16,19 @@ Los grandes resultados vienen de pequenas acciones diarias. El seguimiento de ha
 2. Cada habito muestra su nombre y si lo has completado hoy
 3. Tambien puedes encontrar habitos en tu seccion de perfil
 
-> [Captura de pantalla: Pantalla de inicio mostrando habitos diarios con casillas de verificacion]
-
 ### Registrar un Habito
 
 1. Toca el habito que quieres registrar
 2. Toca **Completar** o marca la casilla para marcarlo como hecho para hoy
 3. El habito se actualiza inmediatamente
 
-> [Captura de pantalla: Habito siendo marcado como completo con animacion de marca de verificacion]
-
-### Ver Tu Historial de Habitos
+### Ver Tu Progreso de Habitos
 
 1. Navega a tu seccion de habitos
 2. Veras un calendario o vista de racha mostrando que dias completaste cada habito
 3. Esto te ayuda a ver tus patrones de consistencia a lo largo del tiempo
 
-> [Captura de pantalla: Historial de habitos mostrando calendario de finalizacion con rachas]
+> [Captura de pantalla: Vista de progreso de habitos mostrando historial de finalizacion y rachas]
 
 ## Cosas a Tener en Cuenta
 

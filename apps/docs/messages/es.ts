@@ -97,6 +97,7 @@ const messages = {
     clientsMobileCoach: 'Clientes (Coach M\u00F3vil)',
     checkIns: 'Check-ins',
     questionnaires: 'Cuestionarios',
+    formBuilderMobile: 'Constructor de Formularios (M\u00F3vil)',
     habits: 'H\u00E1bitos',
     metrics: 'M\u00E9tricas',
     progressPhotos: 'Fotos de Progreso',
@@ -186,7 +187,13 @@ const messages = {
 
     // Forms > Questionnaires
     questionnaires: { title: 'Cuestionarios', description: 'Crea cuestionarios \u00FAnicos para clientes.' },
-    questionnairesForOnboarding: { title: 'Cuestionarios para Onboarding', description: 'Usa cuestionarios en flujos de onboarding.' },
+
+    // Forms > Form Builder (Mobile)
+    checkInBuilderMobile: { title: 'Crear Check-ins en el M\u00F3vil', description: 'Crea formularios de check-in recurrentes desde tu tel\u00E9fono.' },
+    questionnaireBuilderMobile: { title: 'Crear Cuestionarios en el M\u00F3vil', description: 'Crea formularios de cuestionario desde tu tel\u00E9fono.' },
+    assigningFormsMobile: { title: 'Asignar Formularios a Clientes en el M\u00F3vil', description: 'Asigna check-ins y cuestionarios a clientes desde tu tel\u00E9fono.' },
+    reviewingCheckInsMobile: { title: 'Revisar Check-ins en el M\u00F3vil', description: 'Revisa los env\u00EDos de check-in de clientes y deja comentarios desde tu tel\u00E9fono.' },
+
 
     // Tracking > Habits
     habits: { title: 'H\u00E1bitos', description: 'Asigna y rastrea h\u00E1bitos diarios.' },
@@ -256,11 +263,11 @@ const messages = {
     featureRequests: { title: 'Solicitudes de Funciones', description: 'Env\u00EDa ideas y vota mejoras.' },
 
     // Client App Guide
-    clientGettingStarted: { title: 'Primeros Pasos (Cliente)', description: 'C\u00F3mo empezar como cliente.' },
-    clientHomeScreen: { title: 'Pantalla de Inicio (Cliente)', description: 'Resumen de la pantalla de inicio.' },
-    clientTraining: { title: 'Entrenamiento (Cliente)', description: 'C\u00F3mo los clientes ven el entrenamiento.' },
-    clientProgress: { title: 'Progreso (Cliente)', description: 'C\u00F3mo los clientes rastrean progreso.' },
-    clientMessaging: { title: 'Mensajer\u00EDa (Cliente)', description: 'C\u00F3mo los clientes chatean.' },
+    clientGettingStarted: { title: 'Primeros Pasos', description: 'C\u00F3mo empezar como cliente.' },
+    clientHomeScreen: { title: 'Pantalla de Inicio', description: 'Resumen de la pantalla de inicio.' },
+    clientTraining: { title: 'Entrenamiento', description: 'C\u00F3mo los clientes ven el entrenamiento.' },
+    clientProgress: { title: 'Progreso', description: 'C\u00F3mo los clientes rastrean progreso.' },
+    clientMessaging: { title: 'Mensajer\u00EDa', description: 'C\u00F3mo los clientes chatean.' },
 
     // Data & Privacy
     thirdPartyIntegrations: { title: 'Integraciones de Terceros y Procesamiento de Datos', description: 'C\u00F3mo se procesan tus datos por servicios de terceros.' },

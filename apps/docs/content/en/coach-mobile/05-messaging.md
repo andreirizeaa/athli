@@ -13,8 +13,6 @@ The Chats tab on the coach mobile app lets you message your clients directly. Se
 3. Unread messages show a badge indicator
 4. Tap a conversation to open it
 
-> [Screenshot: Mobile chat list with conversations and unread badges]
-
 ### Sending Messages
 
 1. Open a conversation
@@ -22,7 +20,7 @@ The Chats tab on the coach mobile app lets you message your clients directly. Se
 3. Tap **Send**
 4. You can also attach images, files, or send audio messages using the icons next to the input
 
-> [Screenshot: Mobile chat conversation with message input]
+> [Screenshot 1: Mobile chat conversation with message input]
 
 ### Sending Attachments
 
@@ -32,15 +30,11 @@ The Chats tab on the coach mobile app lets you message your clients directly. Se
 4. Add an optional caption
 5. Tap **Send**
 
-> [Screenshot: Mobile attachment options sheet]
-
 ### Viewing Archived Conversations
 
 1. On the Chats list, tap **Archived**
 2. View previously archived conversations
 3. Tap to unarchive and continue chatting
-
-> [Screenshot: Mobile archived conversations screen]
 
 ## Things to Note
 

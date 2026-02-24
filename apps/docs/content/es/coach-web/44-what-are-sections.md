@@ -39,7 +39,7 @@ Por ejemplo, un entrenamiento llamado "Lunes Tren Superior" podria contener:
 2. **Fuerza Principal** (Seccion Regular) - Press de banca, press de hombros, remos
 3. **Finalizador** (Seccion AMRAP) - Flexiones, dominadas, fondos durante 8 minutos
 
-> [Screenshot: workout builder showing multiple sections stacked within a single workout]
+> [Screenshot 1: workout builder showing multiple sections stacked within a single workout]
 
 ### Agregar Secciones a un Entrenamiento
 
@@ -49,7 +49,7 @@ Por ejemplo, un entrenamiento llamado "Lunes Tren Superior" podria contener:
 4. Selecciona el tipo de seccion y agrega ejercicios.
 5. Repite para agregar mas secciones al mismo entrenamiento.
 
-> [Screenshot: Add Section button in the workout builder with section type options]
+> [Screenshot 2: Add Section button in the workout builder with section type options]
 
 ### Guardar una Seccion en la Biblioteca
 
@@ -58,7 +58,7 @@ Por ejemplo, un entrenamiento llamado "Lunes Tren Superior" podria contener:
 3. Dale un nombre a la seccion y etiquetas opcionales.
 4. La seccion ahora esta disponible para reutilizar en cualquier entrenamiento futuro.
 
-> [Screenshot: section menu with Save to Library option highlighted]
+> [Screenshot 3: section menu with Save to Library option highlighted]
 
 ## Cosas a Tener en Cuenta
 

@@ -26,7 +26,7 @@ Tracking numbers over time reveals real progress that clients might not notice d
 6. Add a **description** (optional) with notes about how to measure or log
 7. Click **Save**
 
-> [Screenshot: Create metric form with type dropdown and unit selection]
+> [Screenshot 1: Create metric form with type dropdown and unit selection]
 
 ### Organizing Metrics into Folders
 
@@ -35,7 +35,7 @@ Tracking numbers over time reveals real progress that clients might not notice d
 3. Drag metrics into folders or use **Move to Folder**
 4. Folders keep your library organized as you add more metrics
 
-> [Screenshot: Metrics library with organized folders]
+> [Screenshot 2: Metrics library with organized folders]
 
 ### Assigning a Metric to a Client
 
@@ -46,7 +46,7 @@ Tracking numbers over time reveals real progress that clients might not notice d
 5. Select the metric and click **Assign**
 6. The metric now appears in the client's Metrics tab, ready for logging
 
-> [Screenshot: Assign metric dialog with library search]
+> [Screenshot 3: Assign metric dialog with library search]
 
 ### Assigning Multiple Metrics
 
@@ -63,7 +63,7 @@ You can assign as many metrics as needed to a single client. Common setups inclu
 3. Update the name, type, unit, or description
 4. Click **Save**
 
-> [Screenshot: Editing an existing metric in the library]
+> [Screenshot 4: Editing an existing metric in the library]
 
 ## Things to Note
 

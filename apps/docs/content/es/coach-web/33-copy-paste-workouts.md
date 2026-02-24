@@ -10,40 +10,24 @@ Muchos entrenadores usan plantillas de entrenamientos similares entre clientes, 
 
 ## Guia Paso a Paso
 
-### Duplicar un Entrenamiento
+### Duplicar un Entrenamiento desde la Cuadricula de Entrenamiento
 
-1. Navega a tu lista de entrenamientos o la vista del programa donde se encuentra el entrenamiento.
-2. Haz clic en el **menu de tres puntos** (o menu contextual) en la tarjeta del entrenamiento.
-3. Selecciona **Duplicar** del menu desplegable.
-4. Se crea una copia del entrenamiento con todos los ejercicios, series, repeticiones, pesos y configuraciones de secciones intactas.
+1. Navega a **Biblioteca > Entrenamiento > Entrenamientos** para abrir la cuadricula de entrenamiento.
+2. Selecciona uno o mas entrenamientos usando las casillas de verificacion.
+3. Haz clic en el boton **Duplicar** que aparece en la barra de acciones masivas.
+4. Se crea una copia de cada entrenamiento seleccionado con todos los ejercicios, series, repeticiones, pesos y configuraciones de secciones intactas.
 5. Abre el entrenamiento duplicado y haz los ajustes necesarios (por ejemplo, cambiar pesos o sustituciones de ejercicios).
 
-> [Screenshot: Three-dot menu on a workout card showing the Duplicate option]
+> [Screenshot 1: Cuadricula de entrenamiento con casillas de verificacion seleccionadas y el boton de accion masiva Duplicar]
 
-### Guardar un Entrenamiento en tu Biblioteca
+### Guardar un Entrenamiento en tu Biblioteca desde el Calendario del Cliente
 
-1. Abre el entrenamiento que quieres guardar.
-2. Haz clic en la opcion **Guardar en Biblioteca** (disponible en el menu del entrenamiento o barra de herramientas).
-3. Dale al entrenamiento un nombre descriptivo y etiquetas opcionales para facilitar la busqueda despues.
+1. Ve a la pestana **Entrenamiento** del cliente y abre su calendario de entrenamiento.
+2. Haz clic en el entrenamiento que quieres guardar.
+3. Haz clic en **Guardar en Biblioteca**.
 4. El entrenamiento ahora esta almacenado en tu biblioteca de entrenamientos, accesible al construir programas para cualquier cliente.
 
-> [Screenshot: Save to Library dialog with name and tag fields]
-
-### Usar un Entrenamiento de la Biblioteca
-
-1. Cuando construyas un programa o agregues un entrenamiento al calendario de un cliente, haz clic en **Agregar desde Biblioteca**.
-2. Explora o busca tus entrenamientos guardados.
-3. Selecciona el entrenamiento deseado. Se agrega como una nueva instancia, asi que los cambios que hagas para este cliente no afectan la copia de la biblioteca.
-
-### Copiar Entrenamientos Entre Clientes
-
-1. Abre el programa del cliente origen y localiza el entrenamiento que quieres copiar.
-2. Usa la accion **Copiar** o **Duplicar** del menu del entrenamiento.
-3. Navega al programa del cliente destino.
-4. Pega o agrega el entrenamiento copiado al programa destino.
-5. Ajusta los parametros de ejercicios segun sea necesario para el nuevo cliente.
-
-> [Screenshot: Copying a workout from one client's programme to another]
+> [Screenshot 2: Calendario de entrenamiento del cliente con un entrenamiento abierto mostrando la opcion Guardar en Biblioteca]
 
 ## Cosas a Tener en Cuenta
 

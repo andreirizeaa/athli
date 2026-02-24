@@ -23,7 +23,7 @@ A medida que tu lista de clientes crece, no puedes hacer seguimiento manual a ca
 2. Veras una lista de flujos de automatizacion disponibles
 3. Cada flujo muestra su evento disparador, acciones y estado activo/inactivo
 
-> [Screenshot: Pagina de flujos con lista de flujos de automatizacion]
+> [Screenshot 1: Pagina de flujos con lista de flujos de automatizacion]
 
 ### Activar un Flujo
 
@@ -31,7 +31,7 @@ A medida que tu lista de clientes crece, no puedes hacer seguimiento manual a ca
 2. Haz clic en el **interruptor** para activarlo
 3. El flujo comienza a ejecutarse inmediatamente para eventos futuros
 
-> [Screenshot: Tarjeta de flujo con interruptor activo]
+> [Screenshot 2: Tarjeta de flujo con interruptor activo]
 
 ### Ver Detalles del Flujo
 
@@ -39,7 +39,7 @@ A medida que tu lista de clientes crece, no puedes hacer seguimiento manual a ca
 2. Puedes ver la condicion disparadora, acciones e historial de ejecuciones
 3. Revisa la actividad reciente para asegurarte de que esta funcionando como se espera
 
-> [Screenshot: Pagina de detalle de flujo con configuracion de disparador y accion]
+> [Screenshot 3: Pagina de detalle de flujo con configuracion de disparador y accion]
 
 ### Solicitar un Nuevo Flujo
 
@@ -49,7 +49,7 @@ Si necesitas una automatizacion que no existe aun:
 2. Describe lo que necesitas
 3. El equipo de Athli revisara tu solicitud
 
-> [Screenshot: Boton de solicitar nuevo flujo]
+> [Screenshot 4: Boton de solicitar nuevo flujo]
 
 ## Tipos de Flujos Disponibles
 

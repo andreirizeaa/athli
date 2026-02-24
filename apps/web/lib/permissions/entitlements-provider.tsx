@@ -24,7 +24,7 @@ const FORCE_SIMULATE_PLAN: 'starter' | 'pro' | null = null;
 
 // DEV ONLY: Force simulate specific addons (set to empty array to use real entitlements)
 // Options: 'ai_assistant' | 'automations' | 'payments'
-const FORCE_SIMULATE_ADDONS: AddonKey[] = ['ai_assistant'];
+const FORCE_SIMULATE_ADDONS: AddonKey[] = [];
 
 // Re-export types for convenience
 export type { AddonKey, FeatureKey, CoachEntitlements };
@@ -136,6 +136,11 @@ export function EntitlementsProvider({ children }: EntitlementsProviderProps) {
       const trialEntitlements: CoachEntitlements = {
         ...TRIAL_ENTITLEMENTS,
         coach_id: user?.id || '',
+        ...(FORCE_SIMULATE_ADDONS.length > 0 && {
+          has_ai_assistant: FORCE_SIMULATE_ADDONS.includes('ai_assistant') || TRIAL_ENTITLEMENTS.has_ai_assistant,
+          has_automations: FORCE_SIMULATE_ADDONS.includes('automations') || TRIAL_ENTITLEMENTS.has_automations,
+          has_payments: FORCE_SIMULATE_ADDONS.includes('payments') || TRIAL_ENTITLEMENTS.has_payments,
+        }),
       };
       console.log('[Entitlements] User is on TRIAL:', {
         plan: 'max',
@@ -152,7 +157,7 @@ export function EntitlementsProvider({ children }: EntitlementsProviderProps) {
         storageLimit: trialEntitlements.storage_limit_gb,
         hasUnlimitedStorage: trialEntitlements.storage_limit_gb === -1,
         hasFeature: (feature: FeatureKey) => checkFeatureAccess(trialEntitlements, feature, true),
-        hasAddon: (addon: AddonKey) => checkAddonAccess(trialEntitlements, addon, true),
+        hasAddon: (addon: AddonKey) => FORCE_SIMULATE_ADDONS.includes(addon) || checkAddonAccess(trialEntitlements, addon, true),
         refetch: () => {},
       };
     }

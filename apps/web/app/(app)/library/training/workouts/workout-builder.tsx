@@ -602,7 +602,7 @@ const SectionItem = memo(function SectionItem({
                           const wrapperClasses = cn(
                             'flex flex-col',
                             isLinkedToNext ? 'gap-0' : 'gap-2',
-                            indexInGroup === 0 ? '' : isLinkedToPrev ? 'mt-3' : isLinkedToNext ? 'mt-0' : 'mt-1'
+                            indexInGroup === 0 ? '' : isLinkedToPrev ? '-mt-px' : isLinkedToNext ? 'mt-0' : 'mt-1'
                           );
 
                           // Only apply individual flash if NOT part of a superset, or if it's a single exercise being focused
@@ -660,7 +660,7 @@ const SectionItem = memo(function SectionItem({
                                   {isLinkedToNext ? (
                                     // Linked superset - show unlink button (no drop zone even when dragging)
                                     <div className={cn(
-                                      "relative flex items-center justify-center bg-background mt-2 mb-4",
+                                      "relative flex items-center justify-center bg-background py-1 -mb-2",
                                       // Add red borders on left/right if superset has error
                                       validationErrors[exercise.instanceId]?.supersetMismatch
                                         ? "border-x-2 border-x-destructive"

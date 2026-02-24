@@ -23,7 +23,7 @@ Un programa se construye sobre una cuadricula simple:
 
 Las celdas de dia vacias son dias de descanso. No necesitas marcarlas explicitamente. Simplemente deja la celda sin un entrenamiento.
 
-> [Screenshot: program builder grid showing a 4-week program with workouts on some days and empty rest day cells]
+> [Screenshot 1: program builder grid showing a 4-week program with workouts on some days and empty rest day cells]
 
 ### Construir Sobrecarga Progresiva
 
@@ -37,7 +37,7 @@ La sobrecarga progresiva es el aumento gradual en la demanda de entrenamiento a 
 
 Este enfoque te permite crear progresion estructurada sin reconstruir entrenamientos desde cero cada semana.
 
-> [Screenshot: two consecutive weeks in the program builder, with Week 2 showing slightly higher rep counts than Week 1]
+> [Screenshot 2: two consecutive weeks in the program builder, with Week 2 showing slightly higher rep counts than Week 1]
 
 ### Dias de Descanso
 
@@ -69,18 +69,7 @@ Cuando asignas un programa a un cliente, eliges cuando comienza:
 
 Los entrenamientos llenan el calendario del cliente comenzando desde la fecha elegida, siguiendo la estructura semanal del programa.
 
-> [Screenshot: program assignment panel with a future start date selected]
-
-### Como los Clientes Experimentan los Programas
-
-Los clientes ven su entrenamiento semana a semana en su calendario en la aplicacion movil:
-
-- Cada dia muestra el entrenamiento programado (si lo hay).
-- Los clientes pueden tocar un entrenamiento para ver los detalles completos: secciones, ejercicios, series y repeticiones.
-- No ven la vista general completa del programa ni las semanas futuras mas alla de lo que esta en su calendario.
-- Los entrenamientos completados se marcan como terminados con los resultados registrados.
-
-> [Screenshot: client mobile app showing a weekly view with scheduled workouts]
+> [Screenshot 3: program assignment panel with a future start date selected]
 
 ### Ajustar la Estructura Despues de la Creacion
 

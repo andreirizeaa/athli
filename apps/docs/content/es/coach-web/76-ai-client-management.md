@@ -18,7 +18,7 @@ Pidele al AI que encuentre clientes por nombre o criterio:
 - **"Listar todos mis clientes"** - Muestra tu lista completa de clientes activos
 - **"¿Quien ha estado inactivo esta semana?"** - Encuentra clientes que perdieron entrenamientos recientemente
 
-> [Screenshot: AI search results showing matching client names and key profile details]
+> [Screenshot 1: AI search results showing matching client names and key profile details]
 
 ### Ver Perfiles de Clientes
 
@@ -30,7 +30,7 @@ Pidele al AI que muestre informacion detallada del perfil:
 
 El AI devuelve la informacion relevante del perfil directamente en el chat.
 
-> [Screenshot: AI displaying a client profile summary with goals and category]
+> [Screenshot 2: AI displaying a client profile summary with goals and category]
 
 ### Agregar Objetivos y Lesiones
 
@@ -42,7 +42,7 @@ Pidele al AI que cree objetivos o registre lesiones para un cliente:
 
 El AI muestra una **tarjeta de accion** con los detalles para tu confirmacion antes de hacer cambios.
 
-> [Screenshot: Action card confirming a new goal being added to a client profile]
+> [Screenshot 3: Action card confirming a new goal being added to a client profile]
 
 ### Actualizar Detalles del Cliente
 

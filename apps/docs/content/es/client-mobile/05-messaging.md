@@ -2,7 +2,7 @@
 
 ## Que es esto?
 
-La pestana de Chats te permite enviar mensajes a tu entrenador directamente desde la app. Envia texto, fotos, videos, archivos y mensajes de audio todo en un solo lugar.
+La tarjeta de Mensajes del Entrenador en tu pantalla de Inicio te permite enviar mensajes a tu entrenador directamente desde la app. Envia texto, fotos, videos, archivos y mensajes de audio todo en un solo lugar.
 
 ## Por que es util
 
@@ -12,19 +12,17 @@ Tener toda tu comunicacion de coaching en una app significa que no necesitas bus
 
 ### Abrir Tu Chat
 
-1. Toca la pestana **Chats** en la parte inferior de la pantalla
-2. Toca la conversacion de tu entrenador
+1. En la pestana **Inicio**, toca la tarjeta de **Mensajes del Entrenador**
+2. Se abre tu conversacion con tu entrenador
 3. Veras tu historial completo de mensajes
 
-> [Captura de pantalla: Pestana de chats del cliente mostrando conversacion con el entrenador]
+> [Captura de pantalla: Conversacion de chat con el entrenador mostrando mensajes y campo de entrada]
 
 ### Enviar un Mensaje
 
 1. Escribe tu mensaje en el campo de entrada en la parte inferior
 2. Toca **Enviar**
 3. Tu entrenador recibe una notificacion
-
-> [Captura de pantalla: Conversacion de chat con campo de entrada de mensaje]
 
 ### Enviar Fotos y Archivos
 
@@ -36,31 +34,23 @@ Tener toda tu comunicacion de coaching en una app significa que no necesitas bus
 3. Agrega una leyenda opcional
 4. Toca **Enviar**
 
-> [Captura de pantalla: Opciones de adjuntos mostrando camara, biblioteca de fotos y archivos]
-
 ### Enviar Mensajes de Audio
 
 1. Toca y manten presionado el icono del **microfono**
 2. Graba tu mensaje
 3. Suelta para enviar
 
-> [Captura de pantalla: Indicador de grabacion de mensaje de audio]
-
 ### Reaccionar a Mensajes
 
-1. Mantén presionado cualquier mensaje
+1. Manten presionado cualquier mensaje
 2. Selecciona una reaccion con emoji
 3. La reaccion aparece en el mensaje
-
-> [Captura de pantalla: Mensaje con opciones de reaccion emoji]
 
 ### Ver Medios Compartidos
 
 1. En una conversacion, puedes desplazarte hacia atras a traves de fotos, videos y archivos compartidos
 2. Toca cualquier medio para verlo en pantalla completa
 3. Descarga archivos a tu dispositivo si es necesario
-
-> [Captura de pantalla: Visor de medios compartidos en el chat]
 
 ## Cosas a Tener en Cuenta
 

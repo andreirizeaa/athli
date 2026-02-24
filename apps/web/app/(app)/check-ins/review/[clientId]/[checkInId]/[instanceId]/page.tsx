@@ -13,10 +13,13 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator
 } from '@/components/ui/breadcrumb';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Download, Loader2 } from 'lucide-react';
 import { CheckInReviewContent } from '@/components/forms/check-in-review-content';
 import { useClientProfile } from '@/hooks/use-client-profile';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { getCheckInInstance, type CheckInInstance } from '@/api/client/client-form-service';
+import { downloadQuestionnaire } from '@/lib/general/pdf-service';
+import { Button } from '@/components/ui/button';
 
 const CheckInReviewPage = () => {
     const t = useTranslations();
@@ -27,13 +30,15 @@ const CheckInReviewPage = () => {
     const instanceId = Array.isArray(params.instanceId) ? params.instanceId[0] : params.instanceId;
 
     const { client } = useClientProfile(clientId);
+    const { user } = useUserProfile();
     const [checkInInstance, setCheckInInstance] = useState<CheckInInstance | null>(null);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     useEffect(() => {
         const fetchInstance = async () => {
             if (!clientId || !checkInId || !instanceId) return;
             try {
-                const data = await getCheckInInstance(clientId, checkInId, instanceId);
+                const data = await getCheckInInstance(clientId, checkInId, instanceId, user!.id);
                 setCheckInInstance(data);
             } catch (error) {
                 console.error('Failed to fetch check-in instance:', error);
@@ -41,6 +46,36 @@ const CheckInReviewPage = () => {
         };
         fetchInstance();
     }, [clientId, checkInId, instanceId]);
+
+    const handleDownload = async () => {
+        if (!checkInInstance || isDownloading) return;
+        setIsDownloading(true);
+        try {
+            const name = client ? `${client.firstName} ${client.lastName}` : 'Client';
+            await downloadQuestionnaire({
+                questionnaire: {
+                    id: checkInInstance.id,
+                    name: checkInInstance.formName,
+                    description: '',
+                    status: checkInInstance.status === 'assigned' ? 'pending' : 'completed',
+                    sentAt: checkInInstance.scheduledDate,
+                    completedAt: checkInInstance.completedAt,
+                    questions: checkInInstance.questions || [],
+                    answers: checkInInstance.answers || [],
+                },
+                clientName: name,
+                clientId,
+                coachId: user!.id,
+                formType: 'check-in',
+                checkInId,
+                submissionId: instanceId,
+            });
+        } catch (error) {
+            console.error('Failed to download check-in PDF:', error);
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     const clientName = client ? `${client.firstName} ${client.lastName}` : '';
     const checkInName = checkInInstance?.formName || '';
@@ -86,11 +121,29 @@ const CheckInReviewPage = () => {
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
-                    <h1 className="text-[22px] font-semibold">
-                        {checkInName
-                            ? `${t('forms.checkIns.review.title')} ${checkInName}`
-                            : t('forms.checkIns.review.pageTitle')}
-                    </h1>
+                    <div className="flex items-center justify-between">
+                        <h1 className="text-[22px] font-semibold">
+                            {checkInName
+                                ? `${t('forms.checkIns.review.title')} ${checkInName}`
+                                : t('forms.checkIns.review.pageTitle')}
+                        </h1>
+                        {checkInInstance && checkInInstance.status !== 'assigned' && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleDownload}
+                                disabled={isDownloading}
+                                className="gap-2"
+                            >
+                                {isDownloading ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                ) : (
+                                    <Download className="size-4" />
+                                )}
+                                <span>{t('common.download')}</span>
+                            </Button>
+                        )}
+                    </div>
                 </div>
                 <Separator className="absolute bottom-[-1px] left-0 right-0" />
             </div>
@@ -102,6 +155,7 @@ const CheckInReviewPage = () => {
                             clientId={clientId}
                             checkInId={checkInId}
                             instanceId={instanceId}
+                            coachId={user!.id}
                             onReviewSaved={() => {
                                 // Optionally navigate back or show success state
                                 // router.push('/check-ins');

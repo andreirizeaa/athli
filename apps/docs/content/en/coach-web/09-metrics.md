@@ -28,7 +28,7 @@ Tracking numbers over time shows real progress. Metrics give you charts and hist
 6. Organize into folders if needed
 7. Click **Save**
 
-> [Screenshot: Create metric form with type and unit selection]
+> [Screenshot 1: Create metric form with type and unit selection]
 
 ### Assigning a Metric to a Client
 
@@ -38,7 +38,7 @@ Tracking numbers over time shows real progress. Metrics give you charts and hist
 4. Select from your library
 5. Click **Assign**
 
-> [Screenshot: Assign metric dialog]
+> [Screenshot 2: Assign metric dialog]
 
 ### Logging Metric Values
 
@@ -48,7 +48,7 @@ Tracking numbers over time shows real progress. Metrics give you charts and hist
 4. The date defaults to today but you can change it
 5. Click **Save**
 
-> [Screenshot: Log metric form with value input]
+> [Screenshot 3: Log metric form with value input]
 
 ### Viewing Metric History and Charts
 
@@ -58,7 +58,7 @@ Tracking numbers over time shows real progress. Metrics give you charts and hist
 4. Below the chart is a history of all logged values
 5. Edit or delete individual entries as needed
 
-> [Screenshot: Metric detail view with chart and history table]
+> [Screenshot 4: Metric detail view with chart and history table]
 
 ### Organizing Metrics into Folders
 
@@ -67,7 +67,7 @@ Tracking numbers over time shows real progress. Metrics give you charts and hist
 3. Name the folder
 4. Drag metrics into the folder or use **Move to Folder**
 
-> [Screenshot: Metrics library with folders]
+> [Screenshot 5: Metrics library with folders]
 
 ## Things to Note
 

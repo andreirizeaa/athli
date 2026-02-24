@@ -21,7 +21,7 @@ HIIT stands for High-Intensity Interval Training. In Athli, a HIIT section lets 
 3. Select **HIIT** as the section type.
 4. Give the section a name (e.g., "Cardio HIIT" or "Full Body Intervals").
 
-> [Screenshot: section type selector with HIIT highlighted]
+> [Screenshot 1: section type selector with HIIT highlighted]
 
 ### Default Configuration
 
@@ -34,7 +34,7 @@ When you select HIIT, the following defaults are applied:
 | Rounds | 10 |
 | **Total Time** | **10 minutes** |
 
-> [Screenshot: HIIT section header showing work, rest, and round fields with default values]
+> [Screenshot 2: HIIT section header showing work, rest, and round fields with default values]
 
 ### Customizing the HIIT
 
@@ -53,7 +53,7 @@ The total time updates automatically. For example, 30s work / 30s rest x 12 roun
 3. With a single exercise, the client performs it every round.
 4. With multiple exercises, the client rotates through them across rounds.
 
-> [Screenshot: HIIT section with four exercises rotating across 10 rounds]
+> [Screenshot 3: HIIT section with four exercises rotating across 10 rounds]
 
 ### How Clients Execute a HIIT Section
 

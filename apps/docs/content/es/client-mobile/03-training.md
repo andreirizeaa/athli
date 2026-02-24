@@ -1,8 +1,8 @@
-# App del Cliente: Ver y Completar Entrenamientos
+# App del Cliente: Entrenamiento
 
 ## Que es esto?
 
-La pestana de Entrenamiento muestra tu calendario semanal de entrenamientos. Puedes ver que entrenamientos ha programado tu entrenador, previsualizar ejercicios y completar sesiones de entrenamiento guiadas con seguimiento integrado.
+La pestana de Entrenamiento muestra tu programa de entrenamiento completo. Puedes ver que entrenamientos ha planificado tu entrenador, seleccionar cualquier dia para ver sus entrenamientos y completar sesiones guiadas con seguimiento integrado.
 
 ## Por que es util
 
@@ -10,36 +10,33 @@ Tu entrenador planifica tu entrenamiento para que no tengas que hacerlo tu. La a
 
 ## Guia Paso a Paso
 
-### Ver Tu Programa Semanal
+### Ver Tu Programa de Entrenamiento
 
 1. Toca la pestana **Entrenamiento**
-2. Veras un calendario semanal con puntos en los dias que tienen entrenamientos
-3. Toca un dia para ver el entrenamiento asignado
-4. Los dias sin entrenamientos son dias de descanso
+2. Las fechas en la parte superior muestran tu programa de un vistazo con indicadores de color:
+   - **Verde** - entrenamiento completado
+   - **Amarillo** - entrenamiento en progreso
+   - **Rojo** - entrenamiento perdido
+   - **Sin color** - futuro o no iniciado
+3. Toca cualquier fecha para ver los entrenamientos programados para ese dia
+4. Desliza a la izquierda y derecha para navegar entre dias
 
-> [Captura de pantalla: Calendario semanal de la pestana de Entrenamiento con indicadores de entrenamiento]
+> [Captura de pantalla: Pestana de Entrenamiento mostrando programa con indicadores de fecha codificados por color]
 
-### Previsualizar un Entrenamiento
+### Iniciar un Entrenamiento
 
-1. Toca un dia que tenga un entrenamiento
-2. La previsualizacion del entrenamiento muestra todos los ejercicios, series, repeticiones y cualquier nota de tu entrenador
-3. Cada ejercicio muestra los musculos objetivo y tiene un video de demostracion que puedes ver
-4. Desplazate para ver la sesion completa antes de comenzar
-
-> [Captura de pantalla: Previsualizacion del entrenamiento mostrando lista de ejercicios con series y repeticiones]
-
-### Iniciar una Sesion de Entrenamiento
-
-1. En la previsualizacion del entrenamiento, toca **Iniciar Entrenamiento**
-2. Es posible que se te pida calificar tus metricas pre-entrenamiento (sueno, animo, energia, estres, dolor muscular)
-3. La app te guia a traves de cada ejercicio uno a la vez
-4. Para cada serie:
+1. Selecciona un dia que tenga un entrenamiento
+2. Toca el entrenamiento para ver todos los ejercicios, series, repeticiones y notas de tu entrenador
+3. Toca **Iniciar Entrenamiento** para comenzar
+4. Es posible que se te pida calificar tus metricas pre-entrenamiento (sueno, animo, energia, estres, dolor muscular)
+5. La app te guia a traves de cada ejercicio uno a la vez
+6. Para cada serie:
    - Registra el peso que usaste
    - Registra las repeticiones que completaste
    - Toca **Completar Serie** para pasar a la siguiente
-5. Los temporizadores de descanso comienzan automaticamente entre series si estan configurados
+7. Los temporizadores de descanso comienzan automaticamente entre series si estan configurados
 
-> [Captura de pantalla: Sesion de entrenamiento activa mostrando el ejercicio actual con registro de series]
+> [Screenshot 3+2: Sesion de entrenamiento activa | Cuestionario pre-entrenamiento]
 
 ### Ver Demostraciones de Ejercicios
 
@@ -49,22 +46,14 @@ Tu entrenador planifica tu entrenamiento para que no tengas que hacerlo tu. La a
 
 > [Captura de pantalla: Video de demostracion de ejercicio reproduciendose durante el entrenamiento]
 
-### Completar un Entrenamiento
+### Completar y Revisar Entrenamientos
 
 1. Despues de terminar todos los ejercicios, toca **Completar Entrenamiento**
-2. Es posible que se te pida retroalimentacion post-entrenamiento (calificacion, notas)
-3. Tus resultados se guardan y se envian a tu entrenador
-4. El entrenamiento aparece como completado en tu calendario
+2. Tus resultados se guardan y se envian a tu entrenador
+3. La fecha del entrenamiento se vuelve verde en tu programa
+4. Para revisar un entrenamiento pasado, toca su fecha y ve tus pesos y repeticiones registrados
 
-> [Captura de pantalla: Pantalla de finalizacion del entrenamiento con opcion de retroalimentacion]
-
-### Ver Entrenamientos Anteriores
-
-1. En la pestana de Entrenamiento, navega a un dia pasado
-2. Toca el entrenamiento completado para ver tus resultados registrados
-3. Compara tu rendimiento a lo largo de las semanas
-
-> [Captura de pantalla: Entrenamiento completado mostrando pesos y repeticiones registrados]
+> [Captura de pantalla: Entrenamiento completado mostrando resultados registrados]
 
 ## Cosas a Tener en Cuenta
 
@@ -76,12 +65,15 @@ Tu entrenador planifica tu entrenamiento para que no tengas que hacerlo tu. La a
 ## Problemas Comunes
 
 **El entrenamiento no aparece para hoy**
+
 Tu entrenador puede no haber programado uno. Consulta con ellos si esperabas un entrenamiento.
 
 **Registre el peso o las repeticiones incorrectas**
+
 Puedes editar series individuales durante la sesion. Despues de completar, pide a tu entrenador que ajuste si es necesario.
 
 **La app se cerro durante mi entrenamiento**
+
 Vuelve a abrir la app. Tu progreso deberia estar guardado. Si no, registra manualmente tus series restantes.
 
 ---

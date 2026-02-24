@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { useTranslations } from 'next-intl';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
@@ -39,11 +38,7 @@ export default async function CollectionPage({
   const collection = getCollectionBySlug(slug);
   if (!collection) notFound();
 
-  return <CollectionContent collection={collection} />;
-}
-
-function CollectionContent({ collection }: { collection: NonNullable<ReturnType<typeof getCollectionBySlug>> }) {
-  const t = useTranslations();
+  const t = await getTranslations();
   const Icon = collection.icon;
   const articleCount = (collection.articles?.length ?? 0) +
     (collection.sections?.reduce((acc, s) => acc + s.articles.length, 0) ?? 0);
@@ -62,7 +57,7 @@ function CollectionContent({ collection }: { collection: NonNullable<ReturnType<
       {/* Collection header - icon on top, text below */}
       <div className="mb-8">
         <div className="flex size-14 items-center justify-center rounded-xl border bg-muted">
-          <Icon className="size-7 text-muted-foreground" />
+          <Icon className="size-7 text-foreground" />
         </div>
         <h1 className="mt-4 text-2xl font-bold">{t(collection.titleKey)}</h1>
         <p className="mt-1 text-muted-foreground">{t(collection.descriptionKey)}</p>
@@ -85,7 +80,7 @@ function CollectionContent({ collection }: { collection: NonNullable<ReturnType<
       {collection.articles && collection.articles.length > 0 && (
         <div className="rounded-xl border bg-background overflow-hidden">
           {collection.articles.map((article) => (
-            <ArticleRow key={article.slug} article={article} />
+            <ArticleRow key={article.slug} slug={article.slug} title={t(article.titleKey)} />
           ))}
         </div>
       )}
@@ -98,7 +93,7 @@ function CollectionContent({ collection }: { collection: NonNullable<ReturnType<
               <h2 className="mb-2 text-sm font-semibold text-muted-foreground">{t(section.titleKey)}</h2>
               <div className="rounded-xl border bg-background overflow-hidden">
                 {section.articles.map((article) => (
-                  <ArticleRow key={article.slug} article={article} />
+                  <ArticleRow key={article.slug} slug={article.slug} title={t(article.titleKey)} />
                 ))}
               </div>
             </div>
@@ -109,17 +104,15 @@ function CollectionContent({ collection }: { collection: NonNullable<ReturnType<
   );
 }
 
-function ArticleRow({ article }: { article: { slug: string; titleKey: string; descriptionKey: string } }) {
-  const t = useTranslations();
-
+function ArticleRow({ slug, title }: { slug: string; title: string }) {
   return (
     <Link
-      href={`/articles/${article.slug}`}
+      href={`/articles/${slug}`}
       className="group flex items-center gap-3 px-5 py-4 transition-colors hover:bg-muted"
     >
       <FileText className="size-4 text-muted-foreground shrink-0" />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-foreground">{t(article.titleKey)}</p>
+        <p className="text-sm font-medium text-foreground">{title}</p>
       </div>
       <ChevronLeft className="size-4 text-muted-foreground rotate-180 shrink-0" />
     </Link>

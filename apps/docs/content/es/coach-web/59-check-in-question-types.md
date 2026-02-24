@@ -21,7 +21,7 @@ Diferentes preguntas requieren diferentes formatos de respuesta. Preguntar "¿Co
 | **Opcion Multiple** | Seleccionar entre opciones predefinidas | Respuestas categorizadas (ej., "¿Como fue tu sueno? Excelente / Bueno / Regular / Malo") |
 | **Escala** | Entrada con deslizador | Respuestas matizadas en un rango (ej., nivel de estres de 0 a 100) |
 
-> [Screenshot: Check-in builder showing the question type dropdown]
+> [Screenshot 1: Check-in builder showing the question type dropdown]
 
 ### Agregar Preguntas a un Check-in
 
@@ -34,7 +34,7 @@ Diferentes preguntas requieren diferentes formatos de respuesta. Preguntar "¿Co
 7. Activa **Requerido** si el cliente debe responder esta pregunta
 8. Haz clic en **Guardar**
 
-> [Screenshot: Adding a multiple choice question with predefined options]
+> [Screenshot 2: Adding a multiple choice question with predefined options]
 
 ### Elegir el Tipo Correcto
 
@@ -52,7 +52,7 @@ Diferentes preguntas requieren diferentes formatos de respuesta. Preguntar "¿Co
 3. Las preguntas requeridas deben ser respondidas antes de que el cliente pueda enviar
 4. Las preguntas opcionales se pueden dejar en blanco
 
-> [Screenshot: Required toggle on a check-in question]
+> [Screenshot 3: Required toggle on a check-in question]
 
 ## Cosas a Tener en Cuenta
 

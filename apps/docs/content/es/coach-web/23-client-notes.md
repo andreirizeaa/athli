@@ -18,7 +18,7 @@ Un sistema simple de toma de notas adjunto al perfil de cada cliente. Puedes cre
 1. Ve al perfil de un cliente (haz clic en cualquier cliente de tu lista de clientes).
 2. Selecciona la pestaña **Notas**.
 
-> [Screenshot: client profile with Notes tab selected showing list of notes]
+> [Screenshot 1: client profile with Notes tab selected showing list of notes]
 
 ## Crear una Nota
 
@@ -27,7 +27,7 @@ Un sistema simple de toma de notas adjunto al perfil de cada cliente. Puedes cre
 3. Escribe el contenido de la nota en el area de texto.
 4. Haz clic en **Guardar**.
 
-> [Screenshot: create note side panel with title and content fields]
+> [Screenshot 2: create note side panel with title and content fields]
 
 ## Ver y Editar Notas
 
@@ -40,7 +40,7 @@ La lista de notas muestra:
 - Fecha de creacion
 - Una vista previa del contenido
 
-> [Screenshot: note detail view in side panel with edit capability]
+> [Screenshot 3: note detail view in side panel with edit capability]
 
 ## Eliminar Notas
 
@@ -54,7 +54,7 @@ La lista de notas muestra:
 2. Haz clic en el boton de eliminar que aparece.
 3. Confirma la eliminacion.
 
-> [Screenshot: notes list with multiple notes selected and delete button visible]
+> [Screenshot 4: notes list with multiple notes selected and delete button visible]
 
 ## Consejos
 

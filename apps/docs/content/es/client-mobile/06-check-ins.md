@@ -38,8 +38,11 @@ Los check-ins le dan a tu entrenador informacion sobre como estas mas alla de so
 1. Navega a tu seccion de **Check-ins** (desde Inicio o Perfil)
 2. Veras una lista de todos tus envios anteriores con fechas
 3. Toca cualquier envio para revisar tus respuestas
+4. Si tu entrenador dejo un comentario en un envio, aparece en la parte superior debajo de la fecha de finalizacion
 
 > [Captura de pantalla: Lista de historial de check-ins con envios anteriores]
+
+> [Captura de pantalla: Detalle del envio de check-in mostrando la tarjeta de comentario del entrenador debajo de la fecha de finalizacion]
 
 ## Cosas a Tener en Cuenta
 
@@ -70,7 +73,7 @@ Esto depende de lo que tu entrenador haya configurado. Los horarios comunes son 
 
 ### Puedo ver lo que mi entrenador piensa de mi check-in?
 
-Tu entrenador puede hacer seguimiento en el chat con retroalimentacion basada en tus respuestas del check-in.
+Si. Cuando tu entrenador revisa un check-in y deja un comentario, puedes verlo tocando el envio en tu historial de check-ins. El comentario aparece en una tarjeta en la parte superior del detalle del envio, debajo de la fecha de finalizacion.
 
 ### Tengo que responder cada pregunta?
 

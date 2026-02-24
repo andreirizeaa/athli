@@ -18,7 +18,7 @@ Ask the AI to find clients by name or criteria:
 - **"List all my clients"** - Shows your full active client roster
 - **"Who has been inactive this week?"** - Finds clients who missed workouts recently
 
-> [Screenshot: AI search results showing matching client names and key profile details]
+> [Screenshot 1: AI search results showing matching client names and key profile details]
 
 ### Viewing Client Profiles
 
@@ -30,7 +30,7 @@ Ask the AI to pull up detailed profile information:
 
 The AI returns the relevant profile information directly in the chat.
 
-> [Screenshot: AI displaying a client profile summary with goals and category]
+> [Screenshot 2: AI displaying a client profile summary with goals and category]
 
 ### Adding Goals and Injuries
 
@@ -42,7 +42,7 @@ Ask the AI to create goals or record injuries for a client:
 
 The AI shows an **action card** with the details for your confirmation before making changes.
 
-> [Screenshot: Action card confirming a new goal being added to a client profile]
+> [Screenshot 3: Action card confirming a new goal being added to a client profile]
 
 ### Updating Client Details
 

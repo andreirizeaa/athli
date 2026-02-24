@@ -17,7 +17,7 @@ Different training goals require different set configurations. A strength block 
 3. A new set row appears with default values. Adjust reps, weight, rest, and other fields as needed.
 4. Repeat to add as many sets as required.
 
-> [Screenshot: Add Set button below an exercise's set rows]
+> [Screenshot 1: Add Set button below an exercise's set rows]
 
 ### Deleting Sets
 
@@ -26,7 +26,7 @@ Different training goals require different set configurations. A strength block 
 3. Click the **Delete** icon (trash icon or "x") on the right side of the set row.
 4. The set is removed immediately. If the exercise has only one set remaining, that set cannot be deleted without removing the entire exercise.
 
-> [Screenshot: Delete icon visible on a set row]
+> [Screenshot 2: Delete icon visible on a set row]
 
 ### Linking and Unlinking Sets
 
@@ -39,7 +39,7 @@ When sets are **unlinked**, each set has independent values. This is essential f
 3. When linked, editing any set value updates all sets.
 4. When unlinked, each set row can be edited independently.
 
-> [Screenshot: Linked vs unlinked sets comparison]
+> [Screenshot 3: Linked vs unlinked sets comparison]
 
 ## Things to Note
 

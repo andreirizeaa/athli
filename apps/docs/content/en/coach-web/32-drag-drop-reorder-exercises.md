@@ -2,7 +2,7 @@
 
 ## What is this?
 
-The Workout Builder supports drag-and-drop functionality, allowing you to reorder exercises within a workout by clicking and dragging them to a new position. You can move exercises within the same section, between different sections, or at the top level of the workout.
+The Workout Builder supports drag-and-drop functionality in the right panel, allowing you to reorder exercises within a workout by clicking and dragging them to a new position. You can move exercises within the same section, between different sections, or at the top level of the workout.
 
 ## Why is it useful?
 
@@ -19,7 +19,9 @@ Exercise order matters for training outcomes. You might want to place compound m
 5. Release the mouse button to drop the exercise into its new position.
 6. The exercise order updates immediately.
 
-> [Screenshot: Drag handle visible on the left side of an exercise card]
+Alternatively, you can click the ellipsis menu (three dots) on an exercise card and select **Move Up** or **Move Down** to reorder without dragging.
+
+> [Screenshot 1: Drag handle visible on the left side of an exercise card, and ellipsis menu with Move Up and Move Down options]
 
 ### Moving Exercises Between Sections
 
@@ -28,7 +30,7 @@ Exercise order matters for training outcomes. You might want to place compound m
 3. The target section will highlight or expand to indicate it can accept the exercise.
 4. Drop the exercise at the desired position within the target section.
 
-> [Screenshot: An exercise being dragged from one section into another]
+> [Screenshot 2: An exercise being dragged from one section into another]
 
 ### Reordering Sections
 

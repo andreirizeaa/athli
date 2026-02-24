@@ -19,7 +19,7 @@ Construir una biblioteca de habitos te permite estandarizar las acciones diarias
 5. Selecciona una **categoria** para agrupar habitos relacionados
 6. Haz clic en **Guardar**
 
-> [Screenshot: Create habit form with name, description, and category fields]
+> [Screenshot 1: Create habit form with name, description, and category fields]
 
 ### Organizar Habitos en Carpetas
 
@@ -28,7 +28,7 @@ Construir una biblioteca de habitos te permite estandarizar las acciones diarias
 3. Arrastra habitos a la carpeta o usa **Mover a Carpeta**
 4. Las carpetas mantienen tu biblioteca ordenada a medida que crece
 
-> [Screenshot: Habits library with folders organizing different habit categories]
+> [Screenshot 2: Habits library with folders organizing different habit categories]
 
 ### Asignar un Habito a un Cliente
 
@@ -40,7 +40,7 @@ Construir una biblioteca de habitos te permite estandarizar las acciones diarias
 6. Haz clic en **Asignar**
 7. El cliente ve el habito en su aplicacion movil inmediatamente
 
-> [Screenshot: Assign habit dialog with library search]
+> [Screenshot 3: Assign habit dialog with library search]
 
 ### Asignar el Mismo Habito a Multiples Clientes
 
@@ -58,7 +58,7 @@ Porque los habitos viven en tu biblioteca, puedes asignar el mismo habito a tant
 4. Haz clic en **Guardar**
 5. Los cambios se aplican a asignaciones futuras; las asignaciones existentes de clientes tambien se actualizan
 
-> [Screenshot: Editing an existing habit in the library]
+> [Screenshot 4: Editing an existing habit in the library]
 
 ## Cosas a Tener en Cuenta
 

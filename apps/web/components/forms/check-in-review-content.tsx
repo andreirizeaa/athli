@@ -31,6 +31,7 @@ interface CheckInReviewContentProps {
     clientId: string;
     checkInId: string;
     instanceId: string;
+    coachId: string;
     onReviewSaved?: () => void;
     showBreadcrumb?: boolean; // Keep for flexibility but maybe handle outside
 }
@@ -39,6 +40,7 @@ export const CheckInReviewContent = ({
     clientId,
     checkInId,
     instanceId,
+    coachId,
     onReviewSaved,
 }: CheckInReviewContentProps) => {
     const t = useTranslations();
@@ -56,12 +58,12 @@ export const CheckInReviewContent = ({
 
             setIsLoading(true);
             try {
-                const data = await getCheckInInstance(clientId, checkInId, instanceId);
+                const data = await getCheckInInstance(clientId, checkInId, instanceId, coachId);
                 setInstance(data);
 
                 if (data.status === 'reviewed') {
                     try {
-                        const review = await getCoachReview(clientId, checkInId, instanceId);
+                        const review = await getCoachReview(clientId, checkInId, instanceId, coachId);
                         if (review && review.review) {
                             setReviewText(review.review);
                             setOriginalReviewText(review.review);
@@ -85,10 +87,17 @@ export const CheckInReviewContent = ({
         };
 
         fetchInstance();
-    }, [clientId, checkInId, instanceId]);
+    }, [clientId, checkInId, instanceId, coachId]);
 
-    const getAnswerForQuestion = (questionId: string): QuestionAnswer | undefined => {
-        return instance?.answers?.find((a) => a.questionId === questionId);
+    const getAnswerForQuestion = (questionId: string, questionIndex: number): QuestionAnswer | undefined => {
+        if (!instance?.answers || !Array.isArray(instance.answers)) return undefined;
+        // First try matching by questionId
+        const byId = instance.answers.find((a: any) => (a.questionId || a.question_id) === questionId);
+        if (byId) return { questionId, answer: byId.answer ?? byId.value ?? null };
+        // Fall back to positional matching
+        const byIndex = instance.answers[questionIndex];
+        if (byIndex) return { questionId, answer: byIndex.answer ?? byIndex.value ?? null };
+        return undefined;
     };
 
     const handleSaveReview = async () => {
@@ -99,6 +108,7 @@ export const CheckInReviewContent = ({
             if (instance.status === 'reviewed' && isEditingReview) {
                 await updateCoachReview({
                     clientId,
+                    coachId,
                     checkInId,
                     instanceId,
                     review: reviewText.trim(),
@@ -108,6 +118,7 @@ export const CheckInReviewContent = ({
             } else {
                 await addCoachReview({
                     clientId,
+                    coachId,
                     checkInId,
                     instanceId,
                     review: reviewText.trim(),
@@ -160,7 +171,7 @@ export const CheckInReviewContent = ({
     };
 
     const renderAnswer = (question: Question, questionIndex: number) => {
-        const answer = getAnswerForQuestion(question.id);
+        const answer = getAnswerForQuestion(question.id, questionIndex);
 
         if (!answer || answer.answer === null || answer.answer === undefined) {
             return <span className="text-sm text-muted-foreground italic">No answer provided</span>;
@@ -169,8 +180,13 @@ export const CheckInReviewContent = ({
         switch (question.format) {
             case 'text':
             case 'multipleChoice':
-            case 'yesNo':
                 return <p className="text-sm text-foreground whitespace-pre-wrap">{String(answer.answer)}</p>;
+
+            case 'yesNo': {
+                const yesNoVal = answer.answer;
+                const displayVal = yesNoVal === true || yesNoVal === 'yes' || yesNoVal === 'Yes' ? 'Yes' : 'No';
+                return <p className="text-sm text-foreground">{displayVal}</p>;
+            }
 
             case 'number':
                 return <p className="text-sm text-foreground">{answer.answer as number}</p>;
@@ -203,7 +219,6 @@ export const CheckInReviewContent = ({
                                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                             </svg>
                         ))}
-                        <span className="text-sm text-muted-foreground ml-2">{answer.answer as number}/5</span>
                     </div>
                 );
 
@@ -271,30 +286,33 @@ export const CheckInReviewContent = ({
                 </Card>
             ) : (
                 <>
-                    <Card className="w-full">
+                    <Card className="w-full pt-0 gap-0">
                         <div className="w-full">
                             {instance.completedAt && (
                                 <>
-                                    <CardHeader className="px-4 pb-3">
-                                        <CardTitle className="text-base">{formatCompletionDate(instance.completedAt)}</CardTitle>
+                                    <CardHeader className="px-4 pt-3 pb-1">
+                                        <CardTitle>{formatCompletionDate(instance.completedAt)}</CardTitle>
                                     </CardHeader>
-                                    <Separator className="w-full mt-[-8px] mb-[-4px]" />
+                                    <Separator className="w-full" />
                                 </>
                             )}
                             {instance.questions?.map((question, index) => (
                                 <div
-                                    key={question.id}
-                                    className={cn('py-4 px-4', index < (instance.questions?.length || 0) - 1 && 'border-b')}
+                                    key={question.id || `q-${index}`}
+                                    className={cn(index > 0 && 'border-t border-border')}
                                 >
-                                    <div className="flex items-start gap-2">
-                                        <span className="text-sm font-medium text-muted-foreground flex-shrink-0">{index + 1}.</span>
-                                        <div className="flex-1 space-y-2">
-                                            <div className="flex items-start gap-2">
-                                                <p className="text-sm font-medium text-foreground">{question.question}</p>
-                                                {question.required && <span className="text-red-500 text-sm">*</span>}
-                                            </div>
-                                            <div className="pl-0">{renderAnswer(question, index)}</div>
+                                    <div className="flex items-start gap-2 px-4 pt-2 pb-2 bg-muted/50">
+                                        <span className="text-sm font-medium text-muted-foreground flex-shrink-0">
+                                            {index + 1}.
+                                        </span>
+                                        <div className="flex items-start gap-2">
+                                            <p className="text-sm font-medium text-foreground">{question.question}</p>
+                                            {question.required && <span className="text-red-500 text-sm">*</span>}
                                         </div>
+                                    </div>
+                                    <div className="border-t border-border" />
+                                    <div className="px-4 pt-2 pb-2">
+                                        {renderAnswer(question, index)}
                                     </div>
                                 </div>
                             ))}

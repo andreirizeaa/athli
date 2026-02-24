@@ -56,8 +56,6 @@ Una vez que tocas un cliente, puedes acceder a:
 2. Elige asignar un entrenamiento de tu biblioteca o crear uno
 3. Selecciona el entrenamiento y confirma
 
-> [Captura de pantalla: Dialogo de agregar entrenamiento a dia movil]
-
 ## Cosas a Tener en Cuenta
 
 - Todos los cambios se sincronizan instantaneamente con la aplicacion web

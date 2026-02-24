@@ -21,7 +21,7 @@ EMOM stands for Every Minute On the Minute. In an EMOM section, the client perfo
 3. Select **EMOM** as the section type.
 4. Give the section a name (e.g., "10-Min EMOM: Power Cleans").
 
-> [Screenshot: section type selector with EMOM highlighted]
+> [Screenshot 1: section type selector with EMOM highlighted]
 
 ### Configuring the EMOM
 
@@ -32,7 +32,7 @@ After selecting EMOM, two configuration fields appear:
 
 You can adjust both values. For example, set 90-second intervals for 12 minutes if you need longer work periods.
 
-> [Screenshot: EMOM section header showing interval duration and total duration fields]
+> [Screenshot 2: EMOM section header showing interval duration and total duration fields]
 
 ### Adding Exercises
 
@@ -57,7 +57,7 @@ You can adjust both values. For example, set 90-second intervals for 12 minutes 
 - Minute 3: 8 Dumbbell Snatches
 - Repeat for 12 minutes
 
-> [Screenshot: EMOM section with alternating exercises configured for odd and even minutes]
+> [Screenshot 3: EMOM section with alternating exercises configured for odd and even minutes]
 
 ### How Clients Execute an EMOM
 

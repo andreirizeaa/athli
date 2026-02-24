@@ -23,7 +23,7 @@ Instead of emailing files back and forth, you can keep everything organized in o
 2. Click **Upload** and select files from your computer
 3. Organize files into folders for easy access
 
-> [Screenshot: Files library page with folders and upload button]
+> [Screenshot 1: Files library page with folders and upload button]
 
 ### Sharing Files with a Client
 
@@ -33,7 +33,7 @@ Instead of emailing files back and forth, you can keep everything organized in o
 4. Select files from your library or upload new ones
 5. The client can now access these files from their mobile app
 
-> [Screenshot: Client files tab with assigned files]
+> [Screenshot 2: Client files tab with assigned files]
 
 ### Creating and Managing Folders
 
@@ -42,7 +42,7 @@ Instead of emailing files back and forth, you can keep everything organized in o
 3. Drag files into the folder or use **Move to Folder**
 4. Click **Edit Folder** to rename or delete
 
-> [Screenshot: Folder management with create and move options]
+> [Screenshot 3: Folder management with create and move options]
 
 ## Things to Note
 

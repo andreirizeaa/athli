@@ -13,7 +13,7 @@ The Library tab on the coach mobile app gives you access to your workout and exe
 3. Filter by muscle group or equipment
 4. Tap an exercise to see details and a video demonstration
 
-> [Screenshot: Mobile exercise library with search and filters]
+> [Screenshot 1: Mobile exercise library with search and filters]
 
 ### Viewing Exercise Details
 
@@ -22,7 +22,7 @@ The Library tab on the coach mobile app gives you access to your workout and exe
 3. Watch the demonstration video
 4. Use this information when planning workouts for clients
 
-> [Screenshot: Mobile exercise detail with video player]
+> [Screenshot 2: Mobile exercise detail with video player]
 
 ### Accessing Workouts
 
@@ -30,7 +30,7 @@ The Library tab on the coach mobile app gives you access to your workout and exe
 2. Browse or search by name
 3. Tap a workout to preview its exercises and structure
 
-> [Screenshot: Mobile workout library list]
+> [Screenshot 3: Mobile workout library list]
 
 ## Things to Note
 

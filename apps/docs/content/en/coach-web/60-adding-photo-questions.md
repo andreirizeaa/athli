@@ -15,43 +15,33 @@ Photos give you visual context that numbers and text cannot capture. A client's 
 1. Go to **Library > Forms > Check-ins**
 2. Open an existing check-in or create a new one
 3. Click **Add Question**
-4. Select the **Photo** question type
-5. Enter the question text (e.g., "Upload a front-facing progress photo")
+4. Select the **Progress Photo** question type
+5. Enter the question text (e.g., "Upload your progress photos")
 6. Optionally toggle **Required** if the photo is mandatory
 7. Click **Save**
 
-> [Screenshot: Adding a photo question to a check-in form]
+> [Screenshot 1: Adding a progress photo question type to a check-in]
 
-### Configuring Photo Questions
+### Configuring the Progress Photo Question
 
-- You can add multiple photo questions to a single check-in (e.g., front photo, side photo, back photo)
-- Each photo question accepts one image per submission
-- Add a clear description so clients know exactly what photo to take
-- Mark photo questions as optional if you want clients to submit them only when convenient
-
-> [Screenshot: Check-in with multiple photo questions configured]
+- Each check-in supports one progress photo question
+- The progress photo question prompts the client to upload three images: front, side, and back
+- Add a clear description so clients know what poses to take
+- Mark the question as optional if you want clients to submit photos only when convenient
 
 ### How Clients Submit Photos
 
 1. The client opens the check-in on their mobile app
 2. They reach the photo question and tap the upload area
-3. They can take a new photo with their camera or select one from their gallery
-4. The photo is attached to their check-in submission
+3. They are prompted to upload three photos: front, side, and back
+4. They can take new photos with their camera or select from their gallery
 5. They continue with the remaining questions and submit
 
 ### Reviewing Submitted Photos
 
-1. Go to the client's **Check-ins** tab
-2. Open a completed check-in submission
-3. Scroll to the photo question to see the submitted image
-4. Click the photo to view it in full size
-5. Use the **Compare** feature to view photos from different submission dates side by side
+Progress photos submitted through check-ins are synced to the client's **Photos** page. Navigate to the client's **Photos** tab to view, compare, and track progress photos over time.
 
-> [Screenshot: Reviewing a submitted photo in a check-in response]
-
-### Photo Questions vs. Progress Photos
-
-Photo questions in check-ins are best for casual, contextual photos submitted alongside other data. For dedicated, structured body composition tracking with comparison tools, use the **Progress Photos** feature instead. Progress photos provide a purpose-built gallery with pose categories and side-by-side comparisons.
+> [Screenshot 2: Photo comparison page showing progress photos side by side]
 
 ## Things to Note
 
@@ -66,7 +56,7 @@ Photo questions in check-ins are best for casual, contextual photos submitted al
 
 ### Can clients upload multiple photos per question?
 
-Each photo question accepts one image. Add multiple photo questions if you need several photos in a single check-in.
+The progress photo question prompts clients for three photos (front, side, and back) in a single question.
 
 ### What file formats are supported?
 
@@ -74,8 +64,4 @@ Standard image formats including JPEG and PNG are supported. Clients can take a 
 
 ### Can I download the submitted photos?
 
-You can view and save photos from the check-in submission detail page.
-
-### Should I use photo questions or the Progress Photos feature?
-
-Use photo questions for quick visual check-ins alongside other data. Use the dedicated Progress Photos feature for structured body composition tracking with pose categories and comparison tools.
+You can view and save photos from the client's Photos page.

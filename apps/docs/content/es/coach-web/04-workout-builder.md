@@ -22,10 +22,11 @@ Construir entrenamientos es el nucleo del coaching. El constructor de entrenamie
 
 1. Ve a **Biblioteca > Entrenamiento > Entrenamientos**
 2. Haz clic en **Nuevo Entrenamiento**
-3. Ingresa el nombre del entrenamiento
-4. Ahora estas en el constructor de entrenamientos
+3. Se abre un panel lateral — ingresa el nombre del entrenamiento y los detalles basicos
+4. Guarda para crear el entrenamiento
+5. Haz clic en el entrenamiento recien creado en la cuadricula para abrir el constructor de entrenamientos
 
-> [Screenshot: Constructor de entrenamientos vacio con campo de nombre arriba]
+> [Screenshot 1: Panel lateral para crear un nuevo entrenamiento con campo de nombre]
 
 ### Agregar Ejercicios
 
@@ -38,7 +39,7 @@ Tienes dos opciones:
 4. Establece el numero de series, repeticiones, peso y tiempo de descanso
 5. Repite para cada ejercicio
 
-> [Screenshot: Panel de busqueda de ejercicios con filtros y resultados]
+> [Screenshot 2: Panel de busqueda de ejercicios con filtros y resultados]
 
 **Generado por IA:**
 1. Haz clic en la pestana **Athli AI**
@@ -46,7 +47,7 @@ Tienes dos opciones:
 3. La IA genera un entrenamiento completo
 4. Revisa y edita segun sea necesario
 
-> [Screenshot: Entrada de generacion de entrenamiento por IA con resultado generado]
+> [Screenshot 3: Entrada de generacion de entrenamiento por IA con resultado generado]
 
 ### Crear Secciones
 
@@ -57,7 +58,7 @@ Las secciones te permiten agrupar ejercicios (ej., superseries, circuitos, bloqu
 3. Arrastra ejercicios a la seccion o agrega nuevos
 4. Configura ajustes especificos de la seccion (rondas, descanso entre rondas, tiempo limite)
 
-> [Screenshot: Constructor de secciones con ejercicios agrupados en una superserie]
+> [Screenshot 4: Constructor de secciones con ejercicios agrupados en una superserie]
 
 ### Reordenar Ejercicios
 
@@ -66,7 +67,7 @@ Las secciones te permiten agrupar ejercicios (ej., superseries, circuitos, bloqu
 3. Arrastra el ejercicio a su nueva posicion
 4. Suelta para soltar
 
-> [Screenshot: Tarjeta de ejercicio siendo arrastrada a nueva posicion]
+> [Screenshot 5: Tarjeta de ejercicio siendo arrastrada a nueva posicion]
 
 ### Configurar Detalles del Ejercicio
 
@@ -80,7 +81,7 @@ Cada tarjeta de ejercicio tiene columnas que puedes personalizar:
 - **RPE** - Tasa de esfuerzo percibido
 - **Notas** - Instrucciones para el cliente
 
-> [Screenshot: Tarjeta de ejercicio con opciones de columna expandidas]
+> [Screenshot 6: Tarjeta de ejercicio con opciones de columna expandidas]
 
 ### Guardar Tu Entrenamiento
 
