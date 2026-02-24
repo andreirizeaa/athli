@@ -93,10 +93,10 @@ export const CheckInReviewContent = ({
         if (!instance?.answers || !Array.isArray(instance.answers)) return undefined;
         // First try matching by questionId
         const byId = instance.answers.find((a: any) => (a.questionId || a.question_id) === questionId);
-        if (byId) return { questionId, answer: byId.answer ?? byId.value };
+        if (byId) return { questionId, answer: byId.answer ?? byId.value ?? null };
         // Fall back to positional matching
         const byIndex = instance.answers[questionIndex];
-        if (byIndex) return { questionId, answer: byIndex.answer ?? byIndex.value };
+        if (byIndex) return { questionId, answer: byIndex.answer ?? byIndex.value ?? null };
         return undefined;
     };
 
