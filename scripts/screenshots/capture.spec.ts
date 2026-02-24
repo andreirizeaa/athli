@@ -111,13 +111,37 @@ test.describe('Screenshots', () => {
   // ==========================================================================
 
   test.describe('coach-web/01-dashboard', () => {
-    test('dashboard overview', async ({ page }) => {
+    test('dashboard full and cards', async ({ page }) => {
       await page.goto('/home');
       await waitForStable(page);
+
+      // Full dashboard
       await snap(page, 'coach-web', '01-dashboard-full');
 
-      // Summary cards at top
-      await snap(page, 'coach-web', '01-dashboard-summary-cards');
+      // Summary cards (top-right column on desktop)
+      const summaryCards = page.locator('text=Total Clients, text=Active Today, text=Workouts Today').first().locator('..').locator('..');
+      if (await summaryCards.isVisible().catch(() => false)) {
+        await summaryCards.screenshot({ path: path.join(SCREENSHOT_DIR, 'light', 'coach-web', '01-dashboard-summary-cards.png') });
+        await page.evaluate(() => document.documentElement.classList.add('dark'));
+        await page.waitForTimeout(200);
+        await summaryCards.screenshot({ path: path.join(SCREENSHOT_DIR, 'dark', 'coach-web', '01-dashboard-summary-cards.png') });
+        await page.evaluate(() => document.documentElement.classList.remove('dark'));
+      }
+
+      // Completed workouts card (left column)
+      await snap(page, 'coach-web', '01-dashboard-completed-workouts');
+
+      // At-risk clients card
+      await snap(page, 'coach-web', '01-dashboard-at-risk');
+
+      // Click a workout card to open preview dialog
+      const workoutCard = page.locator('[data-testid="workout-card"], .workout-card').first();
+      if (await workoutCard.isVisible().catch(() => false)) {
+        await workoutCard.click();
+        await page.waitForTimeout(500);
+        await snap(page, 'coach-web', '01-dashboard-workout-preview');
+        await page.keyboard.press('Escape');
+      }
     });
   });
 
@@ -126,29 +150,41 @@ test.describe('Screenshots', () => {
   // ==========================================================================
 
   test.describe('coach-web/02-client-management', () => {
-    test('athletes page', async ({ page }) => {
+    test('athletes page and actions', async ({ page }) => {
       await page.goto('/athletes');
       await waitForStable(page);
       await snap(page, 'coach-web', '02-athletes-list');
-    });
 
-    test('add client panel', async ({ page }) => {
-      await page.goto('/athletes');
-      await waitForStable(page);
+      // Add client panel
       await openSidePanel(page, 'Add');
       await snap(page, 'coach-web', '02-add-client-panel');
       await page.keyboard.press('Escape');
-    });
+      await page.waitForTimeout(300);
 
-    test('client overview', async ({ page }) => {
-      await page.goto('/athletes');
-      await waitForStable(page);
-      // Click first client
-      const firstClient = page.locator('table tbody tr, [data-testid="client-row"]').first();
-      if (await firstClient.isVisible()) {
+      // Click first client to go to overview
+      const firstClient = page.locator('table tbody tr').first();
+      if (await firstClient.isVisible().catch(() => false)) {
         await firstClient.click();
         await waitForStable(page);
         await snap(page, 'coach-web', '02-client-overview');
+
+        // Client settings tab
+        await page.click('a:has-text("Settings"), [href*="/settings"]');
+        await waitForStable(page);
+        await snap(page, 'coach-web', '02-client-settings');
+      }
+    });
+
+    test('CSV upload', async ({ page }) => {
+      await page.goto('/athletes');
+      await waitForStable(page);
+      // Look for import/CSV button
+      const importBtn = page.locator('button:has-text("Import"), button:has-text("CSV"), [aria-label*="import"]').first();
+      if (await importBtn.isVisible().catch(() => false)) {
+        await importBtn.click();
+        await page.waitForTimeout(500);
+        await snap(page, 'coach-web', '02-csv-upload');
+        await page.keyboard.press('Escape');
       }
     });
   });
@@ -200,10 +236,18 @@ test.describe('Screenshots', () => {
   // ==========================================================================
 
   test.describe('coach-web/06-check-ins', () => {
-    test('check-ins library', async ({ page }) => {
+    test('check-ins library and builder', async ({ page }) => {
       await page.goto('/library/forms/check-ins');
       await waitForStable(page);
       await snap(page, 'coach-web', '06-check-ins-library');
+
+      // Click first check-in to open builder
+      const firstCheckIn = page.locator('table tbody tr, [data-testid="form-row"]').first();
+      if (await firstCheckIn.isVisible().catch(() => false)) {
+        await firstCheckIn.click();
+        await waitForStable(page);
+        await snap(page, 'coach-web', '06-check-in-builder');
+      }
     });
 
     test('check-ins review', async ({ page }) => {
@@ -274,21 +318,29 @@ test.describe('Screenshots', () => {
   // ==========================================================================
 
   test.describe('coach-web/11-messaging', () => {
-    test('inbox', async ({ page }) => {
+    test('inbox and conversations', async ({ page }) => {
       await page.goto('/inbox');
       await waitForStable(page);
       await snap(page, 'coach-web', '11-inbox');
-    });
 
-    test('inbox with conversation', async ({ page }) => {
-      await page.goto('/inbox');
-      await waitForStable(page);
       // Click first conversation
-      const firstConvo = page.locator('[data-testid="conversation-item"], .conversation-item').first();
-      if (await firstConvo.isVisible()) {
+      const firstConvo = page.locator('[data-testid="conversation-item"], .conversation-item, [class*="conversation"]').first();
+      if (await firstConvo.isVisible().catch(() => false)) {
         await firstConvo.click();
         await waitForStable(page);
         await snap(page, 'coach-web', '11-inbox-conversation');
+
+        // Message input area
+        await snap(page, 'coach-web', '11-message-input');
+      }
+
+      // Broadcast button
+      const broadcastBtn = page.locator('button:has-text("Broadcast"), [aria-label*="broadcast"]').first();
+      if (await broadcastBtn.isVisible().catch(() => false)) {
+        await broadcastBtn.click();
+        await page.waitForTimeout(500);
+        await snap(page, 'coach-web', '11-broadcast');
+        await page.keyboard.press('Escape');
       }
     });
   });
