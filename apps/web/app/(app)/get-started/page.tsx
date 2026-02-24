@@ -641,7 +641,7 @@ const GetStartedPage = () => {
             {/* Live Chat Card */}
             <div
               className="group relative flex flex-1 h-[140px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:shadow-md cursor-pointer"
-              onClick={() => { }}
+              onClick={() => { window.Tawk_API?.maximize(); }}
             >
               <div className="relative w-[100px] md:w-[140px] shrink-0 overflow-hidden">
                 <img
