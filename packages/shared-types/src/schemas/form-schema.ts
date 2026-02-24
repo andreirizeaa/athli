@@ -35,7 +35,9 @@ export interface Question {
 
 export interface QuestionAnswer {
   questionId: string;
-  answer: string | string[] | number | Date | null;
+  answer: string | string[] | number | boolean | Date | null;
+  /** Legacy field – some API responses use `value` instead of `answer`. */
+  value?: string | string[] | number | boolean | Date | null;
 }
 
 // =============================================================================
