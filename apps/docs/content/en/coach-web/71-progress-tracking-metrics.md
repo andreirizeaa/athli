@@ -20,7 +20,7 @@ Track physical changes with metrics like:
 
 Set up a body composition folder in your metrics library and assign the relevant metrics to each client. Encourage clients to log under consistent conditions (e.g., morning, fasted, same scale).
 
-> [Screenshot: Body composition metrics folder with weight, body fat, and measurement metrics]
+> [Screenshot 1: Body weight metric line chart showing progress over several weeks]
 
 ### Performance Tracking
 
@@ -32,8 +32,6 @@ Track training progress with metrics like:
 
 Log performance metrics after testing sessions or when clients hit new personal records.
 
-> [Screenshot: Performance metric chart showing squat 1RM increasing over a training cycle]
-
 ### Wellness Tracking
 
 Track lifestyle factors that influence results:
@@ -44,8 +42,6 @@ Track lifestyle factors that influence results:
 - **Energy level** (self-reported scale)
 
 Wellness metrics help you spot correlations. A client whose weight loss stalled might also show declining sleep and rising stress levels.
-
-> [Screenshot: Wellness metrics dashboard showing sleep and steps trends]
 
 ### Viewing Trends Over Time
 

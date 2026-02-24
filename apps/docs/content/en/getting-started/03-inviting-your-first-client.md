@@ -28,7 +28,7 @@ Clients need an invite to join your coaching roster. Once invited, they get acce
 4. Click **Send Invite**
 5. The client will receive an email with a link to download the app and create their account
 
-> [Screenshot: Add client side panel with form fields]
+> [Screenshot 1: Add client side panel with form fields]
 
 ### Method 2: Upload Multiple Clients (CSV)
 
@@ -40,7 +40,7 @@ Clients need an invite to join your coaching roster. Once invited, they get acce
 6. Review the imported data and confirm
 7. All clients will receive invite emails
 
-> [Screenshot: CSV upload side panel with template download]
+> [Screenshot 2: CSV upload side panel with template download]
 
 ### Method 3: Share an Invite Link
 
@@ -49,7 +49,7 @@ Clients need an invite to join your coaching roster. Once invited, they get acce
 3. Copy the link and send it to your client via email, WhatsApp, or any messaging app
 4. When the client opens the link, they are guided through creating their account and joining your roster
 
-> [Screenshot: Invite link dialog with copy button]
+> [Screenshot 3: Invite link dialog with copy button]
 
 ## What Happens After the Client Joins
 

@@ -48,6 +48,18 @@ export const getClients = async (): Promise<Athlete[]> => {
     const createdAt = new Date(client.created_at || Date.now());
     const clientForDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
 
+    // Format last activity date
+    const lastActivityDate = client.last_activity ? new Date(client.last_activity) : null;
+    const lastActivityStr = lastActivityDate
+      ? lastActivityDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+      : '';
+
+    // Format training stats from API response
+    const last7Completed = client.last_7_days_training_completed ?? 0;
+    const last7Total = client.last_7_days_training_total ?? 0;
+    const last30Completed = client.last_30_days_training_completed ?? 0;
+    const last30Total = client.last_30_days_training_total ?? 0;
+
     return {
       id: client.client_id,
       publicId: client.public_id,
@@ -62,9 +74,9 @@ export const getClients = async (): Promise<Athlete[]> => {
       createdAt: createdAt.getTime(),
       phone: client.phone || '',
       country: client.country || '',
-      lastActivity: '',
-      last7DaysTraining: '0/0',
-      last30DaysTraining: '0/0',
+      lastActivity: lastActivityStr,
+      last7DaysTraining: `${last7Completed}/${last7Total}`,
+      last30DaysTraining: `${last30Completed}/${last30Total}`,
       birthDate: client.date_of_birth || null,
       age: calculateAge(client.date_of_birth),
       height: client.height_cm || null,
@@ -88,6 +100,18 @@ export const getClient = async (id: string): Promise<Athlete> => {
   const createdAt = new Date(client.created_at || Date.now());
   const clientForDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
 
+  // Format last activity date
+  const lastActivityDate = client.last_activity ? new Date(client.last_activity) : null;
+  const lastActivityStr = lastActivityDate
+    ? lastActivityDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '';
+
+  // Format training stats from API response
+  const last7Completed = client.last_7_days_training_completed ?? 0;
+  const last7Total = client.last_7_days_training_total ?? 0;
+  const last30Completed = client.last_30_days_training_completed ?? 0;
+  const last30Total = client.last_30_days_training_total ?? 0;
+
   return {
     id: client.client_id,
     name: client.full_name || '',
@@ -101,9 +125,9 @@ export const getClient = async (id: string): Promise<Athlete> => {
     createdAt: createdAt.getTime(),
     phone: client.phone || '',
     country: client.country || '',
-    lastActivity: '',
-    last7DaysTraining: '0/0',
-    last30DaysTraining: '0/0',
+    lastActivity: lastActivityStr,
+    last7DaysTraining: `${last7Completed}/${last7Total}`,
+    last30DaysTraining: `${last30Completed}/${last30Total}`,
     birthDate: client.date_of_birth || null,
     age: calculateAge(client.date_of_birth),
     height: client.height_cm || null,

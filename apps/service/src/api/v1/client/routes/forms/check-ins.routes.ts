@@ -190,3 +190,89 @@ clientCheckInRouter.post('/:id/submit', supabaseAuthenticate, clientCheckInsCont
  *     responses: { 200: { description: 'Success' } }
  */
 clientCheckInRouter.patch('/:id/status', supabaseAuthenticate, clientCheckInsController.updateCheckInStatus);
+
+/**
+ * @swagger
+ * /api/v1/client/forms/check-ins/{id}/logs:
+ *   get:
+ *     summary: Get all submission logs for a check-in assignment
+ *     tags: [Client Forms]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
+ *     responses: { 200: { description: 'Success' } }
+ */
+clientCheckInRouter.get('/:id/logs', supabaseAuthenticate, clientCheckInsController.getCheckInLogs);
+
+/**
+ * @swagger
+ * /api/v1/client/forms/check-ins/{id}/logs/{logId}:
+ *   get:
+ *     summary: Get a single check-in log with questions from parent
+ *     tags: [Client Forms]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: logId
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
+ *     responses: { 200: { description: 'Success' } }
+ */
+clientCheckInRouter.get('/:id/logs/:logId', supabaseAuthenticate, clientCheckInsController.getCheckInLog);
+
+/**
+ * @swagger
+ * /api/v1/client/forms/check-ins/{id}/logs/{logId}/review:
+ *   patch:
+ *     summary: Add or update a coach review on a check-in log
+ *     tags: [Client Forms]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: logId
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [review]
+ *             properties:
+ *               review: { type: string }
+ *     responses: { 200: { description: 'Success' } }
+ */
+clientCheckInRouter.patch('/:id/logs/:logId/review', supabaseAuthenticate, clientCheckInsController.reviewCheckInLog);

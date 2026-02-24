@@ -39,7 +39,7 @@ For example, a workout called "Monday Upper Body" might contain:
 2. **Main Strength** (Regular section) - Bench press, overhead press, rows
 3. **Finisher** (AMRAP section) - Push-ups, pull-ups, dips for 8 minutes
 
-> [Screenshot: workout builder showing multiple sections stacked within a single workout]
+> [Screenshot 1: workout builder showing multiple sections stacked within a single workout]
 
 ### Adding Sections to a Workout
 
@@ -49,7 +49,7 @@ For example, a workout called "Monday Upper Body" might contain:
 4. Select the section type and add exercises.
 5. Repeat to add more sections to the same workout.
 
-> [Screenshot: Add Section button in the workout builder with section type options]
+> [Screenshot 2: Add Section button in the workout builder with section type options]
 
 ### Saving a Section to the Library
 
@@ -58,7 +58,7 @@ For example, a workout called "Monday Upper Body" might contain:
 3. Give the section a name and optional tags.
 4. The section is now available for reuse in any future workout.
 
-> [Screenshot: section menu with Save to Library option highlighted]
+> [Screenshot 3: section menu with Save to Library option highlighted]
 
 ## Things to Note
 

@@ -16,8 +16,6 @@ Numbers do not lie. Tracking metrics gives you and your coach an objective view 
 2. You see a list of all metrics your coach has assigned
 3. Each metric shows the latest value and when it was last logged
 
-> [Screenshot: Metrics list showing assigned metrics with latest values]
-
 ### Logging a Metric Value
 
 1. Tap the metric you want to log (e.g., Body Weight)
@@ -26,8 +24,6 @@ Numbers do not lie. Tracking metrics gives you and your coach an objective view 
 4. Tap **Save**
 5. The new value appears on your chart immediately
 
-> [Screenshot: Metric logging screen with value input and save button]
-
 ### Viewing Your Metric Charts
 
 1. Tap any metric to see its chart
@@ -35,7 +31,7 @@ Numbers do not lie. Tracking metrics gives you and your coach an objective view 
 3. Tap individual points to see exact values and dates
 4. Use the time range to zoom in on specific periods
 
-> [Screenshot: Metric chart showing body weight trend with data points]
+> [Screenshot 1: Metric progress page showing chart with trend line and data points]
 
 ### Logging Multiple Metrics
 
@@ -44,8 +40,6 @@ If your coach has assigned several metrics, you can log them one after another:
 1. Log the first metric and save
 2. Go back to the list and tap the next one
 3. Repeat until all are logged
-
-> [Screenshot: Metrics list with some showing "logged today" indicators]
 
 ## Things to Note
 

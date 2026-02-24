@@ -186,6 +186,7 @@ export interface FormTemplate {
 
 export interface AddCoachReviewData {
   clientId: string;
+  coachId: string;
   checkInId: string;
   instanceId: string;
   review: string;
@@ -193,19 +194,15 @@ export interface AddCoachReviewData {
 
 export interface UpdateCoachReviewData {
   clientId: string;
+  coachId: string;
   checkInId: string;
   instanceId: string;
   review: string;
 }
 
 export interface CoachReview {
-  id: string;
-  clientId: string;
-  checkInId: string;
-  instanceId: string;
   review: string;
   createdAt: Date;
-  updatedAt: Date;
 }
 
 // =============================================================================

@@ -20,7 +20,7 @@ Muchos entrenadores rastrean valores como peso corporal u horas de sueno a trave
 6. Selecciona la metrica objetivo del menu desplegable
 7. Haz clic en **Guardar**
 
-> [Screenshot: Check-in builder with Link to Metric option on a Number question]
+> [Screenshot 1: Check-in builder with Link to Metric option on a Number question]
 
 ### Como Fluyen los Datos
 
@@ -31,8 +31,6 @@ Muchos entrenadores rastrean valores como peso corporal u horas de sueno a trave
 5. El valor se registra automaticamente en la metrica vinculada con la fecha de envio del check-in
 6. El grafico de la metrica se actualiza para incluir el nuevo punto de datos
 
-> [Screenshot: Diagram showing data flow from check-in submission to metric chart]
-
 ### Ver Datos Sincronizados
 
 1. Ve a la pestana de **Metricas** del cliente
@@ -41,7 +39,7 @@ Muchos entrenadores rastrean valores como peso corporal u horas de sueno a trave
 4. La tabla de historial muestra cada entrada con su origen
 5. Las entradas sincronizadas se registran con la fecha de envio del check-in
 
-> [Screenshot: Metric chart with data points sourced from check-in submissions]
+> [Screenshot 2: Metric chart with data points sourced from check-in submissions]
 
 ### Configuraciones Comunes de Sincronizacion
 

@@ -18,16 +18,12 @@ The scale does not always reflect reality. You might be building muscle while lo
 4. The photo is saved and tagged with today's date
 5. Tap **Save**
 
-> [Screenshot: Progress photo capture screen with camera and library options]
-
 ### Viewing Your Photos
 
 1. Go to the Progress Photos section
 2. You see your photos organized by date
 3. Tap any date to view the photos from that day
 4. Swipe through multiple photos if you took more than one
-
-> [Screenshot: Photo timeline showing photos organized by date]
 
 ### Comparing Photos
 
@@ -36,7 +32,7 @@ The scale does not always reflect reality. You might be building muscle while lo
 3. Your photos from each date appear next to each other
 4. This makes it easy to see visual changes over time
 
-> [Screenshot: Side-by-side photo comparison with two different dates]
+> [Screenshot 1: Side-by-side photo comparison page]
 
 ### Tips for Better Progress Photos
 

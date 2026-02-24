@@ -42,64 +42,6 @@ import type {
 
 type Form = CheckIn | Questionnaire;
 
-// Mock check-ins data
-const mockClientCheckIns: ClientCheckIn[] = [
-  {
-    id: 'checkin-1',
-    name: 'Weekly Check-in',
-    questionCount: 5,
-    schedule: 'Every Monday',
-    nextScheduledAt: new Date(2025, 11, 23),
-    createdAt: new Date(2025, 9, 1),
-    description: 'Weekly progress check-in form',
-    status: 'live',
-    submissionCount: 12,
-  },
-  {
-    id: 'checkin-2',
-    name: 'Monthly Assessment',
-    questionCount: 12,
-    schedule: 'First of each month',
-    nextScheduledAt: new Date(2026, 0, 1),
-    createdAt: new Date(2025, 8, 15),
-    description: 'Comprehensive monthly assessment',
-    status: 'live',
-    submissionCount: 3,
-  },
-  {
-    id: 'checkin-3',
-    name: 'Daily Check-in',
-    questionCount: 3,
-    schedule: 'Daily',
-    nextScheduledAt: new Date(2025, 11, 20),
-    createdAt: new Date(2025, 10, 1),
-    description: 'Quick daily check-in',
-    status: 'draft',
-    submissionCount: 0,
-  },
-];
-
-// Mock questionnaires data
-const mockClientQuestionnaires: ClientQuestionnaire[] = [
-  {
-    id: 'questionnaire-1',
-    name: 'Initial Assessment',
-    questionCount: 8,
-    status: 'completed',
-    sentAt: new Date(2025, 10, 15),
-    completedAt: new Date(2025, 10, 16),
-    description: 'One-time initial assessment form',
-  },
-  {
-    id: 'questionnaire-2',
-    name: 'Mid-Season Evaluation',
-    questionCount: 10,
-    status: 'pending',
-    sentAt: new Date(2025, 11, 18),
-    description: 'Mid-season performance evaluation',
-  },
-];
-
 /**
  * Service method to get check-ins for a client
  */
@@ -382,338 +324,132 @@ export const duplicateForm = async (formId: string, originalForm: Form): Promise
   }
 };
 
-// Mock check-in instances data - in production this would come from an API
-// Key format: `${clientId}-${checkInId}`
-const mockCheckInInstances: Record<string, CheckInInstance[]> = {
-  // Client ID 1 (John Smith) - Weekly Check-in
-  '1-checkin-1': [
-    {
-      id: 'instance-1-1',
-      formId: 'checkin-1',
-      formName: 'Weekly Check-in',
-      scheduledDate: new Date(2025, 10, 25), // Nov 25, 2025
-      status: 'reviewed',
-      completedAt: new Date(2025, 10, 25, 15, 20),
-    },
-    {
-      id: 'instance-1-2',
-      formId: 'checkin-1',
-      formName: 'Weekly Check-in',
-      scheduledDate: new Date(2025, 11, 2), // Dec 2, 2025
-      status: 'reviewed',
-      completedAt: new Date(2025, 11, 2, 16, 45),
-    },
-    {
-      id: 'instance-1-3',
-      formId: 'checkin-1',
-      formName: 'Weekly Check-in',
-      scheduledDate: new Date(2025, 11, 9), // Dec 9, 2025
-      status: 'completed',
-      completedAt: new Date(2025, 11, 9, 11, 30),
-    },
-    {
-      id: 'instance-1-4',
-      formId: 'checkin-1',
-      formName: 'Weekly Check-in',
-      scheduledDate: new Date(2025, 11, 16), // Dec 16, 2025
-      status: 'review',
-      completedAt: new Date(2025, 11, 16, 14, 10),
-    },
-    {
-      id: 'instance-1-5',
-      formId: 'checkin-1',
-      formName: 'Weekly Check-in',
-      scheduledDate: new Date(2025, 11, 23), // Dec 23, 2025
-      status: 'assigned',
-    },
-    {
-      id: 'instance-1-6',
-      formId: 'checkin-1',
-      formName: 'Weekly Check-in',
-      scheduledDate: new Date(2025, 11, 30), // Dec 30, 2025
-      status: 'assigned',
-    },
-    {
-      id: 'instance-1-7',
-      formId: 'checkin-1',
-      formName: 'Weekly Check-in',
-      scheduledDate: new Date(2026, 0, 6), // Jan 6, 2026
-      status: 'assigned',
-    },
-  ],
-  // Client ID 1 (John Smith) - Monthly Assessment
-  '1-checkin-2': [
-    {
-      id: 'instance-2-1',
-      formId: 'checkin-2',
-      formName: 'Monthly Assessment',
-      scheduledDate: new Date(2025, 9, 1), // Oct 1, 2025
-      status: 'reviewed',
-      completedAt: new Date(2025, 9, 2, 10, 15),
-    },
-    {
-      id: 'instance-2-2',
-      formId: 'checkin-2',
-      formName: 'Monthly Assessment',
-      scheduledDate: new Date(2025, 10, 1), // Nov 1, 2025
-      status: 'reviewed',
-      completedAt: new Date(2025, 10, 1, 18, 30),
-    },
-    {
-      id: 'instance-2-3',
-      formId: 'checkin-2',
-      formName: 'Monthly Assessment',
-      scheduledDate: new Date(2025, 11, 1), // Dec 1, 2025
-      status: 'completed',
-      completedAt: new Date(2025, 11, 1, 9, 45),
-    },
-    {
-      id: 'instance-2-4',
-      formId: 'checkin-2',
-      formName: 'Monthly Assessment',
-      scheduledDate: new Date(2026, 0, 1), // Jan 1, 2026
-      status: 'assigned',
-    },
-    {
-      id: 'instance-2-5',
-      formId: 'checkin-2',
-      formName: 'Monthly Assessment',
-      scheduledDate: new Date(2026, 1, 1), // Feb 1, 2026
-      status: 'assigned',
-    },
-  ],
-  // Client ID 1 (John Smith) - Daily Check-in
-  '1-checkin-3': [
-    {
-      id: 'instance-3-1',
-      formId: 'checkin-3',
-      formName: 'Daily Check-in',
-      scheduledDate: new Date(2025, 11, 15), // Dec 15, 2025
-      status: 'reviewed',
-      completedAt: new Date(2025, 11, 15, 8, 30),
-    },
-    {
-      id: 'instance-3-2',
-      formId: 'checkin-3',
-      formName: 'Daily Check-in',
-      scheduledDate: new Date(2025, 11, 16), // Dec 16, 2025
-      status: 'reviewed',
-      completedAt: new Date(2025, 11, 16, 7, 45),
-    },
-    {
-      id: 'instance-3-3',
-      formId: 'checkin-3',
-      formName: 'Daily Check-in',
-      scheduledDate: new Date(2025, 11, 17), // Dec 17, 2025
-      status: 'completed',
-      completedAt: new Date(2025, 11, 17, 9, 15),
-    },
-    {
-      id: 'instance-3-4',
-      formId: 'checkin-3',
-      formName: 'Daily Check-in',
-      scheduledDate: new Date(2025, 11, 18), // Dec 18, 2025
-      status: 'review',
-      completedAt: new Date(2025, 11, 18, 8, 0),
-    },
-    {
-      id: 'instance-3-5',
-      formId: 'checkin-3',
-      formName: 'Daily Check-in',
-      scheduledDate: new Date(2025, 11, 19), // Dec 19, 2025
-      status: 'assigned',
-    },
-    {
-      id: 'instance-3-6',
-      formId: 'checkin-3',
-      formName: 'Daily Check-in',
-      scheduledDate: new Date(2025, 11, 20), // Dec 20, 2025
-      status: 'assigned',
-    },
-  ],
-};
-
 /**
- * Service method to get all instances of a specific check-in form for a client
- * This will be connected to the backend in the future
+ * Get all submission logs for a check-in assignment
  */
 export const getClientCheckInsForForm = async (
   clientId: string,
-  checkInId: string
+  checkInId: string,
+  coachId: string
 ): Promise<CheckInInstance[]> => {
-  console.log('Getting check-in instances for client and form:', { clientId, checkInId });
+  const response = await apiFetch<{ data: { instances: any[] } }>(`/client/forms/check-ins/${checkInId}/logs`, {
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+  });
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/clients/${clientId}/check-ins/${checkInId}/instances`, {
-  //   method: 'GET',
-  // })
-  // if (!response.ok) throw new Error('Failed to get client check-in instances')
-  // return await response.json()
-
-  const key = `${clientId}-${checkInId}`;
-  return mockCheckInInstances[key] || [];
+  return (response.data.instances || []).map((i: any) => ({
+    id: i.id,
+    formId: i.formId,
+    formName: i.formName,
+    scheduledDate: new Date(i.scheduledDate),
+    status: i.status,
+    completedAt: i.completedAt ? new Date(i.completedAt) : undefined,
+  }));
 };
 
 /**
- * Service method to get a specific check-in instance with questions and answers
- * This will be connected to the backend in the future
+ * Get a single check-in log with questions and answers
  */
 export const getCheckInInstance = async (
   clientId: string,
   checkInId: string,
-  instanceId: string
+  instanceId: string,
+  coachId: string
 ): Promise<CheckInInstance> => {
-  console.log('Getting check-in instance detail:', { clientId, checkInId, instanceId });
+  const response = await apiFetch<{ data: any }>(`/client/forms/check-ins/${checkInId}/logs/${instanceId}`, {
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+  });
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/clients/${clientId}/check-ins/${checkInId}/instances/${instanceId}`, {
-  //   method: 'GET',
-  // })
-  // if (!response.ok) throw new Error('Failed to get check-in instance')
-  // return await response.json()
-
-  // Mock data
-  const mockQuestions: Question[] = [
-    {
-      id: 'q1',
-      question: 'How are you feeling this week?',
-      required: true,
-      format: 'scale',
-      scaleFrom: '1',
-      scaleTo: '10',
-    },
-    {
-      id: 'q2',
-      question: 'Did you follow your training plan?',
-      required: true,
-      format: 'yesNo',
-    },
-    {
-      id: 'q3',
-      question: 'Any injuries or concerns?',
-      required: false,
-      format: 'text',
-    },
-    {
-      id: 'q4',
-      question: 'Rate your energy levels',
-      required: true,
-      format: 'rating',
-    },
-    {
-      id: 'q5',
-      question: 'Progress photos (optional)',
-      required: false,
-      format: 'images',
-      mediaCount: 3,
-    },
-  ];
-
-  const mockAnswers: QuestionAnswer[] = [
-    { questionId: 'q1', answer: 8 },
-    { questionId: 'q2', answer: 'Yes' },
-    { questionId: 'q3', answer: 'Slight knee pain after squats, but manageable. Taking extra rest days as needed.' },
-    { questionId: 'q4', answer: 4 },
-    { questionId: 'q5', answer: ['https://picsum.photos/400/600', 'https://picsum.photos/400/601'] },
-  ];
-
-  // Find the instance
-  const key = `${clientId}-${checkInId}`;
-  const instances = mockCheckInInstances[key] || [];
-  const instance = instances.find((i) => i.id === instanceId);
-
-  if (!instance) {
-    throw new Error('Check-in instance not found');
-  }
-
+  const d = response.data;
   return {
-    ...instance,
-    questions: mockQuestions,
-    answers: mockAnswers,
+    id: d.id,
+    formId: d.formId,
+    formName: d.formName,
+    scheduledDate: new Date(d.scheduledDate),
+    status: d.status,
+    completedAt: d.completedAt ? new Date(d.completedAt) : undefined,
+    questions: d.questions || [],
+    answers: normalizeAnswers(d.answers || []),
   };
 };
 
 /**
- * Service method to get a coach review for a check-in instance
- * This will be connected to the backend in the future
+ * Normalize answer data into a consistent QuestionAnswer[] format.
+ * Handles:
+ * - Array of {questionId, answer} (keyed format from mobile submit)
+ * - Array of {value} (positional format from questionnaire DB)
+ * - Object with numeric keys {"0": {value}, "1": {value}} (check-in DB format)
+ * - Empty object {} (DB default)
+ */
+const normalizeAnswers = (answers: any): QuestionAnswer[] => {
+  if (!answers) return [];
+
+  // Array format
+  if (Array.isArray(answers)) {
+    return answers.map((a: any) => ({
+      questionId: a.questionId || a.question_id || '',
+      answer: a.answer ?? a.value,
+    }));
+  }
+
+  // Object with numeric keys: {"0": {value: 8}, "1": {value: true}, ...}
+  if (typeof answers === 'object') {
+    const keys = Object.keys(answers).sort((a, b) => Number(a) - Number(b));
+    if (keys.length === 0) return [];
+    return keys.map((key) => {
+      const entry = answers[key];
+      return {
+        questionId: entry?.questionId || entry?.question_id || '',
+        answer: entry?.answer ?? entry?.value,
+      };
+    });
+  }
+
+  return [];
+};
+
+/**
+ * Get coach review from a check-in log (derived from the log data)
  */
 export const getCoachReview = async (
   clientId: string,
   checkInId: string,
-  instanceId: string
+  instanceId: string,
+  coachId: string
 ): Promise<CoachReview | null> => {
-  console.log('Getting coach review:', { clientId, checkInId, instanceId });
+  const response = await apiFetch<{ data: any }>(`/client/forms/check-ins/${checkInId}/logs/${instanceId}`, {
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+  });
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/clients/${clientId}/check-ins/${checkInId}/instances/${instanceId}/review`, {
-  //   method: 'GET',
-  // })
-  // if (!response.ok) {
-  //   if (response.status === 404) return null;
-  //   throw new Error('Failed to get coach review')
-  // }
-  // return await response.json()
-
-  // Mock: Return null to simulate no review exists
-  // In production, this would check if a review exists
+  const d = response.data;
+  if (d.coachComment) {
+    return {
+      review: d.coachComment,
+      createdAt: d.reviewedAt ? new Date(d.reviewedAt) : new Date(),
+    };
+  }
   return null;
 };
 
 /**
- * Service method to add a coach review to a check-in instance
- * This will be connected to the backend in the future
+ * Add a coach review to a check-in log
  */
 export const addCoachReview = async (data: AddCoachReviewData): Promise<void> => {
-  console.log('Adding coach review:', {
-    clientId: data.clientId,
-    checkInId: data.checkInId,
-    instanceId: data.instanceId,
-    review: data.review,
+  await apiFetch(`/client/forms/check-ins/${data.checkInId}/logs/${data.instanceId}/review`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({ review: data.review }),
   });
-
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/clients/${data.clientId}/check-ins/${data.checkInId}/instances/${data.instanceId}/review`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ review: data.review }),
-  // })
-  // if (!response.ok) throw new Error('Failed to add coach review')
 };
 
 /**
- * Service method to update a coach review for a check-in instance
- * This will be connected to the backend in the future
+ * Update a coach review for a check-in log
  */
 export const updateCoachReview = async (data: UpdateCoachReviewData): Promise<void> => {
-  console.log('Updating coach review:', {
-    clientId: data.clientId,
-    checkInId: data.checkInId,
-    instanceId: data.instanceId,
-    review: data.review,
+  await apiFetch(`/client/forms/check-ins/${data.checkInId}/logs/${data.instanceId}/review`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({ review: data.review }),
   });
-
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/clients/${data.clientId}/check-ins/${data.checkInId}/instances/${data.instanceId}/review`, {
-  //   method: 'PUT',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ review: data.review }),
-  // })
-  // if (!response.ok) throw new Error('Failed to update coach review')
 };
 
 // Types for client-specific form creation

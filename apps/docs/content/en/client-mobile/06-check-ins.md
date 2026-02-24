@@ -17,7 +17,7 @@ Check-ins give your coach insight into how you are doing beyond just your workou
 3. You may also receive a push notification when a check-in is due
 4. Tap the check-in to open it
 
-> [Screenshot: Home screen showing pending check-in notification card]
+> [Screenshot 1: Home screen showing pending check-in notification card]
 
 ### Filling Out a Check-in
 
@@ -31,15 +31,18 @@ Check-ins give your coach insight into how you are doing beyond just your workou
 3. Scroll through all questions
 4. Tap **Submit** when done
 
-> [Screenshot: Check-in form with different question types being filled out]
+> [Screenshot 2: Check-in form with different question types being filled out]
 
 ### Viewing Past Check-in Submissions
 
 1. Navigate to your **Check-ins** section (from Home or Profile)
 2. You see a list of all your past submissions with dates
 3. Tap any submission to review your answers
+4. If your coach left a comment on a submission, it appears at the top below the completion date
 
-> [Screenshot: Check-in history list with past submissions]
+> [Screenshot 3: Check-in history list with past submissions]
+
+> [Screenshot 4: Check-in submission detail showing the coach's comment card below the completion date]
 
 ## Things to Note
 
@@ -70,7 +73,7 @@ This depends on what your coach has set up. Common schedules are daily or weekly
 
 ### Can I see what my coach thinks of my check-in?
 
-Your coach may follow up in the chat with feedback based on your check-in responses.
+Yes. When your coach reviews a check-in and leaves a comment, you can see it by tapping the submission in your check-in history. The comment appears in a card at the top of the submission detail, below the completion date.
 
 ### Do I have to answer every question?
 

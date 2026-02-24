@@ -18,7 +18,7 @@ Pidele al AI que escriba mensajes para clientes especificos:
 - **"Escribir un recordatorio de check-in para Jake"** - Redacta un recordatorio amigable para completar un check-in
 - **"Enviar un mensaje de animo a Sarah por lograr su marca personal"** - Crea un mensaje motivacional usando contexto de rendimiento
 
-> [Screenshot: AI draft message action card with message content and send button]
+> [Screenshot 1: AI draft message action card with message content and send button]
 
 ### Revisar y Enviar
 
@@ -30,7 +30,7 @@ Pidele al AI que escriba mensajes para clientes especificos:
 
 Todos los mensajes son borradores hasta que tu los confirmes explicitamente. El AI nunca envia mensajes directamente.
 
-> [Screenshot: Action card with Confirm, Edit, and Dismiss options for a draft message]
+> [Screenshot 2: Action card with Confirm, Edit, and Dismiss options for a draft message]
 
 ### Tipos de Mensajes que Puedes Solicitar
 

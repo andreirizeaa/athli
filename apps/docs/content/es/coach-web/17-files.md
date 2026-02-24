@@ -23,7 +23,7 @@ En lugar de enviar archivos de un lado a otro por email, puedes mantener todo or
 2. Haz clic en **Subir** y selecciona archivos de tu computadora
 3. Organiza los archivos en carpetas para facil acceso
 
-> [Screenshot: Pagina de biblioteca de archivos con carpetas y boton de subir]
+> [Screenshot 1: Pagina de biblioteca de archivos con carpetas y boton de subir]
 
 ### Compartir Archivos con un Cliente
 
@@ -33,7 +33,7 @@ En lugar de enviar archivos de un lado a otro por email, puedes mantener todo or
 4. Selecciona archivos de tu biblioteca o sube nuevos
 5. El cliente ahora puede acceder a estos archivos desde su app movil
 
-> [Screenshot: Pestana de archivos del cliente con archivos asignados]
+> [Screenshot 2: Pestana de archivos del cliente con archivos asignados]
 
 ### Crear y Gestionar Carpetas
 
@@ -42,7 +42,7 @@ En lugar de enviar archivos de un lado a otro por email, puedes mantener todo or
 3. Arrastra archivos a la carpeta o usa **Mover a Carpeta**
 4. Haz clic en **Editar Carpeta** para renombrar o eliminar
 
-> [Screenshot: Gestion de carpetas con opciones de crear y mover]
+> [Screenshot 3: Gestion de carpetas con opciones de crear y mover]
 
 ## Cosas a Tener en Cuenta
 

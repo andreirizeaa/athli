@@ -21,7 +21,7 @@ A Circuit section lets you group exercises that are performed in sequence for a 
 3. Select **Circuit** as the section type.
 4. Give the section a name (e.g., "Full Body Circuit" or "Upper Body Burnout").
 
-> [Screenshot: section type selector with Circuit highlighted]
+> [Screenshot 1: section type selector with Circuit highlighted]
 
 ### Setting the Number of Rounds
 
@@ -30,7 +30,7 @@ The default is 3 rounds. To change it:
 1. Locate the **Rounds** field in the section header.
 2. Enter the desired number of rounds (e.g., 4 or 5).
 
-> [Screenshot: Circuit section header showing the rounds field set to 3]
+> [Screenshot 2: Circuit section header showing the rounds field set to 3]
 
 ### Adding Exercises
 
@@ -39,7 +39,7 @@ The default is 3 rounds. To change it:
 3. For each exercise, set the target reps or duration.
 4. Reorder exercises by dragging them to create the sequence you want.
 
-> [Screenshot: Circuit section with five exercises listed in order with rep targets]
+> [Screenshot 3: Circuit section with five exercises listed in order with rep targets]
 
 ### Configuring Rest Between Rounds
 

@@ -18,7 +18,7 @@ Pidele al AI que muestre valores recientes de metricas y tendencias:
 - **"Muestrame el peso corporal de Jake en los ultimos 3 meses"** - Muestra historial de metricas
 - **"¿Cual es el porcentaje actual de grasa corporal de Sarah?"** - Obtiene una metrica especifica
 
-> [Screenshot: AI showing client metrics with recent values and trend indicators]
+> [Screenshot 1: AI showing client metrics with recent values and trend indicators]
 
 ### Revisar Historial de Check-Ins
 
@@ -28,7 +28,7 @@ Pidele al AI que muestre los envios de check-ins:
 - **"¿Que reporto Sarah en su ultimo check-in?"** - Muestra el envio mas reciente
 - **"¿Como ha estado el nivel de energia de Jake este mes?"** - Rastrea un campo especifico de check-in a lo largo del tiempo
 
-> [Screenshot: AI displaying check-in history with response summaries]
+> [Screenshot 2: AI displaying check-in history with response summaries]
 
 ### Analizar Rendimiento en Ejercicios
 
@@ -46,7 +46,7 @@ Pidele al AI que reporte sobre la completacion de habitos:
 - **"¿Que tan consistente ha sido Sarah con su habito de ingesta de agua?"** - Verifica un habito especifico
 - **"¿Que clientes tienen baja completacion de habitos esta semana?"** - Identifica clientes que necesitan atencion
 
-> [Screenshot: AI showing habit completion rates with percentage breakdowns]
+> [Screenshot 3: AI showing habit completion rates with percentage breakdowns]
 
 ### Ejecutar Analisis Completo
 
@@ -63,7 +63,7 @@ Pidele al AI que cree graficos a partir de datos de metricas:
 - **"Generar un grafico del peso corporal de Jake"** - Crea un grafico de lineas visual de la metrica a lo largo del tiempo
 - **"Graficar el progreso de sentadilla de Sarah"** - Visualiza el rendimiento en ejercicio
 
-> [Screenshot: AI-generated line chart showing body weight trend over time]
+> [Screenshot 4: AI-generated line chart showing body weight trend over time]
 
 ## Cosas a Tener en Cuenta
 

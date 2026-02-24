@@ -23,7 +23,8 @@ export function useCoachHomeData(date: Date, type: 'completed' | 'missed' | 'in_
             const historyItems = await getCoachClientHistory(dateStr, type);
 
             // 2. Get cached clients from React Query
-            const cachedClients = queryClient.getQueryData<Athlete[]>(['coach-clients']) || [];
+            // Note: The query key includes { includeArchived: false } to match useCoachClients default
+            const cachedClients = queryClient.getQueryData<Athlete[]>(['coach-clients', { includeArchived: false }]) || [];
 
             // Create lookup map for fast client access
             const clientMap = new Map<string, Athlete>();

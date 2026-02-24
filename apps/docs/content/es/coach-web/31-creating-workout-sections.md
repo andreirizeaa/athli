@@ -19,7 +19,7 @@ La mayoria de los entrenamientos del mundo real combinan diferentes estilos de e
 5. La nueva seccion aparece en el entrenamiento como un contenedor vacio.
 6. Agrega ejercicios a la seccion usando el boton **Agregar Ejercicio** dentro de la seccion, o arrastra ejercicios existentes a ella.
 
-> [Screenshot: Section type selection dropdown showing available formats]
+> [Screenshot 1: Section type selection dropdown showing available formats]
 
 ### Configurar los Ajustes de la Seccion
 
@@ -33,7 +33,7 @@ Cada tipo de seccion tiene opciones de configuracion unicas:
 - **Circuito**: Establece el numero de rondas y descanso opcional entre rondas. Los ejercicios se realizan secuencialmente por las rondas prescritas.
 - **Drop Set**: Ejercicios con peso progresivamente decreciente dentro de una secuencia de series unica.
 
-> [Screenshot: EMOM section configuration showing interval and total time settings]
+> [Screenshot 2: EMOM section configuration showing interval and total time settings]
 
 ### Mover Ejercicios Entre Secciones
 

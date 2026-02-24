@@ -21,7 +21,7 @@ EMOM significa Cada Minuto en el Minuto (Every Minute On the Minute). En una sec
 3. Selecciona **EMOM** como tipo de seccion.
 4. Dale un nombre a la seccion (ej., "EMOM de 10 Min: Cargadas de Potencia").
 
-> [Screenshot: section type selector with EMOM highlighted]
+> [Screenshot 1: section type selector with EMOM highlighted]
 
 ### Configurar el EMOM
 
@@ -32,7 +32,7 @@ Despues de seleccionar EMOM, aparecen dos campos de configuracion:
 
 Puedes ajustar ambos valores. Por ejemplo, establece intervalos de 90 segundos durante 12 minutos si necesitas periodos de trabajo mas largos.
 
-> [Screenshot: EMOM section header showing interval duration and total duration fields]
+> [Screenshot 2: EMOM section header showing interval duration and total duration fields]
 
 ### Agregar Ejercicios
 
@@ -57,7 +57,7 @@ Puedes ajustar ambos valores. Por ejemplo, establece intervalos de 90 segundos d
 - Minuto 3: 8 Arrancadas con Mancuerna
 - Repetir durante 12 minutos
 
-> [Screenshot: EMOM section with alternating exercises configured for odd and even minutes]
+> [Screenshot 3: EMOM section with alternating exercises configured for odd and even minutes]
 
 ### Como los Clientes Ejecutan un EMOM
 

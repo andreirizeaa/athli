@@ -17,7 +17,7 @@ El Constructor de Secciones te permite crear secciones de entrenamiento reutiliz
 2. Selecciona la pestaña **Entrenamiento**.
 3. Haz clic en **Secciones**.
 
-> [Screenshot: section library page showing list of saved sections]
+> [Screenshot 1: section library page showing list of saved sections]
 
 ## Tipos de Secciones
 
@@ -45,13 +45,14 @@ Puedes personalizar todos los valores al construir la seccion.
 ## Crear una Seccion
 
 1. Haz clic en **Agregar Seccion** desde la pagina de biblioteca de secciones.
-2. Ingresa un nombre y etiquetas opcionales para organizacion.
-3. Selecciona el tipo de seccion (Regular, AMRAP, Tabata, etc.).
-4. Agrega ejercicios de tu biblioteca de ejercicios.
-5. Configura cada ejercicio con series, repeticiones, peso, descanso u otros campos relevantes dependiendo del tipo de seccion.
-6. Guarda la seccion.
+2. Se abre un panel lateral — ingresa un nombre, selecciona el tipo de seccion (Regular, AMRAP, Tabata, etc.) y agrega etiquetas opcionales.
+3. Guarda para crear la seccion.
+4. Haz clic en la seccion recien creada en la cuadricula para abrir el constructor de secciones.
+5. Agrega ejercicios de tu biblioteca de ejercicios.
+6. Configura cada ejercicio con series, repeticiones, peso, descanso u otros campos relevantes dependiendo del tipo de seccion.
+7. Guarda la seccion.
 
-> [Screenshot: section builder with exercises added and type selected]
+> [Screenshot 2: section builder with exercises added and type selected]
 
 ## Agregar Ejercicios a una Seccion
 
@@ -60,7 +61,7 @@ Puedes personalizar todos los valores al construir la seccion.
 - Crea superseries agrupando ejercicios juntos.
 - Usa el generador de IA para autocompletar una seccion desde un prompt de texto.
 
-> [Screenshot: exercise selection panel within the section builder]
+> [Screenshot 3: exercise selection panel within the section builder]
 
 ## Configurar Ejercicios
 
@@ -72,7 +73,7 @@ Dependiendo del tipo de ejercicio, puedes establecer diferentes campos por serie
 
 Cada ejercicio puede tener multiples series con valores individuales. Usa el toggle vincular/desvincular para establecer todas las series con el mismo valor o personalizar cada una.
 
-> [Screenshot: exercise card showing set configuration with linked values]
+> [Screenshot 4: exercise card showing set configuration with linked values]
 
 ## Usar Secciones en Entrenamientos
 
@@ -92,7 +93,7 @@ Desde la biblioteca de secciones, puedes:
 - **Duplicar** una seccion para crear una variacion
 - **Eliminar** secciones que ya no necesitas (eliminacion masiva soportada)
 
-> [Screenshot: sections list with filters and bulk actions]
+> [Screenshot 5: sections list with filters and bulk actions]
 
 ## Consejos
 

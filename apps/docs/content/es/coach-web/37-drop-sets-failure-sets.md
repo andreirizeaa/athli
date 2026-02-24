@@ -25,7 +25,7 @@ Estas tecnicas aumentan la intensidad del entrenamiento y el tiempo bajo tension
 | 2 | Drop Set | 10 | 22.5 kg |
 | 3 | Drop Set | 12 | 15 kg |
 
-> [Screenshot: Drop set sequence configured in the Workout Builder]
+> [Screenshot 1: Drop set sequence configured in the Workout Builder]
 
 ### Configurar Series al Fallo
 
@@ -35,7 +35,7 @@ Estas tecnicas aumentan la intensidad del entrenamiento y el tiempo bajo tension
 4. La serie se marca como serie al fallo. Puedes dejar el campo de repeticiones vacio o ingresar un minimo objetivo, ya que las repeticiones reales seran determinadas por el rendimiento del cliente.
 5. En la app movil, el cliente registra el numero real de repeticiones que completo antes de llegar al fallo.
 
-> [Screenshot: Failure set marked in the Workout Builder with visual indicator]
+> [Screenshot 2: Failure set marked in the Workout Builder with visual indicator]
 
 ### Combinar Drop Sets y Series al Fallo
 

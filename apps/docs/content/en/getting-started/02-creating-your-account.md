@@ -6,75 +6,86 @@ This guide walks you through signing up for Athli and setting up your coach prof
 
 ## Why it matters
 
-A complete profile helps your clients recognize you and builds trust. Your profile picture, name, and business details appear throughout the app when clients interact with your coaching.
+A complete profile helps your clients recognize you and builds trust. Your business details and branding appear throughout the app when clients interact with your coaching.
 
 ## Step-by-Step Guide
 
 ### 1. Sign Up
 
 1. Go to the Athli website and click **Get Started**
-2. Enter your email address and create a password
-3. Check your inbox for a verification email
-4. Click the verification link to confirm your account
+2. Choose to sign up with **Google**, **Apple**, or enter your email address and create a password
+3. If signing up with email, check your inbox for a verification code
+4. Enter the 6-digit code to confirm your account
 
-> [Screenshot: Sign up page with email and password fields]
+> [Screenshot 1: Sign up page with email and password fields]
 
-### 2. Complete Your Profile
+### 2. Start Your Free Trial
 
-After verifying your email, you will be taken to the onboarding flow:
+After verifying your account, you will see the free trial welcome screen:
 
-1. Enter your **full name**
-2. Upload a **profile picture** (recommended: square image, at least 200x200px)
-3. Select your **coaching category** (Online, Hybrid, or In Person)
-4. Set your **timezone** so scheduling works correctly
+1. Review the features included in your **30-day free trial**
+2. Optionally enter a **referral code** if you have one (this gives you $20 in credits)
+3. Click **Start free trial** to continue
 
-> [Screenshot: Profile setup page during onboarding]
+> [Screenshot 2: Free trial welcome screen]
 
-### 3. Set Up Your Business (Optional)
+### 3. Set Up Your Business Profile
 
-You can also configure your business details:
+The onboarding flow guides you through setting up your coaching business:
 
-1. Go to **Settings > Business > Company Information**
-2. Add your business name, logo, and description
-3. This information appears on your public coaching page and client-facing materials
+1. **Company Name** (required) - Enter your business or coaching brand name
+2. **Country** - Select the country where you operate
+3. **Specialities** - Choose your areas of expertise (e.g., Personal Training, Strength, Nutrition, CrossFit)
+4. **Website** (optional) - Add your website URL
+5. **LinkedIn** (optional) - Add your LinkedIn profile URL
+6. **Logo** (optional) - Upload your business logo
 
-> [Screenshot: Business settings page]
+You can skip any optional steps and complete them later in Settings.
 
-### 4. Explore the Dashboard
+> [Screenshot 3: Onboarding specialities selection]
 
-Once setup is complete, you land on your **Home Dashboard**. From here you can:
+### 4. Getting Started Guide
 
-- See today's client workouts
-- View at-risk clients who may need attention
-- Check your to-do list
-- Access all features from the sidebar navigation
+Once setup is complete, you land on the **Getting Started** page. This interactive guide walks you through the key features of Athli:
 
-> [Screenshot: Home dashboard with summary cards]
+- **Add your first client** - Invite clients via email or share your unique invite link
+- **Create a workout** - Build your first training session using the workout builder
+- **Set up check-ins** - Configure recurring check-ins to track client progress
+- **Explore the exercise library** - Browse 1,500+ exercises with video demonstrations
+- **Connect with your clients** - Send messages and build relationships
+
+Complete each step at your own pace. You can return to this page anytime from the sidebar.
+
+> [Screenshot 4: Getting Started page with checklist]
 
 ## Things to Note
 
-- You can update your profile at any time from **Settings > Account > Profile**
+- You can update your business details at any time from **Settings > Business > Company Information**
 - Your email address is used for login and notifications. You can change it in **Settings > Account > Security**
-- If you signed up with Google, your profile picture is imported automatically
+- If you signed up with Google or Apple, your profile picture is imported automatically
+- Your free trial lasts 30 days with full access to all features - no credit card required
 
 ## Common Problems
 
-**I did not receive the verification email**
+**I did not receive the verification code**
 Check your spam folder. If it is still missing, try signing up again or contact support.
 
 **I want to change my email address after signing up**
 Go to **Settings > Account > Security** and update your email. You will need to verify the new address.
 
-**My profile picture is not uploading**
+**My logo is not uploading**
 Make sure the image is under 5MB and in JPG or PNG format.
+
+**I skipped the onboarding - can I go back?**
+Yes, you can update all business details in **Settings > Business > Company Information** at any time.
 
 ---
 
 ## FAQs
 
-### Can I sign up with Google?
+### Can I sign up with Google or Apple?
 
-Yes. On the sign-up page, click the Google option to create your account using your Google credentials.
+Yes. On the sign-up page, click the Google or Apple option to create your account using those credentials.
 
 ### Can I have multiple coach accounts?
 
@@ -83,3 +94,7 @@ Each email address can only be linked to one account. If you need separate accou
 ### Is there a mobile app for coaches?
 
 Yes. After creating your account on the web, you can download the Athli coach app and sign in with the same credentials.
+
+### What happens after the free trial?
+
+After 30 days, you will need to choose a plan to continue using Athli. Your data and clients are preserved - you just need to subscribe to keep access.

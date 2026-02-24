@@ -18,7 +18,7 @@ A simple note-taking system attached to each client's profile. You can create, e
 1. Go to a client's profile (click on any client from your client list).
 2. Select the **Notes** tab.
 
-> [Screenshot: client profile with Notes tab selected showing list of notes]
+> [Screenshot 1: client profile with Notes tab selected showing list of notes]
 
 ## Creating a Note
 
@@ -27,7 +27,7 @@ A simple note-taking system attached to each client's profile. You can create, e
 3. Write the note content in the text area.
 4. Click **Save**.
 
-> [Screenshot: create note side panel with title and content fields]
+> [Screenshot 2: create note side panel with title and content fields]
 
 ## Viewing and Editing Notes
 
@@ -40,7 +40,7 @@ The notes list shows:
 - Creation date
 - A preview of the content
 
-> [Screenshot: note detail view in side panel with edit capability]
+> [Screenshot 3: note detail view in side panel with edit capability]
 
 ## Deleting Notes
 
@@ -54,7 +54,7 @@ The notes list shows:
 2. Click the delete button that appears.
 3. Confirm deletion.
 
-> [Screenshot: notes list with multiple notes selected and delete button visible]
+> [Screenshot 4: notes list with multiple notes selected and delete button visible]
 
 ## Tips
 

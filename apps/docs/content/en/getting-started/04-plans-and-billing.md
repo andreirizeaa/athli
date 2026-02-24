@@ -16,7 +16,7 @@ Choosing the right plan means you get all the features you need without paying f
 2. Click **Billing**
 3. You will see your current plan, active client count, and billing cycle
 
-> [Screenshot: Billing page showing current plan and client count]
+> [Screenshot 1: Billing page showing current plan and client count]
 
 ### Upgrading Your Plan
 
@@ -26,7 +26,7 @@ Choosing the right plan means you get all the features you need without paying f
 4. Review the pricing and confirm
 5. Your new plan takes effect immediately
 
-> [Screenshot: Plan selection page with pricing cards]
+> [Screenshot 2: Plan selection page with pricing cards]
 
 ### Managing Add-ons
 

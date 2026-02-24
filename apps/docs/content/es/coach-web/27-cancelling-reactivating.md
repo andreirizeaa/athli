@@ -13,7 +13,7 @@ Esta guia explica como cancelar tu suscripcion de Athli, que sucede cuando cance
 3. Aparecera un dialogo de confirmacion explicando que sucede a continuacion.
 4. Confirma la cancelacion.
 
-> [Screenshot: cancel subscription confirmation dialog]
+> [Screenshot 1: cancel subscription confirmation dialog]
 
 ### Que Sucede Cuando Cancelas
 
@@ -40,7 +40,7 @@ Si cancelaste pero tu periodo de facturacion aun no ha terminado, puedes deshace
 4. Tu suscripcion continua con normalidad y la cancelacion se deshace.
 5. La facturacion se reanuda en el horario regular.
 
-> [Screenshot: billing page showing reactivate option for a subscription scheduled for cancellation]
+> [Screenshot 2: billing page showing reactivate option for a subscription scheduled for cancellation]
 
 ### Resuscribirse Despues de la Cancelacion
 
@@ -76,7 +76,7 @@ La eliminacion de cuenta es separada de la cancelacion de suscripcion:
 
 **Advertencia:** La eliminacion de cuenta es permanente. Asegurate de haber exportado cualquier dato que necesites antes de proceder.
 
-> [Screenshot: danger zone page showing cancel subscription and delete account sections]
+> [Screenshot 3: danger zone page showing cancel subscription and delete account sections]
 
 ## Resumen de Linea de Tiempo
 

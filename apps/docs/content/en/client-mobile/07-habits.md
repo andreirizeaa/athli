@@ -16,23 +16,19 @@ Big results come from small daily actions. Habit tracking keeps you accountable 
 2. Each habit shows its name and whether you have completed it today
 3. You can also find habits in your profile section
 
-> [Screenshot: Home screen showing daily habits with checkboxes]
-
 ### Logging a Habit
 
 1. Tap the habit you want to log
 2. Tap **Complete** or check the box to mark it as done for today
 3. The habit updates immediately
 
-> [Screenshot: Habit being marked as complete with checkmark animation]
-
-### Viewing Your Habit History
+### Viewing Your Habit Progress
 
 1. Navigate to your habits section
 2. You see a calendar or streak view showing which days you completed each habit
 3. This helps you see your consistency patterns over time
 
-> [Screenshot: Habit history showing completion calendar with streaks]
+> [Screenshot 1: Habit progress view showing completion history and streaks]
 
 ## Things to Note
 

@@ -23,6 +23,7 @@ interface CheckInReviewSidePanelProps {
     clientId: string;
     checkInId: string;
     instanceId: string;
+    coachId: string;
     onReviewSaved?: () => void;
     clientName?: string;
     checkinName?: string;
@@ -34,6 +35,7 @@ export const CheckInReviewSidePanel = ({
     clientId,
     checkInId,
     instanceId,
+    coachId,
     onReviewSaved,
     clientName = 'Review',
     checkinName = 'Check in',
@@ -73,6 +75,7 @@ export const CheckInReviewSidePanel = ({
                             clientId={clientId}
                             checkInId={checkInId}
                             instanceId={instanceId}
+                            coachId={coachId}
                             onReviewSaved={() => {
                                 onReviewSaved?.();
                                 // Optionally close on save if it's a one-time thing

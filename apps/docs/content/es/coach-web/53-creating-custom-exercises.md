@@ -21,7 +21,7 @@ Aunque Athli incluye miles de ejercicios integrados, puede que necesites movimie
 3. Haz clic en **Ejercicios**.
 4. Haz clic en el boton **Agregar Ejercicio**.
 
-> [Screenshot: exercise library page with the Add Exercise button highlighted]
+> [Screenshot 1: exercise library page with the Add Exercise button highlighted]
 
 ### Completar los Detalles del Ejercicio
 
@@ -32,7 +32,7 @@ El formulario del ejercicio incluye los siguientes campos:
 - **Equipamiento** - Elige el equipamiento necesario (barra, mancuerna, bandas, maquina, peso corporal, etc.).
 - **Categoria** - Selecciona la categoria (fuerza, cardio, flexibilidad, etc.).
 
-> [Screenshot: add exercise form showing name, muscles, equipment, and category fields]
+> [Screenshot 2: add exercise form showing name, muscles, equipment, and category fields]
 
 ### Subir un Video o Imagen Personalizada
 
@@ -41,7 +41,7 @@ El formulario del ejercicio incluye los siguientes campos:
 3. Los formatos soportados incluyen formatos de video comunes (MP4, MOV) y formatos de imagen (JPG, PNG).
 4. El medio subido se mostrara a los clientes en la aplicacion movil cuando toquen el ejercicio durante un entrenamiento.
 
-> [Screenshot: media upload section of the exercise form with an uploaded video thumbnail]
+> [Screenshot 3: media upload section of the exercise form with an uploaded video thumbnail]
 
 ### Guardar el Ejercicio
 
@@ -61,7 +61,7 @@ Si quieres crear una variacion de un ejercicio integrado existente:
 
 Esto es util cuando quieres mantener la mayor parte de la informacion del ejercicio original pero cambiar detalles especificos como el nombre o agregar tu propio video.
 
-> [Screenshot: built-in exercise with the Duplicate button highlighted]
+> [Screenshot 4: built-in exercise with the Duplicate button highlighted]
 
 ## Cosas a Tener en Cuenta
 

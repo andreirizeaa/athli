@@ -1,8 +1,8 @@
-# Client App: Viewing and Completing Workouts
+# Client App: Training
 
 ## What is this?
 
-The Training tab shows your weekly workout calendar. You can see what workouts your coach has scheduled, preview exercises, and complete guided workout sessions with built-in tracking.
+The Training tab shows your full training schedule. You can see what workouts your coach has planned, select any day to view its workouts, and complete guided sessions with built-in tracking.
 
 ## Why it is useful
 
@@ -10,36 +10,33 @@ Your coach plans your training so you do not have to. The app walks you through 
 
 ## Step-by-Step Guide
 
-### Viewing Your Weekly Schedule
+### Viewing Your Training Schedule
 
 1. Tap the **Training** tab
-2. You see a weekly calendar with dots on days that have workouts
-3. Tap a day to see the workout assigned
-4. Days without workouts are rest days
+2. The dates across the top show your schedule at a glance with colour-coded indicators:
+   - **Green** - workout completed
+   - **Yellow** - workout in progress
+   - **Red** - workout missed
+   - **No colour** - future or not yet started
+3. Tap any date to see the workouts scheduled for that day
+4. Swipe left and right to navigate between days
 
-> [Screenshot: Training tab weekly calendar with workout indicators]
+> [Screenshot 1: Training tab showing schedule with colour-coded date indicators]
 
-### Previewing a Workout
+### Starting a Workout
 
-1. Tap a day that has a workout
-2. The workout preview shows all exercises, sets, reps, and any notes from your coach
-3. Each exercise shows the target muscles and has a video demo you can watch
-4. Scroll through to see the full session before starting
-
-> [Screenshot: Workout preview showing exercise list with sets and reps]
-
-### Starting a Workout Session
-
-1. On the workout preview, tap **Start Workout**
-2. You may be asked to rate your pre-workout metrics (sleep, mood, energy, stress, soreness)
-3. The app guides you through each exercise one at a time
-4. For each set:
+1. Select a day that has a workout
+2. Tap the workout to see all exercises, sets, reps, and any notes from your coach
+3. Tap **Start Workout** to begin
+4. You may be asked to rate your pre-workout metrics (sleep, mood, energy, stress, soreness)
+5. The app guides you through each exercise one at a time
+6. For each set:
    - Log the weight you used
    - Log the reps you completed
    - Tap **Complete Set** to move to the next one
-5. Rest timers start automatically between sets if configured
+7. Rest timers start automatically between sets if configured
 
-> [Screenshot: Active workout session showing current exercise with set logging]
+> [Screenshot 3+2: Active workout session | Pre-workout questionnaire]
 
 ### Viewing Exercise Demos
 
@@ -47,24 +44,16 @@ Your coach plans your training so you do not have to. The app walks you through 
 2. A demonstration video plays showing proper form
 3. Close the video to return to your session
 
-> [Screenshot: Exercise video demo playing during workout]
+> [Screenshot 4: Exercise video demo during workout]
 
-### Completing a Workout
+### Completing and Reviewing Workouts
 
 1. After finishing all exercises, tap **Complete Workout**
-2. You may be asked for post-workout feedback (rating, notes)
-3. Your results are saved and sent to your coach
-4. The workout shows as completed on your calendar
+2. Your results are saved and sent to your coach
+3. The workout date turns green on your schedule
+4. To review a past workout, tap its date and view your logged weights and reps
 
-> [Screenshot: Workout completion screen with feedback option]
-
-### Viewing Past Workouts
-
-1. On the Training tab, navigate to a past day
-2. Tap the completed workout to see your logged results
-3. Compare your performance across weeks
-
-> [Screenshot: Completed workout showing logged weights and reps]
+> [Screenshot 5: Completed workout showing logged results]
 
 ## Things to Note
 
@@ -76,12 +65,15 @@ Your coach plans your training so you do not have to. The app walks you through 
 ## Common Problems
 
 **The workout is not showing for today**
+
 Your coach may not have scheduled one. Check with them if you expected a workout.
 
 **I logged the wrong weight or reps**
+
 You can edit individual sets during the session. After completing, ask your coach to adjust if needed.
 
 **The app crashed during my workout**
+
 Reopen the app. Your progress should be saved. If not, manually log your remaining sets.
 
 ---

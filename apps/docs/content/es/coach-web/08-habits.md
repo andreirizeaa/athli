@@ -25,7 +25,7 @@ Los grandes resultados vienen de acciones diarias consistentes, no solo de los e
 4. Opcionalmente organiza en carpetas
 5. Haz clic en **Guardar**
 
-> [Screenshot: Formulario de crear habito]
+> [Screenshot 1: Formulario de crear habito]
 
 ### Asignar un Habito a un Cliente
 
@@ -35,7 +35,7 @@ Los grandes resultados vienen de acciones diarias consistentes, no solo de los e
 4. Selecciona un habito de tu biblioteca
 5. Haz clic en **Asignar**
 
-> [Screenshot: Dialogo de asignar habito con seleccion de biblioteca]
+> [Screenshot 2: Dialogo de asignar habito con seleccion de biblioteca]
 
 ### Ver Registros de Habitos
 
@@ -44,7 +44,7 @@ Los grandes resultados vienen de acciones diarias consistentes, no solo de los e
 3. Haz clic en un habito para ver registros detallados
 4. Usa **Registrar un Habito** para registrar manualmente en nombre del cliente
 
-> [Screenshot: Pestana de habitos mostrando calendario de completado y entradas de registro]
+> [Screenshot 3: Pestana de habitos mostrando calendario de completado y entradas de registro]
 
 ### Editar y Eliminar Registros
 
@@ -53,7 +53,7 @@ Los grandes resultados vienen de acciones diarias consistentes, no solo de los e
 3. Haz clic en **Eliminar** para remover el registro
 4. Confirma la accion
 
-> [Screenshot: Entrada de registro de habito con opciones de editar y eliminar]
+> [Screenshot 4: Entrada de registro de habito con opciones de editar y eliminar]
 
 ## Cosas a Tener en Cuenta
 

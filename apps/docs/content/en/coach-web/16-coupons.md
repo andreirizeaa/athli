@@ -26,7 +26,7 @@ Coupons are a great marketing tool for attracting new clients, running promotion
 5. Optionally set an expiry date or usage limit
 6. Click **Create**
 
-> [Screenshot: Create coupon form with discount options]
+> [Screenshot 1: Create coupon form with discount options]
 
 ### Deactivating a Coupon
 
@@ -34,7 +34,7 @@ Coupons are a great marketing tool for attracting new clients, running promotion
 2. Click **Deactivate**
 3. The coupon can no longer be used at checkout
 
-> [Screenshot: Coupon list with deactivate option]
+> [Screenshot 2: Coupon list with deactivate option]
 
 ## Things to Note
 

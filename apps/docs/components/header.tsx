@@ -25,7 +25,7 @@ export function Header() {
   return (
     <>
       {/* Fixed header - logo left, help right */}
-      <header className="fixed top-0 left-0 right-0 z-20 w-full border-b bg-background/80 backdrop-blur-sm">
+      <header className="fixed top-0 left-0 right-0 z-20 w-full border-b bg-background">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Link href="/">
             <AthliLogo iconClassName="size-6" className="gap-1.5 text-lg" />

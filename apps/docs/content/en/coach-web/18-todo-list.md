@@ -24,7 +24,7 @@ Coaching involves a lot of moving parts. The to-do list helps you keep track of 
 3. You see tasks created by automations and flows
 4. Complete tasks by checking them off
 
-> [Screenshot: To-do Athli Assistant tab with automated task list]
+> [Screenshot 1: To-do Athli Assistant tab with automated task list]
 
 ### Managing Your Personal Tasks
 
@@ -34,7 +34,7 @@ Coaching involves a lot of moving parts. The to-do list helps you keep track of 
 4. Enter the task description
 5. Check off tasks as you complete them
 
-> [Screenshot: To-do Your List tab with personal tasks and add button]
+> [Screenshot 2: To-do Your List tab with personal tasks and add button]
 
 ## Things to Note
 

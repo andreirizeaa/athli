@@ -17,7 +17,7 @@ Understanding the client purchase flow helps you optimize your packages page and
 3. This shows exactly what clients see when they visit your packages page
 4. Review the layout, descriptions, and pricing for accuracy
 
-> [Screenshot: Preview Packages button on the Packages page]
+> [Screenshot 1: Preview Packages button on the Packages page]
 
 ### Sharing Your Packages Link
 
@@ -26,7 +26,7 @@ Understanding the client purchase flow helps you optimize your packages page and
 3. You can share it via email, social media, your website, or direct message
 4. Clients do not need an Athli account to view the packages page
 
-> [Screenshot: Shareable packages link with copy button]
+> [Screenshot 2: Shareable packages link with copy button]
 
 ### What the Client Sees
 
@@ -37,7 +37,7 @@ Understanding the client purchase flow helps you optimize your packages page and
 5. The client enters their payment information securely through Stripe
 6. After successful payment, the purchase is confirmed
 
-> [Screenshot: Client-facing packages page showing available coaching packages]
+> [Screenshot 3: Client-facing packages page showing available coaching packages]
 
 ### After Purchase
 
@@ -47,7 +47,7 @@ Understanding the client purchase flow helps you optimize your packages page and
 4. Recurring packages automatically bill at the set interval
 5. You receive the payment through Stripe according to your payout schedule
 
-> [Screenshot: Activity page showing a new client purchase]
+> [Screenshot 4: Activity page showing a new client purchase]
 
 ## Things to Note
 

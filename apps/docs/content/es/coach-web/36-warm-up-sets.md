@@ -19,7 +19,7 @@ Los calentamientos adecuados reducen el riesgo de lesiones y mejoran el rendimie
 5. La fila de serie cambia de apariencia (por ejemplo, color diferente, etiqueta "W" o estilo mas claro) para distinguirla visualmente de las series de trabajo.
 6. Configura las repeticiones y peso para la serie de calentamiento. Tipicamente, las series de calentamiento usan cargas mas ligeras y pueden tener diferentes conteos de repeticiones.
 
-> [Screenshot: A set row marked as a warm-up set with distinct visual styling]
+> [Screenshot 1: A set row marked as a warm-up set with distinct visual styling]
 
 ### Agregar Multiples Series de Calentamiento
 
@@ -38,7 +38,7 @@ Una progresion comun de calentamiento para un levantamiento compuesto pesado pod
 | 5 | Trabajo | 5 | 100 kg |
 | 6 | Trabajo | 5 | 100 kg |
 
-> [Screenshot: Exercise with warm-up sets and working sets clearly separated]
+> [Screenshot 2: Exercise with warm-up sets and working sets clearly separated]
 
 ### Como los Clientes Ven las Series de Calentamiento
 

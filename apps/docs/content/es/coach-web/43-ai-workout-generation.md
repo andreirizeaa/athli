@@ -22,7 +22,7 @@ Construir entrenamientos desde cero toma tiempo, especialmente cuando gestionas 
 8. Edita cualquier cosa que necesite ajuste: intercambia ejercicios, cambia rangos de repeticiones, ajusta pesos, agrega o elimina secciones.
 9. Guarda el entrenamiento cuando estes satisfecho.
 
-> [Screenshot: Athli AI tab open in the Workout Builder with a text prompt]
+> [Screenshot 1: Athli AI tab open in the Workout Builder with a text prompt]
 
 ### Consejos para Mejores Solicitudes a la AI
 
@@ -44,7 +44,7 @@ La calidad del entrenamiento generado depende de la especificidad de tu solicitu
 | "Dia de piernas con un finalizador EMOM de 10 minutos, avanzado" | Compuestos pesados de piernas seguidos de un bloque de acondicionamiento EMOM cronometrado |
 | "Entrenamiento rapido de 30 minutos con peso corporal para principiante" | Ejercicios simples de peso corporal con volumen manejable |
 
-> [Screenshot: Generated workout appearing in the Workout Builder after an AI prompt]
+> [Screenshot 2: Generated workout appearing in the Workout Builder after an AI prompt]
 
 ### Revisar y Editar el Entrenamiento Generado
 

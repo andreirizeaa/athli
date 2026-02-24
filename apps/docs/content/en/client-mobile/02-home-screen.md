@@ -24,7 +24,7 @@ Instead of navigating through different sections to figure out what you need to 
 3. It shows the workout name, number of exercises, and estimated duration
 4. Tap the workout card to start your session or preview the exercises
 
-> [Screenshot: Client home screen with today's workout card highlighted]
+> [Screenshot 1: Client home screen with today's workout card highlighted]
 
 ### Checking Pending Tasks
 
@@ -34,7 +34,7 @@ Instead of navigating through different sections to figure out what you need to 
    - Questionnaires to complete
 2. Tap any item to go directly to it
 
-> [Screenshot: Home screen showing pending check-in and habit reminders]
+> [Screenshot 2: Home screen showing pending check-in and habit reminders]
 
 ### Viewing Pre-Workout Metrics
 
@@ -44,7 +44,7 @@ Before starting a workout, you may be asked to rate how you are feeling:
 2. Before the session starts, rate your **sleep**, **mood**, **energy**, **stress**, and **soreness**
 3. These ratings help your coach understand how you are feeling and adjust your training
 
-> [Screenshot: Pre-workout metrics screen with rating sliders]
+> [Screenshot 3: Pre-workout metrics screen with rating sliders]
 
 ### Quick Actions
 
@@ -55,7 +55,7 @@ The Home screen may include quick action buttons for:
 - Logging a habit
 - Taking a progress photo
 
-> [Screenshot: Quick action buttons on home screen]
+> [Screenshot 4: Quick action buttons on home screen]
 
 ## Things to Note
 
@@ -67,9 +67,11 @@ The Home screen may include quick action buttons for:
 ## Common Problems
 
 **My home screen shows no workout**
+
 Your coach may not have scheduled a workout for today. This is normal on rest days. Check the Training tab for upcoming workouts.
 
 **I do not see any check-ins or habits**
+
 Your coach needs to assign these to you first. If you think something is missing, message your coach.
 
 ---

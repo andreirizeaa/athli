@@ -22,6 +22,43 @@ import type {
 // Extended QuestionAnswer with format field from API response
 export type QuestionAnswerWithFormat = QuestionAnswer & { format?: string };
 
+/**
+ * Normalize answers from various DB formats into a consistent array.
+ * Handles three formats:
+ * 1. Array of {questionId, answer} (keyed format from mobile submit)
+ * 2. Array of {value} (positional format from questionnaire DB)
+ * 3. Object with numeric keys {"0": {value: 8}, "1": {value: true}} (check-in DB format)
+ *
+ * Optionally accepts a questions array to fill in missing questionIds and format fields
+ * from the corresponding question at the same index.
+ */
+const normalizeAnswers = (answers: any, questions?: any[]): QuestionAnswerWithFormat[] => {
+  if (!answers) return [];
+
+  if (Array.isArray(answers)) {
+    return answers.map((a: any, index: number) => ({
+      questionId: a.questionId || a.question_id || questions?.[index]?.id || '',
+      answer: a.answer ?? a.value,
+      format: a.format || questions?.[index]?.format,
+    }));
+  }
+
+  if (typeof answers === 'object') {
+    const keys = Object.keys(answers).sort((a, b) => Number(a) - Number(b));
+    if (keys.length === 0) return [];
+    return keys.map((key, index) => {
+      const entry = answers[key];
+      return {
+        questionId: entry?.questionId || entry?.question_id || questions?.[index]?.id || '',
+        answer: entry?.answer ?? entry?.value,
+        format: entry?.format || questions?.[index]?.format,
+      };
+    });
+  }
+
+  return [];
+};
+
 // Re-export types from shared-types for backwards compatibility
 export type {
   Question,
@@ -113,14 +150,48 @@ export const getClientQuestionnaire = async (
 };
 
 /**
- * Get a check-in submission for a client (questions + answers)
+ * Get a check-in submission for a client (questions + latest answers from logs)
  */
 export const getClientCheckInSubmission = async (
   clientId: string,
   checkInId: string,
   coachId: string
 ): Promise<ClientQuestionnaireDetail> => {
-  const response = await apiFetch<{ success: boolean; data: ClientQuestionnaireDetail }>(
+  // First get the logs to find the latest submission
+  const logsResponse = await apiFetch<{ success: boolean; data: { instances: any[] } }>(
+    `/client/forms/check-ins/${checkInId}/logs`,
+    {
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+    }
+  );
+
+  const instances = logsResponse.data.instances || [];
+  const latestSubmission = instances.find((i: any) => i.status !== 'assigned');
+
+  if (latestSubmission) {
+    // Fetch the full log with questions and answers
+    const logResponse = await apiFetch<{ success: boolean; data: any }>(
+      `/client/forms/check-ins/${checkInId}/logs/${latestSubmission.id}`,
+      {
+        headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+      }
+    );
+
+    const d = logResponse.data;
+    const questions = d.questions || [];
+    return {
+      id: d.id,
+      name: d.formName,
+      description: '',
+      questions,
+      answers: normalizeAnswers(d.answers, questions),
+      status: 'completed',
+      completedAt: d.completedAt ? new Date(d.completedAt) : undefined,
+    };
+  }
+
+  // No submissions yet - return the check-in with empty answers
+  const response = await apiFetch<{ success: boolean; data: any }>(
     `/client/forms/check-ins/${checkInId}`,
     {
       headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
@@ -128,9 +199,105 @@ export const getClientCheckInSubmission = async (
   );
 
   return {
-    ...response.data,
-    completedAt: response.data.completedAt ? new Date(response.data.completedAt) : undefined,
+    id: response.data.id,
+    name: response.data.name,
+    description: response.data.description || '',
+    questions: response.data.questions || [],
+    answers: [],
+    status: 'pending',
   };
+};
+
+/**
+ * Get all submission logs for a check-in assignment
+ */
+export type CheckInLogInstance = {
+  id: string;
+  formId: string;
+  formName: string;
+  scheduledDate: string;
+  status: string;
+  completedAt?: string;
+};
+
+export const getCheckInLogs = async (
+  clientId: string,
+  checkInId: string,
+  coachId: string
+): Promise<CheckInLogInstance[]> => {
+  const response = await apiFetch<{ success: boolean; data: { instances: any[] } }>(
+    `/client/forms/check-ins/${checkInId}/logs`,
+    {
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+    }
+  );
+
+  return (response.data.instances || []).map((i: any) => ({
+    id: i.id,
+    formId: i.formId,
+    formName: i.formName,
+    scheduledDate: i.scheduledDate,
+    status: i.status,
+    completedAt: i.completedAt,
+  }));
+};
+
+/**
+ * Extended detail type that includes coach comment fields from check-in logs
+ */
+export type CheckInLogDetailResult = ClientQuestionnaireDetail & {
+  coachComment?: string | null;
+  reviewedAt?: string | null;
+};
+
+/**
+ * Get a single check-in log with questions and answers
+ */
+export const getCheckInLogDetail = async (
+  clientId: string,
+  checkInId: string,
+  logId: string,
+  coachId: string
+): Promise<CheckInLogDetailResult> => {
+  const response = await apiFetch<{ success: boolean; data: any }>(
+    `/client/forms/check-ins/${checkInId}/logs/${logId}`,
+    {
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+    }
+  );
+
+  const d = response.data;
+  const questions = d.questions || [];
+  return {
+    id: d.id,
+    name: d.formName,
+    description: '',
+    questions,
+    answers: normalizeAnswers(d.answers, questions),
+    status: d.status || 'completed',
+    completedAt: d.completedAt ? new Date(d.completedAt) : undefined,
+    coachComment: d.coachComment || null,
+    reviewedAt: d.reviewedAt || null,
+  };
+};
+
+/**
+ * Review a check-in log (coach only)
+ */
+export type ReviewCheckInLogData = {
+  checkInId: string;
+  logId: string;
+  clientId: string;
+  coachId: string;
+  review: string;
+};
+
+export const reviewCheckInLog = async (data: ReviewCheckInLogData): Promise<void> => {
+  await apiFetch(`/client/forms/check-ins/${data.checkInId}/logs/${data.logId}/review`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({ review: data.review }),
+  });
 };
 
 /**
@@ -573,6 +740,8 @@ export type AthleteCheckIn = {
   submission_count: number;
   latest_answers: QuestionAnswer[] | null;
   latest_submission_date: string | null;
+  latest_created_at: string | null;
+  latest_coach_comment: string | null;
   created_at: string;
 };
 
@@ -596,6 +765,8 @@ export const getMyCheckIns = async (clientId: string, coachId: string): Promise<
     submission_count: c.submission_count || 0,
     latest_answers: c.latest_answers || null,
     latest_submission_date: c.latest_submission_date || null,
+    latest_created_at: c.latest_created_at || null,
+    latest_coach_comment: c.latest_coach_comment || null,
     created_at: c.created_at,
   }));
 };

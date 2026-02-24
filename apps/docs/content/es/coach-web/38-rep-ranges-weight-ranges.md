@@ -18,7 +18,7 @@ No todos los dias de entrenamiento se sienten igual. La fuerza y los niveles de 
 4. La serie ahora muestra "8-12" en la columna de repeticiones.
 5. En la app movil, el cliente ve este rango y registra las repeticiones reales que completo.
 
-> [Screenshot: Reps field showing "8-12" as a rep range]
+> [Screenshot 1: Reps field showing "8-12" as a rep range]
 
 ### Establecer un Rango de Peso
 
@@ -27,17 +27,7 @@ No todos los dias de entrenamiento se sienten igual. La fuerza y los niveles de 
 3. La serie ahora muestra "20-25" en la columna de peso, con la unidad (kg o lbs) basada en tus ajustes.
 4. El cliente elige un peso dentro de este rango durante su entrenamiento y registra el peso real utilizado.
 
-> [Screenshot: Weight field showing "20-25" as a weight range]
-
-### Usar Porcentajes
-
-Para programacion basada en porcentajes (comun en programas de fuerza y powerlifting):
-
-1. Ingresa el valor de porcentaje en el campo de peso (por ejemplo, "75%").
-2. Esto indica que el cliente debe usar el 75% de su repeticion maxima (1RM) para ese ejercicio.
-3. Los clientes necesitan conocer su 1RM para calcular el peso de trabajo.
-
-> [Screenshot: Weight field showing a percentage value]
+> [Screenshot 2: Weight field showing "20-25" as a weight range]
 
 ### Como los Clientes Ven los Rangos en la App Movil
 
@@ -51,7 +41,6 @@ Cuando un cliente abre un entrenamiento con rangos de repeticiones o peso:
 
 - Los rangos de repeticiones animan a los clientes a entrenar con la intensidad apropiada en lugar de fijarse en un solo numero.
 - Los rangos de peso son particularmente utiles durante las primeras semanas con un nuevo cliente cuando aun estas calibrando sus pesos de trabajo.
-- Las prescripciones basadas en porcentajes requieren que los clientes tengan numeros de fuerza base establecidos (1RM o 1RM estimado).
 - Tanto el rango prescrito como los valores reales registrados se almacenan, para que puedas revisar si los clientes consistentemente alcanzan el extremo superior, medio o inferior del rango.
 - Puedes mezclar valores fijos y rangos dentro del mismo ejercicio. Por ejemplo, peso fijo con un rango de repeticiones, o repeticiones fijas con un rango de peso.
 

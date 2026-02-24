@@ -17,7 +17,7 @@ Cada entrenador tiene ejercicios exclusivos, variaciones o movimientos especific
 3. El video muestra el movimiento desde multiples angulos con calidad profesional.
 4. Los clientes ven estos mismos videos en la app movil cuando tocan un ejercicio durante su entrenamiento.
 
-> [Screenshot: Built-in exercise demo video playing in the Workout Builder]
+> [Screenshot 1: Built-in exercise demo video playing in the Workout Builder]
 
 ### Crear un Ejercicio Personalizado
 
@@ -30,7 +30,7 @@ Cada entrenador tiene ejercicios exclusivos, variaciones o movimientos especific
    - **Imagen**: Sube una imagen JPG o PNG si no hay un video disponible.
 6. Guarda el ejercicio personalizado. Ahora esta disponible en tu biblioteca de ejercicios.
 
-> [Screenshot: Custom exercise creation form with video upload field]
+> [Screenshot 2: Custom exercise creation form with video upload field]
 
 ### Usar Ejercicios Personalizados en Entrenamientos
 

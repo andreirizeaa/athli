@@ -71,6 +71,33 @@ const resolveAuth = async (req: Request, res: Response) => {
 };
 
 /**
+ * Normalize answers from various DB formats into a consistent array.
+ * Handles: array (pass-through), object with numeric keys ({"0": {"value": 8}}), or falsy (empty array).
+ */
+const normalizeAnswers = (answers: any, questions?: any[]): any[] => {
+    if (!answers) return [];
+    if (Array.isArray(answers)) {
+        return answers.map((entry: any, index: number) => ({
+            questionId: entry?.questionId || entry?.question_id || (questions?.[index] as any)?.id || '',
+            answer: entry?.answer ?? entry?.value,
+            format: entry?.format || (questions?.[index] as any)?.format,
+        }));
+    }
+    if (typeof answers === 'object') {
+        const keys = Object.keys(answers).sort((a, b) => Number(a) - Number(b));
+        return keys.map((key, index) => {
+            const entry = answers[key];
+            return {
+                questionId: entry?.questionId || entry?.question_id || (questions?.[index] as any)?.id || '',
+                answer: entry?.answer ?? entry?.value,
+                format: entry?.format || (questions?.[index] as any)?.format,
+            };
+        });
+    }
+    return [];
+};
+
+/**
  * Resolve signed URLs for all media answers in a form.
  */
 const resolveMediaUrls = async (answers: any[]): Promise<Record<string, string>> => {
@@ -140,8 +167,12 @@ export const clientPdfController = {
         if (error || !questionnaire) return notFound(res, { message: 'Questionnaire not found' });
         const { data: profile } = profileResult;
 
+        // Normalize answers (DB stores as [{value: "..."}] or {0: {value: ...}})
+        const questions = questionnaire.questions || [];
+        const answers = normalizeAnswers(questionnaire.answers, questions);
+
         // Resolve media URLs
-        const resolvedMediaUrls = await resolveMediaUrls(questionnaire.answers || []);
+        const resolvedMediaUrls = await resolveMediaUrls(answers);
 
         // Generate HTML
         const html = generateQuestionnairePdfHtml({
@@ -149,8 +180,8 @@ export const clientPdfController = {
             clientName: profile?.name || 'Client',
             clientEmail: profile?.email,
             completedAt: questionnaire.completed_at ? new Date(questionnaire.completed_at) : undefined,
-            questions: questionnaire.questions || [],
-            answers: questionnaire.answers || [],
+            questions,
+            answers,
             resolvedMediaUrls,
         });
 
@@ -216,7 +247,8 @@ export const clientPdfController = {
         const submission = logsResult.data?.[0];
         const { data: profile } = profileResult;
 
-        const answers = submission?.answers || [];
+        const questions = checkIn.questions || [];
+        const answers = normalizeAnswers(submission?.answers, questions);
         const resolvedMediaUrls = await resolveMediaUrls(answers);
 
         const html = generateQuestionnairePdfHtml({
@@ -224,7 +256,7 @@ export const clientPdfController = {
             clientName: profile?.name || 'Client',
             clientEmail: profile?.email,
             completedAt: submission?.submission_date ? new Date(submission.submission_date) : undefined,
-            questions: checkIn.questions || [],
+            questions,
             answers,
             resolvedMediaUrls,
         });

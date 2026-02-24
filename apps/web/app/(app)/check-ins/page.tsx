@@ -75,14 +75,14 @@ const CheckInsPage = () => {
       icon: <Calendar className="size-3" />,
       sortable: true,
       width: { class: 'w-[180px]', pixel: '180px' },
-      getSortValue: (row) => new Date(row.submission_date).getTime(),
-      getSearchValue: (row) => format(new Date(row.submission_date), 'MMM dd, yyyy HH:mm'),
+      getSortValue: (row) => new Date(row.created_at).getTime(),
+      getSearchValue: (row) => format(new Date(row.created_at), 'MMM dd, yyyy HH:mm'),
       renderCell: (row) => (
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm">{format(new Date(row.submission_date), 'MMM dd, yyyy')}</span>
+          <span className="text-sm">{format(new Date(row.created_at), 'MMM dd, yyyy')}</span>
           <span className="text-xs text-muted-foreground flex items-center gap-1">
             <Clock className="size-3" />
-            {format(new Date(row.submission_date), 'HH:mm')}
+            {format(new Date(row.created_at), 'HH:mm')}
           </span>
         </div>
       ),

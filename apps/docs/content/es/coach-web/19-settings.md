@@ -17,7 +17,7 @@ Actualiza tu nombre visible, foto de perfil y zona horaria.
 2. Edita tu nombre, sube una nueva foto de perfil o cambia tu zona horaria
 3. Haz clic en **Guardar**
 
-> [Screenshot: Profile settings page with name and timezone fields]
+> [Screenshot 1: Profile settings page with name and timezone fields]
 
 ### Cuenta > Seguridad
 Gestiona tu direccion de correo electronico, contraseña y configuracion de seguridad.
@@ -26,7 +26,7 @@ Gestiona tu direccion de correo electronico, contraseña y configuracion de segu
 2. Cambia tu correo electronico (requiere verificacion)
 3. Actualiza tu contraseña
 
-> [Screenshot: Security settings page]
+> [Screenshot 2: Security settings page]
 
 ### Cuenta > Informacion
 Ve los detalles de tu cuenta e informacion de membresia.
@@ -41,7 +41,7 @@ Configura los detalles de tu negocio de coaching, incluyendo nombre del negocio,
 2. Ingresa el nombre y descripcion de tu negocio
 3. Sube tu logo y configura los colores de marca
 
-> [Screenshot: Company information settings page]
+> [Screenshot 3: Company information settings page]
 
 ### Negocio > Marca
 Personaliza la apariencia visual de tus materiales orientados al cliente.
@@ -50,13 +50,13 @@ Personaliza la apariencia visual de tus materiales orientados al cliente.
 Gestiona los miembros del equipo si operas un negocio de coaching con varios empleados.
 
 ### Aplicacion > Personalizaciones
-Configura como se comporta la aplicacion para tu estilo de coaching.
+Configura tus preferencias de la aplicacion.
 
 1. Ve a **Ajustes > Aplicacion > Personalizaciones**
-2. Elige que columnas de ejercicios mostrar en los entrenamientos (series, repeticiones, peso, RPE, tempo, etc.)
-3. Configura tus valores predeterminados preferidos
-
-> [Screenshot: App customisations page with column toggles]
+2. Establece tu **tema** (modo claro u oscuro)
+3. Elige tu **idioma**
+4. Selecciona tu **color de acento**
+5. Establece la **terminologia de clientes** utilizada en toda la aplicacion (ej., Cliente, Atleta, Miembro)
 
 ### Notificaciones
 Controla que notificaciones recibes y como las recibes.
@@ -65,7 +65,7 @@ Controla que notificaciones recibes y como las recibes.
 2. Activa o desactiva las notificaciones para diferentes tipos de eventos
 3. Elige entre push, correo electronico o ambos
 
-> [Screenshot: Notification preferences page]
+> [Screenshot 4: Notification preferences page]
 
 ### Zona de Peligro
 Eliminacion de cuenta y acciones irreversibles.
@@ -74,7 +74,7 @@ Eliminacion de cuenta y acciones irreversibles.
 2. Esta seccion contiene acciones destructivas como la eliminacion de cuenta
 3. Procede con extrema precaucion
 
-> [Screenshot: Danger zone settings with delete account option]
+> [Screenshot 5: Danger zone settings with delete account option]
 
 ## Cosas a Tener en Cuenta
 

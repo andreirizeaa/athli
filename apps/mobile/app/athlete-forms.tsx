@@ -130,7 +130,9 @@ export default function AthleteFormsScreen() {
         questionnaireName: item.name,
         questionsJson: JSON.stringify(item.questions),
         answersJson: JSON.stringify(item.latest_answers || []),
-        completedAt: item.latest_submission_date || undefined,
+        completedAt: item.latest_created_at || undefined,
+        formType: 'checkIn',
+        coachComment: item.latest_coach_comment || undefined,
       },
     });
   }, [router]);

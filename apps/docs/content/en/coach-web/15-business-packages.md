@@ -27,7 +27,7 @@ Before you can accept payments, you need to connect your Stripe account:
 4. Complete the Stripe onboarding process
 5. Once connected, you can start creating packages
 
-> [Screenshot: Business page with Connect Stripe button]
+> [Screenshot 1: Business page with Connect Stripe button]
 
 ### Creating a Package
 
@@ -41,7 +41,7 @@ Before you can accept payments, you need to connect your Stripe account:
    - **Duration** for recurring packages (monthly, quarterly, etc.)
 4. Click **Save**
 
-> [Screenshot: Create package form with pricing options]
+> [Screenshot 2: Create package form with pricing options]
 
 ### Sharing Packages with Clients
 
@@ -50,7 +50,7 @@ Before you can accept payments, you need to connect your Stripe account:
 3. Copy the link and share it with clients
 4. Clients can view your packages and purchase directly
 
-> [Screenshot: Package preview page as seen by clients]
+> [Screenshot 3: Package preview page as seen by clients]
 
 ### Viewing Payment Activity
 
@@ -58,7 +58,7 @@ Before you can accept payments, you need to connect your Stripe account:
 2. You see a list of all transactions, subscriptions, and payment events
 3. Filter by date, client, or status
 
-> [Screenshot: Activity page with transaction list]
+> [Screenshot 4: Activity page with transaction list]
 
 ### Managing the Stripe Dashboard
 

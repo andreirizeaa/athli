@@ -23,7 +23,7 @@ This is the most common section type and the one you will use for the majority o
 3. Select **Regular** as the section type.
 4. Give the section a name (e.g., "Main Strength", "Accessory Work", "Warm-Up").
 
-> [Screenshot: section type selector with Regular highlighted]
+> [Screenshot 1: section type selector with Regular highlighted]
 
 ### Adding Exercises
 
@@ -32,7 +32,7 @@ This is the most common section type and the one you will use for the majority o
 3. Select one or more exercises to add.
 4. Exercises appear in order within the section.
 
-> [Screenshot: exercise picker panel with search and filters]
+> [Screenshot 2: exercise picker panel with search and filters]
 
 ### Configuring Sets and Reps
 
@@ -44,7 +44,7 @@ Each exercise can be configured with multiple sets. Depending on the exercise ty
 
 Use the **link/unlink toggle** to either set all sets to the same value or customize each set individually. For example, you might program a pyramid: Set 1 at 12 reps, Set 2 at 10, Set 3 at 8, Set 4 at 6.
 
-> [Screenshot: exercise card showing four sets with individual rep and weight values]
+> [Screenshot 3: exercise card showing four sets with individual rep and weight values]
 
 ### Adding Rest Periods
 
@@ -60,7 +60,7 @@ Drag exercises up or down to reorder them within the section. The order you set 
 
 Group two or more exercises together to create a superset. Clients perform the grouped exercises back-to-back before resting.
 
-> [Screenshot: two exercises grouped as a superset within a regular section]
+> [Screenshot 4: two exercises grouped as a superset within a regular section]
 
 ## Things to Note
 

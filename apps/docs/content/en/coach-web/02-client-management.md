@@ -25,7 +25,7 @@ As your coaching business grows, you need a central place to manage all your cli
 3. Each client card shows their name, profile picture, category, and status
 4. Use the search bar at the top to find specific clients
 
-> [Screenshot: Athletes page with client list and search bar]
+> [Screenshot 1: Athletes page with client list and search bar]
 
 ### Adding a New Client
 
@@ -35,7 +35,7 @@ As your coaching business grows, you need a central place to manage all your cli
 4. Click **Send Invite**
 5. The client receives an email invitation to join
 
-> [Screenshot: Add client side panel with form]
+> [Screenshot 2: Add client side panel with form]
 
 ### Viewing a Client's Profile
 
@@ -54,7 +54,7 @@ As your coaching business grows, you need a central place to manage all your cli
    - **Notes** - Private coaching notes
    - **Settings** - Client-specific settings
 
-> [Screenshot: Client overview page with navigation tabs]
+> [Screenshot 3: Client overview page with navigation tabs]
 
 ### Editing Client Details
 
@@ -63,7 +63,7 @@ As your coaching business grows, you need a central place to manage all your cli
 3. Update their name, email, profile picture, category, or timezone
 4. Click **Save**
 
-> [Screenshot: Edit client details side panel]
+> [Screenshot 4: Edit client details side panel]
 
 ### Archiving a Client
 
@@ -73,7 +73,7 @@ As your coaching business grows, you need a central place to manage all your cli
 4. Confirm the action
 5. The client will no longer appear in your active list and will lose app access
 
-> [Screenshot: Client settings page with archive option]
+> [Screenshot 5: Client settings page with archive option]
 
 ### Restoring Archived Clients
 
@@ -83,7 +83,7 @@ As your coaching business grows, you need a central place to manage all your cli
 4. Click **Restore**
 5. They regain access to the app immediately
 
-> [Screenshot: Restore clients side panel]
+> [Screenshot 6: Restore clients side panel]
 
 ### Uploading Clients via CSV
 
@@ -93,7 +93,7 @@ As your coaching business grows, you need a central place to manage all your cli
 4. Upload the completed file
 5. Review and confirm the import
 
-> [Screenshot: CSV upload side panel with preview]
+> [Screenshot 7: CSV upload side panel with preview]
 
 ## Client Profile Sections
 

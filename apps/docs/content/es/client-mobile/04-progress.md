@@ -32,26 +32,29 @@ Dia a dia puede ser dificil ver el progreso. La pestana de Progreso te da grafic
 1. En la pestana de Progreso, navega a **Historial de Ejercicios**
 2. Busca o navega por un ejercicio especifico
 3. Toca un ejercicio para ver tu historial de rendimiento
-4. Ve graficos mostrando progresion de peso, repeticiones y volumen a lo largo del tiempo
-
-> [Captura de pantalla: Lista de historial de ejercicios con barra de busqueda]
-
-### Ver Graficos de Detalle de Ejercicios
-
-1. Despues de seleccionar un ejercicio, ves un grafico de tus mejores series
-2. Debajo del grafico hay un registro de cada vez que realizaste ese ejercicio
-3. Cada entrada muestra la fecha, series, repeticiones y pesos usados
-4. Esto te ayuda a ti y a tu entrenador a rastrear la progresion de fuerza
+4. Ves un grafico de tus mejores series con progresion de peso, repeticiones y volumen a lo largo del tiempo
+5. Debajo del grafico hay un registro de cada vez que realizaste ese ejercicio mostrando la fecha, series, repeticiones y pesos usados
+6. Esto te ayuda a ti y a tu entrenador a rastrear la progresion de fuerza
 
 > [Captura de pantalla: Pagina de detalle del ejercicio con grafico de rendimiento e historial de registros]
 
-### Comparar Progreso a lo Largo del Tiempo
+### Fotos de Progreso
 
-1. Usa los controles de rango de fechas para acercar o alejar tus datos
-2. Compara las metricas actuales con donde comenzaste
-3. Comparte tu progreso con tu entrenador a traves del chat si quieres celebrar un logro
+1. En la pestana de Progreso, navega a **Fotos de Progreso**
+2. Toca **Agregar Foto** para tomar o subir una nueva foto de progreso
+3. Las fotos se organizan por fecha para que puedas comparar lado a lado a lo largo del tiempo
+4. Tu entrenador tambien puede ver tus fotos de progreso desde su lado
 
-> [Captura de pantalla: Comparacion de progreso mostrando valores iniciales vs actuales]
+> [Captura de pantalla: Galeria de fotos de progreso mostrando fotos a lo largo del tiempo]
+
+### Habitos
+
+1. En la pestana de Progreso, navega a **Habitos**
+2. Ve los habitos que tu entrenador te ha asignado
+3. Toca un habito para marcarlo como completado para el dia
+4. Rastrea tus rachas y tasas de cumplimiento a lo largo del tiempo
+
+> [Captura de pantalla: Pantalla de seguimiento de habitos mostrando habitos diarios y estado de cumplimiento]
 
 ## Cosas a Tener en Cuenta
 

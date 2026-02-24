@@ -21,7 +21,7 @@ Cuando el AI propone una accion, muestra una **tarjeta de accion** con todos los
    - **Editar** - Modificar los detalles antes de confirmar
    - **Descartar** - Cancelar la accion por completo
 
-> [Screenshot: Action card for a generated workout showing exercises with Confirm, Edit, and Dismiss buttons]
+> [Screenshot 1: Action card for a generated workout showing exercises with Confirm, Edit, and Dismiss buttons]
 
 ### Cuando Aparecen las Tarjetas de Accion
 
@@ -44,7 +44,7 @@ Las solicitudes de solo lectura como "Muestrame las metricas de Sarah" no produc
 4. Haz clic en cualquier chat anterior para continuar donde lo dejaste
 5. Haz clic en **Nuevo** para iniciar una conversacion nueva
 
-> [Screenshot: Chat sidebar showing conversation history with titles and dates]
+> [Screenshot 2: Chat sidebar showing conversation history with titles and dates]
 
 ### Buscar Conversaciones Pasadas
 
@@ -59,7 +59,7 @@ Las solicitudes de solo lectura como "Muestrame las metricas de Sarah" no produc
 2. Haz clic en el **icono de papelera** para eliminar
 3. Las conversaciones eliminadas no se pueden recuperar
 
-> [Screenshot: Chat sidebar with trash icon visible on hover]
+> [Screenshot 3: Chat sidebar with trash icon visible on hover]
 
 ### Usar el Panel Lateral (Solo Web)
 
@@ -69,7 +69,7 @@ Las solicitudes de solo lectura como "Muestrame las metricas de Sarah" no produc
 4. Haz preguntas relacionadas con lo que esta en pantalla sin salir de tu pagina actual
 5. Los indicadores de actividad de herramientas muestran que datos esta consultando el AI en tiempo real
 
-> [Screenshot: Side panel open on the right while viewing a client training page]
+> [Screenshot 4: Side panel open on the right while viewing a client training page]
 
 ## Cosas a Tener en Cuenta
 

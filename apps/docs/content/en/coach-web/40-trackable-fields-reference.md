@@ -46,18 +46,7 @@ Different exercises require different metrics. A barbell squat needs reps and we
 4. Select the desired field. The column updates immediately.
 5. Repeat for additional columns as needed.
 
-> [Screenshot: Column header dropdown showing available trackable fields]
-
-### Customising Default Columns
-
-You can set your preferred default columns so every new exercise starts with the fields you use most:
-
-1. Navigate to **Settings > App > Customisations**.
-2. Locate the default column configuration.
-3. Select the fields you want as defaults (e.g., Reps, Kg, RPE).
-4. Save your settings. All newly added exercises will use these defaults.
-
-> [Screenshot: Settings page showing default column customisation]
+> [Screenshot 1: Column header dropdown showing available trackable fields]
 
 ## Things to Note
 
@@ -65,7 +54,6 @@ You can set your preferred default columns so every new exercise starts with the
 - The "(Optional)" modifier makes a field available but does not require the client to fill it in.
 - Setting a column to "None" hides it entirely for that exercise.
 - Different exercises in the same workout can have different column configurations.
-- Changes to default columns in Settings only affect newly added exercises, not existing ones.
 
 ## FAQs
 

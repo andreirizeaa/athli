@@ -17,7 +17,7 @@ RPE y RIR son herramientas fundamentales para el entrenamiento autorregulado. En
 3. Selecciona **RPE** o **RIR** de la lista de campos disponibles.
 4. La columna aparece para ese ejercicio.
 
-> [Screenshot: RPE column added to an exercise in the Workout Builder]
+> [Screenshot 1: RPE column added to an exercise in the Workout Builder]
 
 ### Prescribir RPE
 
@@ -42,15 +42,6 @@ RPE y RIR son herramientas fundamentales para el entrenamiento autorregulado. En
 | 6 | 4 | Podria haber hecho 4 repeticiones mas |
 | 5 | 5 | Esfuerzo moderado, varias repeticiones restantes |
 
-### Como los Clientes Registran RPE y RIR
-
-1. En la app movil, el campo de RPE o RIR aparece junto a las repeticiones y el peso para cada serie.
-2. Despues de completar una serie, el cliente ingresa el RPE o RIR real que experimento.
-3. Estos datos registrados se almacenan y estan disponibles en tu panel de coaching para revision.
-4. Comparar el RPE/RIR prescrito versus el real te ayuda a calibrar la programacion futura.
-
-> [Screenshot: Client logging RPE after completing a set in the mobile app]
-
 ### Cuando Usar RPE vs RIR
 
 - **RPE** es mejor para levantadores experimentados que han desarrollado un sentido confiable de esfuerzo a traves de diferentes rangos de repeticiones y ejercicios.
@@ -63,7 +54,7 @@ RPE y RIR son herramientas fundamentales para el entrenamiento autorregulado. En
 - Prescribir RPE/RIR funciona mejor junto con un rango de repeticiones (por ejemplo, "8-10 repeticiones a RPE 8") en lugar de repeticiones fijas.
 - Revisa los datos registrados de RPE/RIR regularmente. Si un cliente consistentemente reporta RPE 10 en series prescritas a RPE 8, la programacion puede ser demasiado agresiva.
 - Puedes usar ambas columnas de RPE y RIR en el mismo ejercicio si es necesario, aunque tipicamente una es suficiente.
-- Establece RPE o RIR como columnas predeterminadas en **Ajustes > App > Personalizaciones** si usas programacion autorregulada frecuentemente.
+
 
 ## Preguntas Frecuentes
 

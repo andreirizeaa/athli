@@ -10,21 +10,27 @@ Controlar el tempo es una de las formas mas efectivas de manipular el estimulo d
 
 ## Guia Paso a Paso
 
-### Agregar la Columna de Tempo
+### Tempo a Nivel de Ejercicio
+
+Puedes establecer un solo tempo que aplique a todas las series de un ejercicio usando el selector de tempo a nivel de ejercicio.
 
 1. Abre el Constructor de Entrenamientos y localiza el ejercicio donde quieres prescribir tempo.
-2. Haz clic en un encabezado de columna para abrir el selector de campos.
-3. Selecciona **Tempo** de la lista de campos disponibles.
-4. La columna de Tempo aparece para ese ejercicio.
+2. Encuentra el campo de **Tempo** en la tarjeta del ejercicio.
+3. Ingresa el tempo de 4 digitos usando el formato: **Excentrica-Pausa-Concentrica-Pausa** (por ejemplo, "3-1-2-0").
+4. El tempo aplica a cada serie de ese ejercicio.
 
-> [Screenshot: Tempo column added to an exercise in the Workout Builder]
+> [Screenshot 1: Selector de tempo a nivel de ejercicio en la tarjeta del ejercicio]
 
-### Ingresar Valores de Tempo
+### Columna de Tempo por Serie
 
-1. Haz clic en el campo de Tempo para una serie.
-2. Ingresa el tempo de 4 digitos usando el formato: **Excentrica-Pausa-Concentrica-Pausa**.
-3. Usa guiones o espacios para separar los digitos (por ejemplo, "3-1-2-0" o "3120").
-4. El valor se guarda y es visible para el cliente.
+Alternativamente, puedes agregar una columna de Tempo para configurar diferentes tempos por serie.
+
+1. Haz clic en un encabezado de columna para abrir el selector de campos.
+2. Selecciona **Tempo** de la lista de campos disponibles.
+3. La columna de Tempo aparece para ese ejercicio.
+4. Ingresa un valor de tempo para cada serie individual.
+
+> [Screenshot 2: Columna de Tempo agregada como campo por serie en el Constructor de Entrenamientos]
 
 ### Entender los Cuatro Digitos
 
@@ -46,16 +52,6 @@ Controlar el tempo es una de las formas mas efectivas de manipular el estimulo d
 | 1-0-X-0 | Explosivo | Desarrollo de potencia y velocidad ("X" significa lo mas rapido posible) |
 | 5-0-5-0 | Super Lento | Tiempo bajo tension, rehabilitacion |
 
-### Como los Clientes Ven el Tempo en la App Movil
-
-Cuando un cliente abre un entrenamiento con tempo prescrito:
-
-1. El valor de tempo se muestra junto a los otros datos de la serie (repeticiones, peso, etc.).
-2. Los clientes pueden consultar el tempo antes y durante cada serie.
-3. Algunos clientes usan el tempo como un conteo mental durante sus repeticiones.
-
-> [Screenshot: Client mobile app view showing tempo alongside reps and weight]
-
 ## Cosas a Tener en Cuenta
 
 - La notacion "X" se usa a veces para la fase concentrica para indicar "lo mas rapido posible" o intencion explosiva.
@@ -63,7 +59,7 @@ Cuando un cliente abre un entrenamiento con tempo prescrito:
 - Al prescribir tempo, puede que necesites reducir el peso comparado con repeticiones no controladas.
 - El tempo se prescribe mas comunmente para levantamientos compuestos y trabajo de aislamiento enfocado en hipertrofia.
 - No cada ejercicio necesita una prescripcion de tempo. Usalo estrategicamente para movimientos donde controlar la velocidad agrega valor.
-- Puedes establecer Tempo como columna predeterminada en **Ajustes > App > Personalizaciones** si lo usas frecuentemente.
+
 
 ## Preguntas Frecuentes
 

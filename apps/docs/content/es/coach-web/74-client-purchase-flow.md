@@ -17,7 +17,7 @@ Entender el flujo de compra del cliente te ayuda a optimizar tu pagina de paquet
 3. Esto muestra exactamente lo que los clientes ven cuando visitan tu pagina de paquetes
 4. Revisa el diseno, las descripciones y los precios para verificar su precision
 
-> [Screenshot: Preview Packages button on the Packages page]
+> [Screenshot 1: Preview Packages button on the Packages page]
 
 ### Compartir tu Enlace de Paquetes
 
@@ -26,7 +26,7 @@ Entender el flujo de compra del cliente te ayuda a optimizar tu pagina de paquet
 3. Puedes compartirlo por correo electronico, redes sociales, tu sitio web o mensaje directo
 4. Los clientes no necesitan una cuenta de Athli para ver la pagina de paquetes
 
-> [Screenshot: Shareable packages link with copy button]
+> [Screenshot 2: Shareable packages link with copy button]
 
 ### Lo que ve el Cliente
 
@@ -37,7 +37,7 @@ Entender el flujo de compra del cliente te ayuda a optimizar tu pagina de paquet
 5. El cliente ingresa su informacion de pago de forma segura a traves de Stripe
 6. Despues del pago exitoso, la compra se confirma
 
-> [Screenshot: Client-facing packages page showing available coaching packages]
+> [Screenshot 3: Client-facing packages page showing available coaching packages]
 
 ### Despues de la Compra
 
@@ -47,7 +47,7 @@ Entender el flujo de compra del cliente te ayuda a optimizar tu pagina de paquet
 4. Los paquetes recurrentes se facturan automaticamente en el intervalo establecido
 5. Recibes el pago a traves de Stripe segun tu calendario de pagos
 
-> [Screenshot: Activity page showing a new client purchase]
+> [Screenshot 4: Activity page showing a new client purchase]
 
 ## Cosas a Tener en Cuenta
 

@@ -21,10 +21,11 @@ La mayoria del coaching sigue una progresion estructurada. Los programas te ahor
 
 1. Ve a **Biblioteca > Entrenamiento > Programas**
 2. Haz clic en **Nuevo Programa**
-3. Ingresa el nombre del programa, descripcion, duracion (numero de semanas) y dificultad
-4. Llegas al **Constructor de Programas**
+3. Se abre un panel lateral — ingresa el nombre del programa, descripcion, duracion (numero de semanas) y dificultad
+4. Guarda para crear el programa
+5. Haz clic en el programa recien creado en la cuadricula para abrir el **Constructor de Programas**
 
-> [Screenshot: Formulario de nuevo programa con campos de nombre, descripcion y duracion]
+> [Screenshot 1: Panel lateral para crear un nuevo programa con campos de nombre, descripcion y duracion]
 
 ### Usar el Constructor de Programas
 
@@ -39,7 +40,7 @@ El constructor de programas muestra una cuadricula de calendario semanal. Cada c
 4. Haz clic en **Editar Detalles** para actualizar el nombre o descripcion del programa
 5. Haz clic en **Guardar** cuando termines
 
-> [Screenshot: Cuadricula del constructor de programas mostrando semanas y dias con tarjetas de entrenamientos]
+> [Screenshot 2: Cuadricula del constructor de programas mostrando semanas y dias con tarjetas de entrenamientos]
 
 ### Duplicar una Semana
 
@@ -48,7 +49,7 @@ El constructor de programas muestra una cuadricula de calendario semanal. Cada c
 3. La semana se duplica abajo con todos sus entrenamientos
 4. Luego puedes modificar entrenamientos individuales para sobrecarga progresiva
 
-> [Screenshot: Fila de semana con boton de copiar resaltado]
+> [Screenshot 3: Fila de semana con boton de copiar resaltado]
 
 ### Guardar un Entrenamiento en la Biblioteca
 
@@ -58,7 +59,7 @@ Si construyes un entrenamiento dentro del constructor de programas que quieres r
 2. Haz clic en **Guardar en Biblioteca**
 3. El entrenamiento ahora esta disponible en tu biblioteca de entrenamientos
 
-> [Screenshot: Tarjeta de entrenamiento con opcion de guardar en biblioteca]
+> [Screenshot 4: Tarjeta de entrenamiento con opcion de guardar en biblioteca]
 
 ### Asignar un Programa a un Cliente
 
@@ -69,7 +70,7 @@ Si construyes un entrenamiento dentro del constructor de programas que quieres r
 5. Haz clic en **Asignar**
 6. Los entrenamientos llenan el calendario del cliente automaticamente
 
-> [Screenshot: Panel lateral de asignar programa con seleccion de rango de semanas]
+> [Screenshot 5: Panel lateral de asignar programa con seleccion de rango de semanas]
 
 ### Editar el Programa de un Cliente
 

@@ -2,7 +2,7 @@
 
 ## What is this?
 
-The Chats tab lets you message your coach directly from the app. Send text, photos, videos, files, and audio messages all in one place.
+The Coach Messages card on your Home screen lets you message your coach directly from the app. Send text, photos, videos, files, and audio messages all in one place.
 
 ## Why it is useful
 
@@ -12,19 +12,17 @@ Having all your coaching communication in one app means you do not need to searc
 
 ### Opening Your Chat
 
-1. Tap the **Chats** tab at the bottom of the screen
-2. Tap your coach's conversation
+1. On the **Home** tab, tap the **Coach Messages** card
+2. Your conversation with your coach opens
 3. You see your full message history
 
-> [Screenshot: Client chats tab showing conversation with coach]
+> [Screenshot 1: Chat conversation with coach showing messages and input field]
 
 ### Sending a Message
 
 1. Type your message in the input field at the bottom
 2. Tap **Send**
 3. Your coach receives a notification
-
-> [Screenshot: Chat conversation with message input field]
 
 ### Sending Photos and Files
 
@@ -36,15 +34,11 @@ Having all your coaching communication in one app means you do not need to searc
 3. Add an optional caption
 4. Tap **Send**
 
-> [Screenshot: Attachment options showing camera, photo library, and files]
-
 ### Sending Audio Messages
 
 1. Tap and hold the **microphone** icon
 2. Record your message
 3. Release to send
-
-> [Screenshot: Audio message recording indicator]
 
 ### Reacting to Messages
 
@@ -52,15 +46,11 @@ Having all your coaching communication in one app means you do not need to searc
 2. Select an emoji reaction
 3. The reaction appears on the message
 
-> [Screenshot: Message with reaction emoji options]
-
 ### Viewing Shared Media
 
 1. In a conversation, you can scroll back through shared photos, videos, and files
 2. Tap any media to view it full screen
 3. Download files to your device if needed
-
-> [Screenshot: Shared media viewer in chat]
 
 ## Things to Note
 

@@ -174,7 +174,15 @@ export const collections: Collection[] = [
         titleKey: 'sections.questionnaires',
         articles: [
           { slug: 'questionnaires', titleKey: 'articles.questionnaires.title', descriptionKey: 'articles.questionnaires.description' },
-          { slug: 'questionnaires-for-onboarding', titleKey: 'articles.questionnairesForOnboarding.title', descriptionKey: 'articles.questionnairesForOnboarding.description' },
+        ],
+      },
+      {
+        titleKey: 'sections.formBuilderMobile',
+        articles: [
+          { slug: 'check-in-builder-mobile', titleKey: 'articles.checkInBuilderMobile.title', descriptionKey: 'articles.checkInBuilderMobile.description' },
+          { slug: 'questionnaire-builder-mobile', titleKey: 'articles.questionnaireBuilderMobile.title', descriptionKey: 'articles.questionnaireBuilderMobile.description' },
+          { slug: 'assigning-forms-mobile', titleKey: 'articles.assigningFormsMobile.title', descriptionKey: 'articles.assigningFormsMobile.description' },
+          { slug: 'reviewing-check-ins-mobile', titleKey: 'articles.reviewingCheckInsMobile.title', descriptionKey: 'articles.reviewingCheckInsMobile.description' },
         ],
       },
     ],
@@ -493,7 +501,12 @@ export const articleFiles: Record<string, string> = {
 
   // Forms > Questionnaires
   'questionnaires': 'coach-web/07-questionnaires.md',
-  'questionnaires-for-onboarding': 'coach-web/63-questionnaires-for-onboarding.md',
+
+  // Forms > Form Builder (Mobile)
+  'check-in-builder-mobile': 'coach-mobile/01-check-in-builder-mobile.md',
+  'questionnaire-builder-mobile': 'coach-mobile/02-questionnaire-builder-mobile.md',
+  'assigning-forms-mobile': 'coach-mobile/03-assigning-forms-mobile.md',
+  'reviewing-check-ins-mobile': 'coach-mobile/04-reviewing-check-ins-mobile.md',
 
   // Tracking > Habits
   'habits': 'coach-web/08-habits.md',
@@ -602,6 +615,21 @@ export function getAllArticles(): { slug: string; titleKey: string; descriptionK
 // Helper to find collection by slug
 export function getCollectionBySlug(slug: string): Collection | undefined {
   return collections.find((c) => c.slug === slug);
+}
+
+// Helper to find the next article in the same collection
+export function findNextArticle(articleSlug: string): Article | undefined {
+  for (const collection of collections) {
+    const allArticles: Article[] = [
+      ...(collection.articles ?? []),
+      ...(collection.sections?.flatMap((s) => s.articles) ?? []),
+    ];
+    const index = allArticles.findIndex((a) => a.slug === articleSlug);
+    if (index !== -1 && index < allArticles.length - 1) {
+      return allArticles[index + 1];
+    }
+  }
+  return undefined;
 }
 
 // Helper to find article and its collection

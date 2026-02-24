@@ -13,8 +13,6 @@ La pestana Chats en la aplicacion movil de coach te permite enviar mensajes a tu
 3. Los mensajes no leidos muestran un indicador de insignia
 4. Toca una conversacion para abrirla
 
-> [Captura de pantalla: Lista de chats movil con conversaciones e insignias de no leidos]
-
 ### Enviar Mensajes
 
 1. Abre una conversacion
@@ -32,15 +30,11 @@ La pestana Chats en la aplicacion movil de coach te permite enviar mensajes a tu
 4. Agrega un titulo opcional
 5. Toca **Enviar**
 
-> [Captura de pantalla: Hoja de opciones de adjuntos movil]
-
 ### Ver Conversaciones Archivadas
 
 1. En la lista de Chats, toca **Archivados**
 2. Ve conversaciones previamente archivadas
 3. Toca para desarchivar y continuar chateando
-
-> [Captura de pantalla: Pantalla de conversaciones archivadas movil]
 
 ## Cosas a Tener en Cuenta
 

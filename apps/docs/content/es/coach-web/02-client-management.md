@@ -25,7 +25,7 @@ A medida que tu negocio de coaching crece, necesitas un lugar central para gesti
 3. Cada tarjeta de cliente muestra su nombre, foto de perfil, categoria y estado
 4. Usa la barra de busqueda en la parte superior para encontrar clientes especificos
 
-> [Screenshot: Pagina de atletas con lista de clientes y barra de busqueda]
+> [Screenshot 1: Pagina de atletas con lista de clientes y barra de busqueda]
 
 ### Agregar un Nuevo Cliente
 
@@ -35,7 +35,7 @@ A medida que tu negocio de coaching crece, necesitas un lugar central para gesti
 4. Haz clic en **Enviar Invitacion**
 5. El cliente recibe una invitacion por email para unirse
 
-> [Screenshot: Panel lateral de agregar cliente con formulario]
+> [Screenshot 2: Panel lateral de agregar cliente con formulario]
 
 ### Ver el Perfil de un Cliente
 
@@ -54,7 +54,7 @@ A medida que tu negocio de coaching crece, necesitas un lugar central para gesti
    - **Notas** - Notas privadas de coaching
    - **Configuracion** - Configuracion especifica del cliente
 
-> [Screenshot: Pagina de resumen del cliente con pestanas de navegacion]
+> [Screenshot 3: Pagina de resumen del cliente con pestanas de navegacion]
 
 ### Editar Detalles del Cliente
 
@@ -63,7 +63,7 @@ A medida que tu negocio de coaching crece, necesitas un lugar central para gesti
 3. Actualiza su nombre, email, foto de perfil, categoria o zona horaria
 4. Haz clic en **Guardar**
 
-> [Screenshot: Panel lateral de edicion de detalles del cliente]
+> [Screenshot 4: Panel lateral de edicion de detalles del cliente]
 
 ### Archivar un Cliente
 
@@ -73,7 +73,7 @@ A medida que tu negocio de coaching crece, necesitas un lugar central para gesti
 4. Confirma la accion
 5. El cliente ya no aparecera en tu lista activa y perdera acceso a la app
 
-> [Screenshot: Pagina de configuracion del cliente con opcion de archivar]
+> [Screenshot 5: Pagina de configuracion del cliente con opcion de archivar]
 
 ### Restaurar Clientes Archivados
 
@@ -83,7 +83,7 @@ A medida que tu negocio de coaching crece, necesitas un lugar central para gesti
 4. Haz clic en **Restaurar**
 5. Recuperan acceso a la app inmediatamente
 
-> [Screenshot: Panel lateral de restaurar clientes]
+> [Screenshot 6: Panel lateral de restaurar clientes]
 
 ### Subir Clientes via CSV
 
@@ -93,7 +93,7 @@ A medida que tu negocio de coaching crece, necesitas un lugar central para gesti
 4. Sube el archivo completado
 5. Revisa y confirma la importacion
 
-> [Screenshot: Panel lateral de subida CSV con vista previa]
+> [Screenshot 7: Panel lateral de subida CSV con vista previa]
 
 ## Secciones del Perfil del Cliente
 

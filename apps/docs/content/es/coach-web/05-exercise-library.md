@@ -19,12 +19,13 @@ Tener una base de datos completa de ejercicios significa que pasas menos tiempo 
 
 ### Navegar Ejercicios
 
-1. Ve a **Biblioteca > Entrenamiento > Ejercicios**
-2. Navega la lista completa o usa la barra de busqueda para encontrar ejercicios especificos
-3. Filtra por grupo muscular, equipo o categoria
-4. Haz clic en cualquier ejercicio para ver sus detalles y video de demostracion
+Para explorar la lista completa de ejercicios, abre el **Constructor de Entrenamientos** y usa el panel izquierdo. El panel izquierdo muestra la biblioteca completa de ejercicios con opciones de busqueda y filtrado.
 
-> [Screenshot: Pagina de biblioteca de ejercicios con barra de busqueda y opciones de filtro]
+1. Abre el **Constructor de Entrenamientos** desde un entrenamiento o programa.
+2. Usa el panel izquierdo para explorar, buscar o filtrar ejercicios por grupo muscular o equipamiento.
+3. Haz clic en cualquier ejercicio para ver sus detalles y video de demostracion.
+
+> [Screenshot 1: Panel izquierdo del Constructor de Entrenamientos mostrando la biblioteca completa de ejercicios con filtros]
 
 ### Crear un Ejercicio Personalizado
 
@@ -34,7 +35,7 @@ Tener una base de datos completa de ejercicios significa que pasas menos tiempo 
 4. Opcionalmente sube un video o imagen personalizada
 5. Haz clic en **Guardar**
 
-> [Screenshot: Formulario de agregar ejercicio con campos]
+> [Screenshot 2: Formulario de agregar ejercicio con campos]
 
 ### Duplicar Ejercicios
 
@@ -42,7 +43,7 @@ Tener una base de datos completa de ejercicios significa que pasas menos tiempo 
 2. Haz clic en **Duplicar Seleccionados**
 3. Las copias aparecen en tu biblioteca listas para editar
 
-> [Screenshot: Lista de ejercicios con casillas de verificacion y boton de duplicar]
+> [Screenshot 3: Lista de ejercicios con casillas de verificacion y boton de duplicar]
 
 ## Cosas a Tener en Cuenta
 

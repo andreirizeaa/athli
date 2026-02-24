@@ -27,7 +27,7 @@ En lugar de hacer clic en multiples paginas para crear un entrenamiento, buscar 
 | "Agregar una lesion para Sarah: Distension de rodilla izquierda" | Registra una lesion para ajustes de entrenamiento |
 | "Actualizar la categoria de Jake a Hibrido" | Modifica detalles del perfil del cliente |
 
-> [Screenshot: IA encontrando clientes inactivos con resultados mostrando nombres de clientes y dias desde ultima actividad]
+> [Screenshot 1: IA encontrando clientes inactivos con resultados mostrando nombres de clientes y dias desde ultima actividad]
 
 ### Entrenamiento y Ejercicios
 
@@ -43,7 +43,7 @@ En lugar de hacer clic en multiples paginas para crear un entrenamiento, buscar 
 | "Buscar ejercicios de isquiotibiales con mancuernas" | Encuentra ejercicios que coincidan con tus criterios |
 | "Explorar el catalogo de ejercicios para ejercicios de espalda" | Muestra ejercicios disponibles por grupo muscular |
 
-> [Screenshot: IA generando un entrenamiento con tarjetas de ejercicios mostrando series, repeticiones y tiempos de descanso]
+> [Screenshot 2: IA generando un entrenamiento con tarjetas de ejercicios mostrando series, repeticiones y tiempos de descanso]
 
 ### Progreso y Analisis
 
@@ -56,7 +56,7 @@ En lugar de hacer clic en multiples paginas para crear un entrenamiento, buscar 
 | "Analizar el progreso de Sarah del ultimo mes" | Analisis integral de progreso en entrenamientos, metricas y habitos |
 | "Generar un grafico del peso corporal de Jake" | Crea un grafico visual de datos de metricas |
 
-> [Screenshot: IA mostrando un analisis de progreso con resumen de metricas e indicadores de tendencia]
+> [Screenshot 3: IA mostrando un analisis de progreso con resumen de metricas e indicadores de tendencia]
 
 ### Comunicacion
 
@@ -66,7 +66,7 @@ En lugar de hacer clic en multiples paginas para crear un entrenamiento, buscar 
 | "Escribir un recordatorio de check-in para Jake" | Redacta un mensaje de recordatorio amigable |
 | "Enviar un mensaje de aliento a Sarah por lograr su PR" | Crea un mensaje motivacional basado en contexto |
 
-> [Screenshot: IA mostrando una tarjeta de mensaje borrador con opciones de editar y enviar]
+> [Screenshot 4: IA mostrando una tarjeta de mensaje borrador con opciones de editar y enviar]
 
 ### Biblioteca y Plantillas
 
@@ -78,7 +78,7 @@ En lugar de hacer clic en multiples paginas para crear un entrenamiento, buscar 
 | "Crear una nueva metrica para seguimiento de circunferencia de cintura" | Configura una nueva metrica con unidades |
 | "Asignar la metrica Peso Corporal a Jake" | Vincula una metrica a un cliente para seguimiento |
 
-> [Screenshot: IA creando una plantilla de check-in con preguntas sugeridas]
+> [Screenshot 5: IA creando una plantilla de check-in con preguntas sugeridas]
 
 ## Guia Paso a Paso
 
@@ -89,7 +89,7 @@ En lugar de hacer clic en multiples paginas para crear un entrenamiento, buscar 
 3. Escribe tu pregunta o solicitud y presiona Enter
 4. La IA procesa tu solicitud y responde
 
-> [Screenshot: Pagina de asistente vacia con tarjetas de resumen de capacidades]
+> [Screenshot 6: Pagina de asistente vacia con tarjetas de resumen de capacidades]
 
 ### Entender las Tarjetas de Accion
 
@@ -109,7 +109,7 @@ Las tarjetas de accion aparecen para:
 - Agregar objetivos y lesiones
 - Asignar metricas a clientes
 
-> [Screenshot: Tarjeta de accion para un entrenamiento generado mostrando ejercicios con botones de confirmar y editar]
+> [Screenshot 7: Tarjeta de accion para un entrenamiento generado mostrando ejercicios con botones de confirmar y editar]
 
 ### Historial de Chat
 
@@ -120,7 +120,7 @@ Las tarjetas de accion aparecen para:
 5. Usa la barra de busqueda para encontrar chats especificos por titulo
 6. Elimina chats que ya no necesites con el icono de papelera
 
-> [Screenshot: Barra lateral de chat mostrando historial de conversaciones con titulos y fechas]
+> [Screenshot 8: Barra lateral de chat mostrando historial de conversaciones con titulos y fechas]
 
 ### Usar el Panel Lateral (Solo Web)
 
@@ -130,7 +130,7 @@ Las tarjetas de accion aparecen para:
 4. Haz preguntas relacionadas con lo que esta en pantalla
 5. Esto es util para preguntas rapidas sin salir de tu pagina actual
 
-> [Screenshot: Panel lateral de asistente abierto mientras se ve la pagina de entrenamiento de un cliente]
+> [Screenshot 9: Panel lateral de asistente abierto mientras se ve la pagina de entrenamiento de un cliente]
 
 ### Ver Actividad de Herramientas
 
@@ -140,7 +140,7 @@ Cuando la IA esta trabajando en tu solicitud, puedes ver lo que esta haciendo:
 2. Por ejemplo: "Buscando clientes...", "Obteniendo datos de entrenamiento...", "Analizando metricas..."
 3. Esta transparencia te ayuda a entender como la IA llega a su respuesta
 
-> [Screenshot: IA procesando con indicadores de llamadas de herramientas mostrando datos siendo obtenidos]
+> [Screenshot 10: IA procesando con indicadores de llamadas de herramientas mostrando datos siendo obtenidos]
 
 ## Ejemplos de Conversaciones
 

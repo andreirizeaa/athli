@@ -21,7 +21,7 @@ Tabata es un protocolo de intervalos de alta intensidad que lleva el nombre del 
 3. Selecciona **Tabata** como tipo de seccion.
 4. Dale un nombre a la seccion (ej., "Finalizador Tabata" o "Tabata de Core").
 
-> [Screenshot: section type selector with Tabata highlighted]
+> [Screenshot 1: section type selector with Tabata highlighted]
 
 ### Configuracion por Defecto
 
@@ -34,7 +34,7 @@ Cuando seleccionas Tabata, se aplican los siguientes valores por defecto:
 | Rondas | 8 |
 | **Tiempo Total** | **4 minutos** |
 
-> [Screenshot: Tabata section header showing work, rest, and round fields with default values]
+> [Screenshot 2: Tabata section header showing work, rest, and round fields with default values]
 
 ### Personalizar el Tabata
 
@@ -53,7 +53,7 @@ El tiempo total se actualiza automaticamente segun tus cambios.
 3. Si agregas un solo ejercicio, el cliente lo realiza durante las 8 rondas.
 4. Si agregas multiples ejercicios, el cliente alterna entre ellos a lo largo de las rondas.
 
-> [Screenshot: Tabata section with two exercises alternating across 8 rounds]
+> [Screenshot 3: Tabata section with two exercises alternating across 8 rounds]
 
 ### Como los Clientes Ejecutan un Tabata
 

@@ -20,7 +20,7 @@ Pidele al AI que genere entrenamientos completos:
 
 El AI genera un entrenamiento y lo muestra en una **tarjeta de accion** para tu revision.
 
-> [Screenshot: AI-generated workout action card with exercises, sets, reps, and rest times]
+> [Screenshot 1: AI-generated workout action card with exercises, sets, reps, and rest times]
 
 ### Construir Secciones
 
@@ -32,7 +32,7 @@ Pidele al AI que cree secciones estructuradas de entrenamiento:
 
 Las secciones son bloques reutilizables que puedes agregar a multiples entrenamientos.
 
-> [Screenshot: Action card showing a superset section with paired exercises]
+> [Screenshot 2: Action card showing a superset section with paired exercises]
 
 ### Explorar tu Biblioteca
 
@@ -42,7 +42,7 @@ Pidele al AI que muestre elementos de tu biblioteca guardada:
 - **"Muestrame mis programas"** - Lista tus programas de entrenamiento
 - **"Muestrame mis secciones guardadas"** - Lista tus plantillas de secciones
 
-> [Screenshot: AI listing saved workouts from the library]
+> [Screenshot 3: AI listing saved workouts from the library]
 
 ### Buscar Ejercicios
 
@@ -61,7 +61,7 @@ Pidele al AI que asigne entrenamiento directamente:
 
 El AI muestra una tarjeta de accion con los detalles de la asignacion para tu confirmacion.
 
-> [Screenshot: Action card confirming workout assignment to a client on a specific date]
+> [Screenshot 4: Action card confirming workout assignment to a client on a specific date]
 
 ## Cosas a Tener en Cuenta
 

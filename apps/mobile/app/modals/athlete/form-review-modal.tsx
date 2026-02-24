@@ -14,13 +14,14 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import axiosInstance from '@/lib/axios';
 
-import { useThemePreference, useTranslations, useClientDetailStore } from '@/stores';
+import { useThemePreference, useTranslations, useClientDetailStore, useCoachProfileStore, useAuth } from '@/stores';
 import { IconButton } from '@/components/ui/icon-button';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { Card } from '@/components/ui/card';
+import { Avatar } from '@/components/ui/avatar';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { typography } from '@/constants/typography';
-import { getQuestionnaireMediaUrl, getClientQuestionnaire, getClientCheckInSubmission, type Question, type QuestionAnswer } from '@/services/client/client-form-service';
+import { getQuestionnaireMediaUrl, getClientQuestionnaire, getClientCheckInSubmission, getCheckInLogDetail, type Question, type QuestionAnswer, type CheckInLogDetailResult } from '@/services/client/client-form-service';
 
 type QuestionWithId = Question & { id: string };
 
@@ -46,32 +47,57 @@ export default function FormReviewModal() {
   const { colors: themeColors, primaryColor } = useThemePreference();
   const { t } = useTranslations();
 
-  const { questionnaireId, questionnaireName, questionsJson, answersJson, clientId, formType, completedAt: completedAtParam } = useLocalSearchParams<{
+  const { questionnaireId, questionnaireName, questionsJson, answersJson, clientId, coachId: coachIdParam, formType, logId, completedAt: completedAtParam, coachComment: coachCommentParam } = useLocalSearchParams<{
     questionnaireId: string;
     questionnaireName: string;
     questionsJson?: string;
     answersJson?: string;
     clientId?: string;
+    coachId?: string;
     formType?: 'questionnaire' | 'checkIn';
+    logId?: string;
     completedAt?: string;
+    coachComment?: string;
   }>();
 
-  const coachId = useClientDetailStore((state) => state.coachId);
+  const storeCoachId = useClientDetailStore((state) => state.coachId);
+  const { clientProfile } = useAuth();
+  const coachId = coachIdParam || storeCoachId || clientProfile?.coach_id;
+  const coachProfile = useCoachProfileStore((state) => state.profile);
+  const loadCoachProfile = useCoachProfileStore((state) => state.loadProfile);
+
+  // Load coach profile for avatar if not already loaded (needed for athlete flow)
+  useEffect(() => {
+    if (coachId && !coachProfile) {
+      loadCoachProfile(coachId);
+    }
+  }, [coachId, coachProfile, loadCoachProfile]);
 
   // Fetch data via react-query when opened from coach side (no questionsJson provided)
   const needsFetch = !questionsJson && !!clientId && !!coachId;
-  const fetchFn = formType === 'checkIn' ? getClientCheckInSubmission : getClientQuestionnaire;
+  const fetchFn = formType === 'checkIn'
+    ? (logId
+      ? () => getCheckInLogDetail(clientId!, questionnaireId, logId, coachId!)
+      : () => getClientCheckInSubmission(clientId!, questionnaireId, coachId!))
+    : () => getClientQuestionnaire(clientId!, questionnaireId, coachId!);
   const { data: fetchedDetail, isLoading: isLoadingData } = useQuery({
-    queryKey: ['client-form-detail', formType || 'questionnaire', clientId, questionnaireId, coachId],
-    queryFn: () => fetchFn(clientId!, questionnaireId, coachId!),
+    queryKey: ['client-form-detail', formType || 'questionnaire', clientId, questionnaireId, logId, coachId],
+    queryFn: fetchFn,
     enabled: needsFetch,
   });
 
   const questions: QuestionWithId[] = useMemo(() => {
+    let raw: any[] = [];
     if (questionsJson) {
-      try { return JSON.parse(questionsJson); } catch { return []; }
+      try { raw = JSON.parse(questionsJson); } catch { return []; }
+    } else {
+      raw = fetchedDetail?.questions || [];
     }
-    return (fetchedDetail?.questions || []) as QuestionWithId[];
+    // Ensure every question has an id - generate one from index if missing
+    return raw.map((q: any, index: number) => ({
+      ...q,
+      id: q.id || `q-${index}`,
+    }));
   }, [questionsJson, fetchedDetail]);
 
   const answers: QuestionAnswerWithFormat[] = useMemo(() => {
@@ -87,14 +113,44 @@ export default function FormReviewModal() {
     return undefined;
   }, [fetchedDetail, completedAtParam]);
 
+  const coachComment = useMemo(() => {
+    if (formType === 'checkIn' && fetchedDetail && 'coachComment' in fetchedDetail) {
+      return (fetchedDetail as CheckInLogDetailResult).coachComment || null;
+    }
+    if (coachCommentParam) return coachCommentParam;
+    return null;
+  }, [fetchedDetail, formType, coachCommentParam]);
+
   // Create a map of answers by questionId for easy lookup
+  // Supports keyed answers (questionId) and positional answers (index-based)
   const answersMap = useMemo(() => {
     const map: Record<string, any> = {};
-    answers.forEach((a) => {
-      map[a.questionId] = a.answer;
+    if (!Array.isArray(answers)) return map;
+
+    // First pass: map by questionId
+    answers.forEach((a: any, index: number) => {
+      const key = a.questionId || a.question_id;
+      const value = a.answer ?? a.value;
+      if (key) {
+        map[key] = value;
+      } else if (questions[index]) {
+        // Positional fallback: use question ID at same index
+        map[questions[index].id] = value;
+      }
     });
+
+    // Safety: if no keyed answers matched any questions, fall back to pure positional mapping
+    const hasAnyMatch = questions.some(q => q.id in map);
+    if (!hasAnyMatch && answers.length > 0 && questions.length > 0) {
+      answers.forEach((a: any, index: number) => {
+        if (questions[index]) {
+          map[questions[index].id] = a.answer ?? a.value;
+        }
+      });
+    }
+
     return map;
-  }, [answers]);
+  }, [answers, questions]);
 
   // Media URL cache
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
@@ -108,6 +164,13 @@ export default function FormReviewModal() {
   // PDF download state
   const isCoachSide = !!clientId && !!coachId;
   const [isDownloading, setIsDownloading] = useState(false);
+
+  const logStatus = useMemo(() => {
+    if (fetchedDetail && 'status' in fetchedDetail) return fetchedDetail.status;
+    return undefined;
+  }, [fetchedDetail]);
+
+  const canReview = isCoachSide && formType === 'checkIn' && logId && logStatus === 'review';
 
   // Helper to check if path is valid (not a placeholder)
   const isValidPath = (path: string): boolean => {
@@ -158,6 +221,7 @@ export default function FormReviewModal() {
 
   // Fetch all media URLs on mount
   useEffect(() => {
+    if (!answers || !Array.isArray(answers)) return;
     answers.forEach((answer) => {
       if (!answer.answer) return;
 
@@ -206,7 +270,7 @@ export default function FormReviewModal() {
     setIsDownloading(true);
     try {
       const endpoint = formType === 'checkIn'
-        ? `/client/forms/check-ins/${questionnaireId}/pdf`
+        ? `/client/forms/check-ins/${questionnaireId}/pdf${logId ? `?submissionId=${logId}` : ''}`
         : `/client/forms/questionnaires/${questionnaireId}/pdf`;
 
       const response = await axiosInstance.get(endpoint, {
@@ -227,6 +291,19 @@ export default function FormReviewModal() {
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  const handleOpenReviewModal = () => {
+    router.push({
+      pathname: '/modals/client/review-checkin-modal',
+      params: {
+        checkInId: questionnaireId,
+        logId: logId!,
+        clientId: clientId!,
+        coachId: coachId!,
+        checkInName: questionnaireName || '',
+      },
+    } as any);
   };
 
   const openMediaViewer = (url: string, type: 'image' | 'video') => {
@@ -330,7 +407,7 @@ export default function FormReviewModal() {
         );
 
       case 'yesNo':
-        const yesNoLabel = answer === 'yes' ? t('athlete.questionnaires.response.yes') : t('athlete.questionnaires.response.no');
+        const yesNoLabel = (answer === true || answer === 'yes' || answer === 'Yes') ? t('athlete.questionnaires.response.yes') : t('athlete.questionnaires.response.no');
         return (
           <View style={[styles.answerPill, { backgroundColor: primaryColor + '20', borderColor: primaryColor }]}>
             <Text style={[styles.answerPillText, { color: primaryColor }]}>
@@ -615,10 +692,53 @@ export default function FormReviewModal() {
               <Text style={[styles.completedTimeText, { color: themeColors.mutedText }]}>
                 {completedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
               </Text>
+              {coachComment && (
+                <>
+                  <View style={[styles.coachCommentDivider, { backgroundColor: themeColors.border }]} />
+                  <View style={styles.coachCommentRow}>
+                    <View style={styles.coachAvatarContainer}>
+                      <Avatar
+                        uri={coachProfile?.profile_picture_url || undefined}
+                        size={40}
+                        borderRadius={20}
+                        fallback={
+                          <View style={[styles.coachAvatarFallback, { backgroundColor: primaryColor + '20' }]}>
+                            <Text style={[styles.coachAvatarInitial, { color: primaryColor }]}>
+                              {coachProfile?.name?.charAt(0)?.toUpperCase() || 'C'}
+                            </Text>
+                          </View>
+                        }
+                      />
+                    </View>
+                    <View style={styles.coachCommentContent}>
+                      <Text style={[styles.coachCommentLabel, { color: themeColors.mutedText }]}>
+                        {t('checkIns.coachComment')}
+                      </Text>
+                      <Text style={[styles.coachCommentText, { color: themeColors.text }]}>
+                        {coachComment}
+                      </Text>
+                    </View>
+                  </View>
+                </>
+              )}
+              {canReview && (
+                <>
+                  <View style={[styles.coachCommentDivider, { backgroundColor: themeColors.border }]} />
+                  <TouchableOpacity
+                    style={[styles.reviewButton, { backgroundColor: primaryColor }]}
+                    onPress={handleOpenReviewModal}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.reviewButtonText, { color: themeColors.primaryForeground }]}>
+                      {t('clientDetail.checkIns.markAsReviewed')}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </Card>
           )}
           {questions.map((question, index) => (
-            <Card key={question.id} style={styles.questionCard}>
+            <Card key={question.id || `q-${index}`} style={styles.questionCard}>
               <View style={[styles.questionNumber, { backgroundColor: primaryColor }]}>
                 <Text style={[styles.questionNumberText, { color: themeColors.primaryForeground }]}>
                   {index + 1}
@@ -634,6 +754,7 @@ export default function FormReviewModal() {
               </View>
             </Card>
           ))}
+
         </ScrollView>
       )}
 
@@ -718,6 +839,44 @@ const styles = StyleSheet.create({
   },
   completedTimeText: {
     ...typography.p3,
+  },
+  coachCommentDivider: {
+    height: 1,
+    alignSelf: 'stretch',
+    marginTop: 16,
+    marginBottom: 16,
+    marginHorizontal: -16,
+  },
+  coachCommentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    alignSelf: 'stretch',
+  },
+  coachAvatarContainer: {
+    marginRight: 12,
+  },
+  coachAvatarFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coachAvatarInitial: {
+    ...typography.p1,
+    fontWeight: '600',
+  },
+  coachCommentContent: {
+    flex: 1,
+  },
+  coachCommentLabel: {
+    ...typography.p4,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  coachCommentText: {
+    ...typography.p2,
+    lineHeight: 20,
   },
   questionCard: {
     flexDirection: 'row',
@@ -844,6 +1003,18 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...typography.h4,
+  },
+  // Review button inside date card
+  reviewButton: {
+    alignSelf: 'stretch',
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewButtonText: {
+    ...typography.p1,
+    fontWeight: '600',
   },
   // Media Viewer Styles
   mediaViewerContainer: {

@@ -73,8 +73,8 @@ export default function VerifyEmailPage() {
             console.error('Failed to seed demo data:', seedError);
             // Don't block verification if seeding fails
           }
-          console.log('[Verify Email] Redirecting to get-started');
-          window.location.href = '/get-started';
+          console.log('[Verify Email] Redirecting to welcome/onboarding');
+          window.location.href = '/welcome';
           return;
         }
 

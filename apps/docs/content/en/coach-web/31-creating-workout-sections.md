@@ -19,7 +19,7 @@ Most real-world workouts combine different training styles. A session might star
 5. The new section appears in the workout as an empty container.
 6. Add exercises to the section by using the **Add Exercise** button within the section, or drag existing exercises into it.
 
-> [Screenshot: Section type selection dropdown showing available formats]
+> [Screenshot 1: Section type selection dropdown showing available formats]
 
 ### Configuring Section Settings
 
@@ -33,7 +33,7 @@ Each section type has unique configuration options:
 - **Circuit**: Set the number of rounds and optional rest between rounds. Exercises are performed sequentially for the prescribed rounds.
 - **Drop Set**: Exercises with progressively decreasing weight within a single set sequence.
 
-> [Screenshot: EMOM section configuration showing interval and total time settings]
+> [Screenshot 2: EMOM section configuration showing interval and total time settings]
 
 ### Moving Exercises Between Sections
 

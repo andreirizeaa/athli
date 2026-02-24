@@ -25,7 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronRight, Plus, GripVertical, Download, Loader2, GitCompare, ChevronDown, Edit, Play, Pause, Send } from 'lucide-react';
+import { ChevronRight, Plus, GripVertical, Download, Loader2, ChevronDown, Edit, Play, Pause, Send } from 'lucide-react';
 import { PageTabs } from '@/components/page-tabs';
 import {
   getClientCheckInById,
@@ -40,9 +40,10 @@ import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { FormBuilder, type Question } from '@/components/forms/form-builder';
 import { CheckInReviewContent } from '@/components/forms/check-in-review-content';
 import { EditClientCheckInFormSidePanel } from '@/components/forms/edit-client-check-in-form-side-panel';
+import { CheckInCompareContent } from '@/components/forms/check-in-compare-content';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
-type TabType = 'builder' | 'submissions';
+type TabType = 'builder' | 'submissions' | 'compare';
 
 const ClientCheckInDetailPage = () => {
   const t = useTranslations();
@@ -98,7 +99,7 @@ const ClientCheckInDetailPage = () => {
 
     setInstancesLoading(true);
     try {
-      const data = await getClientCheckInsForForm(clientId, checkInId);
+      const data = await getClientCheckInsForForm(clientId, checkInId, user!.id);
       setInstances(data);
       // Auto-select the first instance if none selected
       if (data.length > 0 && !selectedInstanceId) {
@@ -121,11 +122,11 @@ const ClientCheckInDetailPage = () => {
     if (activeTab === 'submissions') {
       fetchInstances();
     }
-  }, [activeTab, clientId, checkInId]);
+  }, [activeTab, clientId, checkInId, user?.id]);
 
   // Sorted instances (newest first)
   const sortedInstances = useMemo(() => {
-    return [...instances].sort((a, b) => b.scheduledDate.getTime() - a.scheduledDate.getTime());
+    return [...instances].sort((a, b) => (b.completedAt || b.scheduledDate).getTime() - (a.completedAt || a.scheduledDate).getTime());
   }, [instances]);
 
   const completedInstances = instances.filter((i) => i.status !== 'assigned');
@@ -189,7 +190,7 @@ const ClientCheckInDetailPage = () => {
 
     setIsDownloading(true);
     try {
-      const instanceDetail = await getCheckInInstance(clientId, checkInId, downloadInstanceId);
+      const instanceDetail = await getCheckInInstance(clientId, checkInId, downloadInstanceId, user!.id);
       const { downloadQuestionnaire } = await import('@/lib/general/pdf-service');
 
       await downloadQuestionnaire({
@@ -206,6 +207,9 @@ const ClientCheckInDetailPage = () => {
         clientName: 'Client',
         clientId,
         coachId: user!.id,
+        formType: 'check-in',
+        checkInId,
+        submissionId: downloadInstanceId,
       });
     } catch (error) {
       console.error('Failed to download check-in:', error);
@@ -217,13 +221,9 @@ const ClientCheckInDetailPage = () => {
   const handleDownloadLatest = () => {
     if (completedInstances.length === 0) return;
     const latestInstance = completedInstances.sort(
-      (a, b) => b.scheduledDate.getTime() - a.scheduledDate.getTime()
+      (a, b) => (b.completedAt || b.scheduledDate).getTime() - (a.completedAt || a.scheduledDate).getTime()
     )[0];
     handleDownload(latestInstance.id);
-  };
-
-  const handleCompare = () => {
-    router.push(`/athletes/${clientId}/check-in/${checkInId}/compare`);
   };
 
   // Builder handlers
@@ -463,7 +463,7 @@ const ClientCheckInDetailPage = () => {
           </Breadcrumb>
         </div>
         {/* Action buttons - positioned at top right */}
-        <div className="absolute top-2 right-4 flex items-center gap-2">
+        <div className="absolute top-2 right-4 flex items-center gap-2 z-10">
           {activeTab === 'builder' && (
             <ButtonGroup className="flex-shrink-0">
               {/* Status action button - only show if there are questions */}
@@ -519,48 +519,38 @@ const ClientCheckInDetailPage = () => {
               </Button>
             </ButtonGroup>
           )}
-          {activeTab === 'submissions' && completedInstances.length > 0 && (
-            <div className="inline-flex rounded-md shadow-sm" role="group">
-              <Button
-                variant="outline"
-                onClick={handleCompare}
-                className="gap-2 rounded-r-none border-r-0"
-              >
-                <GitCompare className="size-4" />
-                <span>{t('common.compare')}</span>
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button disabled={isDownloading} className="gap-2 min-w-[120px] rounded-l-none">
-                    {isDownloading ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Download className="size-4" />
-                        <span>{t('common.download')}</span>
-                        <ChevronDown className="size-4 ml-1" />
-                      </>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onClick={handleDownloadLatest}>
-                    <span className="font-medium">Latest</span>
-                  </DropdownMenuItem>
-                  {completedInstances.length > 0 && <DropdownMenuSeparator />}
-                  {completedInstances
-                    .sort((a, b) => b.scheduledDate.getTime() - a.scheduledDate.getTime())
-                    .map((instance) => (
-                      <DropdownMenuItem
-                        key={instance.id}
-                        onClick={() => handleDownload(instance.id)}
-                      >
-                        {formatScheduledDate(instance.scheduledDate)}
-                      </DropdownMenuItem>
-                    ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+          {completedInstances.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button disabled={isDownloading} className="gap-2 min-w-[120px]">
+                  {isDownloading ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Download className="size-4" />
+                      <span>{t('common.download')}</span>
+                      <ChevronDown className="size-4 ml-1" />
+                    </>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={handleDownloadLatest}>
+                  <span className="font-medium">Latest</span>
+                </DropdownMenuItem>
+                {completedInstances.length > 0 && <DropdownMenuSeparator />}
+                {completedInstances
+                  .sort((a, b) => (b.completedAt || b.scheduledDate).getTime() - (a.completedAt || a.scheduledDate).getTime())
+                  .map((instance) => (
+                    <DropdownMenuItem
+                      key={instance.id}
+                      onClick={() => handleDownload(instance.id)}
+                    >
+                      {formatScheduledDate(instance.completedAt || instance.scheduledDate)}
+                    </DropdownMenuItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
         {/* Tabs */}
@@ -569,6 +559,7 @@ const ClientCheckInDetailPage = () => {
             tabs={[
               { value: 'builder', label: currentForm?.name || '' },
               { value: 'submissions', label: t('forms.detail.tabs.submissions') },
+              { value: 'compare', label: t('common.compare') },
             ]}
             value={activeTab}
             onValueChange={(value) => setActiveTab(value as TabType)}
@@ -637,7 +628,7 @@ const ClientCheckInDetailPage = () => {
                           )}
                         >
                           <div className="flex flex-col gap-1 min-w-0 flex-1">
-                            <span className="text-sm font-medium">{formatScheduledDate(instance.scheduledDate)}</span>
+                            <span className="text-sm font-medium">{formatScheduledDate(instance.completedAt || instance.scheduledDate)}</span>
                             <span className="text-xs text-muted-foreground">
                               {getStatusLabel(instance.status)}
                             </span>
@@ -668,6 +659,7 @@ const ClientCheckInDetailPage = () => {
                       clientId={clientId}
                       checkInId={checkInId}
                       instanceId={selectedInstanceId}
+                      coachId={user!.id}
                     />
                   </div>
                 </div>
@@ -678,6 +670,16 @@ const ClientCheckInDetailPage = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {activeTab === 'compare' && (
+        <div className="flex-1 min-h-0 overflow-auto border-t">
+          <CheckInCompareContent
+            clientId={clientId}
+            checkInId={checkInId}
+            coachId={user!.id}
+          />
         </div>
       )}
 

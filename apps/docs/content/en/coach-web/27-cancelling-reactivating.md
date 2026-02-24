@@ -13,7 +13,7 @@ This guide explains how to cancel your Athli subscription, what happens when you
 3. A confirmation dialog will appear explaining what happens next.
 4. Confirm the cancellation.
 
-> [Screenshot: cancel subscription confirmation dialog]
+> [Screenshot 1: cancel subscription confirmation dialog]
 
 ### What Happens When You Cancel
 
@@ -40,7 +40,7 @@ If you cancelled but your billing period has not ended yet, you can undo the can
 4. Your subscription continues as normal, and the cancellation is undone.
 5. Billing resumes on the regular schedule.
 
-> [Screenshot: billing page showing reactivate option for a subscription scheduled for cancellation]
+> [Screenshot 2: billing page showing reactivate option for a subscription scheduled for cancellation]
 
 ### Resubscribing After Cancellation
 
@@ -76,7 +76,7 @@ Account deletion is separate from subscription cancellation:
 
 **Warning:** Account deletion is permanent. Make sure you have exported any data you need before proceeding.
 
-> [Screenshot: danger zone page showing cancel subscription and delete account sections]
+> [Screenshot 3: danger zone page showing cancel subscription and delete account sections]
 
 ## Timeline Summary
 

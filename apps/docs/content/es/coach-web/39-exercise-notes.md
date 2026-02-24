@@ -18,17 +18,7 @@ El entrenamiento es mas que solo numeros. Los clientes a menudo necesitan record
 4. La nota se guarda como parte de la configuracion del ejercicio dentro del entrenamiento.
 5. No hay un limite estricto de caracteres, pero manten las notas concisas y accionables para mejores resultados.
 
-> [Screenshot: Notes field below an exercise's set rows with sample text]
-
-### Ver Notas en la App Movil
-
-Cuando un cliente abre el entrenamiento en la app movil:
-
-1. Las notas del ejercicio aparecen directamente con el ejercicio, tipicamente debajo del nombre del ejercicio o en una seccion expandible.
-2. El cliente puede leer las notas antes de comenzar el ejercicio.
-3. Las notas permanecen visibles durante todo el proceso de registro de series para facil referencia.
-
-> [Screenshot: Client view in mobile app showing exercise notes]
+> [Screenshot 1: Notes field below an exercise's set rows with sample text]
 
 ### Casos de Uso Comunes para Notas de Ejercicios
 
