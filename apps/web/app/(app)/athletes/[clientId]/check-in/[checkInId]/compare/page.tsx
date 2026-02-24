@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getClientCheckInsForForm, getCheckInInstance, type CheckInInstance } from '@/api/client/client-form-service';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import type { Question, QuestionAnswer } from '@/api/client/client-form-service';
 import { cn } from '@/lib/general/utils';
 import Image from 'next/image';
@@ -45,6 +46,7 @@ const ComparePage = () => {
   const params = useParams<{ clientId: string; checkInId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
   const checkInId = Array.isArray(params.checkInId) ? params.checkInId[0] : params.checkInId;
+  const { user } = useUserProfile();
 
   const [instances, setInstances] = useState<CheckInInstance[]>([]);
   const [leftInstance, setLeftInstance] = useState<CheckInInstance | null>(null);
@@ -85,10 +87,10 @@ const ComparePage = () => {
 
       setIsLoading(true);
       try {
-        const data = await getClientCheckInsForForm(clientId, checkInId);
+        const data = await getClientCheckInsForForm(clientId, checkInId, user!.id);
         const completedInstances = data
           .filter((i) => i.status !== 'assigned')
-          .sort((a, b) => a.scheduledDate.getTime() - b.scheduledDate.getTime());
+          .sort((a, b) => (a.completedAt || a.scheduledDate).getTime() - (b.completedAt || b.scheduledDate).getTime());
         setInstances(completedInstances);
 
         // Set default selections (first two instances)
@@ -117,7 +119,7 @@ const ComparePage = () => {
       }
 
       try {
-        const instanceDetail = await getCheckInInstance(clientId, checkInId, instanceId);
+        const instanceDetail = await getCheckInInstance(clientId, checkInId, instanceId, user!.id);
         setInstance(instanceDetail);
       } catch (error) {
         console.error('Failed to fetch instance:', error);
@@ -342,7 +344,7 @@ const ComparePage = () => {
                     .filter((i) => i.id !== rightInstanceId)
                     .map((instance) => (
                       <SelectItem key={instance.id} value={instance.id}>
-                        {formatScheduledDate(instance.scheduledDate)}
+                        {formatScheduledDate(instance.completedAt || instance.scheduledDate)}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -360,7 +362,7 @@ const ComparePage = () => {
                 )}
                 {leftInstance.questions?.map((question, index) => (
                   <div
-                    key={question.id}
+                    key={question.id || `q-${index}`}
                     className={cn('py-4 px-4', index < (leftInstance.questions?.length || 0) - 1 && 'border-b')}
                   >
                     <div className="flex items-start gap-2">
@@ -396,7 +398,7 @@ const ComparePage = () => {
                     .filter((i) => i.id !== leftInstanceId)
                     .map((instance) => (
                       <SelectItem key={instance.id} value={instance.id}>
-                        {formatScheduledDate(instance.scheduledDate)}
+                        {formatScheduledDate(instance.completedAt || instance.scheduledDate)}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -414,7 +416,7 @@ const ComparePage = () => {
                 )}
                 {rightInstance.questions?.map((question, index) => (
                   <div
-                    key={question.id}
+                    key={question.id || `q-${index}`}
                     className={cn('py-4 px-4', index < (rightInstance.questions?.length || 0) - 1 && 'border-b')}
                   >
                     <div className="flex items-start gap-2">

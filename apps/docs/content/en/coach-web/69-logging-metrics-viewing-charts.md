@@ -20,7 +20,7 @@ A single number in isolation does not mean much. But when you plot body weight r
 6. The date defaults to today but you can change it to log a past value
 7. Click **Save**
 
-> [Screenshot: Log a Metric form with metric selection, value input, and date picker]
+> [Screenshot 1: Log a Metric form with metric selection, value input, and date picker]
 
 ### Viewing the Metric Chart
 
@@ -30,7 +30,7 @@ A single number in isolation does not mean much. But when you plot body weight r
 4. Hover over data points to see the exact value and date
 5. The chart auto-scales to fit the data range
 
-> [Screenshot: Metric chart showing body weight trend over several weeks]
+> [Screenshot 2: Metric chart showing body weight trend over several weeks]
 
 ### Reading the History Table
 
@@ -40,7 +40,7 @@ Below the chart, you see a history table listing every logged entry:
 - Entries are sorted by date with the most recent at the top
 - Click any entry to edit or delete it
 
-> [Screenshot: Metric history table below the chart]
+> [Screenshot 3: Metric history table below the chart]
 
 ### Editing a Log Entry
 
@@ -71,8 +71,6 @@ Clients can also log metric values directly from their mobile app:
 2. They select the metric and enter the value
 3. The log is saved and visible to both the client and the coach
 4. As the coach, you see client-logged entries alongside your own entries
-
-> [Screenshot: Client mobile view logging a metric value]
 
 ## Things to Note
 

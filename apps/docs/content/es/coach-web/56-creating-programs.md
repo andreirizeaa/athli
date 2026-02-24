@@ -20,14 +20,15 @@ Un programa de entrenamiento en Athli es un plan estructurado de multiples seman
 2. Selecciona la pestana **Entrenamiento**.
 3. Haz clic en **Programas**.
 4. Haz clic en **Nuevo Programa**.
-5. Completa los detalles del programa:
+5. Se abre un panel lateral — completa los detalles del programa:
    - **Nombre** - Un nombre descriptivo (ej., "Fuerza para Principiantes 12 Semanas").
    - **Descripcion** - Resumen opcional de los objetivos y estructura del programa.
    - **Duracion** - Numero de semanas que abarca el programa.
    - **Dificultad** - El nivel de dificultad previsto.
-6. Haz clic en **Crear** para abrir el constructor de programas.
+6. Guarda para crear el programa.
+7. Haz clic en el programa recien creado en la cuadricula para abrir el constructor de programas.
 
-> [Screenshot: new program form with name, description, duration, and difficulty fields]
+> [Screenshot 1: panel lateral para crear un nuevo programa con campos de nombre, descripcion, duracion y dificultad]
 
 ### Entender la Cuadricula del Constructor de Programas
 
@@ -38,7 +39,7 @@ El constructor de programas muestra una cuadricula de calendario semanal:
 - Cada **celda** es un espacio de dia donde puedes agregar un entrenamiento.
 - Las celdas vacias representan dias de descanso.
 
-> [Screenshot: program builder grid showing weeks as rows and days as columns with some workout cards placed]
+> [Screenshot 2: program builder grid showing weeks as rows and days as columns with some workout cards placed]
 
 ### Agregar Entrenamientos a los Dias
 
@@ -47,7 +48,7 @@ Haz clic en cualquier celda de dia en la cuadricula para agregar un entrenamient
 1. **Crear un nuevo entrenamiento** - Construye un entrenamiento desde cero directamente en la celda usando el constructor de entrenamientos.
 2. **Agregar desde la biblioteca** - Selecciona un entrenamiento existente de tu biblioteca de entrenamientos guardados.
 
-> [Screenshot: day cell clicked showing options to create new workout or add from library]
+> [Screenshot 3: day cell clicked showing options to create new workout or add from library]
 
 ### Arrastrar y Soltar
 
@@ -64,7 +65,7 @@ Esto facilita reestructurar tu programa sin eliminar y recrear entrenamientos.
 - **Insertar Semana** - Haz clic en el boton de insertar semana para agregar una fila de semana en blanco en la posicion deseada.
 - **Duplicar Semana** - Pasa el cursor sobre una fila de semana y haz clic en el icono de copiar. Todos los entrenamientos de esa semana se duplican en una nueva fila debajo. Esta es la forma mas rapida de construir sobrecarga progresiva: duplica una semana y luego ajusta los pesos o repeticiones hacia arriba.
 
-> [Screenshot: week row with insert and duplicate buttons visible]
+> [Screenshot 4: week row with insert and duplicate buttons visible]
 
 ### Editar Detalles del Programa
 
@@ -82,7 +83,7 @@ Si construyes un entrenamiento dentro del programa que quieres reutilizar en otr
 2. Haz clic en **Guardar en Biblioteca**.
 3. El entrenamiento ahora esta disponible en tu biblioteca de entrenamientos para usar en otros programas o entrenamiento de clientes.
 
-> [Screenshot: workout card context menu with Save to Library option]
+> [Screenshot 5: workout card context menu with Save to Library option]
 
 ## Cosas a Tener en Cuenta
 

@@ -20,7 +20,7 @@ Un solo numero aislado no significa mucho. Pero cuando graficas lecturas de peso
 6. La fecha se establece por defecto en hoy pero puedes cambiarla para registrar un valor pasado
 7. Haz clic en **Guardar**
 
-> [Screenshot: Log a Metric form with metric selection, value input, and date picker]
+> [Screenshot 1: Log a Metric form with metric selection, value input, and date picker]
 
 ### Ver el Grafico de la Metrica
 
@@ -30,7 +30,7 @@ Un solo numero aislado no significa mucho. Pero cuando graficas lecturas de peso
 4. Pasa el cursor sobre los puntos de datos para ver el valor exacto y la fecha
 5. El grafico se auto-escala para ajustarse al rango de datos
 
-> [Screenshot: Metric chart showing body weight trend over several weeks]
+> [Screenshot 2: Metric chart showing body weight trend over several weeks]
 
 ### Leer la Tabla de Historial
 
@@ -40,7 +40,7 @@ Debajo del grafico, ves una tabla de historial que lista cada entrada registrada
 - Las entradas estan ordenadas por fecha con la mas reciente arriba
 - Haz clic en cualquier entrada para editarla o eliminarla
 
-> [Screenshot: Metric history table below the chart]
+> [Screenshot 3: Metric history table below the chart]
 
 ### Editar una Entrada de Registro
 
@@ -71,8 +71,6 @@ Los clientes tambien pueden registrar valores de metricas directamente desde su 
 2. Seleccionan la metrica e ingresan el valor
 3. El registro se guarda y es visible tanto para el cliente como para el entrenador
 4. Como entrenador, ves las entradas registradas por el cliente junto a las tuyas
-
-> [Screenshot: Client mobile view logging a metric value]
 
 ## Cosas a Tener en Cuenta
 

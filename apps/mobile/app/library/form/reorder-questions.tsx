@@ -313,7 +313,7 @@ export default function ReorderQuestionsScreen() {
             color={themeColors.text}
           />
           <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
-            {t('formBuilder.reorderQuestions')}
+            {t('library.formBuilder.reorderQuestions')}
           </Text>
           <IconButton
             icon={{ sf: 'checkmark', IconComponent: Check }}

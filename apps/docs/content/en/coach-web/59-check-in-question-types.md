@@ -21,7 +21,7 @@ Different questions call for different answer formats. Asking "How are you feeli
 | **Multiple Choice** | Select from predefined options | Categorized responses (e.g., "How was your sleep? Great / Good / Fair / Poor") |
 | **Scale** | Slider-based input | Nuanced responses across a range (e.g., stress level from 0 to 100) |
 
-> [Screenshot: Check-in builder showing the question type dropdown]
+> [Screenshot 1: Check-in builder showing the question type dropdown]
 
 ### Adding Questions to a Check-in
 
@@ -34,7 +34,7 @@ Different questions call for different answer formats. Asking "How are you feeli
 7. Toggle **Required** if the client must answer this question
 8. Click **Save**
 
-> [Screenshot: Adding a multiple choice question with predefined options]
+> [Screenshot 2: Adding a multiple choice question with predefined options]
 
 ### Choosing the Right Type
 
@@ -52,7 +52,7 @@ Different questions call for different answer formats. Asking "How are you feeli
 3. Required questions must be answered before the client can submit
 4. Optional questions can be left blank
 
-> [Screenshot: Required toggle on a check-in question]
+> [Screenshot 3: Required toggle on a check-in question]
 
 ## Things to Note
 

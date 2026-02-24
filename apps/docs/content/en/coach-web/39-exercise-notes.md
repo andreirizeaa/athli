@@ -18,17 +18,7 @@ Training is more than just numbers. Clients often need cueing reminders, tempo d
 4. The note is saved as part of the exercise configuration within the workout.
 5. There is no strict character limit, but keep notes concise and actionable for best results.
 
-> [Screenshot: Notes field below an exercise's set rows with sample text]
-
-### Viewing Notes in the Mobile App
-
-When a client opens the workout in the mobile app:
-
-1. The exercise notes appear directly with the exercise, typically below the exercise name or in an expandable section.
-2. The client can read the notes before starting the exercise.
-3. Notes remain visible throughout the set logging process for easy reference.
-
-> [Screenshot: Client view in mobile app showing exercise notes]
+> [Screenshot 1: Notes field below an exercise's set rows with sample text]
 
 ### Common Use Cases for Exercise Notes
 

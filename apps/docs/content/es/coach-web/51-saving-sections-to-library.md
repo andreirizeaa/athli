@@ -20,12 +20,13 @@ La biblioteca de secciones es donde almacenas secciones de entrenamiento reutili
 2. Selecciona la pestana **Entrenamiento**.
 3. Haz clic en **Secciones**.
 4. Haz clic en **Agregar Seccion**.
-5. Ingresa un nombre, selecciona el tipo de seccion (Regular, AMRAP, Tabata, HIIT, EMOM o Circuito).
-6. Agrega ejercicios y configura series, repeticiones, peso o tiempos segun sea necesario.
-7. Agrega etiquetas opcionales para organizacion (ej., "calentamiento", "finalizador", "piernas", "tren superior").
-8. Haz clic en **Guardar**.
+5. Se abre un panel lateral — ingresa un nombre, selecciona el tipo de seccion (Regular, AMRAP, Tabata, HIIT, EMOM o Circuito) y agrega etiquetas opcionales para organizacion (ej., "calentamiento", "finalizador", "piernas", "tren superior").
+6. Guarda para crear la seccion.
+7. Haz clic en la seccion recien creada en la cuadricula para abrir el constructor de secciones.
+8. Agrega ejercicios y configura series, repeticiones, peso o tiempos segun sea necesario.
+9. Guarda la seccion.
 
-> [Screenshot: section library page with the Add Section button and list of saved sections]
+> [Screenshot 1: section library page with the Add Section button and list of saved sections]
 
 ### Guardar una Seccion desde un Entrenamiento
 
@@ -37,7 +38,7 @@ Si construyes una seccion dentro del constructor de entrenamientos que quieres r
 4. Haz clic en **Guardar**.
 5. La seccion ahora esta disponible en tu biblioteca para uso futuro.
 
-> [Screenshot: section menu inside workout builder with Save to Library option]
+> [Screenshot 2: section menu inside workout builder with Save to Library option]
 
 ### Usar Secciones Guardadas en Entrenamientos
 
@@ -48,7 +49,7 @@ Si construyes una seccion dentro del constructor de entrenamientos que quieres r
 5. La seccion, incluyendo todos los ejercicios y configuracion, se inserta en el entrenamiento.
 6. Puedes personalizar la seccion agregada para el entrenamiento especifico sin afectar la version de la biblioteca.
 
-> [Screenshot: Add Section panel showing library sections with search and type filter]
+> [Screenshot 3: Add Section panel showing library sections with search and type filter]
 
 ### Gestionar tu Biblioteca de Secciones
 
@@ -60,7 +61,7 @@ Desde la pagina **Biblioteca > Entrenamiento > Secciones**, puedes:
 - **Duplicar** una seccion para crear una variacion sin modificar la original.
 - **Eliminar** secciones que ya no necesitas. La eliminacion masiva esta soportada para limpiar multiples secciones a la vez.
 
-> [Screenshot: sections list with search bar, type filter, and bulk action buttons]
+> [Screenshot 4: sections list with search bar, type filter, and bulk action buttons]
 
 ## Cosas a Tener en Cuenta
 

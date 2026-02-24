@@ -22,7 +22,7 @@ Packages let you professionally present your coaching services with clear pricin
    - **Duration** for recurring packages (monthly, quarterly, annually, etc.)
 4. Click **Save**
 
-> [Screenshot: Create package form with name, description, price, and billing type fields]
+> [Screenshot 1: Create package form with name, description, price, and billing type fields]
 
 ### Setting Up Different Tiers
 
@@ -34,7 +34,7 @@ You can create multiple packages to offer different service levels:
 
 Each tier can have its own price, description, and linked automation.
 
-> [Screenshot: Packages list showing multiple tiers with different prices]
+> [Screenshot 2: Packages list showing multiple tiers with different prices]
 
 ### Linking a Sequence to a Package
 

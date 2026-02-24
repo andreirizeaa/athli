@@ -23,7 +23,7 @@ As your client roster grows, you cannot manually follow up with every client for
 2. You see a list of available automation flows
 3. Each flow shows its trigger event, actions, and active/inactive status
 
-> [Screenshot: Flows page with list of automation flows]
+> [Screenshot 1: Flows page with list of automation flows]
 
 ### Activating a Flow
 
@@ -31,7 +31,7 @@ As your client roster grows, you cannot manually follow up with every client for
 2. Click the **toggle** to activate it
 3. The flow starts running immediately for future events
 
-> [Screenshot: Flow card with active toggle]
+> [Screenshot 2: Flow card with active toggle]
 
 ### Viewing Flow Details
 
@@ -39,7 +39,7 @@ As your client roster grows, you cannot manually follow up with every client for
 2. You can see the trigger condition, actions, and history of executions
 3. Review recent activity to make sure it is working as expected
 
-> [Screenshot: Flow detail page with trigger and action configuration]
+> [Screenshot 3: Flow detail page with trigger and action configuration]
 
 ### Requesting a New Flow
 
@@ -49,7 +49,7 @@ If you need an automation that does not exist yet:
 2. Describe what you need
 3. The Athli team will review your request
 
-> [Screenshot: Request new flow button]
+> [Screenshot 4: Request new flow button]
 
 ## Available Flow Types
 

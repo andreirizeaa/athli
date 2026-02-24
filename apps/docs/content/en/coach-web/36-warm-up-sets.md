@@ -19,7 +19,7 @@ Proper warm-ups reduce injury risk and improve performance during working sets. 
 5. The set row changes appearance (e.g., different colour, "W" label, or lighter styling) to visually distinguish it from working sets.
 6. Configure the reps and weight for the warm-up set. Typically, warm-up sets use lighter loads and may have different rep counts.
 
-> [Screenshot: A set row marked as a warm-up set with distinct visual styling]
+> [Screenshot 1: A set row marked as a warm-up set with distinct visual styling]
 
 ### Adding Multiple Warm-Up Sets
 
@@ -38,7 +38,7 @@ A common warm-up progression for a heavy compound lift might look like:
 | 5 | Working | 5 | 100 kg |
 | 6 | Working | 5 | 100 kg |
 
-> [Screenshot: Exercise with warm-up sets and working sets clearly separated]
+> [Screenshot 2: Exercise with warm-up sets and working sets clearly separated]
 
 ### How Clients See Warm-Up Sets
 

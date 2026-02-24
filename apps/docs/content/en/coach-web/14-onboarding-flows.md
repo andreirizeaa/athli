@@ -30,7 +30,7 @@ First impressions matter. A smooth onboarding experience makes clients feel take
 5. Set the timing for each step (immediately, after X days, after previous step)
 6. Click **Save and Activate**
 
-> [Screenshot: Onboarding builder with step sequence]
+> [Screenshot 1: Onboarding builder with step sequence]
 
 ### Assigning an Onboarding Flow to New Clients
 
@@ -38,15 +38,7 @@ First impressions matter. A smooth onboarding experience makes clients feel take
 2. Alternatively, you can set a default onboarding in your settings
 3. The flow starts automatically when the client creates their account
 
-> [Screenshot: Add client form with onboarding flow selection]
-
-### Monitoring Onboarding Progress
-
-1. Go to the **Onboarding** page
-2. You see all active onboarding processes
-3. Each shows the client name, current step, and completion status
-
-> [Screenshot: Onboarding page with active processes and progress indicators]
+> [Screenshot 2: Add client form with onboarding flow selection]
 
 ## Things to Note
 

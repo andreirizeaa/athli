@@ -3156,6 +3156,7 @@ export const esMessages = {
         activated: 'Paquete activado',
         deactivated: 'Paquete desactivado',
         stripeRequired: 'Conecta Stripe antes de activar paquetes',
+        linkCopied: 'Enlace de pago copiado al portapapeles',
       },
     },
     coupons: {

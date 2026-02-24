@@ -27,7 +27,7 @@ Instead of clicking through multiple pages to build a workout, look up a client'
 | "Add an injury for Sarah: Left knee strain" | Records an injury for training adjustments |
 | "Update Jake's category to Hybrid" | Modifies client profile details |
 
-> [Screenshot: AI finding inactive clients with results showing client names and days since last activity]
+> [Screenshot 1: AI finding inactive clients with results showing client names and days since last activity]
 
 ### Training and Workouts
 
@@ -43,7 +43,7 @@ Instead of clicking through multiple pages to build a workout, look up a client'
 | "Search for hamstring exercises with dumbbells" | Finds exercises matching your criteria |
 | "Browse the exercise catalog for back exercises" | Shows available exercises by muscle group |
 
-> [Screenshot: AI generating a workout with exercise cards showing sets, reps, and rest times]
+> [Screenshot 2: AI generating a workout with exercise cards showing sets, reps, and rest times]
 
 ### Progress and Analytics
 
@@ -56,7 +56,7 @@ Instead of clicking through multiple pages to build a workout, look up a client'
 | "Analyze Sarah's progress over the last month" | Comprehensive progress analysis across workouts, metrics, and habits |
 | "Generate a chart of Jake's body weight" | Creates a visual chart of metric data |
 
-> [Screenshot: AI showing a progress analysis with metrics summary and trend indicators]
+> [Screenshot 3: AI showing a progress analysis with metrics summary and trend indicators]
 
 ### Communication
 
@@ -66,7 +66,7 @@ Instead of clicking through multiple pages to build a workout, look up a client'
 | "Write a check-in reminder for Jake" | Drafts a friendly reminder message |
 | "Send an encouraging message to Sarah about hitting her PR" | Creates a motivational message based on context |
 
-> [Screenshot: AI showing a draft message card with edit and send options]
+> [Screenshot 4: AI showing a draft message card with edit and send options]
 
 ### Library and Templates
 
@@ -78,7 +78,7 @@ Instead of clicking through multiple pages to build a workout, look up a client'
 | "Create a new metric for tracking waist circumference" | Sets up a new metric with units |
 | "Assign the Body Weight metric to Jake" | Links a metric to a client for tracking |
 
-> [Screenshot: AI creating a check-in template with suggested questions]
+> [Screenshot 5: AI creating a check-in template with suggested questions]
 
 ## Step-by-Step Guide
 
@@ -89,7 +89,7 @@ Instead of clicking through multiple pages to build a workout, look up a client'
 3. Type your question or request and press Enter
 4. The AI processes your request and responds
 
-> [Screenshot: Empty assistant page with capability overview cards]
+> [Screenshot 6: Empty assistant page with capability overview cards]
 
 ### Understanding Action Cards
 
@@ -109,7 +109,7 @@ Action cards appear for:
 - Adding goals and injuries
 - Assigning metrics to clients
 
-> [Screenshot: Action card for a generated workout showing exercises with confirm and edit buttons]
+> [Screenshot 7: Action card for a generated workout showing exercises with confirm and edit buttons]
 
 ### Chat History
 
@@ -120,7 +120,7 @@ Action cards appear for:
 5. Use the search bar to find specific chats by title
 6. Delete chats you no longer need with the trash icon
 
-> [Screenshot: Chat sidebar showing conversation history with titles and dates]
+> [Screenshot 8: Chat sidebar showing conversation history with titles and dates]
 
 ### Using the Side Panel (Web Only)
 
@@ -130,7 +130,7 @@ Action cards appear for:
 4. Ask questions related to what is on screen
 5. This is useful for quick questions without leaving your current page
 
-> [Screenshot: Side panel assistant open while viewing a client's training page]
+> [Screenshot 9: Side panel assistant open while viewing a client's training page]
 
 ### Viewing Tool Activity
 
@@ -140,7 +140,7 @@ When the AI is working on your request, you can see what it is doing:
 2. For example: "Searching clients...", "Fetching workout data...", "Analyzing metrics..."
 3. This transparency helps you understand how the AI arrives at its answer
 
-> [Screenshot: AI processing with tool call indicators showing data being fetched]
+> [Screenshot 10: AI processing with tool call indicators showing data being fetched]
 
 ## Example Conversations
 

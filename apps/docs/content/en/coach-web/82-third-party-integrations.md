@@ -23,8 +23,6 @@ Understanding how your data is handled builds trust and helps you make informed 
 - Provides additional cloud services used by the platform
 - Supports specific platform features and processing tasks
 
-> [Screenshot: Overview diagram of Athli infrastructure and data flow]
-
 ### Payment Processing
 
 **Stripe**
@@ -34,8 +32,6 @@ Understanding how your data is handled builds trust and helps you make informed 
 - Athli does not store, see, or have access to credit card information
 - Stripe is PCI-DSS compliant, meeting the highest standard for payment data security
 - Manage payouts, refunds, and disputes directly through your Stripe Dashboard
-
-> [Screenshot: Stripe checkout page during a client purchase]
 
 ### Analytics
 

@@ -17,7 +17,7 @@ Un tablero de retroalimentacion integrado donde los entrenadores pueden proponer
 
 1. Haz clic en **Solicitudes de Funciones** en la barra lateral (o navega a la pagina de Funciones).
 
-> [Screenshot: feature requests page showing list of requests with vote counts]
+> [Screenshot 1: feature requests page showing list of requests with vote counts]
 
 ## Enviar una Solicitud de Funcion
 
@@ -26,7 +26,7 @@ Un tablero de retroalimentacion integrado donde los entrenadores pueden proponer
 3. Agrega una descripcion detallada explicando la funcion y por que seria util.
 4. Enviar.
 
-> [Screenshot: add feature request dialog with title and description fields]
+> [Screenshot 2: add feature request dialog with title and description fields]
 
 ## Votar por Solicitudes
 
@@ -34,7 +34,7 @@ Un tablero de retroalimentacion integrado donde los entrenadores pueden proponer
 - Haz clic de nuevo para quitar tu voto.
 - Las solicitudes se pueden ordenar por popularidad para ver las ideas mas votadas.
 
-> [Screenshot: feature request card with upvote button and vote count]
+> [Screenshot 3: feature request card with upvote button and vote count]
 
 ## Ver y Responder
 
@@ -43,7 +43,7 @@ Un tablero de retroalimentacion integrado donde los entrenadores pueden proponer
 3. Haz clic en **Responder** para agregar tus pensamientos o sugerencias.
 4. Puedes ordenar las respuestas por mas recientes o mas antiguas.
 
-> [Screenshot: feature request detail view with replies]
+> [Screenshot 4: feature request detail view with replies]
 
 ## Ordenar y Buscar
 

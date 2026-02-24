@@ -57,7 +57,7 @@ Each plan comes with a base number of clients included. If you need more, you ca
 - Extra clients are billed per client, per month
 - Max plan offers lower per-client pricing than Pro
 
-> [Screenshot: pricing page showing client slider with "I want to coach" selector]
+> [Screenshot 1: pricing page showing client slider with "I want to coach" selector]
 
 ## Monthly vs Annual Billing
 
@@ -68,7 +68,7 @@ You can choose to pay monthly or annually:
 
 Toggle between Monthly and Annual at the top of the pricing page to compare costs.
 
-> [Screenshot: pricing page showing monthly/annual toggle]
+> [Screenshot 2: pricing page showing monthly/annual toggle]
 
 ## Add-ons
 
@@ -85,7 +85,7 @@ Collect payments from clients via Stripe. Includes packages and subscription man
 
 Each add-on is billed separately and can be added or removed at any time from the billing page.
 
-> [Screenshot: add-ons section on pricing page showing Automations, AI Assistant, and Payments]
+> [Screenshot 3: add-ons section on pricing page showing Automations, AI Assistant, and Payments]
 
 ## Free Trial
 
@@ -103,7 +103,7 @@ To see a detailed feature-by-feature comparison:
 2. Scroll down to **Compare Plans in Detail**
 3. Review every feature and which plans include it
 
-> [Screenshot: plan comparison table showing features across Starter, Pro, and Max]
+> [Screenshot 4: plan comparison table showing features across Starter, Pro, and Max]
 
 ## FAQs
 

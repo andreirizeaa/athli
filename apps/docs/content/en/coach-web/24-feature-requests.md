@@ -17,7 +17,7 @@ A built-in feedback board where coaches can propose new features, upvote ideas t
 
 1. Click **Feature Requests** in the sidebar (or navigate to the Features page).
 
-> [Screenshot: feature requests page showing list of requests with vote counts]
+> [Screenshot 1: feature requests page showing list of requests with vote counts]
 
 ## Submitting a Feature Request
 
@@ -26,7 +26,7 @@ A built-in feedback board where coaches can propose new features, upvote ideas t
 3. Add a detailed description explaining the feature and why it would be useful.
 4. Submit.
 
-> [Screenshot: add feature request dialog with title and description fields]
+> [Screenshot 2: add feature request dialog with title and description fields]
 
 ## Voting on Requests
 
@@ -34,7 +34,7 @@ A built-in feedback board where coaches can propose new features, upvote ideas t
 - Click it again to remove your vote.
 - Requests can be sorted by popularity to see the most-voted ideas.
 
-> [Screenshot: feature request card with upvote button and vote count]
+> [Screenshot 3: feature request card with upvote button and vote count]
 
 ## Viewing and Replying
 
@@ -43,7 +43,7 @@ A built-in feedback board where coaches can propose new features, upvote ideas t
 3. Click **Reply** to add your thoughts or suggestions.
 4. You can sort replies by newest or oldest.
 
-> [Screenshot: feature request detail view with replies]
+> [Screenshot 4: feature request detail view with replies]
 
 ## Sorting and Searching
 

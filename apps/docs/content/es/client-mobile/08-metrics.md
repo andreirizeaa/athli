@@ -16,8 +16,6 @@ Los numeros no mienten. Rastrear metricas te da a ti y a tu entrenador una vista
 2. Veras una lista de todas las metricas que tu entrenador ha asignado
 3. Cada metrica muestra el ultimo valor y cuando fue registrado por ultima vez
 
-> [Captura de pantalla: Lista de metricas mostrando metricas asignadas con ultimos valores]
-
 ### Registrar un Valor de Metrica
 
 1. Toca la metrica que quieres registrar (ej., Peso Corporal)
@@ -26,8 +24,6 @@ Los numeros no mienten. Rastrear metricas te da a ti y a tu entrenador una vista
 4. Toca **Guardar**
 5. El nuevo valor aparece en tu grafico inmediatamente
 
-> [Captura de pantalla: Pantalla de registro de metrica con entrada de valor y boton de guardar]
-
 ### Ver Tus Graficos de Metricas
 
 1. Toca cualquier metrica para ver su grafico
@@ -35,7 +31,7 @@ Los numeros no mienten. Rastrear metricas te da a ti y a tu entrenador una vista
 3. Toca puntos individuales para ver valores exactos y fechas
 4. Usa el rango de tiempo para acercar periodos especificos
 
-> [Captura de pantalla: Grafico de metrica mostrando tendencia de peso corporal con puntos de datos]
+> [Captura de pantalla: Pagina de progreso de metrica mostrando grafico con linea de tendencia y puntos de datos]
 
 ### Registrar Multiples Metricas
 
@@ -44,8 +40,6 @@ Si tu entrenador ha asignado varias metricas, puedes registrarlas una tras otra:
 1. Registra la primera metrica y guarda
 2. Vuelve a la lista y toca la siguiente
 3. Repite hasta que todas esten registradas
-
-> [Captura de pantalla: Lista de metricas con algunas mostrando indicadores de "registrado hoy"]
 
 ## Cosas a Tener en Cuenta
 

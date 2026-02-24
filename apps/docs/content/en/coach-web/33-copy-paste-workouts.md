@@ -10,40 +10,24 @@ Many coaches use similar workout templates across clients, adjusting only the we
 
 ## Step-by-Step Guide
 
-### Duplicating a Workout
+### Duplicating a Workout from the Training Grid
 
-1. Navigate to your workout list or the programme view where the workout is located.
-2. Click the **three-dot menu** (or context menu) on the workout card.
-3. Select **Duplicate** from the dropdown menu.
-4. A copy of the workout is created with all exercises, sets, reps, weights, and section configurations intact.
+1. Navigate to **Library > Training > Workouts** to open the training grid.
+2. Select one or more workouts using the checkboxes.
+3. Click the **Duplicate** button that appears in the bulk actions bar.
+4. A copy of each selected workout is created with all exercises, sets, reps, weights, and section configurations intact.
 5. Open the duplicated workout and make any necessary adjustments (e.g., changing weights or exercise substitutions).
 
-> [Screenshot: Three-dot menu on a workout card showing the Duplicate option]
+> [Screenshot 1: Training grid with workout checkboxes selected and the Duplicate bulk action button]
 
-### Saving a Workout to Your Library
+### Saving a Workout to Your Library from a Client's Calendar
 
-1. Open the workout you want to save.
-2. Click the **Save to Library** option (available in the workout menu or toolbar).
-3. Give the workout a descriptive name and optional tags for easier searching later.
+1. Go to the client's **Training** tab and open their training calendar.
+2. Click on the workout you want to save.
+3. Click **Save to Library**.
 4. The workout is now stored in your workout library, accessible when building programmes for any client.
 
-> [Screenshot: Save to Library dialog with name and tag fields]
-
-### Using a Library Workout
-
-1. When building a programme or adding a workout to a client's schedule, click **Add from Library**.
-2. Browse or search your saved workouts.
-3. Select the desired workout. It is added as a new instance, so changes you make for this client do not affect the library copy.
-
-### Copying Workouts Between Clients
-
-1. Open the source client's programme and locate the workout you want to copy.
-2. Use the **Copy** or **Duplicate** action from the workout menu.
-3. Navigate to the target client's programme.
-4. Paste or add the copied workout into the target programme.
-5. Adjust exercise parameters as needed for the new client.
-
-> [Screenshot: Copying a workout from one client's programme to another]
+> [Screenshot 2: Client training calendar with a workout open showing the Save to Library option]
 
 ## Things to Note
 

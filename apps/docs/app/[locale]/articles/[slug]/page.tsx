@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
-import { getArticleContent, extractTitle } from '@/lib/articles';
-import { findArticle, getAllArticles } from '@/lib/content';
+import { getArticleContent, extractTitle, resolveScreenshots, resolveInternalLinks } from '@/lib/articles';
+import { findArticle, findNextArticle, getAllArticles, articleFiles } from '@/lib/content';
 import { ArticleLayout } from './article-layout';
 
 export function generateStaticParams() {
@@ -32,13 +32,19 @@ export default async function ArticlePage({
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const content = getArticleContent(slug, locale);
-  if (!content) notFound();
+  const rawContent = getArticleContent(slug, locale);
+  if (!rawContent) notFound();
 
   const info = findArticle(slug);
   if (!info) notFound();
 
-  const title = extractTitle(content);
+  const title = extractTitle(rawContent);
+  const content = resolveInternalLinks(resolveScreenshots(rawContent, info.collection.slug, slug));
+  const filePath = articleFiles[slug] ?? '';
+  const isMobileArticle =
+    (filePath.startsWith('client-mobile/') || filePath.startsWith('coach-mobile/')) &&
+    slug !== 'client-getting-started';
+  const nextArticle = findNextArticle(slug);
 
   return (
     <ArticleLayout
@@ -47,6 +53,8 @@ export default async function ArticlePage({
       collectionSlug={info.collection.slug}
       collectionTitleKey={info.collection.titleKey}
       sectionTitleKey={info.section?.titleKey}
+      isMobileArticle={isMobileArticle}
+      nextArticle={nextArticle ? { slug: nextArticle.slug, titleKey: nextArticle.titleKey } : undefined}
     />
   );
 }

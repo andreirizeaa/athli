@@ -23,7 +23,7 @@ Este es el tipo de seccion mas comun y el que usaras para la mayoria de la progr
 3. Selecciona **Regular** como tipo de seccion.
 4. Dale un nombre a la seccion (ej., "Fuerza Principal", "Trabajo Accesorio", "Calentamiento").
 
-> [Screenshot: section type selector with Regular highlighted]
+> [Screenshot 1: section type selector with Regular highlighted]
 
 ### Agregar Ejercicios
 
@@ -32,7 +32,7 @@ Este es el tipo de seccion mas comun y el que usaras para la mayoria de la progr
 3. Selecciona uno o mas ejercicios para agregar.
 4. Los ejercicios aparecen en orden dentro de la seccion.
 
-> [Screenshot: exercise picker panel with search and filters]
+> [Screenshot 2: exercise picker panel with search and filters]
 
 ### Configurar Series y Repeticiones
 
@@ -44,7 +44,7 @@ Cada ejercicio se puede configurar con multiples series. Dependiendo del tipo de
 
 Usa el **boton de vincular/desvincular** para establecer todas las series con el mismo valor o personalizar cada serie individualmente. Por ejemplo, puedes programar una piramide: Serie 1 a 12 repeticiones, Serie 2 a 10, Serie 3 a 8, Serie 4 a 6.
 
-> [Screenshot: exercise card showing four sets with individual rep and weight values]
+> [Screenshot 3: exercise card showing four sets with individual rep and weight values]
 
 ### Agregar Periodos de Descanso
 
@@ -60,7 +60,7 @@ Arrastra los ejercicios hacia arriba o hacia abajo para reordenarlos dentro de l
 
 Agrupa dos o mas ejercicios juntos para crear una superserie. Los clientes realizan los ejercicios agrupados uno tras otro antes de descansar.
 
-> [Screenshot: two exercises grouped as a superset within a regular section]
+> [Screenshot 4: two exercises grouped as a superset within a regular section]
 
 ## Cosas a Tener en Cuenta
 

@@ -13,7 +13,7 @@ The Clients tab on the coach mobile app lets you view your roster, access client
 3. Use the search bar to find a specific client
 4. Tap a client to open their profile
 
-> [Screenshot: Mobile clients tab with client list and search]
+> [Screenshot 1: Mobile clients tab with client list and search]
 
 ### Navigating a Client Profile
 
@@ -29,7 +29,7 @@ Once you tap a client, you can access:
 - **Files** shared with the client
 - **Notes** for private coaching notes
 
-> [Screenshot: Mobile client profile with navigation options]
+> [Screenshot 2: Mobile client profile with navigation options]
 
 ### Editing Client Details
 
@@ -38,7 +38,7 @@ Once you tap a client, you can access:
 3. Update their name, category, goals, or other information
 4. Tap **Save**
 
-> [Screenshot: Mobile edit client details screen]
+> [Screenshot 3: Mobile edit client details screen]
 
 ### Viewing a Client's Training Calendar
 
@@ -48,15 +48,13 @@ Once you tap a client, you can access:
 4. Tap any day to see the assigned workout
 5. Tap a workout to preview it or add a new one
 
-> [Screenshot: Mobile training calendar with weekly view]
+> [Screenshot 4: Mobile training calendar with weekly view]
 
 ### Assigning a Workout to a Day
 
 1. On the training calendar, tap an empty day
 2. Choose to assign a workout from your library or create one
 3. Select the workout and confirm
-
-> [Screenshot: Mobile add workout to day dialog]
 
 ## Things to Note
 

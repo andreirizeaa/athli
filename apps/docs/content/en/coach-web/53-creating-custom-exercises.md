@@ -21,7 +21,7 @@ While Athli includes thousands of built-in exercises, you may need movements tha
 3. Click **Exercises**.
 4. Click the **Add Exercise** button.
 
-> [Screenshot: exercise library page with the Add Exercise button highlighted]
+> [Screenshot 1: exercise library page with the Add Exercise button highlighted]
 
 ### Filling in Exercise Details
 
@@ -32,7 +32,7 @@ The exercise form includes the following fields:
 - **Equipment** - Choose the equipment needed (barbell, dumbbell, bands, machine, bodyweight, etc.).
 - **Category** - Select the category (strength, cardio, flexibility, etc.).
 
-> [Screenshot: add exercise form showing name, muscles, equipment, and category fields]
+> [Screenshot 2: add exercise form showing name, muscles, equipment, and category fields]
 
 ### Uploading a Custom Video or Image
 
@@ -41,7 +41,7 @@ The exercise form includes the following fields:
 3. Supported formats include common video formats (MP4, MOV) and image formats (JPG, PNG).
 4. The uploaded media will be shown to clients in the mobile app when they tap the exercise during a workout.
 
-> [Screenshot: media upload section of the exercise form with an uploaded video thumbnail]
+> [Screenshot 3: media upload section of the exercise form with an uploaded video thumbnail]
 
 ### Saving the Exercise
 
@@ -61,7 +61,7 @@ If you want to create a variation of an existing built-in exercise:
 
 This is useful when you want to keep most of the original exercise information but change specific details like the name or add your own video.
 
-> [Screenshot: built-in exercise with the Duplicate button highlighted]
+> [Screenshot 4: built-in exercise with the Duplicate button highlighted]
 
 ## Things to Note
 

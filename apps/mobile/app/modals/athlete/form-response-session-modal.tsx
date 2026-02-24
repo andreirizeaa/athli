@@ -169,7 +169,12 @@ export default function FormResponseSessionModal() {
 
   const questions: QuestionWithId[] = useMemo(() => {
     try {
-      return JSON.parse(questionsJson || '[]');
+      const parsed = JSON.parse(questionsJson || '[]');
+      // Ensure every question has an id - generate one from index if missing
+      return parsed.map((q: any, index: number) => ({
+        ...q,
+        id: q.id || `q-${index}`,
+      }));
     } catch {
       return [];
     }
@@ -286,10 +291,13 @@ export default function FormResponseSessionModal() {
       }
 
       haptics.success();
-      // Invalidate caches to refetch
-      await queryClient.invalidateQueries({ queryKey: ['athlete-questionnaires'] });
-      await queryClient.invalidateQueries({ queryKey: ['athlete-tasks'] });
-      await queryClient.invalidateQueries({ queryKey: ['athlete-checkins'] });
+      // Invalidate all relevant caches so home page shows updated data instantly
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['athlete-questionnaires'] }),
+        queryClient.invalidateQueries({ queryKey: ['athlete-tasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['athlete-checkins'] }),
+        queryClient.invalidateQueries({ queryKey: ['client-form-detail'] }),
+      ]);
       setSubmissionComplete(true);
     } catch (error) {
       haptics.error();

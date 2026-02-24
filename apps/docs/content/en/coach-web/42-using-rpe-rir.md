@@ -17,7 +17,7 @@ RPE and RIR are foundational tools for autoregulated training. Instead of prescr
 3. Select **RPE** or **RIR** from the list of available fields.
 4. The column appears for that exercise.
 
-> [Screenshot: RPE column added to an exercise in the Workout Builder]
+> [Screenshot 1: RPE column added to an exercise in the Workout Builder]
 
 ### Prescribing RPE
 
@@ -42,15 +42,6 @@ RPE and RIR are foundational tools for autoregulated training. Instead of prescr
 | 6 | 4 | Could have done 4 more reps |
 | 5 | 5 | Moderate effort, several reps left |
 
-### How Clients Log RPE and RIR
-
-1. In the mobile app, the RPE or RIR field appears alongside reps and weight for each set.
-2. After completing a set, the client enters the actual RPE or RIR they experienced.
-3. This logged data is stored and available in your coaching dashboard for review.
-4. Comparing prescribed versus actual RPE/RIR helps you calibrate future programming.
-
-> [Screenshot: Client logging RPE after completing a set in the mobile app]
-
 ### When to Use RPE vs RIR
 
 - **RPE** is better for experienced lifters who have developed a reliable sense of exertion across different rep ranges and exercises.
@@ -63,7 +54,7 @@ RPE and RIR are foundational tools for autoregulated training. Instead of prescr
 - Prescribing RPE/RIR works best alongside a rep range (e.g., "8-10 reps at RPE 8") rather than fixed reps.
 - Review logged RPE/RIR data regularly. If a client consistently reports RPE 10 on sets prescribed at RPE 8, the programming may be too aggressive.
 - You can use both RPE and RIR columns on the same exercise if needed, though typically one is sufficient.
-- Set RPE or RIR as default columns in **Settings > App > Customisations** if you use autoregulated programming frequently.
+
 
 ## FAQs
 

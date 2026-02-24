@@ -21,7 +21,7 @@ AMRAP stands for As Many Rounds (or Reps) As Possible. In an AMRAP section, you 
 3. Select **AMRAP** as the section type.
 4. Give the section a name (e.g., "8-Min AMRAP Finisher").
 
-> [Screenshot: section type selector with AMRAP highlighted]
+> [Screenshot 1: section type selector with AMRAP highlighted]
 
 ### Setting the Time Cap
 
@@ -29,7 +29,7 @@ AMRAP stands for As Many Rounds (or Reps) As Possible. In an AMRAP section, you 
 2. Enter the total duration in minutes (e.g., 8 minutes, 12 minutes, 20 minutes).
 3. This is the total working time. When the timer reaches zero, the client stops.
 
-> [Screenshot: AMRAP section header showing the time cap field set to 8 minutes]
+> [Screenshot 2: AMRAP section header showing the time cap field set to 8 minutes]
 
 ### Adding Exercises
 
@@ -38,7 +38,7 @@ AMRAP stands for As Many Rounds (or Reps) As Possible. In an AMRAP section, you 
 3. For each exercise, set the target reps per round (e.g., 10 push-ups, 15 air squats, 20 sit-ups).
 4. Clients will cycle through these exercises in order, repeating from the top each round.
 
-> [Screenshot: AMRAP section with three exercises and rep targets listed]
+> [Screenshot 3: AMRAP section with three exercises and rep targets listed]
 
 ### How Clients Execute an AMRAP
 

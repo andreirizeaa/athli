@@ -25,7 +25,7 @@ Mantener toda la comunicacion con clientes dentro de tu plataforma de coaching s
 3. Escribe tu mensaje en el campo de entrada en la parte inferior
 4. Presiona **Enter** o haz clic en **Enviar**
 
-> [Screenshot: Pagina de bandeja de entrada con lista de conversaciones e hilo de mensajes]
+> [Screenshot 1: Pagina de bandeja de entrada con lista de conversaciones e hilo de mensajes]
 
 ### Enviar Archivos y Medios
 
@@ -34,7 +34,7 @@ Mantener toda la comunicacion con clientes dentro de tu plataforma de coaching s
 3. Tipos soportados: imagenes, videos, documentos, PDFs
 4. Haz clic en **Enviar**
 
-> [Screenshot: Entrada de mensaje con opciones de adjunto]
+> [Screenshot 2: Entrada de mensaje con opciones de adjunto]
 
 ### Reaccionar a Mensajes
 
@@ -43,7 +43,7 @@ Mantener toda la comunicacion con clientes dentro de tu plataforma de coaching s
 3. Selecciona una reaccion de emoji
 4. La reaccion aparece en el mensaje
 
-> [Screenshot: Mensaje con selector de reaccion de emoji]
+> [Screenshot 3: Mensaje con selector de reaccion de emoji]
 
 ### Responder a un Mensaje Especifico
 
@@ -52,7 +52,7 @@ Mantener toda la comunicacion con clientes dentro de tu plataforma de coaching s
 3. El mensaje original se cita arriba de tu entrada
 4. Escribe tu respuesta y envia
 
-> [Screenshot: Vista previa de respuesta arriba de la entrada de mensaje]
+> [Screenshot 4: Vista previa de respuesta arriba de la entrada de mensaje]
 
 ### Enviar un Mensaje de Difusion
 
@@ -62,7 +62,7 @@ Mantener toda la comunicacion con clientes dentro de tu plataforma de coaching s
 4. Haz clic en **Enviar a Todos**
 5. Cada cliente recibe el mensaje como una conversacion individual
 
-> [Screenshot: Panel lateral de difusion con seleccion de clientes]
+> [Screenshot 5: Panel lateral de difusion con seleccion de clientes]
 
 ### Ver Perfil de Cliente desde una Conversacion
 
@@ -70,7 +70,7 @@ Mantener toda la comunicacion con clientes dentro de tu plataforma de coaching s
 2. Un panel de perfil se desliza a la derecha
 3. Puedes ver su informacion clave sin salir del chat
 
-> [Screenshot: Chat con panel de perfil de cliente abierto a la derecha]
+> [Screenshot 6: Chat con panel de perfil de cliente abierto a la derecha]
 
 ## Cosas a Tener en Cuenta
 

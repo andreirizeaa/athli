@@ -17,7 +17,7 @@ Every coach has signature exercises, variations, or equipment-specific movements
 3. The video shows the movement from multiple angles with professional quality.
 4. Clients see these same videos in the mobile app when they tap on an exercise during their workout.
 
-> [Screenshot: Built-in exercise demo video playing in the Workout Builder]
+> [Screenshot 1: Built-in exercise demo video playing in the Workout Builder]
 
 ### Creating a Custom Exercise
 
@@ -30,7 +30,7 @@ Every coach has signature exercises, variations, or equipment-specific movements
    - **Image**: Upload a JPG or PNG image if a video is not available.
 6. Save the custom exercise. It is now available in your exercise library.
 
-> [Screenshot: Custom exercise creation form with video upload field]
+> [Screenshot 2: Custom exercise creation form with video upload field]
 
 ### Using Custom Exercises in Workouts
 

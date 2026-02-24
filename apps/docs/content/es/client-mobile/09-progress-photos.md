@@ -18,16 +18,12 @@ La bascula no siempre refleja la realidad. Puedes estar construyendo musculo mie
 4. La foto se guarda y se etiqueta con la fecha de hoy
 5. Toca **Guardar**
 
-> [Captura de pantalla: Pantalla de captura de foto de progreso con opciones de camara y biblioteca]
-
 ### Ver Tus Fotos
 
 1. Ve a la seccion de Fotos de Progreso
 2. Veras tus fotos organizadas por fecha
 3. Toca cualquier fecha para ver las fotos de ese dia
 4. Desliza a traves de multiples fotos si tomaste mas de una
-
-> [Captura de pantalla: Linea de tiempo de fotos mostrando fotos organizadas por fecha]
 
 ### Comparar Fotos
 
@@ -36,7 +32,7 @@ La bascula no siempre refleja la realidad. Puedes estar construyendo musculo mie
 3. Tus fotos de cada fecha aparecen una al lado de la otra
 4. Esto facilita ver cambios visuales a lo largo del tiempo
 
-> [Captura de pantalla: Comparacion de fotos lado a lado con dos fechas diferentes]
+> [Captura de pantalla: Pagina de comparacion de fotos lado a lado]
 
 ### Consejos para Mejores Fotos de Progreso
 

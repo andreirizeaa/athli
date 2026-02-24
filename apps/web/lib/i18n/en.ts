@@ -3181,6 +3181,7 @@ export const enMessages = {
         activated: 'Package activated',
         deactivated: 'Package deactivated',
         stripeRequired: 'Connect Stripe before activating packages',
+        linkCopied: 'Checkout link copied to clipboard',
       },
     },
     coupons: {

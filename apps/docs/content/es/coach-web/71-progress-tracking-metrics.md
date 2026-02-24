@@ -20,7 +20,7 @@ Rastrea cambios fisicos con metricas como:
 
 Configura una carpeta de composicion corporal en tu biblioteca de metricas y asigna las metricas relevantes a cada cliente. Anima a los clientes a registrar bajo condiciones consistentes (ej., por la manana, en ayunas, misma bascula).
 
-> [Screenshot: Body composition metrics folder with weight, body fat, and measurement metrics]
+> [Screenshot 1: Grafico de linea de metrica de peso corporal mostrando progreso durante varias semanas]
 
 ### Seguimiento de Rendimiento
 
@@ -32,8 +32,6 @@ Rastrea el progreso de entrenamiento con metricas como:
 
 Registra metricas de rendimiento despues de sesiones de prueba o cuando los clientes logran nuevos records personales.
 
-> [Screenshot: Performance metric chart showing squat 1RM increasing over a training cycle]
-
 ### Seguimiento de Bienestar
 
 Rastrea factores de estilo de vida que influyen en los resultados:
@@ -44,8 +42,6 @@ Rastrea factores de estilo de vida que influyen en los resultados:
 - **Nivel de energia** (escala autoreportada)
 
 Las metricas de bienestar te ayudan a detectar correlaciones. Un cliente cuya perdida de peso se estanco tambien podria mostrar sueno en declive y niveles de estres en aumento.
-
-> [Screenshot: Wellness metrics dashboard showing sleep and steps trends]
 
 ### Ver Tendencias a lo Largo del Tiempo
 

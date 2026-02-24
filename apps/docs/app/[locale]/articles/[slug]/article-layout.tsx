@@ -1,26 +1,28 @@
-'use client';
-
-import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import Image from 'next/image';
 import { Link } from '@/lib/i18n/navigation';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Markdown } from '@/components/markdown';
 import { TableOfContents } from '@/components/table-of-contents';
 
-export function ArticleLayout({
+export async function ArticleLayout({
   title,
   content,
   collectionSlug,
   collectionTitleKey,
   sectionTitleKey,
+  isMobileArticle,
+  nextArticle,
 }: {
   title: string;
   content: string;
   collectionSlug: string;
   collectionTitleKey: string;
   sectionTitleKey?: string;
+  isMobileArticle?: boolean;
+  nextArticle?: { slug: string; titleKey: string };
 }) {
-  const t = useTranslations();
+  const t = await getTranslations();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -73,17 +75,28 @@ export function ArticleLayout({
 
           {/* Article content */}
           <article className="max-w-none">
-            <Markdown content={content} />
+            <Markdown content={content} isMobileArticle={isMobileArticle} />
           </article>
 
-          {/* Back button */}
-          <Link
-            href={`/collections/${collectionSlug}`}
-            className="inline-flex items-center gap-1 text-sm text-foreground hover:text-primary transition-colors mt-12"
-          >
-            <ChevronLeft className="size-4" />
-            {t('nav.backToCollection')}
-          </Link>
+          {/* Bottom navigation */}
+          <div className="mt-12 flex items-center justify-between gap-4">
+            <Link
+              href={`/collections/${collectionSlug}`}
+              className="inline-flex items-center gap-1 text-sm text-foreground hover:text-primary transition-colors"
+            >
+              <ChevronLeft className="size-4" />
+              {t('nav.backToCollection')}
+            </Link>
+            {nextArticle && (
+              <Link
+                href={`/articles/${nextArticle.slug}`}
+                className="inline-flex items-center gap-1 text-sm text-foreground hover:text-primary transition-colors"
+              >
+                {t(nextArticle.titleKey)}
+                <ChevronRight className="size-4" />
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Table of contents - sticky on desktop, aligned with content */}

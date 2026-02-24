@@ -17,7 +17,7 @@ Update your display name, profile picture, and timezone.
 2. Edit your name, upload a new profile picture, or change your timezone
 3. Click **Save**
 
-> [Screenshot: Profile settings page with name and timezone fields]
+> [Screenshot 1: Profile settings page with name and timezone fields]
 
 ### Account > Security
 Manage your email address, password, and security settings.
@@ -26,7 +26,7 @@ Manage your email address, password, and security settings.
 2. Change your email (requires verification)
 3. Update your password
 
-> [Screenshot: Security settings page]
+> [Screenshot 2: Security settings page]
 
 ### Account > Information
 View your account details and membership information.
@@ -41,7 +41,7 @@ Set up your coaching business details including business name, description, and 
 2. Enter your business name and description
 3. Upload your logo and set brand colors
 
-> [Screenshot: Company information settings page]
+> [Screenshot 3: Company information settings page]
 
 ### Business > Branding
 Customize the visual appearance of your client-facing materials.
@@ -50,13 +50,13 @@ Customize the visual appearance of your client-facing materials.
 Manage team members if you operate a coaching business with multiple staff.
 
 ### App > Customisations
-Configure how the app behaves for your coaching style.
+Configure your app preferences.
 
 1. Go to **Settings > App > Customisations**
-2. Choose which exercise columns to show in workouts (sets, reps, weight, RPE, tempo, etc.)
-3. Set your preferred defaults
-
-> [Screenshot: App customisations page with column toggles]
+2. Set your **theme** (light or dark mode)
+3. Choose your **language**
+4. Pick your **accent colour**
+5. Set the **client terminology** used throughout the app (e.g., Client, Athlete, Member)
 
 ### Notifications
 Control what notifications you receive and how you receive them.
@@ -65,7 +65,7 @@ Control what notifications you receive and how you receive them.
 2. Toggle notifications on or off for different event types
 3. Choose between push, email, or both
 
-> [Screenshot: Notification preferences page]
+> [Screenshot 4: Notification preferences page]
 
 ### Danger Zone
 Account deletion and irreversible actions.
@@ -74,7 +74,7 @@ Account deletion and irreversible actions.
 2. This section contains destructive actions like account deletion
 3. Proceed with extreme caution
 
-> [Screenshot: Danger zone settings with delete account option]
+> [Screenshot 5: Danger zone settings with delete account option]
 
 ## Things to Note
 

@@ -98,7 +98,7 @@ export const clientCheckInsController = {
         // Get latest submission per assignment for review display
         const { data: latestSubmissions } = await supabase
             .from('client_checkin_logs')
-            .select('assignment_id, answers, submission_date, created_at')
+            .select('assignment_id, answers, submission_date, created_at, coach_comment')
             .eq('client_id', targetClientId)
             .in('assignment_id', checkInIds)
             .order('created_at', { ascending: false });
@@ -127,6 +127,8 @@ export const clientCheckInsController = {
                 submission_count: countMap[a.id] || 0,
                 latest_answers: latest?.answers || null,
                 latest_submission_date: latest?.submission_date || null,
+                latest_created_at: latest?.created_at || null,
+                latest_coach_comment: latest?.coach_comment || null,
             };
         });
 
@@ -560,6 +562,191 @@ export const clientCheckInsController = {
                 name: checkIn.name,
                 description: checkIn.description,
                 questions: checkIn.questions || [],
+            },
+        });
+    },
+
+    /**
+     * Get all logs (submissions) for a check-in assignment
+     */
+    getCheckInLogs: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+
+        let targetClientId: string;
+        let targetCoachId: string | undefined;
+
+        const isCoachRequest = coachIdHeader && coachIdHeader === userId;
+
+        if (isCoachRequest) {
+            if (!clientIdHeader) {
+                return forbidden(res, { message: 'x-client-id header required for coach requests' });
+            }
+            targetClientId = clientIdHeader;
+            targetCoachId = coachIdHeader;
+        } else {
+            if (clientIdHeader && clientIdHeader !== userId) {
+                return forbidden(res, { message: 'Cannot access another client\'s data' });
+            }
+            targetClientId = clientIdHeader || userId;
+            if (coachIdHeader) targetCoachId = coachIdHeader;
+        }
+
+        const supabase = getSupabaseClient();
+
+        // Get the parent check-in name
+        const { data: checkIn, error: checkInError } = await supabase
+            .from('client_checkins')
+            .select('name')
+            .eq('id', id)
+            .eq('client_id', targetClientId)
+            .single();
+
+        if (checkInError || !checkIn) return notFound(res, { message: 'Check-in not found' });
+
+        let query = supabase
+            .from('client_checkin_logs')
+            .select('*')
+            .eq('assignment_id', id)
+            .eq('client_id', targetClientId)
+            .order('submission_date', { ascending: false });
+
+        if (targetCoachId) {
+            query = query.eq('coach_id', targetCoachId);
+        }
+
+        const { data: logs, error } = await query;
+        if (error) return res.status(500).json({ success: false, message: error.message });
+
+        const instances = (logs || []).map((log: any) => ({
+            id: log.id,
+            formId: id,
+            formName: checkIn.name,
+            scheduledDate: log.submission_date,
+            status: log.status,
+            completedAt: log.created_at,
+            coachComment: log.coach_comment,
+            reviewedAt: log.reviewed_at,
+        }));
+
+        success(res, {
+            message: 'Check-in logs retrieved successfully',
+            data: { instances },
+        });
+    },
+
+    /**
+     * Get a single check-in log with questions from the parent assignment
+     */
+    getCheckInLog: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id, logId } = req.params;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+
+        let targetClientId: string;
+        let targetCoachId: string | undefined;
+
+        const isCoachRequest = coachIdHeader && coachIdHeader === userId;
+
+        if (isCoachRequest) {
+            if (!clientIdHeader) {
+                return forbidden(res, { message: 'x-client-id header required for coach requests' });
+            }
+            targetClientId = clientIdHeader;
+            targetCoachId = coachIdHeader;
+        } else {
+            if (clientIdHeader && clientIdHeader !== userId) {
+                return forbidden(res, { message: 'Cannot access another client\'s data' });
+            }
+            targetClientId = clientIdHeader || userId;
+            if (coachIdHeader) targetCoachId = coachIdHeader;
+        }
+
+        const supabase = getSupabaseClient();
+
+        // Get the log entry
+        const { data: log, error: logError } = await supabase
+            .from('client_checkin_logs')
+            .select('*')
+            .eq('id', logId)
+            .eq('assignment_id', id)
+            .eq('client_id', targetClientId)
+            .single();
+
+        if (logError || !log) return notFound(res, { message: 'Check-in log not found' });
+
+        // Get the parent check-in for questions
+        const { data: checkIn, error: checkInError } = await supabase
+            .from('client_checkins')
+            .select('name, questions')
+            .eq('id', id)
+            .single();
+
+        if (checkInError || !checkIn) return notFound(res, { message: 'Parent check-in not found' });
+
+        success(res, {
+            message: 'Check-in log retrieved successfully',
+            data: {
+                id: log.id,
+                formId: id,
+                formName: checkIn.name,
+                scheduledDate: log.submission_date,
+                status: log.status,
+                completedAt: log.created_at,
+                questions: checkIn.questions || [],
+                answers: log.answers || [],
+                coachComment: log.coach_comment,
+                reviewedAt: log.reviewed_at,
+            },
+        });
+    },
+
+    /**
+     * Add or update a coach review on a check-in log
+     */
+    reviewCheckInLog: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id, logId } = req.params;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const { review } = req.body;
+
+        if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
+        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
+        if (!review || typeof review !== 'string') return res.status(400).json({ success: false, message: 'review text required' });
+
+        const targetCoachId = coachIdHeader as string;
+        const targetClientId = clientIdHeader as string;
+
+        const supabase = getSupabaseClient();
+
+        const { data, error } = await supabase
+            .from('client_checkin_logs')
+            .update({
+                coach_comment: review.trim(),
+                reviewed_at: new Date().toISOString(),
+                status: 'reviewed',
+            })
+            .eq('id', logId)
+            .eq('assignment_id', id)
+            .eq('client_id', targetClientId)
+            .eq('coach_id', targetCoachId)
+            .select()
+            .single();
+
+        if (error) return res.status(500).json({ success: false, message: error.message });
+        if (!data) return notFound(res, { message: 'Check-in log not found' });
+
+        success(res, {
+            message: 'Review saved successfully',
+            data: {
+                id: data.id,
+                status: data.status,
+                coachComment: data.coach_comment,
+                reviewedAt: data.reviewed_at,
             },
         });
     },

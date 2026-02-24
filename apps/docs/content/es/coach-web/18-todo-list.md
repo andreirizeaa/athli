@@ -24,7 +24,7 @@ El coaching involucra muchas partes moviles. La lista de tareas te ayuda a mante
 3. Veras tareas creadas por automatizaciones y flujos
 4. Completa tareas marcandolas
 
-> [Screenshot: Pestana de Tareas Asistente Athli con lista de tareas automatizadas]
+> [Screenshot 1: Pestana de Tareas Asistente Athli con lista de tareas automatizadas]
 
 ### Gestionar Tus Tareas Personales
 
@@ -34,7 +34,7 @@ El coaching involucra muchas partes moviles. La lista de tareas te ayuda a mante
 4. Ingresa la descripcion de la tarea
 5. Marca las tareas a medida que las completas
 
-> [Screenshot: Pestana Tu Lista de Tareas con tareas personales y boton de agregar]
+> [Screenshot 2: Pestana Tu Lista de Tareas con tareas personales y boton de agregar]
 
 ## Cosas a Tener en Cuenta
 

@@ -20,7 +20,7 @@ Many coaches track values like body weight or sleep hours through both check-ins
 6. Select the target metric from the dropdown
 7. Click **Save**
 
-> [Screenshot: Check-in builder with Link to Metric option on a Number question]
+> [Screenshot 1: Check-in builder with Link to Metric option on a Number question]
 
 ### How the Data Flows
 
@@ -31,8 +31,6 @@ Many coaches track values like body weight or sleep hours through both check-ins
 5. The value is automatically logged to the linked metric with the check-in submission date
 6. The metric chart updates to include the new data point
 
-> [Screenshot: Diagram showing data flow from check-in submission to metric chart]
-
 ### Viewing Synced Data
 
 1. Go to the client's **Metrics** tab
@@ -41,7 +39,7 @@ Many coaches track values like body weight or sleep hours through both check-ins
 4. The history table shows each entry with its source
 5. Synced entries are logged with the check-in submission date
 
-> [Screenshot: Metric chart with data points sourced from check-in submissions]
+> [Screenshot 2: Metric chart with data points sourced from check-in submissions]
 
 ### Common Sync Configurations
 

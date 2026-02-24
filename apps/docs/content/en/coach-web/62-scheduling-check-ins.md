@@ -24,7 +24,7 @@ Consistent check-ins create a reliable feedback loop between you and your client
 6. Set the **start date** for the first check-in
 7. Click **Assign**
 
-> [Screenshot: Assign check-in dialog with frequency and start date options]
+> [Screenshot 1: Assign check-in dialog with frequency and start date options]
 
 ### How Clients Receive Check-ins
 
@@ -32,8 +32,6 @@ Consistent check-ins create a reliable feedback loop between you and your client
 2. They open the mobile app and navigate to the check-in
 3. They fill out all questions and submit
 4. You receive the submission and can review it from the dashboard or the client's profile
-
-> [Screenshot: Client mobile view showing a pending check-in notification]
 
 ### Assigning Multiple Check-ins
 
@@ -45,16 +43,12 @@ You can assign multiple check-in templates to the same client, each with its own
 
 Each operates independently on its own schedule.
 
-> [Screenshot: Client check-ins tab showing multiple assigned check-ins with different frequencies]
-
 ### Reviewing Pending Submissions
 
 1. Go to the **Check-ins** page from the sidebar
 2. This shows all pending and recently submitted check-ins across all your clients
 3. Filter by status to see which clients have not submitted yet
 4. Click any entry to view the submission or send a reminder
-
-> [Screenshot: Dashboard check-ins page with pending and submitted entries]
 
 ### Late Submissions
 

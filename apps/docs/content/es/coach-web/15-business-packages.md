@@ -27,7 +27,7 @@ Antes de poder aceptar pagos, necesitas conectar tu cuenta de Stripe:
 4. Completa el proceso de incorporacion de Stripe
 5. Una vez conectado, puedes comenzar a crear paquetes
 
-> [Screenshot: Pagina de negocio con boton de Conectar Stripe]
+> [Screenshot 1: Pagina de negocio con boton de Conectar Stripe]
 
 ### Crear un Paquete
 
@@ -41,7 +41,7 @@ Antes de poder aceptar pagos, necesitas conectar tu cuenta de Stripe:
    - **Duracion** para paquetes recurrentes (mensual, trimestral, etc.)
 4. Haz clic en **Guardar**
 
-> [Screenshot: Formulario de crear paquete con opciones de precio]
+> [Screenshot 2: Formulario de crear paquete con opciones de precio]
 
 ### Compartir Paquetes con Clientes
 
@@ -50,7 +50,7 @@ Antes de poder aceptar pagos, necesitas conectar tu cuenta de Stripe:
 3. Copia el enlace y compartelo con clientes
 4. Los clientes pueden ver tus paquetes y comprar directamente
 
-> [Screenshot: Pagina de vista previa de paquetes como la ven los clientes]
+> [Screenshot 3: Pagina de vista previa de paquetes como la ven los clientes]
 
 ### Ver Actividad de Pagos
 
@@ -58,7 +58,7 @@ Antes de poder aceptar pagos, necesitas conectar tu cuenta de Stripe:
 2. Veras una lista de todas las transacciones, suscripciones y eventos de pago
 3. Filtra por fecha, cliente o estado
 
-> [Screenshot: Pagina de actividad con lista de transacciones]
+> [Screenshot 4: Pagina de actividad con lista de transacciones]
 
 ### Gestionar el Panel de Stripe
 

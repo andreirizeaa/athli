@@ -20,27 +20,27 @@ Instead of checking each client individually, the dashboard surfaces the most im
 ### Today's Workouts
 Shows all client workouts scheduled for today. Each card displays the client name, workout name, completion status, and pre-workout metrics (sleep, mood, energy, stress, soreness) if the client has logged them.
 
-> [Screenshot: Today's workouts card showing client workout cards with status indicators]
+> [Screenshot 1: Today's workouts card showing client workout cards with status indicators]
 
 ### At-Risk Clients
 Highlights clients who may need your attention based on missed workouts, overdue check-ins, or declining engagement.
 
-> [Screenshot: At-risk clients card with warning indicators]
+> [Screenshot 2: At-risk clients card with warning indicators]
 
 ### Completed Workouts
 Shows recently completed workouts with client feedback and post-workout ratings. You can filter by status (completed, in progress, missed).
 
-> [Screenshot: Completed workouts card with filter dropdown]
+> [Screenshot 3: Completed workouts card with filter dropdown]
 
 ### To-Do List
 Your personal task list. Shows both automated tasks from Athli (like check-in reviews) and custom tasks you have added.
 
-> [Screenshot: To-do card with task items and checkboxes]
+> [Screenshot 4: To-do card with task items and checkboxes]
 
 ### Summary Cards
 Quick stats at the top showing key numbers like active clients, workouts completed today, and pending check-ins.
 
-> [Screenshot: Summary cards row at top of dashboard]
+> [Screenshot 5: Summary cards row at top of dashboard]
 
 ## Step-by-Step Guide
 
@@ -51,7 +51,7 @@ Quick stats at the top showing key numbers like active clients, workouts complet
 3. You can see all exercises, sets, reps, and any notes the client added
 4. Click **View Profile** to go to the client's full profile
 
-> [Screenshot: Workout preview dialog with exercise details]
+> [Screenshot 6: Workout preview dialog with exercise details]
 
 ### Messaging a Client from the Dashboard
 
@@ -60,7 +60,7 @@ Quick stats at the top showing key numbers like active clients, workouts complet
 3. A quick message input appears
 4. Type your message and send
 
-> [Screenshot: Quick message input on workout card]
+> [Screenshot 7: Quick message input on workout card]
 
 ## Things to Note
 

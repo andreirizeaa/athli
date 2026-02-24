@@ -19,12 +19,13 @@ Having a comprehensive exercise database means you spend less time describing mo
 
 ### Browsing Exercises
 
-1. Go to **Library > Training > Exercises**
-2. Browse the full list or use the search bar to find specific exercises
-3. Filter by muscle group, equipment, or category
-4. Click any exercise to see its details and video demonstration
+To browse the full exercise list, open the **Workout Builder** and use the left panel. The left panel displays the complete exercise library with search and filter options.
 
-> [Screenshot: Exercise library page with search bar and filter options]
+1. Open the **Workout Builder** from a workout or programme.
+2. Use the left panel to browse, search, or filter exercises by muscle group or equipment.
+3. Click any exercise to see its details and video demonstration.
+
+> [Screenshot 1: Workout Builder left panel showing the full exercise library with filters]
 
 ### Creating a Custom Exercise
 
@@ -34,7 +35,7 @@ Having a comprehensive exercise database means you spend less time describing mo
 4. Optionally upload a custom video or image
 5. Click **Save**
 
-> [Screenshot: Add exercise form with fields]
+> [Screenshot 2: Add exercise form with fields]
 
 ### Duplicating Exercises
 
@@ -42,7 +43,7 @@ Having a comprehensive exercise database means you spend less time describing mo
 2. Click **Duplicate Selected**
 3. The copies appear in your library ready to edit
 
-> [Screenshot: Exercise list with checkboxes and duplicate button]
+> [Screenshot 3: Exercise list with checkboxes and duplicate button]
 
 ## Things to Note
 

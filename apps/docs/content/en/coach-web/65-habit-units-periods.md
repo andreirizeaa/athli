@@ -10,9 +10,9 @@ Not all habits are the same. "Walk 10,000 steps" needs a Steps unit and daily tr
 
 ## Step-by-Step Guide
 
-### Available Units
+### Setting Units
 
-Habits support a range of units across different categories:
+Units are labels that appear when clients log a habit. Choose the unit that matches the habit from the dropdown when creating or editing a habit.
 
 | Category | Units | Example Habit |
 |----------|-------|---------------|
@@ -22,47 +22,33 @@ Habits support a range of units across different categories:
 | Volume | ml, l, oz, Cups, Drink | "Drink 3 l of water", "8 Cups of water" |
 | Nutrition | Cal, g, mg | "Eat 150 g protein", "2000 Cal intake" |
 
-### Tracking Periods
-
-The tracking period determines how often the client is expected to complete the habit:
-
-| Period | Description | Best For |
-|--------|-------------|----------|
-| Daily | The habit resets every day and clients track completion each day | Daily routines like water intake, stretching, supplements |
-| Weekly | The habit target is tracked over the full week | Weekly goals like total distance run, gym sessions per week |
-
-### Duration Settings
-
-The duration controls how long the habit stays active for the client:
-
-| Duration | Description | Example |
-|----------|-------------|---------|
-| Days | Habit runs for a set number of days | "30-day water challenge" |
-| Months | Habit runs for a set number of months | "3-month mobility program" |
-| Years | Habit runs for a set number of years | "Ongoing annual wellness habit" |
-
-### How Units Affect the Client Experience
-
-When a client opens a habit on their mobile app, the unit you chose determines the input they see:
-
-- If the unit is **Steps**, the client enters a number of steps
-- If the unit is **Min**, the client logs minutes spent
-- If the unit is **Cups**, the client logs cups consumed
-- The unit label appears next to the input field so the client knows what to enter
-
-> [Screenshot: Client mobile view showing habit logging with unit label]
-
-### Configuring a Habit with Units and Periods
-
 1. Go to **Library > Habits**
 2. Click **Create Habit** or edit an existing habit
-3. Set the **unit** from the dropdown (Steps, Min, Times, Count, Drink, Cups, m, km, Mile, Sec, Hour, ml, l, oz, Cal, g, mg)
-4. Set the **period** (Daily or Weekly)
-5. Set the **duration** and choose Days, Months, or Years
-6. Enter the **target value** (e.g., 10,000 for Steps, 3 for l)
-7. Click **Save**
+3. Set the **unit** from the dropdown
+4. Enter the **target value** (e.g., 10,000 for Steps, 3 for l)
 
-> [Screenshot: Habit creation form with unit, period, and duration settings]
+> [Screenshot 1: Habit creation form showing the units dropdown]
+
+### Duration and Reminders
+
+Set how long the habit runs and how often clients are reminded to log it.
+
+| Period | Description |
+|--------|-------------|
+| Daily | The habit resets every day |
+| Weekly | The habit target is tracked over the full week |
+
+| Duration | Description |
+|----------|-------------|
+| Days | Habit runs for a set number of days |
+| Months | Habit runs for a set number of months |
+| Years | Habit runs for a set number of years |
+
+1. Set the **period** (Daily or Weekly)
+2. Set the **duration** and choose Days, Months, or Years
+3. Click **Save**
+
+> [Screenshot 2: Habit creation form showing the duration and reminder settings]
 
 ## Things to Note
 

@@ -21,7 +21,7 @@ HIIT significa Entrenamiento de Intervalos de Alta Intensidad (High-Intensity In
 3. Selecciona **HIIT** como tipo de seccion.
 4. Dale un nombre a la seccion (ej., "Cardio HIIT" o "Intervalos de Cuerpo Completo").
 
-> [Screenshot: section type selector with HIIT highlighted]
+> [Screenshot 1: section type selector with HIIT highlighted]
 
 ### Configuracion por Defecto
 
@@ -34,7 +34,7 @@ Cuando seleccionas HIIT, se aplican los siguientes valores por defecto:
 | Rondas | 10 |
 | **Tiempo Total** | **10 minutos** |
 
-> [Screenshot: HIIT section header showing work, rest, and round fields with default values]
+> [Screenshot 2: HIIT section header showing work, rest, and round fields with default values]
 
 ### Personalizar el HIIT
 
@@ -53,7 +53,7 @@ El tiempo total se actualiza automaticamente. Por ejemplo, 30s trabajo / 30s des
 3. Con un solo ejercicio, el cliente lo realiza en cada ronda.
 4. Con multiples ejercicios, el cliente rota a traves de ellos a lo largo de las rondas.
 
-> [Screenshot: HIIT section with four exercises rotating across 10 rounds]
+> [Screenshot 3: HIIT section with four exercises rotating across 10 rounds]
 
 ### Como los Clientes Ejecutan una Seccion HIIT
 

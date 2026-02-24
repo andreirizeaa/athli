@@ -17,7 +17,7 @@ The Section Builder lets you create reusable workout sections in your library. A
 2. Select the **Training** tab.
 3. Click **Sections**.
 
-> [Screenshot: section library page showing list of saved sections]
+> [Screenshot 1: section library page showing list of saved sections]
 
 ## Section Types
 
@@ -45,13 +45,14 @@ You can customize all values when building the section.
 ## Creating a Section
 
 1. Click **Add Section** from the sections library page.
-2. Enter a name and optional tags for organization.
-3. Select the section type (Regular, AMRAP, Tabata, etc.).
-4. Add exercises from your exercise library.
-5. Configure each exercise with sets, reps, weight, rest, or other relevant fields depending on the section type.
-6. Save the section.
+2. A side panel opens — enter a name, select the section type (Regular, AMRAP, Tabata, etc.), and add optional tags.
+3. Save to create the section.
+4. Click on the newly created section in the grid to open the section builder.
+5. Add exercises from your exercise library.
+6. Configure each exercise with sets, reps, weight, rest, or other relevant fields depending on the section type.
+7. Save the section.
 
-> [Screenshot: section builder with exercises added and type selected]
+> [Screenshot 2: section builder with exercises added and type selected]
 
 ## Adding Exercises to a Section
 
@@ -60,7 +61,7 @@ You can customize all values when building the section.
 - Create supersets by grouping exercises together.
 - Use the AI generator to auto-fill a section from a text prompt.
 
-> [Screenshot: exercise selection panel within the section builder]
+> [Screenshot 3: exercise selection panel within the section builder]
 
 ## Configuring Exercises
 
@@ -72,7 +73,7 @@ Depending on the exercise type, you can set different fields per set:
 
 Each exercise can have multiple sets with individual values. Use the link/unlink toggle to set all sets to the same value or customize each one.
 
-> [Screenshot: exercise card showing set configuration with linked values]
+> [Screenshot 4: exercise card showing set configuration with linked values]
 
 ## Using Sections in Workouts
 
@@ -92,7 +93,7 @@ From the sections library, you can:
 - **Duplicate** a section to create a variation
 - **Delete** sections you no longer need (bulk delete supported)
 
-> [Screenshot: sections list with filters and bulk actions]
+> [Screenshot 5: sections list with filters and bulk actions]
 
 ## Tips
 

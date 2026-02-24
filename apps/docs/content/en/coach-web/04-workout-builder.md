@@ -22,10 +22,11 @@ Building workouts is the core of coaching. The workout builder gives you a flexi
 
 1. Go to **Library > Training > Workouts**
 2. Click **New Workout**
-3. Enter the workout name
-4. You are now in the workout builder
+3. A side panel opens — enter the workout name and any basic details
+4. Save to create the workout
+5. Click on the newly created workout in the grid to open the workout builder
 
-> [Screenshot: Empty workout builder with name field at top]
+> [Screenshot 1: Side panel for creating a new workout with name field]
 
 ### Adding Exercises
 
@@ -38,7 +39,7 @@ You have two options:
 4. Set the number of sets, reps, weight, and rest time
 5. Repeat for each exercise
 
-> [Screenshot: Exercise search panel with filters and results]
+> [Screenshot 2: Exercise search panel with filters and results]
 
 **AI Generated:**
 1. Click the **Athli AI** tab
@@ -46,7 +47,7 @@ You have two options:
 3. The AI generates a complete workout
 4. Review and edit as needed
 
-> [Screenshot: AI workout generation input with generated result]
+> [Screenshot 3: AI workout generation input with generated result]
 
 ### Creating Sections
 
@@ -57,7 +58,7 @@ Sections let you group exercises together (e.g., supersets, circuits, AMRAP bloc
 3. Drag exercises into the section or add new ones
 4. Configure section-specific settings (rounds, rest between rounds, time cap)
 
-> [Screenshot: Section builder with exercises grouped in a superset]
+> [Screenshot 4: Section builder with exercises grouped in a superset]
 
 ### Reordering Exercises
 
@@ -66,7 +67,7 @@ Sections let you group exercises together (e.g., supersets, circuits, AMRAP bloc
 3. Drag the exercise to its new position
 4. Release to drop
 
-> [Screenshot: Exercise card being dragged to new position]
+> [Screenshot 5: Exercise card being dragged to new position]
 
 ### Configuring Exercise Details
 
@@ -80,7 +81,7 @@ Each exercise card has columns you can customize:
 - **RPE** - Rate of perceived exertion
 - **Notes** - Instructions for the client
 
-> [Screenshot: Exercise card with expanded column options]
+> [Screenshot 6: Exercise card with expanded column options]
 
 ### Saving Your Workout
 

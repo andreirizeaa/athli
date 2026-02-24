@@ -19,7 +19,7 @@ Building a habit library lets you standardize the daily actions you want your cl
 5. Select a **category** to group related habits together
 6. Click **Save**
 
-> [Screenshot: Create habit form with name, description, and category fields]
+> [Screenshot 1: Create habit form with name, description, and category fields]
 
 ### Organizing Habits into Folders
 
@@ -28,7 +28,7 @@ Building a habit library lets you standardize the daily actions you want your cl
 3. Drag habits into the folder or use **Move to Folder**
 4. Folders keep your library clean as it grows
 
-> [Screenshot: Habits library with folders organizing different habit categories]
+> [Screenshot 2: Habits library with folders organizing different habit categories]
 
 ### Assigning a Habit to a Client
 
@@ -40,7 +40,7 @@ Building a habit library lets you standardize the daily actions you want your cl
 6. Click **Assign**
 7. The client sees the habit on their mobile app immediately
 
-> [Screenshot: Assign habit dialog with library search]
+> [Screenshot 3: Assign habit dialog with library search]
 
 ### Assigning the Same Habit to Multiple Clients
 
@@ -58,7 +58,7 @@ Because habits live in your library, you can assign the same habit to as many cl
 4. Click **Save**
 5. Changes apply to future assignments; existing client assignments update as well
 
-> [Screenshot: Editing an existing habit in the library]
+> [Screenshot 4: Editing an existing habit in the library]
 
 ## Things to Note
 

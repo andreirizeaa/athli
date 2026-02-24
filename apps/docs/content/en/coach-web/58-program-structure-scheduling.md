@@ -23,7 +23,7 @@ A program is built on a simple grid:
 
 Empty day cells are rest days. You do not need to mark them explicitly. Simply leave the cell without a workout.
 
-> [Screenshot: program builder grid showing a 4-week program with workouts on some days and empty rest day cells]
+> [Screenshot 1: program builder grid showing a 4-week program with workouts on some days and empty rest day cells]
 
 ### Building Progressive Overload
 
@@ -37,7 +37,7 @@ Progressive overload is the gradual increase in training demand over time. The p
 
 This approach lets you create structured progression without rebuilding workouts from scratch each week.
 
-> [Screenshot: two consecutive weeks in the program builder, with Week 2 showing slightly higher rep counts than Week 1]
+> [Screenshot 2: two consecutive weeks in the program builder, with Week 2 showing slightly higher rep counts than Week 1]
 
 ### Rest Days
 
@@ -69,18 +69,7 @@ When you assign a program to a client, you choose when it starts:
 
 The workouts populate the client's calendar starting from the chosen date, following the weekly structure of the program.
 
-> [Screenshot: program assignment panel with a future start date selected]
-
-### How Clients Experience Programs
-
-Clients see their training week by week on their calendar in the mobile app:
-
-- Each day shows the scheduled workout (if any).
-- Clients can tap a workout to see the full details: sections, exercises, sets, and reps.
-- They do not see the full program overview or future weeks beyond what is on their calendar.
-- Completed workouts are marked as done with logged results.
-
-> [Screenshot: client mobile app showing a weekly view with scheduled workouts]
+> [Screenshot 3: program assignment panel with a future start date selected]
 
 ### Adjusting Structure After Creation
 

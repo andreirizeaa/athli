@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Download, Loader2 } from 'lucide-react';
 import { getCheckInInstance, addCoachReview, updateCoachReview, getCoachReview, type CheckInInstance, type Question, type QuestionAnswer } from '@/api/client/client-form-service';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,
@@ -37,6 +38,7 @@ const CheckInInstancePage = () => {
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
   const checkInId = Array.isArray(params.checkInId) ? params.checkInId[0] : params.checkInId;
   const instanceId = Array.isArray(params.instanceId) ? params.instanceId[0] : params.instanceId;
+  const { user } = useUserProfile();
 
   const [instance, setInstance] = useState<CheckInInstance | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -64,6 +66,7 @@ const CheckInInstancePage = () => {
             clientId={clientId}
             checkInId={checkInId}
             instanceId={instanceId}
+            coachId={user!.id}
           />
         </div>
       </div>

@@ -10,21 +10,27 @@ Controlling tempo is one of the most effective ways to manipulate training stimu
 
 ## Step-by-Step Guide
 
-### Adding the Tempo Column
+### Exercise-Wide Tempo
+
+You can set a single tempo that applies to all sets of an exercise using the tempo selector at the exercise level.
 
 1. Open the Workout Builder and locate the exercise where you want to prescribe tempo.
-2. Click on a column header to open the field selector.
-3. Select **Tempo** from the list of available fields.
-4. The Tempo column appears for that exercise.
+2. Find the **Tempo** field on the exercise card.
+3. Enter the 4-digit tempo using the format: **Eccentric-Pause-Concentric-Pause** (e.g., "3-1-2-0").
+4. The tempo applies to every set of that exercise.
 
-> [Screenshot: Tempo column added to an exercise in the Workout Builder]
+> [Screenshot 1: Exercise-wide tempo selector on the exercise card]
 
-### Entering Tempo Values
+### Set-Specific Tempo Column
 
-1. Click on the Tempo field for a set.
-2. Enter the 4-digit tempo using the format: **Eccentric-Pause-Concentric-Pause**.
-3. Use hyphens or spaces to separate the digits (e.g., "3-1-2-0" or "3120").
-4. The value is saved and visible to the client.
+Alternatively, you can add a Tempo column to configure different tempos per set.
+
+1. Click on a column header to open the field selector.
+2. Select **Tempo** from the list of available fields.
+3. The Tempo column appears for that exercise.
+4. Enter a tempo value for each individual set.
+
+> [Screenshot 2: Tempo column added as a per-set field in the Workout Builder]
 
 ### Understanding the Four Digits
 
@@ -46,16 +52,6 @@ Controlling tempo is one of the most effective ways to manipulate training stimu
 | 1-0-X-0 | Explosive | Power and speed development ("X" means as fast as possible) |
 | 5-0-5-0 | Super Slow | Time under tension, rehabilitation |
 
-### How Clients See Tempo in the Mobile App
-
-When a client opens a workout with tempo prescribed:
-
-1. The tempo value is displayed alongside the other set data (reps, weight, etc.).
-2. Clients can reference the tempo before and during each set.
-3. Some clients use the tempo as a mental count during their reps.
-
-> [Screenshot: Client mobile app view showing tempo alongside reps and weight]
-
 ## Things to Note
 
 - The "X" notation is sometimes used for the concentric phase to indicate "as fast as possible" or explosive intent.
@@ -63,7 +59,7 @@ When a client opens a workout with tempo prescribed:
 - When prescribing tempo, you may need to reduce the weight compared to uncontrolled reps.
 - Tempo is most commonly prescribed for compound lifts and hypertrophy-focused isolation work.
 - Not every exercise needs a tempo prescription. Use it strategically for movements where controlling speed adds value.
-- You can set Tempo as a default column in **Settings > App > Customisations** if you use it frequently.
+
 
 ## FAQs
 

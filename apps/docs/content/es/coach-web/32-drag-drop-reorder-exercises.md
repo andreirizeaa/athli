@@ -2,7 +2,7 @@
 
 ## ¿Que es esto?
 
-El Constructor de Entrenamientos soporta funcionalidad de arrastrar y soltar, permitiendote reordenar ejercicios dentro de un entrenamiento haciendo clic y arrastrandolos a una nueva posicion. Puedes mover ejercicios dentro de la misma seccion, entre diferentes secciones o en el nivel superior del entrenamiento.
+El Constructor de Entrenamientos soporta funcionalidad de arrastrar y soltar en el panel derecho, permitiendote reordenar ejercicios dentro de un entrenamiento haciendo clic y arrastrandolos a una nueva posicion. Puedes mover ejercicios dentro de la misma seccion, entre diferentes secciones o en el nivel superior del entrenamiento.
 
 ## ¿Por que es util?
 
@@ -19,7 +19,9 @@ El orden de los ejercicios importa para los resultados del entrenamiento. Puede 
 5. Suelta el boton del raton para soltar el ejercicio en su nueva posicion.
 6. El orden de los ejercicios se actualiza inmediatamente.
 
-> [Screenshot: Drag handle visible on the left side of an exercise card]
+Alternativamente, puedes hacer clic en el menu de puntos suspensivos (tres puntos) en la tarjeta del ejercicio y seleccionar **Mover Arriba** o **Mover Abajo** para reordenar sin arrastrar.
+
+> [Screenshot 1: Manija de arrastre visible en el lado izquierdo de la tarjeta del ejercicio, y menu de puntos suspensivos con opciones Mover Arriba y Mover Abajo]
 
 ### Mover Ejercicios Entre Secciones
 
@@ -28,7 +30,7 @@ El orden de los ejercicios importa para los resultados del entrenamiento. Puede 
 3. La seccion destino se resaltara o expandira para indicar que puede aceptar el ejercicio.
 4. Suelta el ejercicio en la posicion deseada dentro de la seccion destino.
 
-> [Screenshot: An exercise being dragged from one section into another]
+> [Screenshot 2: An exercise being dragged from one section into another]
 
 ### Reordenar Secciones
 

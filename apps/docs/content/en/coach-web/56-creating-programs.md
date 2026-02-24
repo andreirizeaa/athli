@@ -20,14 +20,15 @@ A training program in Athli is a multi-week structured plan that organizes worko
 2. Select the **Training** tab.
 3. Click **Programs**.
 4. Click **New Program**.
-5. Fill in the program details:
+5. A side panel opens — fill in the program details:
    - **Name** - A descriptive name (e.g., "12-Week Beginner Strength").
    - **Description** - Optional summary of the program's goals and structure.
    - **Duration** - Number of weeks the program spans.
    - **Difficulty** - The intended difficulty level.
-6. Click **Create** to open the program builder.
+6. Save to create the program.
+7. Click on the newly created program in the grid to open the program builder.
 
-> [Screenshot: new program form with name, description, duration, and difficulty fields]
+> [Screenshot 1: side panel for creating a new program with name, description, duration, and difficulty fields]
 
 ### Understanding the Program Builder Grid
 
@@ -38,7 +39,7 @@ The program builder displays a weekly calendar grid:
 - Each **cell** is a day slot where you can add a workout.
 - Empty cells represent rest days.
 
-> [Screenshot: program builder grid showing weeks as rows and days as columns with some workout cards placed]
+> [Screenshot 2: program builder grid showing weeks as rows and days as columns with some workout cards placed]
 
 ### Adding Workouts to Days
 
@@ -47,7 +48,7 @@ Click on any day cell in the grid to add a workout. You have two options:
 1. **Create a new workout** - Build a workout from scratch directly in the cell using the workout builder.
 2. **Add from library** - Select an existing workout from your saved workout library.
 
-> [Screenshot: day cell clicked showing options to create new workout or add from library]
+> [Screenshot 3: day cell clicked showing options to create new workout or add from library]
 
 ### Drag and Drop
 
@@ -64,7 +65,7 @@ This makes it easy to restructure your program without deleting and recreating w
 - **Insert Week** - Click the insert week button to add a blank week row at the desired position.
 - **Duplicate Week** - Hover over a week row and click the copy icon. All workouts from that week are duplicated into a new row below. This is the fastest way to build progressive overload: duplicate a week and then adjust the weights or reps upward.
 
-> [Screenshot: week row with insert and duplicate buttons visible]
+> [Screenshot 4: week row with insert and duplicate buttons visible]
 
 ### Editing Program Details
 
@@ -82,7 +83,7 @@ If you build a workout inside the program that you want to reuse elsewhere:
 2. Click **Save to Library**.
 3. The workout is now available in your workout library for use in other programs or client training.
 
-> [Screenshot: workout card context menu with Save to Library option]
+> [Screenshot 5: workout card context menu with Save to Library option]
 
 ## Things to Note
 

@@ -22,14 +22,14 @@ These groupings help you design time-efficient, high-intensity workouts. Superse
 4. Click the **Group as Superset** option that appears in the toolbar or context menu.
 5. The exercises are now visually grouped together with a bracket or border indicating they form a superset.
 
-> [Screenshot: Two exercises grouped as a superset with visual bracket]
+> [Screenshot 1: Two exercises grouped as a superset with visual bracket]
 
 ### Creating a Triset or Giant Set
 
 1. Follow the same selection process, but select 3 exercises for a triset or 4+ exercises for a giant set.
 2. Use the group action to combine them. The builder automatically labels the group based on the number of exercises: Superset (2), Triset (3), or Giant Set (4+).
 
-> [Screenshot: Four exercises grouped as a giant set]
+> [Screenshot 2: Four exercises grouped as a giant set]
 
 ### Ungrouping Exercises
 

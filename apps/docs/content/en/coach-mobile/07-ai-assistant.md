@@ -13,7 +13,7 @@ The AI Assistant is available on the coach mobile app so you can get quick answe
 3. Type your question or request
 4. The AI responds with context-aware answers
 
-> [Screenshot: Mobile AI assistant chat screen]
+> [Screenshot 1: Mobile AI assistant chat screen]
 
 ### Example Requests
 
@@ -28,7 +28,7 @@ The AI Assistant is available on the coach mobile app so you can get quick answe
 2. If it suggests an action (like creating a workout), review the details
 3. Confirm to execute the action or ask for modifications
 
-> [Screenshot: Mobile AI response with action card]
+> [Screenshot 2: Mobile AI response with action card]
 
 ## Things to Note
 

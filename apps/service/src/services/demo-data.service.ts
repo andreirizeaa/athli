@@ -10,6 +10,131 @@ interface SeedDemoClientParams {
   timezone: string | null;
 }
 
+// TODO: Remove hardcoded demo clients when real client onboarding is complete
+// These demo clients are used to populate the athletes page with realistic data for screenshots and demos
+const DEMO_CLIENTS = [
+  {
+    name: 'Sarah Johnson',
+    email: 'sarah.j@demo.athli.com',
+    avatarUrl: 'https://randomuser.me/api/portraits/women/44.jpg',
+    dateOfBirth: '1995-03-15',
+    gender: 'female',
+    heightCm: 165,
+    phone: '+1 555-0101',
+    country: 'United States',
+    timezone: 'America/New_York',
+    last7Completed: 5,
+    last7Total: 5,
+    last30Completed: 18,
+    last30Total: 20,
+  },
+  {
+    name: 'Marcus Chen',
+    email: 'marcus.c@demo.athli.com',
+    avatarUrl: 'https://randomuser.me/api/portraits/men/32.jpg',
+    dateOfBirth: '1990-08-22',
+    gender: 'male',
+    heightCm: 178,
+    phone: '+1 555-0102',
+    country: 'Canada',
+    timezone: 'America/Toronto',
+    last7Completed: 4,
+    last7Total: 5,
+    last30Completed: 15,
+    last30Total: 20,
+  },
+  {
+    name: 'Emma Williams',
+    email: 'emma.w@demo.athli.com',
+    avatarUrl: 'https://randomuser.me/api/portraits/women/68.jpg',
+    dateOfBirth: '1998-11-08',
+    gender: 'female',
+    heightCm: 170,
+    phone: '+44 7700 900123',
+    country: 'United Kingdom',
+    timezone: 'Europe/London',
+    last7Completed: 3,
+    last7Total: 4,
+    last30Completed: 14,
+    last30Total: 16,
+  },
+  {
+    name: 'James Rodriguez',
+    email: 'james.r@demo.athli.com',
+    avatarUrl: 'https://randomuser.me/api/portraits/men/75.jpg',
+    dateOfBirth: '1992-05-30',
+    gender: 'male',
+    heightCm: 182,
+    phone: '+34 612 345 678',
+    country: 'Spain',
+    timezone: 'Europe/Madrid',
+    last7Completed: 5,
+    last7Total: 5,
+    last30Completed: 19,
+    last30Total: 20,
+  },
+  {
+    name: 'Olivia Taylor',
+    email: 'olivia.t@demo.athli.com',
+    avatarUrl: 'https://randomuser.me/api/portraits/women/17.jpg',
+    dateOfBirth: '1997-02-14',
+    gender: 'female',
+    heightCm: 163,
+    phone: '+61 412 345 678',
+    country: 'Australia',
+    timezone: 'Australia/Sydney',
+    last7Completed: 2,
+    last7Total: 4,
+    last30Completed: 12,
+    last30Total: 16,
+  },
+  {
+    name: 'Daniel Kim',
+    email: 'daniel.k@demo.athli.com',
+    avatarUrl: 'https://randomuser.me/api/portraits/men/91.jpg',
+    dateOfBirth: '1994-09-03',
+    gender: 'male',
+    heightCm: 175,
+    phone: '+82 10 1234 5678',
+    country: 'South Korea',
+    timezone: 'Asia/Seoul',
+    last7Completed: 4,
+    last7Total: 5,
+    last30Completed: 16,
+    last30Total: 20,
+  },
+  {
+    name: 'Sophia Martinez',
+    email: 'sophia.m@demo.athli.com',
+    avatarUrl: 'https://randomuser.me/api/portraits/women/55.jpg',
+    dateOfBirth: '1996-07-19',
+    gender: 'female',
+    heightCm: 168,
+    phone: '+52 55 1234 5678',
+    country: 'Mexico',
+    timezone: 'America/Mexico_City',
+    last7Completed: 3,
+    last7Total: 4,
+    last30Completed: 13,
+    last30Total: 16,
+  },
+  {
+    name: 'Alex Patel',
+    email: 'alex.p@demo.athli.com',
+    avatarUrl: 'https://randomuser.me/api/portraits/men/46.jpg',
+    dateOfBirth: '1991-12-25',
+    gender: 'male',
+    heightCm: 180,
+    phone: '+91 98765 43210',
+    country: 'India',
+    timezone: 'Asia/Kolkata',
+    last7Completed: 5,
+    last7Total: 5,
+    last30Completed: 20,
+    last30Total: 20,
+  },
+];
+
 class DemoDataService {
   async seedDemoClient(params: SeedDemoClientParams): Promise<void> {
     const { coachId, coachName, coachEmail, signinMethod, profilePictureUrl, timezone } = params;
@@ -160,6 +285,9 @@ class DemoDataService {
       // Training must be done after the above since it's the most complex
       await this.seedTraining(supabase, clientId, coachId);
 
+      // Seed additional demo clients for populated athletes page
+      await this.seedAdditionalDemoClients(supabase, coachId);
+
       // Generate client tasks for today based on the seeded assignments
       await this.generateTasks(supabase);
 
@@ -167,6 +295,92 @@ class DemoDataService {
     } catch (err) {
       console.error('[DemoData] Unexpected error during seeding:', err);
     }
+  }
+
+  // ─── Additional Demo Clients ────────────────────────────────────
+  // TODO: Remove this method when real client onboarding is complete
+
+  private async seedAdditionalDemoClients(supabase: any, coachId: string) {
+    console.log('[DemoData] Seeding additional demo clients for coach:', coachId);
+
+    for (const demoClient of DEMO_CLIENTS) {
+      try {
+        // Create a new user via Supabase admin API
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: demoClient.email,
+          email_confirm: true,
+          user_metadata: {
+            name: demoClient.name,
+            user_type: 'client',
+          },
+        });
+
+        if (authError) {
+          // User might already exist, try to find them
+          const { data: existingUsers } = await supabase.auth.admin.listUsers();
+          const existingUser = existingUsers?.users?.find((u: any) => u.email === demoClient.email);
+          if (existingUser) {
+            console.log(`[DemoData] Demo client ${demoClient.name} already exists, skipping`);
+            continue;
+          }
+          console.error(`[DemoData] Failed to create auth user for ${demoClient.name}:`, authError);
+          continue;
+        }
+
+        const clientId = authData.user.id;
+        const now = new Date();
+        const lastActivityDate = addDays(now, -1).toISOString().split('T')[0];
+
+        // Create user_profiles entry
+        await supabase.from('user_profiles').insert({
+          id: clientId,
+          user_type: 'client',
+          email: demoClient.email,
+          name: demoClient.name,
+          profile_picture_url: demoClient.avatarUrl,
+          signin_method: 'email',
+          timezone: demoClient.timezone,
+        });
+
+        // Create client_profiles entry with populated fields
+        await supabase.from('client_profiles').insert({
+          client_id: clientId,
+          unit_system: 'metric',
+          date_of_birth: demoClient.dateOfBirth,
+          gender: demoClient.gender,
+          height_cm: demoClient.heightCm,
+          phone: demoClient.phone,
+          country: demoClient.country,
+        });
+
+        // Create coach_client_assignments
+        await supabase.from('coach_client_assignments').insert({
+          coach_id: coachId,
+          client_id: clientId,
+          category: 'online',
+          status: 'connected',
+          connected_at: now.toISOString(),
+          is_active: true,
+        });
+
+        // Create training summary with populated stats
+        await supabase.from('client_training_summary').insert({
+          client_id: clientId,
+          coach_id: coachId,
+          last_activity: lastActivityDate,
+          last_7_days_training_completed: demoClient.last7Completed,
+          last_7_days_training_total: demoClient.last7Total,
+          last_30_days_training_completed: demoClient.last30Completed,
+          last_30_days_training_total: demoClient.last30Total,
+        });
+
+        console.log(`[DemoData] Created demo client: ${demoClient.name}`);
+      } catch (err) {
+        console.error(`[DemoData] Error creating demo client ${demoClient.name}:`, err);
+      }
+    }
+
+    console.log('[DemoData] Finished seeding additional demo clients');
   }
 
   // ─── Step 5: Bio ────────────────────────────────────────────────

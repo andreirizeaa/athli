@@ -25,7 +25,7 @@ Great results come from consistent daily actions, not just workouts. Habit track
 4. Optionally organize into folders
 5. Click **Save**
 
-> [Screenshot: Create habit form]
+> [Screenshot 1: Create habit form]
 
 ### Assigning a Habit to a Client
 
@@ -35,7 +35,7 @@ Great results come from consistent daily actions, not just workouts. Habit track
 4. Select a habit from your library
 5. Click **Assign**
 
-> [Screenshot: Assign habit dialog with library selection]
+> [Screenshot 2: Assign habit dialog with library selection]
 
 ### Viewing Habit Logs
 
@@ -44,7 +44,7 @@ Great results come from consistent daily actions, not just workouts. Habit track
 3. Click on a habit to see detailed logs
 4. Use **Log a Habit** to manually log on the client's behalf
 
-> [Screenshot: Habit tab showing completion calendar and log entries]
+> [Screenshot 3: Habit tab showing completion calendar and log entries]
 
 ### Editing and Deleting Logs
 
@@ -53,7 +53,7 @@ Great results come from consistent daily actions, not just workouts. Habit track
 3. Click **Delete** to remove the log
 4. Confirm the action
 
-> [Screenshot: Habit log entry with edit and delete options]
+> [Screenshot 4: Habit log entry with edit and delete options]
 
 ## Things to Note
 

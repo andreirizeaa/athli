@@ -198,7 +198,7 @@ export const coachCheckInsController = {
         }
 
         // Map view columns to the CheckInReview interface
-        const reviews = (rows || []).map((r: any) => ({
+        const allReviews = (rows || []).map((r: any) => ({
             checkin_log_id: r.log_id,
             client_id: r.client_id,
             coach_checkin_id: r.assignment_id,
@@ -213,6 +213,17 @@ export const coachCheckInsController = {
             updated_at: r.created_at,
             coach_id: r.coach_id,
         }));
+
+        // Deduplicate: if the same client has multiple assignments for the same
+        // check-in template, keep only the most recent log per (client, name, date).
+        // Rows are already ordered by created_at DESC so the first seen wins.
+        const seen = new Set<string>();
+        const reviews = allReviews.filter((r: any) => {
+            const key = `${r.client_id}_${r.checkin_name}_${r.submission_date}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
 
         success(res, {
             message: 'Coach check-in reviews retrieved successfully',

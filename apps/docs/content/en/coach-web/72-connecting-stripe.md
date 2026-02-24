@@ -19,7 +19,7 @@ Before you can sell coaching packages or accept any payments through Athli, you 
 5. Once the onboarding is complete, you are redirected back to Athli
 6. Your Stripe account is now connected and you can start creating packages
 
-> [Screenshot: Business page showing the Connect Stripe button]
+> [Screenshot 1: Business page showing the Connect Stripe button]
 
 ### Choosing an Account Type
 
@@ -35,7 +35,7 @@ Before you can sell coaching packages or accept any payments through Athli, you 
 3. From Stripe, configure your payout schedule (daily, weekly, monthly)
 4. Set your preferred bank account for receiving funds
 
-> [Screenshot: Stripe Dashboard link in the Business section]
+> [Screenshot 2: Stripe Dashboard link in the Business section]
 
 ## Things to Note
 

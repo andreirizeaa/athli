@@ -10,9 +10,9 @@ No todos los habitos son iguales. "Caminar 10,000 pasos" necesita una unidad de 
 
 ## Guia Paso a Paso
 
-### Unidades Disponibles
+### Configurar Unidades
 
-Los habitos admiten una variedad de unidades en diferentes categorias:
+Las unidades son etiquetas que aparecen cuando los clientes registran un habito. Elige la unidad que corresponda al habito desde el desplegable al crear o editar un habito.
 
 | Categoria | Unidades | Ejemplo de Habito |
 |-----------|----------|-------------------|
@@ -22,47 +22,33 @@ Los habitos admiten una variedad de unidades en diferentes categorias:
 | Volumen | ml, l, oz, Vasos, Bebida | "Beber 3 l de agua", "8 Vasos de agua" |
 | Nutricion | Cal, g, mg | "Comer 150 g de proteina", "2000 Cal de ingesta" |
 
-### Periodos de Seguimiento
-
-El periodo de seguimiento determina con que frecuencia se espera que el cliente complete el habito:
-
-| Periodo | Descripcion | Mejor Para |
-|---------|-------------|------------|
-| Diario | El habito se reinicia cada dia y los clientes rastrean el completado cada dia | Rutinas diarias como ingesta de agua, estiramientos, suplementos |
-| Semanal | El objetivo del habito se rastrea durante toda la semana | Objetivos semanales como distancia total corrida, sesiones de gimnasio por semana |
-
-### Configuracion de Duracion
-
-La duracion controla cuanto tiempo permanece activo el habito para el cliente:
-
-| Duracion | Descripcion | Ejemplo |
-|----------|-------------|---------|
-| Dias | El habito dura un numero determinado de dias | "Desafio de agua de 30 dias" |
-| Meses | El habito dura un numero determinado de meses | "Programa de movilidad de 3 meses" |
-| Anos | El habito dura un numero determinado de anos | "Habito de bienestar anual continuo" |
-
-### Como las Unidades Afectan la Experiencia del Cliente
-
-Cuando un cliente abre un habito en su aplicacion movil, la unidad que elegiste determina la entrada que ve:
-
-- Si la unidad es **Pasos**, el cliente ingresa un numero de pasos
-- Si la unidad es **Min**, el cliente registra minutos invertidos
-- Si la unidad es **Vasos**, el cliente registra vasos consumidos
-- La etiqueta de la unidad aparece junto al campo de entrada para que el cliente sepa que ingresar
-
-> [Screenshot: Client mobile view showing habit logging with unit label]
-
-### Configurar un Habito con Unidades y Periodos
-
 1. Ve a **Biblioteca > Habitos**
 2. Haz clic en **Crear Habito** o edita un habito existente
-3. Establece la **unidad** del menu desplegable (Pasos, Min, Veces, Conteo, Bebida, Vasos, m, km, Milla, Seg, Hora, ml, l, oz, Cal, g, mg)
-4. Establece el **periodo** (Diario o Semanal)
-5. Establece la **duracion** y elige Dias, Meses o Anos
-6. Ingresa el **valor objetivo** (ej., 10,000 para Pasos, 3 para l)
-7. Haz clic en **Guardar**
+3. Establece la **unidad** del desplegable
+4. Ingresa el **valor objetivo** (ej., 10,000 para Pasos, 3 para l)
 
-> [Screenshot: Habit creation form with unit, period, and duration settings]
+> [Screenshot 1: Formulario de creacion de habito mostrando el desplegable de unidades]
+
+### Duracion y Recordatorios
+
+Establece cuanto tiempo dura el habito y con que frecuencia se les recuerda a los clientes registrarlo.
+
+| Periodo | Descripcion |
+|---------|-------------|
+| Diario | El habito se reinicia cada dia |
+| Semanal | El objetivo del habito se rastrea durante toda la semana |
+
+| Duracion | Descripcion |
+|----------|-------------|
+| Dias | El habito dura un numero determinado de dias |
+| Meses | El habito dura un numero determinado de meses |
+| Anos | El habito dura un numero determinado de anos |
+
+1. Establece el **periodo** (Diario o Semanal)
+2. Establece la **duracion** y elige Dias, Meses o Anos
+3. Haz clic en **Guardar**
+
+> [Screenshot 2: Formulario de creacion de habito mostrando la configuracion de duracion y recordatorios]
 
 ## Cosas a Tener en Cuenta
 

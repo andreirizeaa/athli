@@ -12,7 +12,7 @@ The Home screen on the coach mobile app shows you a summary of your day. See tod
 2. Scroll through the workout cards to see each client's scheduled workout
 3. Tap a card to view workout details, completion status, and client feedback
 
-> [Screenshot: Mobile home screen showing workout cards for today]
+> [Screenshot 1: Mobile home screen showing workout cards for today]
 
 ### Checking At-Risk Clients
 
@@ -20,7 +20,7 @@ The Home screen on the coach mobile app shows you a summary of your day. See tod
 2. This highlights clients who have missed workouts or check-ins
 3. Tap a client to go directly to their profile
 
-> [Screenshot: At-risk clients section on mobile home]
+> [Screenshot 2: At-risk clients section on mobile home]
 
 ### Managing Your To-Do List
 
@@ -28,7 +28,7 @@ The Home screen on the coach mobile app shows you a summary of your day. See tod
 2. View automated tasks and your personal task list
 3. Tap to complete tasks or add new ones
 
-> [Screenshot: Mobile to-do list with task items]
+> [Screenshot 3: Mobile to-do list with task items]
 
 ---
 

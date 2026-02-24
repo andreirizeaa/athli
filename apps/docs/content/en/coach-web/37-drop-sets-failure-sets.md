@@ -25,7 +25,7 @@ These techniques increase training intensity and time under tension beyond what 
 | 2 | Drop Set | 10 | 22.5 kg |
 | 3 | Drop Set | 12 | 15 kg |
 
-> [Screenshot: Drop set sequence configured in the Workout Builder]
+> [Screenshot 1: Drop set sequence configured in the Workout Builder]
 
 ### Configuring Failure Sets
 
@@ -35,7 +35,7 @@ These techniques increase training intensity and time under tension beyond what 
 4. The set is marked as a failure set. You can leave the reps field blank or enter a target minimum, since the actual reps will be determined by the client's performance.
 5. In the mobile app, the client logs the actual number of reps they completed before reaching failure.
 
-> [Screenshot: Failure set marked in the Workout Builder with visual indicator]
+> [Screenshot 2: Failure set marked in the Workout Builder with visual indicator]
 
 ### Combining Drop Sets and Failure Sets
 

@@ -166,12 +166,16 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions, cl
     }
   }, [question, open]);
 
-  // Fetch metrics when metrics format is selected
+  // Fetch metrics eagerly when panel opens with clientId (so metricsCardState is accurate),
+  // or when metrics format is selected without clientId (edit mode in coach library)
   useEffect(() => {
-    if (open && selectedFormat === 'metrics') {
+    if (!open) return;
+    if (clientId) {
+      fetchMetrics();
+    } else if (selectedFormat === 'metrics') {
       fetchMetrics();
     }
-  }, [open, selectedFormat]);
+  }, [open, clientId, selectedFormat]);
 
   const fetchMetrics = async () => {
     if (isEditing) {

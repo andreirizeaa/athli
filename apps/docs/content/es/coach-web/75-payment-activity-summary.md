@@ -17,7 +17,7 @@ Llevar un registro de los ingresos de tu coaching es esencial. La pagina de Acti
 3. Cada entrada muestra el nombre del cliente, paquete, monto, fecha y estado
 4. Usa los filtros para reducir los resultados por rango de fechas, cliente o estado de pago
 
-> [Screenshot: Activity page with list of transactions and filter options]
+> [Screenshot 1: Activity page with list of transactions and filter options]
 
 ### Entender los Estados de Pago
 
@@ -34,7 +34,7 @@ Llevar un registro de los ingresos de tu coaching es esencial. La pagina de Acti
 3. Seras llevado directamente a tu cuenta de Stripe
 4. Desde alli, puedes gestionar todos los detalles financieros
 
-> [Screenshot: Stripe Dashboard link in the Business section]
+> [Screenshot 2: Stripe Dashboard link in the Business section]
 
 ### Gestionar Reembolsos
 
@@ -51,7 +51,7 @@ Athli no gestiona reembolsos directamente. Todo el procesamiento de reembolsos d
 2. Ve suscripciones activas, renovaciones y cancelaciones
 3. Para detalles de gestion de suscripciones, visita el Stripe Dashboard
 
-> [Screenshot: Activity page filtered to show subscription events]
+> [Screenshot 3: Activity page filtered to show subscription events]
 
 ## Cosas a Tener en Cuenta
 

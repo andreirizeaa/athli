@@ -17,14 +17,14 @@ If you know other coaches who would benefit from Athli, referring them earns you
 3. Click **Copy Link** to copy it to your clipboard
 4. Share it with other coaches via email, social media, or messaging
 
-> [Screenshot: Refer and earn page with referral link and copy button]
+> [Screenshot 1: Refer and earn page with referral link and copy button]
 
 ### Getting Your Referral Code
 
 1. On the same page, you can also find your referral code
 2. Share this code for coaches who prefer entering a code during signup
 
-> [Screenshot: Referral code section]
+> [Screenshot 2: Referral code section]
 
 ### Tracking Your Referrals
 
@@ -32,7 +32,7 @@ If you know other coaches who would benefit from Athli, referring them earns you
 2. See how many people signed up using your link
 3. Track your earned rewards
 
-> [Screenshot: Referral stats showing signups and rewards]
+> [Screenshot 3: Referral stats showing signups and rewards]
 
 ## Things to Note
 

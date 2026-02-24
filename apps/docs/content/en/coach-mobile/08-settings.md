@@ -11,15 +11,15 @@ The Settings screen on the coach mobile app lets you manage your profile, notifi
 1. Tap the **Profile** or **Settings** tab at the bottom of the screen
 2. You see a list of setting categories
 
-> [Screenshot: Mobile settings screen with category list]
+> [Screenshot 1: Mobile settings screen with category list]
 
 ### Editing Your Profile
 
 1. Tap **Edit Profile**
-2. Update your name, profile picture, or bio
+2. Update your personal details (name, profile picture, bio, timezone, contact information) and company details (business name, description)
 3. Tap **Save**
 
-> [Screenshot: Mobile edit profile screen]
+> [Screenshot 2: Mobile edit profile screen]
 
 ### Managing Notifications
 
@@ -27,7 +27,7 @@ The Settings screen on the coach mobile app lets you manage your profile, notifi
 2. Toggle push notifications on or off for different event types
 3. Choose which events you want to be notified about
 
-> [Screenshot: Mobile notification preferences]
+> [Screenshot 3: Mobile notification preferences]
 
 ### Viewing Billing
 
@@ -35,15 +35,7 @@ The Settings screen on the coach mobile app lets you manage your profile, notifi
 2. See your current plan and usage
 3. For plan changes, you will be directed to the web app
 
-> [Screenshot: Mobile billing overview]
-
-### Company Details
-
-1. Tap **Company Details**
-2. View and update your business information
-3. Edit business name and description
-
-> [Screenshot: Mobile company details screen]
+> [Screenshot 4: Mobile billing overview]
 
 ### Feature Requests
 
@@ -51,19 +43,12 @@ The Settings screen on the coach mobile app lets you manage your profile, notifi
 2. Browse existing requests and vote on ones you want
 3. Submit new feature requests directly from the app
 
-> [Screenshot: Mobile feature requests list]
-
-### Personal Details
-
-1. Tap **Personal Details**
-2. Update your timezone, preferences, and contact information
-
-> [Screenshot: Mobile personal details screen]
+> [Screenshot 5: Mobile feature requests list]
 
 ## Things to Note
 
 - Some settings (like billing plan changes) redirect to the web app
-- Notification settings on mobile control push notifications specifically
+- Notification settings on mobile include toggles for both push and email notifications
 - Changes sync with the web app immediately
 
 ---

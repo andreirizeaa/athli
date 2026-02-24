@@ -20,7 +20,7 @@ Sin la sincronizacion, los clientes necesitarian enviar un check-in y luego regi
 6. Selecciona la metrica con la que quieres sincronizar del menu desplegable
 7. Haz clic en **Guardar**
 
-> [Screenshot: Number question with Link to Metric dropdown showing available metrics]
+> [Screenshot 1: Number question with Link to Metric dropdown showing available metrics]
 
 ### Como Funciona la Sincronizacion
 
@@ -30,28 +30,13 @@ Sin la sincronizacion, los clientes necesitarian enviar un check-in y luego regi
 4. El valor se registra automaticamente en la metrica vinculada con la fecha de envio
 5. El grafico de la metrica se actualiza para incluir el nuevo punto de datos
 
-> [Screenshot: Metric chart showing data points synced from check-in submissions]
+> [Screenshot 2: Metric chart showing data points synced from check-in submissions]
 
 ### Requisitos para la Sincronizacion
 
 - La pregunta del check-in debe ser de tipo **Numero**. Las preguntas de Texto, Calificacion, Si/No, Opcion Multiple y Escala no se pueden sincronizar con metricas.
 - La metrica debe existir ya en tu biblioteca y estar asignada al cliente.
 - Una pregunta puede vincularse a una metrica a la vez.
-
-### Verificar la Sincronizacion
-
-1. Despues de que un cliente envie un check-in con una pregunta vinculada, ve a su pestana de **Metricas**
-2. Abre la metrica vinculada
-3. Deberias ver el nuevo punto de datos en el grafico y el historial
-4. La entrada del registro mostrara que fue sincronizada desde un check-in
-
-> [Screenshot: Metric history entry showing source as check-in sync]
-
-### Escenarios Comunes de Sincronizacion
-
-- **Check-in de peso corporal**: Agrega una pregunta de Numero "¿Cual es tu peso hoy?" y vinculala a la metrica de peso del cliente
-- **Seguimiento de sueno**: Agrega una pregunta de Numero "¿Cuantas horas dormiste?" y vinculala a una metrica de horas de sueno
-- **Mediciones**: Agrega preguntas de Numero para cintura, pecho o brazos y vincula cada una a la metrica correspondiente
 
 ## Cosas a Tener en Cuenta
 

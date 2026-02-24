@@ -26,7 +26,7 @@ Rastrear numeros a lo largo del tiempo revela progreso real que los clientes pod
 6. Agrega una **descripcion** (opcional) con notas sobre como medir o registrar
 7. Haz clic en **Guardar**
 
-> [Screenshot: Create metric form with type dropdown and unit selection]
+> [Screenshot 1: Create metric form with type dropdown and unit selection]
 
 ### Organizar Metricas en Carpetas
 
@@ -35,7 +35,7 @@ Rastrear numeros a lo largo del tiempo revela progreso real que los clientes pod
 3. Arrastra metricas a las carpetas o usa **Mover a Carpeta**
 4. Las carpetas mantienen tu biblioteca organizada a medida que agregas mas metricas
 
-> [Screenshot: Metrics library with organized folders]
+> [Screenshot 2: Metrics library with organized folders]
 
 ### Asignar una Metrica a un Cliente
 
@@ -46,7 +46,7 @@ Rastrear numeros a lo largo del tiempo revela progreso real que los clientes pod
 5. Selecciona la metrica y haz clic en **Asignar**
 6. La metrica ahora aparece en la pestana de Metricas del cliente, lista para registrar
 
-> [Screenshot: Assign metric dialog with library search]
+> [Screenshot 3: Assign metric dialog with library search]
 
 ### Asignar Multiples Metricas
 
@@ -63,7 +63,7 @@ Puedes asignar tantas metricas como necesites a un solo cliente. Configuraciones
 3. Actualiza el nombre, tipo, unidad o descripcion
 4. Haz clic en **Guardar**
 
-> [Screenshot: Editing an existing metric in the library]
+> [Screenshot 4: Editing an existing metric in the library]
 
 ## Cosas a Tener en Cuenta
 

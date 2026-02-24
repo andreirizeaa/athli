@@ -17,14 +17,14 @@ Si conoces a otros entrenadores que se beneficiarian de Athli, referirlos te hac
 3. Haz clic en **Copiar Enlace** para copiarlo al portapapeles
 4. Compartelo con otros entrenadores por correo electronico, redes sociales o mensajeria
 
-> [Screenshot: Refer and earn page with referral link and copy button]
+> [Screenshot 1: Refer and earn page with referral link and copy button]
 
 ### Obtener tu Codigo de Referido
 
 1. En la misma pagina, tambien puedes encontrar tu codigo de referido
 2. Comparte este codigo para entrenadores que prefieren ingresar un codigo durante el registro
 
-> [Screenshot: Referral code section]
+> [Screenshot 2: Referral code section]
 
 ### Seguimiento de tus Referidos
 
@@ -32,7 +32,7 @@ Si conoces a otros entrenadores que se beneficiarian de Athli, referirlos te hac
 2. Ve cuantas personas se registraron usando tu enlace
 3. Rastrea tus recompensas ganadas
 
-> [Screenshot: Referral stats showing signups and rewards]
+> [Screenshot 3: Referral stats showing signups and rewards]
 
 ## Cosas a Tener en Cuenta
 
