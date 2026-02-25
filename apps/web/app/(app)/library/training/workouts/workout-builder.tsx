@@ -46,6 +46,7 @@ import type {
 import type { SetData } from '@/components/training/builder/exercise-card';
 import { ExerciseCard } from '@/components/training/builder/exercise-card';
 import { ExerciseSelectionPanel } from '@/components/training/builder/exercise-selection-panel';
+import { AIBuilderChat } from '@/components/training/builder/ai-builder-chat';
 import { CoachSectionsSidebar } from '@/components/training/builder/coach-sections-sidebar';
 import { InlineSectionCreator } from '@/components/training/builder/inline-section-creator';
 import { getSectionById, createSection, type Section } from '@/api/coach/coach-section-service';
@@ -1653,8 +1654,7 @@ export const WorkoutBuilder = ({
     }
   };
 
-  const handleUseAiExample = () => {
-    const examplePrompt = `Create a full-body strength and conditioning workout for intermediate level. Include:
+  const examplePrompt = `Create a full-body strength and conditioning workout for intermediate level. Include:
 
 - 3-4 compound exercises (squats, deadlifts, bench press variations)
 - 2-3 accessory movements for arms and core
@@ -1664,6 +1664,8 @@ export const WorkoutBuilder = ({
 - Total workout duration: 45-60 minutes
 
 Focus on proper form and progressive overload.`;
+
+  const handleUseAiExample = () => {
     setAiPrompt(examplePrompt);
   };
 
@@ -2929,190 +2931,15 @@ Focus on proper form and progressive overload.`;
                         )}
                       </div>
                     ) : (
-                      <div
-                        className="flex flex-col px-4 h-full min-h-0 w-full relative"
-                        onDragEnter={(e) => {
-                          if (selectedFile) return;
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setIsDraggingAiFile(true);
+                      <AIBuilderChat
+                        builderType="workout"
+                        onWorkoutGenerated={(workout) => {
+                          processGeneratedWorkout(workout);
+                          setActiveBuilder("manual");
                         }}
-                        onDragLeave={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                            setIsDraggingAiFile(false);
-                          }
-                        }}
-                        onDragOver={(e) => {
-                          if (selectedFile) return;
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                        onDrop={(e) => {
-                          if (selectedFile) return;
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setIsDraggingAiFile(false);
-                          const files = Array.from(e.dataTransfer.files);
-                          const validFile = files.find((file) => file.type === 'application/pdf');
-                          if (validFile) {
-                            setSelectedFile(validFile);
-                          }
-                        }}
-                      >
-                        {!selectedFile && isDraggingAiFile && (
-                          <div
-                            className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm border-2 border-dashed border-primary flex items-center justify-center pointer-events-auto rounded-lg"
-                            onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingAiFile(true); }}
-                            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setIsDraggingAiFile(false);
-                              const files = Array.from(e.dataTransfer.files);
-                              const validFile = files.find((file) => file.type === 'application/pdf');
-                              if (validFile) {
-                                setSelectedFile(validFile);
-                              }
-                            }}
-                          >
-                            <div className="flex flex-col items-center gap-4 text-center">
-                              <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-background/50 backdrop-blur-sm shadow-xl p-3 border border-white/20">
-                                <Image
-                                  src="/icons/pdf.png"
-                                  alt="PDF"
-                                  width={40}
-                                  height={40}
-                                  className="object-contain"
-                                />
-                              </div>
-                              <div>
-                                <p className="text-lg font-semibold">{t('library.dropPdfHere')}</p>
-                                <p className="text-sm text-muted-foreground">{t('library.pdfFilesOnly')}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        <div className="flex-col items-center gap-4 flex-shrink-0 pb-4 flex relative z-0 w-full">
-                          <div className="relative flex items-center justify-center w-36 h-36 -mb-4">
-                            {aiAnimationData && (
-                              <Lottie
-                                className="w-full h-full"
-                                animationData={aiAnimationData}
-                                loop
-                                autoplay
-                              />
-                            )}
-                          </div>
-                          <h2 className="text-xl font-semibold text-center">{t('library.athliAiBuilder')}</h2>
-                          <p className="text-sm text-foreground text-center max-w-md">
-                            {t('library.dragDropPdf')}
-                          </p>
-                        </div>
-                        <div className="flex-1 overflow-y-auto flex flex-col w-full">
-                          <div className="flex-1 flex flex-col min-h-0 w-full">
-                            <div className="flex flex-col gap-2 flex-1 min-h-0 w-full">
-                              <div className="flex items-center gap-2 mb-1">
-                                <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground">
-                                  <Sparkles className="h-4 w-4" />
-                                </div>
-                                <h3 className="text-sm font-semibold">
-                                  {t('library.letsBuildWorkout')}<RequiredAsterisk />
-                                </h3>
-                              </div>
-                              <div className="relative flex-1 min-h-0 flex flex-col">
-                                <Textarea
-                                  value={aiPrompt}
-                                  onChange={(e) => setAiPrompt(e.target.value)}
-                                  className="resize-none text-sm flex-1 min-h-[200px] pb-12 bg-muted/30"
-                                  placeholder={t('library.workoutPromptPlaceholder')}
-                                />
-                                <input
-                                  ref={fileInputRef}
-                                  type="file"
-                                  accept=".pdf"
-                                  onChange={handleAiFileChange}
-                                  className="hidden"
-                                  aria-label={t('library.selectPdfFile')}
-                                />
-                                {!aiPrompt.trim() && (
-                                  <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={handleUseAiExample}
-                                      className="h-7 px-3 text-xs"
-                                      aria-label={t('library.useExample')}
-                                    >
-                                      {t('library.useExample')}
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      onClick={() => fileInputRef.current?.click()}
-                                      disabled={!!selectedFile}
-                                      className="h-7 px-3 text-xs gap-1.5"
-                                      aria-label={t('library.selectPdfFile')}
-                                    >
-                                      <FileText className="h-3.5 w-3.5" />
-                                      {t('messages.pdf')}
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                              {selectedFile && (
-                                <div className="flex items-center gap-2 p-2 rounded-lg border bg-background mt-2">
-                                  <div className="flex items-center justify-center h-8 w-8 rounded-md bg-transparent flex-shrink-0">
-                                    <Image
-                                      src="/icons/pdf.png"
-                                      alt="PDF"
-                                      width={24}
-                                      height={24}
-                                      className="object-contain"
-                                    />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-[11px] font-medium text-foreground truncate">
-                                      {selectedFile.name}
-                                    </p>
-                                    <p className="text-[10px] text-muted-foreground">{t('messages.pdf')}</p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={handleRemoveAiFile}
-                                    className="flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all p-1 rounded-md"
-                                    aria-label={t('library.removePdfFile')}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              )}
-                              <div className="pt-2 mt-auto pb-1">
-                                <Button
-                                  onClick={handleAiGenerate}
-                                  disabled={isGeneratingAi || !aiPrompt.trim()}
-                                  className="w-full gap-2 h-11 font-bold shadow-lg"
-                                >
-                                  {isGeneratingAi ? (
-                                    <>
-                                      <Loader2 className="h-5 w-5 animate-spin" />
-                                      {t('library.generate')}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Sparkles className="h-5 w-5" />
-                                      {t('library.generate')}
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                        onSwitchToManual={() => setActiveBuilder("manual")}
+                        examplePrompt={examplePrompt}
+                      />
                     )}
                   </div>
                 </div>
