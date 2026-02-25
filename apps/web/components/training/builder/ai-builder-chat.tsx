@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import {
+  AlertCircle,
   ArrowUpIcon,
   BrainCog,
   FileText,
@@ -21,13 +22,30 @@ import { ToolStatusList } from '@/app/(app)/assistant/components/tool-status';
 import type { ActionPayload } from '@/api/ai/ai-service';
 import type { GeneratedWorkout } from '@/api/exercise/generate-exercise';
 
+// ── Constants ──────────────────────────────────────────────────────
+
+const MAX_PDF_SIZE_MB = 10;
+const MAX_PDF_SIZE_BYTES = MAX_PDF_SIZE_MB * 1024 * 1024;
+
+const SECTION_TYPE_DESCRIPTIONS: Record<string, string> = {
+  regular: 'Regular (standard sets with reps, weight, rest)',
+  amrap: 'AMRAP (As Many Rounds/Reps As Possible within a time limit)',
+  tabata: 'Tabata (20s work, 10s rest, 8 rounds)',
+  hiit: 'HIIT (High-Intensity Interval Training with customizable work/rest)',
+  emom: 'EMOM (Every Minute On the Minute)',
+  circuits: 'Circuit training (multiple rounds)',
+  auxiliary: 'Auxiliary (warm-up, cool-down, etc.)',
+} as const;
+
+// ── Props ──────────────────────────────────────────────────────────
+
 interface AIBuilderChatProps {
   /** Section type for context (e.g., 'amrap', 'tabata'). Undefined for workout builder. */
   sectionType?: string;
   /** Callback when AI generates a workout payload */
   onWorkoutGenerated?: (workout: GeneratedWorkout) => void;
   /** Callback when AI generates a section payload */
-  onSectionGenerated?: (payload: any) => void;
+  onSectionGenerated?: (payload: unknown) => void;
   /** Called when switching back to manual mode after generation */
   onSwitchToManual?: () => void;
   /** Current builder context — 'section' or 'workout' */
@@ -35,6 +53,8 @@ interface AIBuilderChatProps {
   /** Example prompt text */
   examplePrompt?: string;
 }
+
+// ── Component ──────────────────────────────────────────────────────
 
 export function AIBuilderChat({
   sectionType,
@@ -47,55 +67,52 @@ export function AIBuilderChat({
   const t = useTranslations();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [inputText, setInputText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Build context message for the AI
+  // Build context message for the AI (only prepended to the first message)
   const buildContextPrefix = useCallback(() => {
-    const parts: string[] = [];
-
     if (builderType === 'section' && sectionType) {
-      const typeDescriptions: Record<string, string> = {
-        regular: 'Regular (standard sets with reps, weight, rest)',
-        amrap: 'AMRAP (As Many Rounds/Reps As Possible within a time limit)',
-        tabata: 'Tabata (20s work, 10s rest, 8 rounds)',
-        hiit: 'HIIT (High-Intensity Interval Training with customizable work/rest)',
-        emom: 'EMOM (Every Minute On the Minute)',
-        circuits: 'Circuit training (multiple rounds)',
-        auxiliary: 'Auxiliary (warm-up, cool-down, etc.)',
-      };
-      parts.push(
-        `I am building a ${typeDescriptions[sectionType] || sectionType} section. ` +
+      const desc = SECTION_TYPE_DESCRIPTIONS[sectionType] || sectionType;
+      return (
+        `I am building a ${desc} section. ` +
         `Generate exercises formatted for a ${sectionType.toUpperCase()} section. ` +
-        `Use the create_section tool with type="${sectionType}".`
+        `Use the create_section tool with type="${sectionType}".\n\n`
       );
-    } else if (builderType === 'workout') {
-      parts.push('I am building a workout. Use the create_workout tool.');
     }
-
-    return parts.length > 0 ? parts.join('\n') + '\n\n' : '';
+    if (builderType === 'workout') {
+      return 'I am building a workout. Use the create_workout tool.\n\n';
+    }
+    return '';
   }, [builderType, sectionType]);
 
   // Handle AI actions (workout/section created)
   const handleAction = useCallback(
     (action: ActionPayload) => {
       if (action.type === 'create_workout' && onWorkoutGenerated && action.payload) {
-        const workout = convertPayloadToGeneratedWorkout(action.payload);
-        onWorkoutGenerated(workout);
-        onSwitchToManual?.();
+        try {
+          const workout = convertPayloadToGeneratedWorkout(action.payload);
+          onWorkoutGenerated(workout);
+          onSwitchToManual?.();
+        } catch (err) {
+          console.error('[AIBuilderChat] Failed to convert workout payload:', err);
+        }
       } else if (action.type === 'create_section' && onSectionGenerated && action.payload) {
         onSectionGenerated(action.payload);
         onSwitchToManual?.();
       }
     },
-    [onWorkoutGenerated, onSectionGenerated, onSwitchToManual]
+    [onWorkoutGenerated, onSectionGenerated, onSwitchToManual],
   );
 
   const {
     messages,
     isStreaming,
+    error: chatError,
     sendMessage,
     stopStreaming,
   } = useAIChat({
@@ -103,58 +120,100 @@ export function AIBuilderChat({
     onAction: handleAction,
   });
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Use requestAnimationFrame to ensure the DOM has updated before scrolling
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    });
   }, [messages, isStreaming]);
 
-  // Handle file selection
+  // ── File handling ────────────────────────────────────────────────
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError(null);
     const file = e.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      setSelectedFile(file);
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const arrayBuffer = ev.target?.result as ArrayBuffer;
-        const bytes = new Uint8Array(arrayBuffer);
-        let binary = '';
-        for (let i = 0; i < bytes.byteLength; i++) {
-          binary += String.fromCharCode(bytes[i]);
-        }
-        setPdfBase64(btoa(binary));
-      };
-      reader.readAsArrayBuffer(file);
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      setFileError('Only PDF files are supported.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
     }
+
+    // Validate file size
+    if (file.size > MAX_PDF_SIZE_BYTES) {
+      setFileError(`PDF must be under ${MAX_PDF_SIZE_MB}MB. This file is ${(file.size / (1024 * 1024)).toFixed(1)}MB.`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setSelectedFile(file);
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const arrayBuffer = ev.target?.result;
+      if (!(arrayBuffer instanceof ArrayBuffer)) {
+        setFileError('Failed to read file.');
+        setSelectedFile(null);
+        return;
+      }
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      setPdfBase64(btoa(binary));
+    };
+    reader.onerror = () => {
+      setFileError('Failed to read PDF file.');
+      setSelectedFile(null);
+    };
+    reader.readAsArrayBuffer(file);
   };
 
   const handleRemoveFile = () => {
     setSelectedFile(null);
     setPdfBase64(null);
+    setFileError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // ── Send ─────────────────────────────────────────────────────────
 
   const handleSend = async () => {
     const text = inputText.trim();
     if (!text || isStreaming) return;
 
-    // Build the full message with context
+    // Context prefix only on the first message
     const contextPrefix = messages.length === 0 ? buildContextPrefix() : '';
     const pdfSuffix = pdfBase64 ? `\n\nPDF Content (base64):\n${pdfBase64}` : '';
     const fullMessage = contextPrefix + text + pdfSuffix;
 
+    // Show just the user's text in the UI, not the context prefix
+    const displayText = text + (selectedFile ? ` 📎 ${selectedFile.name}` : '');
+
     setInputText('');
-    // Clear PDF after first send
     if (pdfBase64) {
       setSelectedFile(null);
       setPdfBase64(null);
     }
 
-    await sendMessage(fullMessage, {
-      currentPage: builderType === 'section'
-        ? '/library/training/sections/new'
-        : '/library/training/workouts/new',
-    });
+    try {
+      await sendMessage(
+        fullMessage,
+        {
+          currentPage: builderType === 'section'
+            ? '/library/training/sections/new'
+            : '/library/training/workouts/new',
+        },
+        displayText,
+      );
+    } catch (err) {
+      // Error is already captured in useAIChat's error state
+      console.error('[AIBuilderChat] sendMessage failed:', err);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -172,13 +231,15 @@ export function AIBuilderChat({
   };
 
   const hasMessages = messages.length > 0;
+  const displayError = fileError || chatError;
+
+  // ── Render ───────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col h-full">
       {/* Messages area or empty state */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0" ref={scrollContainerRef}>
         {!hasMessages ? (
-          /* Empty state */
           <div className="flex flex-col items-center gap-4 pt-8 pb-4 px-4">
             <div className="relative flex items-center justify-center py-6 px-6">
               <div className="absolute inset-0 rounded-full bg-primary/10 blur-xl" />
@@ -203,7 +264,6 @@ export function AIBuilderChat({
             )}
           </div>
         ) : (
-          /* Chat messages */
           <div className="flex flex-col gap-3 px-4 py-4">
             {messages.map((message: ChatMessage) => (
               <div
@@ -212,7 +272,7 @@ export function AIBuilderChat({
                   'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm',
                   message.role === 'user'
                     ? 'ml-auto bg-primary text-primary-foreground'
-                    : 'mr-auto bg-muted'
+                    : 'mr-auto bg-muted',
                 )}
               >
                 {message.role === 'assistant' ? (
@@ -220,29 +280,42 @@ export function AIBuilderChat({
                     {message.toolCalls && message.toolCalls.length > 0 && (
                       <ToolStatusList toolCalls={message.toolCalls} />
                     )}
-                    <Markdown>{message.content}</Markdown>
+                    {message.content ? (
+                      <Markdown>{message.content}</Markdown>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Generating...</span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="whitespace-pre-wrap">{message.content}</p>
                 )}
               </div>
             ))}
-            {isStreaming && messages[messages.length - 1]?.role === 'user' && (
-              <div className="mr-auto max-w-[85%] rounded-2xl bg-muted px-4 py-2.5">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Generating...</span>
-                </div>
-              </div>
-            )}
             <div ref={messagesEndRef} />
           </div>
         )}
       </div>
 
+      {/* Error display */}
+      {displayError && (
+        <div className="flex items-center gap-2 mx-3 mb-1 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-xs">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          <span>{displayError}</span>
+          <button
+            onClick={() => setFileError(null)}
+            className="ml-auto shrink-0 hover:bg-destructive/20 rounded p-0.5"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
       {/* Input area */}
       <div className="flex-shrink-0 border-t p-3 space-y-2">
-        {/* PDF attachment */}
+        {/* PDF attachment preview */}
         {selectedFile && (
           <div className="flex items-center gap-2 p-2 rounded-lg border bg-background">
             <div className="flex items-center justify-center h-8 w-8 rounded-md bg-transparent flex-shrink-0">
@@ -250,12 +323,15 @@ export function AIBuilderChat({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-medium text-foreground truncate">{selectedFile.name}</p>
-              <p className="text-[10px] text-muted-foreground">PDF</p>
+              <p className="text-[10px] text-muted-foreground">
+                PDF · {(selectedFile.size / 1024).toFixed(0)} KB
+              </p>
             </div>
             <button
               type="button"
               onClick={handleRemoveFile}
               className="flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all p-1 rounded-md"
+              aria-label="Remove file"
             >
               <X className="h-4 w-4" />
             </button>
@@ -278,7 +354,7 @@ export function AIBuilderChat({
               rows={hasMessages ? 1 : 4}
               className={cn(
                 'w-full resize-none rounded-xl border bg-muted/30 px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all',
-                hasMessages ? 'min-h-[44px] max-h-[120px]' : 'min-h-[120px]'
+                hasMessages ? 'min-h-[44px] max-h-[120px]' : 'min-h-[120px]',
               )}
             />
             {!hasMessages && !inputText.trim() && (
@@ -310,7 +386,13 @@ export function AIBuilderChat({
 
           {/* Send/Stop button */}
           {isStreaming ? (
-            <Button onClick={stopStreaming} size="icon" variant="outline" className="h-11 w-11 rounded-xl shrink-0">
+            <Button
+              onClick={stopStreaming}
+              size="icon"
+              variant="outline"
+              className="h-11 w-11 rounded-xl shrink-0"
+              aria-label="Stop generating"
+            >
               <SquareIcon className="h-4 w-4" />
             </Button>
           ) : (
@@ -319,13 +401,14 @@ export function AIBuilderChat({
               disabled={!inputText.trim()}
               size="icon"
               className="h-11 w-11 rounded-xl shrink-0"
+              aria-label="Send message"
             >
               <ArrowUpIcon className="h-4 w-4" />
             </Button>
           )}
         </div>
 
-        {/* Actions row */}
+        {/* PDF attach button in chat mode */}
         {hasMessages && (
           <div className="flex items-center gap-2">
             <Button
@@ -333,11 +416,11 @@ export function AIBuilderChat({
               variant="ghost"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
-              disabled={!!selectedFile}
+              disabled={!!selectedFile || isStreaming}
               className="h-7 px-2 text-xs gap-1"
             >
               <Paperclip className="h-3.5 w-3.5" />
-              PDF
+              Attach PDF
             </Button>
           </div>
         )}
@@ -345,7 +428,7 @@ export function AIBuilderChat({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf"
+          accept=".pdf,application/pdf"
           onChange={handleFileChange}
           className="hidden"
         />
@@ -354,46 +437,101 @@ export function AIBuilderChat({
   );
 }
 
-/** Convert AI action payload to GeneratedWorkout format */
-function convertPayloadToGeneratedWorkout(payload: any): GeneratedWorkout {
+// ── Payload conversion ─────────────────────────────────────────────
+
+interface RawExercise {
+  prescribedExerciseId?: string;
+  id?: string;
+  name?: string;
+  column1Label?: string;
+  column1Value?: string;
+  column2Label?: string;
+  column2Value?: string;
+  category?: string;
+  sets?: number;
+  rest?: number;
+}
+
+interface RawSection {
+  type?: string;
+  exercises?: RawExercise[];
+}
+
+interface RawPayload {
+  name?: string;
+  description?: string;
+  type?: string;
+  difficulty?: string;
+  sections?: RawSection[];
+}
+
+/** Convert AI action payload to GeneratedWorkout format with validation */
+function convertPayloadToGeneratedWorkout(payload: unknown): GeneratedWorkout {
+  const p = payload as RawPayload;
+
+  if (!p || typeof p !== 'object') {
+    throw new Error('Invalid workout payload: expected an object');
+  }
+
   return {
-    title: payload.name || 'Generated Workout',
-    description: payload.description || '',
-    type: payload.type || 'weightlifting',
-    difficulty: payload.difficulty || 'all_levels',
-    sections: (payload.sections || []).map((section: any, index: number) => ({
-      id: `sec_${section.type || 'regular'}_${index + 1}`,
-      type: section.type || 'regular',
-      exercises: (section.exercises || []).map((ex: any) => ({
-        isSuperset: false,
-        exercises: [{
-          id: ex.prescribedExerciseId || ex.id,
-          name: ex.name,
-          exerciseType: determineExerciseType(ex),
-          equipment: ex.category ? [ex.category] : [],
-          sets: generateSetsFromExercise(ex),
-        }],
-      })),
-    })),
+    title: p.name || 'Generated Workout',
+    description: p.description || '',
+    type: p.type || 'weightlifting',
+    difficulty: p.difficulty || 'all_levels',
+    sections: Array.isArray(p.sections)
+      ? p.sections.map((section, index) => ({
+          id: `sec_${section.type || 'regular'}_${index + 1}`,
+          type: section.type || 'regular',
+          exercises: Array.isArray(section.exercises)
+            ? section.exercises
+                .filter((ex) => ex.name) // Skip exercises without a name
+                .map((ex) => ({
+                  isSuperset: false,
+                  exercises: [
+                    {
+                      id: ex.prescribedExerciseId || ex.id || '',
+                      name: ex.name || 'Unknown exercise',
+                      exerciseType: determineExerciseType(ex),
+                      equipment: ex.category ? [ex.category] : [],
+                      sets: generateSetsFromExercise(ex),
+                    },
+                  ],
+                }))
+            : [],
+        }))
+      : [],
   };
 }
 
-function determineExerciseType(ex: any): string {
-  const col1 = ex.column1Label?.toLowerCase() || '';
-  const col2 = ex.column2Label?.toLowerCase() || '';
-  if (col1 === 'minutes' || col1 === 'seconds' || col1 === 'km' || col1 === 'm') return 'distance_duration';
-  if (col2 === 'kg' || col2 === 'lbs') return 'weight_reps';
+function determineExerciseType(ex: RawExercise): string {
+  const col1 = (ex.column1Label || '').toLowerCase();
+  const col2 = (ex.column2Label || '').toLowerCase();
+  if (['minutes', 'seconds', 'km', 'm'].includes(col1)) return 'distance_duration';
+  if (['kg', 'lbs'].includes(col2)) return 'weight_reps';
   return 'reps';
 }
 
-function generateSetsFromExercise(ex: any): any[] {
-  const sets = [];
-  const numSets = ex.sets || 3;
-  const reps = parseInt(ex.column1Value) || 10;
+function generateSetsFromExercise(ex: RawExercise): Array<{
+  setNumber: number;
+  isDropset: boolean;
+  weight: number | null;
+  reps: number | null;
+  distance: number | null;
+  durationSec: number | null;
+  restSec: number;
+}> {
+  const numSets = Math.max(1, Math.min(ex.sets || 3, 20)); // Clamp between 1–20
+  const reps = ex.column1Value ? parseInt(ex.column1Value, 10) || 10 : 10;
   const weight = ex.column2Value ? parseFloat(ex.column2Value) : null;
-  const rest = ex.rest || 60;
-  for (let i = 1; i <= numSets; i++) {
-    sets.push({ setNumber: i, isDropset: false, weight, reps, distance: null, durationSec: null, restSec: rest });
-  }
-  return sets;
+  const rest = Math.max(0, ex.rest || 60);
+
+  return Array.from({ length: numSets }, (_, i) => ({
+    setNumber: i + 1,
+    isDropset: false,
+    weight: weight && !isNaN(weight) ? weight : null,
+    reps,
+    distance: null,
+    durationSec: null,
+    restSec: rest,
+  }));
 }

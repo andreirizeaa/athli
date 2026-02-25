@@ -256,6 +256,7 @@ export default function AssistantScreen() {
   const {
     messages: aiMessages,
     isStreaming,
+    error: chatError,
     sendMessage,
     stopStreaming,
     clearChat,
@@ -270,24 +271,29 @@ export default function AssistantScreen() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
-  // Fetch real chat sessions
+  // Fetch real chat sessions (debounced)
+  const loadSessionsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadSessions = useCallback(async () => {
-    setIsLoadingSessions(true);
-    try {
-      const chats = await fetchChats();
-      setSessions(
-        chats.map((chat: AiChatListItem) => ({
-          id: chat.id,
-          summary: chat.title || 'New chat',
-          lastMessagePreview: '',
-          timestamp: new Date(chat.updated_at || chat.created_at),
-        })),
-      );
-    } catch (e) {
-      console.error('[Assistant] Failed to load sessions:', e);
-    } finally {
-      setIsLoadingSessions(false);
-    }
+    // Debounce: cancel pending load if called again within 300ms
+    if (loadSessionsTimeoutRef.current) clearTimeout(loadSessionsTimeoutRef.current);
+    loadSessionsTimeoutRef.current = setTimeout(async () => {
+      setIsLoadingSessions(true);
+      try {
+        const chats = await fetchChats();
+        setSessions(
+          chats.map((chat: AiChatListItem) => ({
+            id: chat.id,
+            summary: chat.title || 'New chat',
+            lastMessagePreview: '',
+            timestamp: new Date(chat.updated_at || chat.created_at),
+          })),
+        );
+      } catch (e) {
+        console.error('[Assistant] Failed to load sessions:', e);
+      } finally {
+        setIsLoadingSessions(false);
+      }
+    }, 300);
   }, []);
 
   // Load sessions on mount and when panel opens
@@ -371,7 +377,12 @@ export default function AssistantScreen() {
   // Chat handlers
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
-    await sendMessage(text, { currentPage: '/assistant' });
+    try {
+      await sendMessage(text, { currentPage: '/assistant' });
+    } catch (err) {
+      // Error is captured in useAIChat's error state
+      console.error('[Assistant] sendMessage failed:', err);
+    }
     // Refresh sessions list after sending (new chat may have been created)
     loadSessions();
   };
@@ -504,6 +515,12 @@ export default function AssistantScreen() {
               )}
             </ScrollView>
 
+            {/* Error banner */}
+            {chatError && (
+              <View style={{ marginHorizontal: 16, marginBottom: 8, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: themeColors.error + '15', borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontSize: 12, color: themeColors.error, flex: 1 }}>{chatError}</Text>
+              </View>
+            )}
             {/* Composer */}
             <View style={styles.composerContainer}>
               <View
