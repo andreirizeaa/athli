@@ -2,15 +2,27 @@
 apps/web
 apps/service
 apps/marketing
+apps/docs
+
+# Exclude root-level non-app directories
+docs
+sessionmanager-bundle
+
+# Exclude git history
+.git
+
+# Exclude build caches
+.next
+.turbo
+**/.next
+**/.turbo
 
 # Exclude root-level node_modules (monorepo dependencies)
 /node_modules
 
 # Ignore native directories in mobile app - these are rebuilt by EAS prebuild
-apps/mobile/ios/
-apps/mobile/android/
-apps/mobile/ios/**
-apps/mobile/android/**
+apps/mobile/ios
+apps/mobile/android
 
 # Ignore expo cache
 apps/mobile/.expo
@@ -32,9 +44,8 @@ apps/mobile/.expo
 .DS_Store
 Thumbs.db
 
-
-
-
+# Ignore husky hooks (not needed for build)
+.husky
 
 
 

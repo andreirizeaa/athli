@@ -111,7 +111,6 @@ import {
   handleTopLevelSlotDrop,
 } from '@/components/training/shared/utils/drop-handlers';
 import {
-  handleExerciseClick as scrollToExercise,
   handleExerciseClickById,
 } from '@/components/training/shared/utils/exercise-scroll';
 
@@ -127,6 +126,7 @@ type SectionBuilderProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDelete?: () => Promise<void> | void;
+  initialAiMode?: boolean;
 };
 
 export const SectionBuilder = ({
@@ -141,13 +141,28 @@ export const SectionBuilder = ({
   open,
   onOpenChange,
   onDelete,
+  initialAiMode = false,
 }: SectionBuilderProps) => {
   const t = useTranslations();
   const isSectionMode = true;
   const router = useRouter();
   
   // Get exercise lookup function from cached exercises
-  const { findExerciseById } = useExerciseLookup();
+  const { findExerciseById, allExercises } = useExerciseLookup();
+
+  // Fuzzy name-based exercise lookup for AI-generated exercises whose ID doesn't match the cache
+  const findExerciseByName = useCallback((name: string): Exercise | undefined => {
+    if (!name || !allExercises?.length) return undefined;
+    const lower = name.toLowerCase();
+    // Exact match first
+    const exact = allExercises.find((e: Exercise) => e.name.toLowerCase() === lower);
+    if (exact) return exact;
+    // Then try starts-with (handles "Bench Press" matching "Bench Press (Barbell)")
+    const startsWith = allExercises.find((e: Exercise) => e.name.toLowerCase().startsWith(lower));
+    if (startsWith) return startsWith;
+    // Then try contains (handles "Barbell Bench Press" matching "Bench Press")
+    return allExercises.find((e: Exercise) => e.name.toLowerCase().includes(lower) || lower.includes(e.name.toLowerCase()));
+  }, [allExercises]);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -232,7 +247,7 @@ export const SectionBuilder = ({
   const sectionNameInputRef = useRef<HTMLInputElement>(null);
 
   // AI Builder state
-  const [activeBuilder, setActiveBuilder] = useState<'ai' | 'manual'>('manual');
+  const [activeBuilder, setActiveBuilder] = useState<'ai' | 'manual'>(initialAiMode ? 'ai' : 'manual');
   const [aiPrompt, setAiPrompt] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDraggingAiFile, setIsDraggingAiFile] = useState<boolean>(false);
@@ -473,15 +488,24 @@ export const SectionBuilder = ({
   });
 
   const processGeneratedWorkout = (aiGenerated: GeneratedWorkout) => {
+    console.log('[processGeneratedWorkout] Starting with:', aiGenerated.title, 'sections:', aiGenerated.sections.length);
+
+    // Update builder metadata from AI-generated data
+    if (aiGenerated.title) setWorkoutTitle(aiGenerated.title);
+    if (aiGenerated.description) setDescription(aiGenerated.description);
+    if (aiGenerated.difficulty) setDifficulty(aiGenerated.difficulty);
+
     // Convert AI generated sections to items format
     const sectionsWithStructure: WorkoutSchemaItem[] = aiGenerated.sections.map((section: any) => {
       const sectionData: WorkoutSection = {
         id: section.id as string,
+        name: section.name || '',
         type: section.type as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary',
         exercises: [] as ExerciseWithSuperset[],
-        ...(section.type === 'amrap' && { roundDurationSec: section.roundDurationSec }),
-        ...((section.type === 'tabata' || section.type === 'hiit') && { workSec: section.workSec, restSec: section.restSec, rounds: section.rounds }),
-        ...(section.type === 'emom' && { intervalSec: section.intervalSec, durationMin: section.durationMin }),
+        ...(section.type === 'amrap' && { roundDurationSec: section.roundDurationSec || 600 }),
+        ...((section.type === 'tabata' || section.type === 'hiit') && { workSec: section.workSec || 20, restSec: section.restSec || 10, rounds: section.rounds || 8 }),
+        ...(section.type === 'emom' && { intervalSec: section.intervalSec || 60, durationMin: section.durationMin || 10 }),
+        ...(section.type === 'circuits' && { rounds: section.rounds || 3 }),
         ...(section.type === 'auxiliary' && { category: section.category }),
       };
       return {
@@ -500,13 +524,13 @@ export const SectionBuilder = ({
     }> = [];
 
     aiGenerated.sections.forEach((section: any) => {
-      if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom') {
+      if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom' || section.type === 'circuits' || section.type === 'amrap') {
         section.exercises?.forEach((group: any) => {
           if (group.isSuperset && group.exercises) {
             const supersetGroupId = `superset_${section.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
             group.exercises.forEach((ex: any) => {
-              const foundExercise = findExerciseById(ex.id);
+              const foundExercise = findExerciseById(ex.id) || findExerciseByName(ex.name);
               const exercise = foundExercise || {
                 exerciseId: ex.id,
                 name: ex.name,
@@ -526,7 +550,8 @@ export const SectionBuilder = ({
                 source: 'musclewiki' as const,
               };
 
-              const sets: SetData[] = (ex.sets || []).map((set: any) => ({
+              // Section exercises always have exactly 1 set
+              const allSets: SetData[] = (ex.sets || []).map((set: any) => ({
                 setNumber: set.setNumber,
                 type: set.isDropset ? 'dropset' : 'normal',
                 reps: set.isDropset && set.repStages ? set.repStages.join('-') : set.reps?.toString() || '',
@@ -535,11 +560,13 @@ export const SectionBuilder = ({
                 distance: set.distance?.toString() || '',
                 duration: set.durationSec?.toString() || '',
               }));
+              const sets: SetData[] = allSets.length > 0 ? [{ ...allSets[0], setNumber: 1 }] : [{ setNumber: 1, type: 'normal', reps: '', weight: '', rest: '', distance: '', duration: '' }];
 
               exercisesToAdd.push({
                 sectionId: section.id,
                 exercise: {
                   ...exercise,
+                  exerciseType: ex.exerciseType || exercise.exerciseType,
                   instanceId: ex.id,
                   supersetGroupId,
                   sets,
@@ -548,7 +575,7 @@ export const SectionBuilder = ({
             });
           } else if (group.exercises && group.exercises.length > 0) {
             const ex = group.exercises[0];
-            const foundExercise = findExerciseById(ex.id);
+            const foundExercise = findExerciseById(ex.id) || findExerciseByName(ex.name);
             const exercise = foundExercise || {
               exerciseId: ex.id,
               name: ex.name,
@@ -568,7 +595,8 @@ export const SectionBuilder = ({
               source: 'musclewiki' as const,
             };
 
-            const sets: SetData[] = (ex.sets || []).map((set: any) => ({
+            // Section exercises always have exactly 1 set
+            const allSets: SetData[] = (ex.sets || []).map((set: any) => ({
               setNumber: set.setNumber,
               type: set.type || (set.isDropset ? 'dropset' : 'normal'),
               reps: set.isDropset && set.repStages ? set.repStages.join('-') : set.reps?.toString() || '',
@@ -577,11 +605,13 @@ export const SectionBuilder = ({
               distance: set.distance?.toString() || '',
               duration: set.durationSec?.toString() || '',
             }));
+            const sets: SetData[] = allSets.length > 0 ? [{ ...allSets[0], setNumber: 1 }] : [{ setNumber: 1, type: 'normal', reps: '', weight: '', rest: '', distance: '', duration: '' }];
 
             exercisesToAdd.push({
               sectionId: section.id,
               exercise: {
                 ...exercise,
+                exerciseType: ex.exerciseType || exercise.exerciseType,
                 instanceId: ex.id,
                 supersetGroupId: null,
                 sets,
@@ -591,7 +621,7 @@ export const SectionBuilder = ({
         });
       } else {
         section.exercises?.forEach((ex: any) => {
-          const foundExercise = findExerciseById(ex.id);
+          const foundExercise = findExerciseById(ex.id) || findExerciseByName(ex.name);
           const exercise = foundExercise || {
             exerciseId: ex.id,
             name: ex.name,
@@ -611,7 +641,8 @@ export const SectionBuilder = ({
             source: 'musclewiki' as const,
           };
 
-          const sets: SetData[] = (ex.sets || []).map((set: any) => ({
+          // Section exercises always have exactly 1 set
+          const allSets: SetData[] = (ex.sets || []).map((set: any) => ({
             setNumber: set.setNumber,
             type: set.type || 'normal',
             reps: set.reps?.toString() || '',
@@ -620,11 +651,13 @@ export const SectionBuilder = ({
             distance: set.distance?.toString() || '',
             duration: set.durationSec?.toString() || '',
           }));
+          const sets: SetData[] = allSets.length > 0 ? [{ ...allSets[0], setNumber: 1 }] : [{ setNumber: 1, type: 'normal', reps: '', weight: '', rest: '', distance: '', duration: '' }];
 
           exercisesToAdd.push({
             sectionId: section.id,
             exercise: {
               ...exercise,
+              exerciseType: ex.exerciseType || exercise.exerciseType,
               instanceId: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
               supersetGroupId: null,
               sets,
@@ -634,9 +667,17 @@ export const SectionBuilder = ({
       }
     });
 
+    console.log('[processGeneratedWorkout] Collected exercises:', exercisesToAdd.length,
+      exercisesToAdd.map(e => ({ section: e.sectionId, name: e.exercise.name, id: e.exercise.exerciseId })));
+
     // Mark as dirty if there are items or exercises to add
     if (sectionsWithStructure.length > 0 || exercisesToAdd.length > 0) {
       markDirty();
+    }
+
+    if (exercisesToAdd.length === 0) {
+      console.warn('[processGeneratedWorkout] No exercises to add! Check the conversion output.');
+      return;
     }
 
     // Calculate delay per exercise
@@ -649,21 +690,29 @@ export const SectionBuilder = ({
     // Add exercises gradually
     exercisesToAdd.forEach((item, index) => {
       setTimeout(() => {
-        setWorkoutSchema((prev) => ({
-          ...prev,
-          items: prev.items.map((schemaItem) => {
-            if (schemaItem.itemType === 'section' && schemaItem.section.id === item.sectionId) {
-              return {
-                ...schemaItem,
-                section: {
-                  ...schemaItem.section,
-                  exercises: [...(schemaItem.section.exercises || []), item.exercise],
-                },
-              };
-            }
-            return schemaItem;
-          }),
-        }));
+        setWorkoutSchema((prev) => {
+          const sectionExists = prev.items.some(
+            (si) => si.itemType === 'section' && si.section.id === item.sectionId
+          );
+          if (!sectionExists) {
+            console.warn('[processGeneratedWorkout] Section not found for exercise:', item.sectionId, item.exercise.name);
+          }
+          return {
+            ...prev,
+            items: prev.items.map((schemaItem) => {
+              if (schemaItem.itemType === 'section' && schemaItem.section.id === item.sectionId) {
+                return {
+                  ...schemaItem,
+                  section: {
+                    ...schemaItem.section,
+                    exercises: [...(schemaItem.section.exercises || []), item.exercise],
+                  },
+                };
+              }
+              return schemaItem;
+            }),
+          };
+        });
 
         if (index === 0) {
           markDirty();
@@ -810,15 +859,8 @@ Focus on proper form and progressive overload.`;
   };
 
   const handleExerciseClick = (exercise: Exercise) => {
-    scrollToExercise(
-      exercise,
-      exerciseRefs,
-      contentScrollRef,
-      (ex) => {
-        setSelectedExercise(ex);
-        setIsVideoModalOpen(true);
-      }
-    );
+    setSelectedExercise(exercise);
+    setIsVideoModalOpen(true);
   };
 
   // Extract sections from items for handleExerciseClickById
@@ -909,7 +951,80 @@ Focus on proper form and progressive overload.`;
       setValidationErrors(exerciseErrors);
       setSectionValidationErrors(sectionErrors);
 
-      toast.error(t('toasts.fillAllFields'));
+      // Build descriptive error messages
+      const errorMessages: string[] = [];
+
+      // Section config errors
+      for (const sectionId of Object.keys(sectionErrors)) {
+        const schemaItem = workoutSchema.items.find(
+          (item) => item.itemType === 'section' && item.section.id === sectionId
+        );
+        if (schemaItem && schemaItem.itemType === 'section') {
+          const sName = schemaItem.section.name || schemaItem.section.type;
+          const errs = sectionErrors[sectionId];
+          if (errs.missingConfig) {
+            if (schemaItem.section.type === 'amrap') {
+              errorMessages.push(`${sName}: ${t('toasts.validationAmrapDuration')}`);
+            } else if (schemaItem.section.type === 'circuits') {
+              errorMessages.push(`${sName}: ${t('toasts.validationCircuitsRounds')}`);
+            } else if (schemaItem.section.type === 'auxiliary') {
+              errorMessages.push(`${sName}: ${t('toasts.validationAuxiliaryCategory')}`);
+            } else {
+              errorMessages.push(`${sName}: ${t('toasts.validationMissingConfig')}`);
+            }
+          }
+          if (errs.emptyExercises) {
+            errorMessages.push(`${sName}: ${t('toasts.validationNoExercises')}`);
+          }
+        }
+      }
+
+      // Exercise field errors
+      for (const instanceId of Object.keys(exerciseErrors)) {
+        let exerciseName = '';
+        for (const item of workoutSchema.items) {
+          if (item.itemType === 'exercise' && item.exercise.instanceId === instanceId) {
+            exerciseName = item.exercise.name || '';
+            break;
+          }
+          if (item.itemType === 'section') {
+            const found = item.section.exercises?.find((ex) => ex.instanceId === instanceId);
+            if (found) {
+              exerciseName = found.name || '';
+              break;
+            }
+          }
+        }
+
+        const fieldErrors = exerciseErrors[instanceId];
+        const missingFields = new Set<string>();
+        for (const setIndex of Object.keys(fieldErrors)) {
+          const setErrs = fieldErrors[parseInt(setIndex)];
+          if (setErrs) {
+            if (setErrs.reps) missingFields.add(t('toasts.fieldReps'));
+            if (setErrs.weight) missingFields.add(t('toasts.fieldWeight'));
+            if (setErrs.distance) missingFields.add(t('toasts.fieldDistance'));
+            if (setErrs.duration) missingFields.add(t('toasts.fieldDuration'));
+            if ((setErrs as any).tempo) missingFields.add(t('toasts.fieldTempo'));
+          }
+        }
+
+        if (missingFields.size > 0) {
+          const name = exerciseName || t('toasts.unnamedExercise');
+          errorMessages.push(`${name}: ${t('toasts.validationMissing')} ${Array.from(missingFields).join(', ')}`);
+        }
+      }
+
+      // Show descriptive errors
+      if (errorMessages.length > 0) {
+        errorMessages.slice(0, 4).forEach((msg) => toast.error(msg));
+        if (errorMessages.length > 4) {
+          toast.error(`+${errorMessages.length - 4} ${t('toasts.validationMoreIssues')}`);
+        }
+      } else {
+        toast.error(t('toasts.fillAllFields'));
+      }
+
       if (onSaveError) onSaveError();
       return;
     }
@@ -917,14 +1032,14 @@ Focus on proper form and progressive overload.`;
     setValidationErrors({});
     setSectionValidationErrors({});
 
-    // Use updated values from state
-    const updatedMeta = meta ? {
-      ...meta,
+    // Use updated values from state - create meta even if original meta is null (for new sections via AI)
+    const updatedMeta = {
+      ...(meta || {}),
       name: workoutTitle,
-      type: workoutType,
-      difficulty: difficulty,
-      description: description,
-    } : null;
+      type: workoutType || '',
+      difficulty: difficulty || '',
+      description: description || '',
+    };
     const payload = buildWorkoutPayload(workoutSchema, updatedMeta);
     if (!payload) {
       toast.error(t('toasts.workoutDetailsMissing'));
@@ -2025,6 +2140,7 @@ Focus on proper form and progressive overload.`;
                                     isLinkedToNext={isLinkedToNext}
                                     onVideoClick={handleExerciseClick}
                                     sectionType={section.type}
+                                    isInSection
                                     validationErrors={validationErrors[exercise.instanceId]}
                                     hasSupersetError={validationErrors[exercise.instanceId]?.supersetMismatch}
                                     onClearValidationField={(setIndex, field) =>
@@ -2308,6 +2424,7 @@ Focus on proper form and progressive overload.`;
             isLinkedToNext={isLinkedToNext}
             onVideoClick={handleExerciseClick}
             sectionType="regular"
+            isInSection
             validationErrors={validationErrors[exercise.instanceId]}
             hasSupersetError={validationErrors[exercise.instanceId]?.supersetMismatch}
             onClearValidationField={(setIndex, field) =>
@@ -2461,11 +2578,11 @@ Focus on proper form and progressive overload.`;
             }
           }}
         >
-          <DialogTitle className="sr-only">Workout Builder</DialogTitle>
+          <DialogTitle className="sr-only">Section Builder</DialogTitle>
           <div className="flex-1 min-h-0 overflow-hidden">
             <div className="flex h-full max-h-full overflow-hidden min-h-0 bg-transparent gap-3">
               <div className="flex h-full overflow-hidden rounded-xl border bg-background shadow-sm flex-1 transition-all duration-500 ease-in-out">
-                <div className="flex-[2] h-full flex flex-col min-h-0 border-r py-4 bg-muted/30">
+                <div className="w-[40%] shrink-0 h-full flex flex-col min-h-0 border-r py-4 bg-muted/30">
                   {/* Main Builder Toggle */}
                   <div className="flex-shrink-0 px-4">
                     <ButtonGroup className="w-full">
@@ -2495,40 +2612,44 @@ Focus on proper form and progressive overload.`;
                   </div>
 
                   <div className="flex-1 overflow-hidden flex flex-col pt-4">
-                    {activeBuilder === 'manual' ? (
-                      <div className="flex flex-col px-4 h-full min-h-0">
-                        <div className="flex-1 min-h-0">
-                          <ExerciseSelectionPanel
-                            onExerciseClick={handleExerciseClick}
-                            onDragStart={handleDragStart}
-                            onDragEnd={handleDragEnd}
-                            activeExerciseIds={activeExerciseIds}
-                          />
-                        </div>
+                    <div className={cn(
+                      'flex flex-col px-4 h-full min-h-0',
+                      activeBuilder !== 'manual' && 'hidden'
+                    )}>
+                      <div className="flex-1 min-h-0">
+                        <ExerciseSelectionPanel
+                          onExerciseClick={handleExerciseClick}
+                          onDragStart={handleDragStart}
+                          onDragEnd={handleDragEnd}
+                          activeExerciseIds={activeExerciseIds}
+                        />
                       </div>
-                    ) : (
+                    </div>
+                    <div className={cn(
+                      'flex-1 min-h-0',
+                      activeBuilder !== 'ai' && 'hidden'
+                    )}>
                       <AIBuilderChat
                         builderType="section"
                         sectionType={sectionType}
                         onWorkoutGenerated={(workout) => {
                           processGeneratedWorkout(workout);
-                          setActiveBuilder("manual");
                         }}
                         onSwitchToManual={() => setActiveBuilder("manual")}
                         examplePrompt={examplePrompt}
                         getCurrentPayload={getCurrentPayload}
                       />
-                    )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex-[3] flex flex-col h-full min-h-0">
+                <div className="w-[60%] flex flex-col h-full min-h-0">
                   <div className="flex-1 flex min-h-0">
                     <div className="flex-1 h-full flex flex-col min-h-0 relative">
                       {isLoadingAiWorkout && (
                         <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
                           <div className="flex flex-col items-center gap-3">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                            <p className="text-sm text-muted-foreground">Generating workout...</p>
+                            <p className="text-sm text-muted-foreground">{t('library.generatingSection')}</p>
                           </div>
                         </div>
                       )}
@@ -2537,7 +2658,7 @@ Focus on proper form and progressive overload.`;
                         <div className="flex items-center gap-2 w-full">
                           <Input
                             className="flex-1 h-9 text-sm shadow-none"
-                            placeholder={t('common.workoutTitle')}
+                            placeholder={t('library.sectionTitle')}
                             value={workoutTitle}
                             onChange={(e) => {
                               const newTitle = e.target.value;

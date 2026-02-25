@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   AlertCircle,
   ArrowUpIcon,
-  BrainCog,
   FileText,
   Loader2,
   Paperclip,
@@ -13,6 +12,7 @@ import {
   SquareIcon,
   X,
 } from 'lucide-react';
+import Lottie from 'lottie-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/general/utils';
@@ -72,15 +72,30 @@ export function AIBuilderChat({
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [inputText, setInputText] = useState('');
+  const [aiAnimationData, setAiAnimationData] = useState<object | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Build context message for the AI (only prepended to the first message)
-  const buildContextPrefix = useCallback(() => {
+  // Load sphere animation
+  useEffect(() => {
+    fetch('/animations/ai-sphere-animation.json')
+      .then((res) => res.json())
+      .then(setAiAnimationData)
+      .catch(() => {});
+  }, []);
+
+  // Build context message for the AI (prepended to every message)
+  const buildContextPrefix = useCallback((isFollowUp: boolean) => {
     if (builderType === 'section' && sectionType) {
       const desc = SECTION_TYPE_DESCRIPTIONS[sectionType] || sectionType;
+      if (isFollowUp) {
+        return (
+          `[IMPORTANT: You MUST use the create_section tool with type="${sectionType}" to apply changes. ` +
+          `Do NOT output raw JSON. Always use the tool and always provide a text response.]\n\n`
+        );
+      }
       return (
         `I am building a ${desc} section. ` +
         `Generate exercises formatted for a ${sectionType.toUpperCase()} section. ` +
@@ -88,29 +103,76 @@ export function AIBuilderChat({
       );
     }
     if (builderType === 'workout') {
+      if (isFollowUp) {
+        return (
+          `[IMPORTANT: You MUST use the create_workout tool to apply changes. ` +
+          `Do NOT output raw JSON. Always use the tool and always provide a text response.]\n\n`
+        );
+      }
       return 'I am building a workout. Use the create_workout tool.\n\n';
     }
     return '';
   }, [builderType, sectionType]);
 
+  // Use refs for callbacks to avoid stale closures in the SSE stream handler.
+  // The useAIChat hook captures onAction at sendMessage-call time, but the
+  // parent's onWorkoutGenerated/onSectionGenerated may have changed by the
+  // time the SSE action event arrives (inline arrow props are recreated each render).
+  const onWorkoutGeneratedRef = useRef(onWorkoutGenerated);
+  const onSectionGeneratedRef = useRef(onSectionGenerated);
+  useEffect(() => { onWorkoutGeneratedRef.current = onWorkoutGenerated; }, [onWorkoutGenerated]);
+  useEffect(() => { onSectionGeneratedRef.current = onSectionGenerated; }, [onSectionGenerated]);
+
   // Handle AI actions (workout/section created)
+  // Note: we intentionally do NOT call onSwitchToManual here so the user
+  // stays on the chat screen while exercises load into the builder area.
   const handleAction = useCallback(
     (action: ActionPayload) => {
-      if (action.type === 'create_workout' && onWorkoutGenerated && action.payload) {
+      console.log('[AIBuilderChat] handleAction received:', action.type, JSON.stringify(action.payload).slice(0, 500));
+
+      if (action.type === 'create_workout' && action.payload) {
+        const cb = onWorkoutGeneratedRef.current;
+        if (!cb) {
+          console.warn('[AIBuilderChat] create_workout action but no onWorkoutGenerated callback');
+          return;
+        }
         try {
           const workout = convertPayloadToGeneratedWorkout(action.payload);
-          onWorkoutGenerated(workout);
-          onSwitchToManual?.();
+          console.log('[AIBuilderChat] Converted workout:', workout.title, 'sections:', workout.sections.length,
+            'exercises:', workout.sections.reduce((sum: number, s: any) => sum + (s.exercises?.length || 0), 0));
+          cb(workout);
         } catch (err) {
           console.error('[AIBuilderChat] Failed to convert workout payload:', err);
         }
-      } else if (action.type === 'create_section' && onSectionGenerated && action.payload) {
-        onSectionGenerated(action.payload);
-        onSwitchToManual?.();
+      } else if (action.type === 'create_section' && action.payload) {
+        const sectionCb = onSectionGeneratedRef.current;
+        const workoutCb = onWorkoutGeneratedRef.current;
+        if (sectionCb) {
+          sectionCb(action.payload);
+        } else if (workoutCb) {
+          // Fallback: wrap the section payload as a single-section workout
+          // so the builder's processGeneratedWorkout can handle it
+          try {
+            const workout = convertSectionPayloadToGeneratedWorkout(action.payload);
+            console.log('[AIBuilderChat] Converted section→workout:', workout.title, 'exercises:', workout.sections[0]?.exercises?.length || 0);
+            workoutCb(workout);
+          } catch (err) {
+            console.error('[AIBuilderChat] Failed to convert section payload:', err);
+          }
+        } else {
+          console.warn('[AIBuilderChat] create_section action but no callbacks available');
+        }
       }
     },
-    [onWorkoutGenerated, onSectionGenerated, onSwitchToManual],
+    [], // stable — uses refs for callbacks
   );
+
+  // Memoize options so useAIChat's sendMessage isn't recreated every render.
+  // handleAction is already stable (empty deps, uses refs).
+  const chatOptions = useMemo(() => ({
+    skipUrlUpdate: true,
+    onAction: handleAction,
+  }), [handleAction]);
 
   const {
     messages,
@@ -118,10 +180,7 @@ export function AIBuilderChat({
     error: chatError,
     sendMessage,
     stopStreaming,
-  } = useAIChat({
-    skipUrlUpdate: true,
-    onAction: handleAction,
-  });
+  } = useAIChat(chatOptions);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -189,8 +248,9 @@ export function AIBuilderChat({
     const text = inputText.trim();
     if (!text || isStreaming) return;
 
-    // Context prefix only on the first message
-    const contextPrefix = messages.length === 0 ? buildContextPrefix() : '';
+    // Context prefix on every message (full on first, reminder on follow-ups)
+    const isFollowUp = messages.length > 0;
+    const contextPrefix = buildContextPrefix(isFollowUp);
     const pdfSuffix = pdfBase64 ? `\n\nPDF Content (base64):\n${pdfBase64}` : '';
 
     // After the first message, include the current builder state so the AI
@@ -255,202 +315,274 @@ export function AIBuilderChat({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Messages area or empty state */}
-      <div className="flex-1 overflow-y-auto min-h-0" ref={scrollContainerRef}>
-        {!hasMessages ? (
-          <div className="flex flex-col items-center gap-4 pt-8 pb-4 px-4">
-            <div className="relative flex items-center justify-center py-6 px-6">
-              <div className="absolute inset-0 rounded-full bg-primary/10 blur-xl" />
-              <div className="absolute inset-4 rounded-full bg-primary/20 blur-sm" />
-              <div className="relative z-10 inline-flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground shadow-lg shadow-primary/10">
-                <BrainCog className="h-10 w-10" />
-              </div>
-            </div>
-            <h2 className="text-xl font-semibold text-center">{t('library.athliAiBuilder')}</h2>
-            <p className="text-sm text-foreground text-center max-w-md">
-              {builderType === 'section' && sectionType
-                ? t('library.dragDropPdf') + ` (${sectionType.toUpperCase()} section)`
-                : t('library.dragDropPdf')}
-            </p>
-            {sectionType && sectionType !== 'regular' && (
-              <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span>
-                  AI will generate exercises for <strong>{sectionType.toUpperCase()}</strong> format
-                </span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3 px-4 py-4">
-            {messages.map((message: ChatMessage) => (
-              <div
-                key={message.id}
-                className={cn(
-                  'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm',
-                  message.role === 'user'
-                    ? 'ml-auto bg-primary text-primary-foreground'
-                    : 'mr-auto bg-muted',
-                )}
-              >
-                {message.role === 'assistant' ? (
-                  <div className="flex flex-col gap-2">
-                    {message.toolCalls && message.toolCalls.length > 0 && (
-                      <ToolStatusList toolCalls={message.toolCalls} />
+      {hasMessages ? (
+        /* ── Chat mode ─────────────────────────────────────────── */
+        <>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto min-h-0" ref={scrollContainerRef}>
+            <div className="flex flex-col space-y-3 px-3 py-3 pe-2">
+              {messages.map((message: ChatMessage) => {
+                const isAssistant = message.role === 'assistant';
+                return (
+                  <div
+                    key={message.id}
+                    className={cn(
+                      message.role === 'user' ? 'flex justify-end' : 'flex justify-start',
                     )}
-                    {message.content ? (
-                      <Markdown>{message.content}</Markdown>
+                  >
+                    {isAssistant ? (
+                      <div className="w-full space-y-2">
+                        {message.toolCalls && message.toolCalls.length > 0 && !message.content && (
+                          <ToolStatusList toolCalls={message.toolCalls} compact />
+                        )}
+                        {message.content ? (
+                          <div className="prose prose-xs dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-ul:text-foreground prose-ol:text-foreground prose-li:text-foreground text-foreground max-w-none text-xs">
+                            <Markdown className="space-y-3">{message.content}</Markdown>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-xs">Generating...</span>
+                          </div>
+                        )}
+                      </div>
                     ) : (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Generating...</span>
+                      <div className="max-w-[85%] text-end">
+                        <span className="bg-primary text-primary-foreground inline-flex rounded-xl py-1.5 px-3 text-start text-xs whitespace-pre-wrap">
+                          {message.content}
+                        </span>
                       </div>
                     )}
                   </div>
-                ) : (
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+
+          {/* Error display */}
+          {displayError && (
+            <div className="flex items-center gap-2 mx-3 mb-1 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-xs">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>{displayError}</span>
+              <button
+                onClick={() => setFileError(null)}
+                className="ml-auto shrink-0 hover:bg-destructive/20 rounded p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+
+          {/* Chat input */}
+          <div className="flex-shrink-0 px-3 pb-1 pt-2">
+            {selectedFile && (
+              <div className="flex items-center gap-2 p-2 rounded-lg border bg-background mb-2">
+                <div className="flex items-center justify-center h-8 w-8 rounded-md bg-transparent flex-shrink-0">
+                  <Image src="/icons/pdf.png" alt="PDF" width={24} height={24} className="object-contain" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-medium text-foreground truncate">{selectedFile.name}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    PDF · {(selectedFile.size / 1024).toFixed(0)} KB
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveFile}
+                  className="flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all p-1 rounded-md"
+                  aria-label="Remove file"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            <div className="bg-primary/10 w-full rounded-2xl p-1">
+              <textarea
+                ref={textareaRef}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={builderType === 'section' ? t('library.refineSection') : t('library.refineWorkout')}
+                rows={1}
+                className="w-full resize-none bg-transparent px-3 py-2.5 text-xs outline-none min-h-[40px] max-h-[120px]"
+              />
+              <div className="flex items-center justify-between px-2 pb-1">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={!!selectedFile || isStreaming}
+                    className="hover:bg-secondary-foreground/10 flex size-7 items-center justify-center rounded-2xl disabled:opacity-50"
+                  >
+                    <Paperclip className="text-primary h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isStreaming ? (
+                    <Button
+                      onClick={stopStreaming}
+                      size="icon"
+                      variant="outline"
+                      className="h-7 w-7 rounded-full shrink-0"
+                      aria-label="Stop generating"
+                    >
+                      <SquareIcon className="h-3.5 w-3.5" />
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleSend}
+                      disabled={!inputText.trim()}
+                      size="icon"
+                      className="h-7 w-7 rounded-full shrink-0"
+                      aria-label="Send message"
+                    >
+                      <ArrowUpIcon className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* ── Initial state (before first message) ──────────────── */
+        <div className="flex flex-col h-full">
+          {/* Sphere animation + title */}
+          <div className="flex flex-col items-center gap-4 flex-shrink-0 pb-4 px-4">
+            <div className="relative flex items-center justify-center w-36 h-36 -mb-4">
+              {aiAnimationData && (
+                <Lottie
+                  className="w-full h-full"
+                  animationData={aiAnimationData}
+                  loop
+                  autoplay
+                />
+              )}
+            </div>
+            <h2 className="text-xl font-semibold text-center">{t('library.athliAiBuilder')}</h2>
+            <p className="text-sm text-foreground text-center max-w-md">
+              {t('library.dragDropPdf')}
+            </p>
+          </div>
+
+          {/* Prompt input area */}
+          <div className="flex-1 overflow-y-auto flex flex-col min-h-0 px-4">
+            <div className="flex flex-col gap-2 flex-1 min-h-0">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <h3 className="text-sm font-semibold">
+                  {builderType === 'section' ? t('library.letsBuildSection') : t('library.letsBuildWorkout')}
+                </h3>
+              </div>
+
+              {/* Error display */}
+              {displayError && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-xs">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  <span>{displayError}</span>
+                  <button
+                    onClick={() => setFileError(null)}
+                    className="ml-auto shrink-0 hover:bg-destructive/20 rounded p-0.5"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+
+              <div className="relative flex-1 min-h-0 flex flex-col">
+                <textarea
+                  ref={textareaRef}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={builderType === 'section' ? t('library.sectionPromptPlaceholder') : t('library.workoutPromptPlaceholder')}
+                  className="resize-none text-sm flex-1 min-h-[200px] pb-12 bg-muted/30 w-full rounded-xl border px-4 py-3 outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+                />
+                {!inputText.trim() && (
+                  <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                    {examplePrompt && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleUseExample}
+                        className="h-7 px-3 text-xs"
+                      >
+                        {t('library.useExample')}
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={!!selectedFile}
+                      className="h-7 px-3 text-xs gap-1.5"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      PDF
+                    </Button>
+                  </div>
                 )}
               </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </div>
 
-      {/* Error display */}
-      {displayError && (
-        <div className="flex items-center gap-2 mx-3 mb-1 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-xs">
-          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-          <span>{displayError}</span>
-          <button
-            onClick={() => setFileError(null)}
-            className="ml-auto shrink-0 hover:bg-destructive/20 rounded p-0.5"
-          >
-            <X className="h-3 w-3" />
-          </button>
+              {/* PDF attachment */}
+              {selectedFile && (
+                <div className="flex items-center gap-2 p-2 rounded-lg border bg-background mt-2">
+                  <div className="flex items-center justify-center h-8 w-8 rounded-md bg-transparent flex-shrink-0">
+                    <Image src="/icons/pdf.png" alt="PDF" width={24} height={24} className="object-contain" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-medium text-foreground truncate">{selectedFile.name}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      PDF · {(selectedFile.size / 1024).toFixed(0)} KB
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveFile}
+                    className="flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all p-1 rounded-md"
+                    aria-label="Remove file"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Send button */}
+              <div className="pt-2 mt-auto pb-1">
+                <Button
+                  onClick={handleSend}
+                  disabled={!inputText.trim() || isStreaming}
+                  className="w-full gap-2 h-11 font-bold shadow-lg"
+                >
+                  {isStreaming ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      {t('library.generate')}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-5 w-5" />
+                      {t('library.generate')}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Input area */}
-      <div className="flex-shrink-0 border-t p-3 space-y-2">
-        {/* PDF attachment preview */}
-        {selectedFile && (
-          <div className="flex items-center gap-2 p-2 rounded-lg border bg-background">
-            <div className="flex items-center justify-center h-8 w-8 rounded-md bg-transparent flex-shrink-0">
-              <Image src="/icons/pdf.png" alt="PDF" width={24} height={24} className="object-contain" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-medium text-foreground truncate">{selectedFile.name}</p>
-              <p className="text-[10px] text-muted-foreground">
-                PDF · {(selectedFile.size / 1024).toFixed(0)} KB
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleRemoveFile}
-              className="flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all p-1 rounded-md"
-              aria-label="Remove file"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Input row */}
-        <div className="flex items-end gap-2">
-          <div className="flex-1 relative">
-            <textarea
-              ref={textareaRef}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                hasMessages
-                  ? 'Refine your workout...'
-                  : t('library.workoutPromptPlaceholder')
-              }
-              rows={hasMessages ? 1 : 4}
-              className={cn(
-                'w-full resize-none rounded-xl border bg-muted/30 px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all',
-                hasMessages ? 'min-h-[44px] max-h-[120px]' : 'min-h-[120px]',
-              )}
-            />
-            {!hasMessages && !inputText.trim() && (
-              <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                {examplePrompt && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleUseExample}
-                    className="h-7 px-3 text-xs"
-                  >
-                    {t('library.useExample')}
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={!!selectedFile}
-                  className="h-7 px-3 text-xs gap-1.5"
-                >
-                  <FileText className="h-3.5 w-3.5" />
-                  PDF
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Send/Stop button */}
-          {isStreaming ? (
-            <Button
-              onClick={stopStreaming}
-              size="icon"
-              variant="outline"
-              className="h-11 w-11 rounded-xl shrink-0"
-              aria-label="Stop generating"
-            >
-              <SquareIcon className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSend}
-              disabled={!inputText.trim()}
-              size="icon"
-              className="h-11 w-11 rounded-xl shrink-0"
-              aria-label="Send message"
-            >
-              <ArrowUpIcon className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-
-        {/* PDF attach button in chat mode */}
-        {hasMessages && (
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!!selectedFile || isStreaming}
-              className="h-7 px-2 text-xs gap-1"
-            >
-              <Paperclip className="h-3.5 w-3.5" />
-              Attach PDF
-            </Button>
-          </div>
-        )}
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,application/pdf"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,application/pdf"
+        onChange={handleFileChange}
+        className="hidden"
+      />
     </div>
   );
 }
@@ -471,8 +603,16 @@ interface RawExercise {
 }
 
 interface RawSection {
+  name?: string;
   type?: string;
   exercises?: RawExercise[];
+  // Section-type-specific config fields
+  roundDurationSec?: number;
+  workSec?: number;
+  restSec?: number;
+  rounds?: number;
+  intervalSec?: number;
+  durationMin?: number;
 }
 
 interface RawPayload {
@@ -483,6 +623,22 @@ interface RawPayload {
   sections?: RawSection[];
 }
 
+/** Convert a flat exercise from the AI payload into the grouped format expected by processGeneratedWorkout */
+function convertRawExercise(ex: RawExercise) {
+  return {
+    isSuperset: false,
+    exercises: [
+      {
+        id: ex.prescribedExerciseId || ex.id || '',
+        name: ex.name || 'Unknown exercise',
+        exerciseType: determineExerciseType(ex),
+        equipment: ex.category ? [ex.category] : [],
+        sets: generateSetsFromExercise(ex),
+      },
+    ],
+  };
+}
+
 /** Convert AI action payload to GeneratedWorkout format with validation */
 function convertPayloadToGeneratedWorkout(payload: unknown): GeneratedWorkout {
   const p = payload as RawPayload;
@@ -491,33 +647,69 @@ function convertPayloadToGeneratedWorkout(payload: unknown): GeneratedWorkout {
     throw new Error('Invalid workout payload: expected an object');
   }
 
+  const sections = Array.isArray(p.sections)
+    ? p.sections.map((section, index) => ({
+        id: `sec_${section.type || 'regular'}_${index + 1}`,
+        name: section.name || '',
+        type: section.type || 'regular',
+        exercises: Array.isArray(section.exercises)
+          ? section.exercises.map((ex) => convertRawExercise(ex))
+          : [],
+        ...(section.roundDurationSec != null && { roundDurationSec: section.roundDurationSec }),
+        ...(section.workSec != null && { workSec: section.workSec }),
+        ...(section.restSec != null && { restSec: section.restSec }),
+        ...(section.rounds != null && { rounds: section.rounds }),
+        ...(section.intervalSec != null && { intervalSec: section.intervalSec }),
+        ...(section.durationMin != null && { durationMin: section.durationMin }),
+      }))
+    : [];
+
+  const totalExercises = sections.reduce((sum, s) => sum + s.exercises.length, 0);
+  console.log('[convertPayloadToGeneratedWorkout]', p.name, '→', sections.length, 'sections,', totalExercises, 'exercises');
+
   return {
     title: p.name || 'Generated Workout',
     description: p.description || '',
     type: p.type || 'weightlifting',
     difficulty: p.difficulty || 'all_levels',
-    sections: Array.isArray(p.sections)
-      ? p.sections.map((section, index) => ({
-          id: `sec_${section.type || 'regular'}_${index + 1}`,
-          type: section.type || 'regular',
-          exercises: Array.isArray(section.exercises)
-            ? section.exercises
-                .filter((ex) => ex.name) // Skip exercises without a name
-                .map((ex) => ({
-                  isSuperset: false,
-                  exercises: [
-                    {
-                      id: ex.prescribedExerciseId || ex.id || '',
-                      name: ex.name || 'Unknown exercise',
-                      exerciseType: determineExerciseType(ex),
-                      equipment: ex.category ? [ex.category] : [],
-                      sets: generateSetsFromExercise(ex),
-                    },
-                  ],
-                }))
-            : [],
-        }))
-      : [],
+    sections,
+  };
+}
+
+/** Convert a single AI section payload to GeneratedWorkout format (wraps as one-section workout) */
+function convertSectionPayloadToGeneratedWorkout(payload: unknown): GeneratedWorkout {
+  const p = payload as RawSection & { description?: string };
+
+  if (!p || typeof p !== 'object') {
+    throw new Error('Invalid section payload: expected an object');
+  }
+
+  const sectionType = p.type || 'regular';
+  const exercises = Array.isArray(p.exercises)
+    ? p.exercises.map((ex) => convertRawExercise(ex))
+    : [];
+
+  console.log('[convertSectionPayloadToGeneratedWorkout]', p.name, '→', exercises.length, 'exercises');
+
+  return {
+    title: p.name || 'Generated Section',
+    description: p.description || '',
+    type: 'strength',
+    difficulty: 'all_levels',
+    sections: [
+      {
+        id: `sec_${sectionType}_1`,
+        name: p.name || '',
+        type: sectionType,
+        exercises,
+        ...(p.roundDurationSec != null && { roundDurationSec: p.roundDurationSec }),
+        ...(p.workSec != null && { workSec: p.workSec }),
+        ...(p.restSec != null && { restSec: p.restSec }),
+        ...(p.rounds != null && { rounds: p.rounds }),
+        ...(p.intervalSec != null && { intervalSec: p.intervalSec }),
+        ...(p.durationMin != null && { durationMin: p.durationMin }),
+      },
+    ],
   };
 }
 

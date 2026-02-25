@@ -196,7 +196,8 @@
       "Bash(git -C /Users/andreirizea/abc/app/athli show 0795b80b --stat)",
       "Bash(git -C /Users/andreirizea/abc/app/athli log --all --oneline)",
       "Bash(git -C /Users/andreirizea/abc/app/athli show 89b25018 --stat)",
-      "Bash(git -C /Users/andreirizea/abc/app/athli show 9dc15de1)"
+      "Bash(git -C /Users/andreirizea/abc/app/athli show 9dc15de1)",
+      "Bash(xargs:*)"
     ]
   }
 }

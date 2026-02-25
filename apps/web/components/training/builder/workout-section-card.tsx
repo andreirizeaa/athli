@@ -371,6 +371,7 @@ export const WorkoutSectionCard = ({
                               isLinkedToNext={isLinkedToNext}
                               onVideoClick={onVideoClick}
                               sectionType={section.type}
+                              isInSection
                               validationErrors={validationErrors?.[exercise.instanceId]}
                               onClearValidationField={(setIndex, field) =>
                                 onClearValidationField?.(exercise.instanceId, setIndex, field)
