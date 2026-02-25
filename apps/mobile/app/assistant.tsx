@@ -47,9 +47,10 @@ import { createWorkout } from '@/services/coach/coach-workout-service';
 import { assignWorkout } from '@/services/client/client-training-service';
 import { assignMetric } from '@/services/client/client-metric-service';
 import { createAthleteGoal, createAthleteInjury } from '@/services/client/client-service';
-import { addCheckIn } from '@/services/coach/coach-check-in-service';
+import { addCheckIn, addQuestion } from '@/services/coach/coach-check-in-service';
 import { createMetric } from '@/services/coach/coach-metric-service';
 import { supabase } from '@/lib/supabase';
+import { transformWorkoutPayload, type AIWorkoutPayload } from '@/utils/ai-payload-transformer';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -374,20 +375,20 @@ export default function AssistantScreen() {
 
       try {
         if (actionType === 'create_workout') {
-          // For now, workout creation on mobile uses the simplified payload
-          // The backend API expects the same format as web
+          // Transform AI payload to full API format
+          const transformedPayload = transformWorkoutPayload(finalPayload as AIWorkoutPayload);
           if (payload.clientId) {
             const date = payload.date || new Date().toISOString().split('T')[0];
             await assignWorkout({
               clientId: payload.clientId,
               coachId: userId || '',
               date,
-              workoutPayload: finalPayload,
+              workoutPayload: transformedPayload,
               isNew: true,
             });
             Alert.alert('Success', `Workout assigned to ${payload.clientName || 'client'}!`);
           } else {
-            await createWorkout(finalPayload);
+            await createWorkout(transformedPayload as any);
             Alert.alert('Success', 'Workout added to library!');
           }
         } else if (actionType === 'assign_workout') {
@@ -395,7 +396,7 @@ export default function AssistantScreen() {
             workoutId: payload.workoutId,
             clientId: payload.clientId,
             date: payload.date,
-            coachId: userId,
+            coachId: userId ?? undefined,
           });
           Alert.alert('Success', `Workout assigned to ${payload.clientName || 'client'}!`);
         } else if (actionType === 'assign_metric_to_client') {
@@ -422,9 +423,29 @@ export default function AssistantScreen() {
           });
           Alert.alert('Success', `Injury recorded for ${payload.clientName}!`);
         } else if (actionType === 'create_checkin_template') {
+          const normalizeType = (type: string): string => {
+            const lowered = type?.toLowerCase().replace(/[^a-z]/g, '') || '';
+            const typeMap: Record<string, string> = {
+              text: 'text', number: 'number', rating: 'rating', yesno: 'yesNo',
+              multiplechoice: 'multipleChoice', scale: 'scale', date: 'date',
+              images: 'images', videos: 'videos', progressphoto: 'progressPhoto', metrics: 'metrics',
+            };
+            return typeMap[lowered] || 'text';
+          };
+
           const checkIn = await addCheckIn({ name: payload.name, description: payload.description || '' });
-          // TODO: Add questions via API when addQuestion is available on mobile
-          Alert.alert('Success', `Check-in "${payload.name}" created!`);
+          if (payload.questions?.length > 0) {
+            for (const q of payload.questions) {
+              await addQuestion({
+                formId: checkIn.id,
+                question: q.question,
+                required: q.required || false,
+                format: normalizeType(q.type),
+                options: q.options || [],
+              });
+            }
+          }
+          Alert.alert('Success', `Check-in "${payload.name}" created with ${payload.questions?.length || 0} questions!`);
         } else if (actionType === 'create_metric') {
           const valueKindMap: Record<string, string> = {
             weight: 'number', measurement: 'number', percentage: 'percent',
