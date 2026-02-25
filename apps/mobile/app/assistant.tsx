@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, Keyboard, useWindowDimensions, Platform, KeyboardAvoidingView } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Keyboard, useWindowDimensions, Platform, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Ellipsis, Plus, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +18,8 @@ import Animated, {
 import { typography } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
+import { useAIChat, type ChatMessage } from '@/hooks/useAIChat';
+import { fetchChats, type AiChatListItem } from '@/services/ai/ai-chat-history-service';
 import { IconButton } from '@/components/ui/icon-button';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { AnimatedSearchBar } from '@/components/ui/animated-search-bar';
@@ -213,7 +215,7 @@ const PanelContent = React.memo(
               renderItem={({ item }) => (
                 <SessionListItem
                   session={item}
-                  activeSessionId={activeSessionId}
+                  activeSessionId={activeSessionId || ''}
                   themeColors={themeColors}
                   onSelectSession={onSelectSession}
                 />
@@ -248,40 +250,50 @@ export default function AssistantScreen() {
   // Shared values for animations
   const listWidthProgress = useSharedValue(0);
 
-  // Chat state
+  // Chat state - real AI
   const [composerHeight, setComposerHeight] = useState(48);
-  const [messages, setMessages] = useState<
-    Array<{ id: string; text: string; role: 'user' | 'assistant' }>
-  >([]);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [activeChatId, setActiveChatId] = useState<string | undefined>(undefined);
+  const {
+    messages: aiMessages,
+    isStreaming,
+    sendMessage,
+    stopStreaming,
+    clearChat,
+  } = useAIChat({ chatId: activeChatId });
 
   // Panel state
-  const [activeSessionId, setActiveSessionId] = useState('session-1');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isFullyExpanded, setIsFullyExpanded] = useState(false);
 
-  // Mock sessions data
-  const [sessions] = useState<ChatSession[]>([
-    {
-      id: 'session-1',
-      summary: 'Training program discussion',
-      lastMessagePreview: 'Help me design a strength program',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    },
-    {
-      id: 'session-2',
-      summary: 'Client nutrition advice',
-      lastMessagePreview: 'What should I recommend for pre-workout?',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    },
-    {
-      id: 'session-3',
-      summary: 'Recovery protocols',
-      lastMessagePreview: 'Best practices for active recovery',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    },
-  ]);
+  // Real chat sessions
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+
+  // Fetch real chat sessions
+  const loadSessions = useCallback(async () => {
+    setIsLoadingSessions(true);
+    try {
+      const chats = await fetchChats();
+      setSessions(
+        chats.map((chat: AiChatListItem) => ({
+          id: chat.id,
+          summary: chat.title || 'New chat',
+          lastMessagePreview: '',
+          timestamp: new Date(chat.updated_at || chat.created_at),
+        })),
+      );
+    } catch (e) {
+      console.error('[Assistant] Failed to load sessions:', e);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  }, []);
+
+  // Load sessions on mount and when panel opens
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
 
   const iconColor = themeColors.text;
 
@@ -295,11 +307,10 @@ export default function AssistantScreen() {
     panelRef.current?.open();
   };
 
-  // Close panel (also collapses search)
+  // Close panel
   const closePanel = useCallback(() => {
     setIsSearchFocused(false);
     setSearchQuery('');
-    setActiveSessionId('session-1');
     panelRef.current?.close();
   }, []);
 
@@ -307,17 +318,17 @@ export default function AssistantScreen() {
   const handleCreateNewSession = useCallback(() => {
     haptics.light();
     closePanel();
-    // Defer message clear until after close animation completes (320ms)
     setTimeout(() => {
-      setMessages([]);
+      setActiveChatId(undefined);
+      clearChat();
     }, 350);
-  }, [closePanel]);
+  }, [closePanel, clearChat]);
 
   // Select session
   const handleSelectSession = useCallback(
     (sessionId: string) => {
       haptics.light();
-      setActiveSessionId(sessionId);
+      setActiveChatId(sessionId);
       closePanel();
     },
     [closePanel]
@@ -326,7 +337,7 @@ export default function AssistantScreen() {
   // Search focus - expand panel
   const handleSearchFocus = useCallback(() => {
     setIsSearchFocused(true);
-    setActiveSessionId(''); // Unhighlight during search
+    // search active // Unhighlight during search
     panelRef.current?.expand();
   }, []);
 
@@ -341,7 +352,7 @@ export default function AssistantScreen() {
     Keyboard.dismiss();
     setSearchQuery('');
     setIsSearchFocused(false);
-    setActiveSessionId('session-1');
+    // reset
     // Snap list width instantly before collapsing panel
     listWidthProgress.value = 0;
     panelRef.current?.snapToCollapsed();
@@ -360,25 +371,13 @@ export default function AssistantScreen() {
   // Chat handlers
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
-
-    const userMessage = { id: Date.now().toString(), text, role: 'user' as const };
-    setMessages((prev) => [...prev, userMessage]);
-
-    setIsStreaming(true);
-
-    setTimeout(() => {
-      const assistantMessage = {
-        id: (Date.now() + 1).toString(),
-        text: 'This is a placeholder response. AI integration coming soon.',
-        role: 'assistant' as const,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-      setIsStreaming(false);
-    }, 1000);
+    await sendMessage(text, { currentPage: '/assistant' });
+    // Refresh sessions list after sending (new chat may have been created)
+    loadSessions();
   };
 
   const handleStop = () => {
-    setIsStreaming(false);
+    stopStreaming();
   };
 
   // Panel content renderer
@@ -392,7 +391,7 @@ export default function AssistantScreen() {
         isFullyExpanded={isFullyExpanded}
         listWidthProgress={listWidthProgress}
         sessions={sessions}
-        activeSessionId={activeSessionId}
+        activeSessionId={activeChatId || ''}
         searchQuery={searchQuery}
         isSearchFocused={isSearchFocused}
         onSearchChange={handleSearchSessions}
@@ -410,7 +409,7 @@ export default function AssistantScreen() {
       isFullyExpanded,
       listWidthProgress,
       sessions,
-      activeSessionId,
+      activeChatId,
       searchQuery,
       isSearchFocused,
       handleSearchSessions,
@@ -431,11 +430,12 @@ export default function AssistantScreen() {
       renderPanel={renderPanelContent}
       onExpansionChange={handleExpansionChange}
       onOpenChange={(isOpen) => {
+        if (isOpen) {
+          loadSessions();
+        }
         if (!isOpen) {
-          // Reset state when panel closes (including from gesture)
           setIsSearchFocused(false);
           setSearchQuery('');
-          setActiveSessionId('session-1');
         }
       }}
     >
@@ -448,14 +448,14 @@ export default function AssistantScreen() {
               contentContainerStyle={styles.scrollContent}
               keyboardDismissMode="on-drag"
             >
-              {messages.length === 0 ? (
+              {aiMessages.length === 0 ? (
                 <View style={styles.emptyState}>
                   <Text style={[styles.emptyStateText, { color: themeColors.mutedText }]}>
                     {t('clientDetail.assistant.emptyState')}
                   </Text>
                 </View>
               ) : (
-                messages.map((message) => (
+                aiMessages.map((message) => (
                   <View
                     key={message.id}
                     style={[
@@ -469,16 +469,36 @@ export default function AssistantScreen() {
                       },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.messageText,
-                        {
-                          color: message.role === 'user' ? '#FFFFFF' : themeColors.text,
-                        },
-                      ]}
-                    >
-                      {message.text}
-                    </Text>
+                    {message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0 && (
+                      <View style={{ marginBottom: 6 }}>
+                        {message.toolCalls.map((tc, i) => (
+                          <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                            {tc.status === 'calling' ? (
+                              <ActivityIndicator size="small" color={themeColors.primary} />
+                            ) : (
+                              <Text style={{ fontSize: 10, color: tc.status === 'error' ? themeColors.error : themeColors.success }}>
+                                {tc.status === 'error' ? '✕' : '✓'}
+                              </Text>
+                            )}
+                            <Text style={{ fontSize: 12, color: themeColors.mutedText }}>{tc.tool.replace(/_/g, ' ')}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                    {message.content ? (
+                      <Text
+                        style={[
+                          styles.messageText,
+                          {
+                            color: message.role === 'user' ? '#FFFFFF' : themeColors.text,
+                          },
+                        ]}
+                      >
+                        {message.content}
+                      </Text>
+                    ) : message.role === 'assistant' && (
+                      <ActivityIndicator size="small" color={themeColors.primary} />
+                    )}
                   </View>
                 ))
               )}
@@ -515,14 +535,14 @@ export default function AssistantScreen() {
               contentContainerStyle={styles.scrollContent}
               keyboardDismissMode="on-drag"
             >
-              {messages.length === 0 ? (
+              {aiMessages.length === 0 ? (
                 <View style={styles.emptyState}>
                   <Text style={[styles.emptyStateText, { color: themeColors.mutedText }]}>
                     {t('clientDetail.assistant.emptyState')}
                   </Text>
                 </View>
               ) : (
-                messages.map((message) => (
+                aiMessages.map((message) => (
                   <View
                     key={message.id}
                     style={[
@@ -536,16 +556,36 @@ export default function AssistantScreen() {
                       },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.messageText,
-                        {
-                          color: message.role === 'user' ? '#FFFFFF' : themeColors.text,
-                        },
-                      ]}
-                    >
-                      {message.text}
-                    </Text>
+                    {message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0 && (
+                      <View style={{ marginBottom: 6 }}>
+                        {message.toolCalls.map((tc, i) => (
+                          <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                            {tc.status === 'calling' ? (
+                              <ActivityIndicator size="small" color={themeColors.primary} />
+                            ) : (
+                              <Text style={{ fontSize: 10, color: tc.status === 'error' ? themeColors.error : themeColors.success }}>
+                                {tc.status === 'error' ? '✕' : '✓'}
+                              </Text>
+                            )}
+                            <Text style={{ fontSize: 12, color: themeColors.mutedText }}>{tc.tool.replace(/_/g, ' ')}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                    {message.content ? (
+                      <Text
+                        style={[
+                          styles.messageText,
+                          {
+                            color: message.role === 'user' ? '#FFFFFF' : themeColors.text,
+                          },
+                        ]}
+                      >
+                        {message.content}
+                      </Text>
+                    ) : message.role === 'assistant' && (
+                      <ActivityIndicator size="small" color={themeColors.primary} />
+                    )}
                   </View>
                 ))
               )}

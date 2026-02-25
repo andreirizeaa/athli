@@ -441,12 +441,13 @@ export default function ClientProfileScreen() {
             color={iconColor}
             loading={isLoadingChat}
           />
-          <IconButton
+          {/* AI Assistant button hidden - use main assistant on home page */}
+          {/* <IconButton
             icon={{ sf: 'sparkles', IconComponent: Sparkles }}
             onPress={handleAssistantPress}
             size="md"
             color={iconColor}
-          />
+          /> */}
         </View>
       </View>
 
