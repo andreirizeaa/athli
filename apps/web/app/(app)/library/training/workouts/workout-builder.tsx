@@ -1654,6 +1654,43 @@ export const WorkoutBuilder = ({
     }
   };
 
+  // Provide current workout state to AI so it knows what was manually edited
+  const getCurrentPayload = useCallback(() => ({
+    name: workoutTitle,
+    type: workoutType,
+    difficulty,
+    description,
+    items: workoutSchema.items.map((item) => {
+      if (item.itemType === 'section') {
+        return {
+          itemType: 'section',
+          type: item.section.type,
+          exercises: (item.section.exercises || []).map((ex) => ({
+            name: ex.name,
+            sets: ex.sets?.map((s) => ({
+              reps: s.reps,
+              weight: s.weight,
+              rest: s.rest,
+              duration: s.duration,
+              distance: s.distance,
+            })),
+          })),
+        };
+      }
+      return {
+        itemType: 'exercise',
+        name: item.exercise.name,
+        sets: item.exercise.sets?.map((s) => ({
+          reps: s.reps,
+          weight: s.weight,
+          rest: s.rest,
+          duration: s.duration,
+          distance: s.distance,
+        })),
+      };
+    }),
+  }), [workoutTitle, workoutType, difficulty, description, workoutSchema]);
+
   const examplePrompt = `Create a full-body strength and conditioning workout for intermediate level. Include:
 
 - 3-4 compound exercises (squats, deadlifts, bench press variations)
@@ -2939,6 +2976,7 @@ Focus on proper form and progressive overload.`;
                         }}
                         onSwitchToManual={() => setActiveBuilder("manual")}
                         examplePrompt={examplePrompt}
+                        getCurrentPayload={getCurrentPayload}
                       />
                     )}
                   </div>

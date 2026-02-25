@@ -52,6 +52,8 @@ interface AIBuilderChatProps {
   builderType: 'section' | 'workout';
   /** Example prompt text */
   examplePrompt?: string;
+  /** Returns the current workout/section state so the AI knows what the user has built so far */
+  getCurrentPayload?: () => unknown;
 }
 
 // ── Component ──────────────────────────────────────────────────────
@@ -63,6 +65,7 @@ export function AIBuilderChat({
   onSwitchToManual,
   builderType,
   examplePrompt,
+  getCurrentPayload,
 }: AIBuilderChatProps) {
   const t = useTranslations();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -189,7 +192,22 @@ export function AIBuilderChat({
     // Context prefix only on the first message
     const contextPrefix = messages.length === 0 ? buildContextPrefix() : '';
     const pdfSuffix = pdfBase64 ? `\n\nPDF Content (base64):\n${pdfBase64}` : '';
-    const fullMessage = contextPrefix + text + pdfSuffix;
+
+    // After the first message, include the current builder state so the AI
+    // knows what the user has built/edited manually since the last message.
+    let payloadSuffix = '';
+    if (messages.length > 0 && getCurrentPayload) {
+      try {
+        const currentState = getCurrentPayload();
+        if (currentState) {
+          payloadSuffix = `\n\n[Current ${builderType} state]:\n${JSON.stringify(currentState)}`;
+        }
+      } catch {
+        // Silently ignore serialization errors
+      }
+    }
+
+    const fullMessage = contextPrefix + text + pdfSuffix + payloadSuffix;
 
     // Show just the user's text in the UI, not the context prefix
     const displayText = text + (selectedFile ? ` 📎 ${selectedFile.name}` : '');
