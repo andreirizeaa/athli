@@ -570,6 +570,11 @@ export const SectionBuilder = ({
                   instanceId: ex.id,
                   supersetGroupId,
                   sets,
+                  ...(ex.eachSide != null && { eachSide: ex.eachSide }),
+                  ...(ex.tempo && { tempo: ex.tempo }),
+                  ...(ex.notes && { notes: ex.notes }),
+                  ...(ex.column1Label && { column1Label: ex.column1Label }),
+                  ...(ex.column2Label && { column2Label: ex.column2Label }),
                 },
               });
             });
@@ -615,6 +620,11 @@ export const SectionBuilder = ({
                 instanceId: ex.id,
                 supersetGroupId: null,
                 sets,
+                ...(ex.eachSide != null && { eachSide: ex.eachSide }),
+                ...(ex.tempo && { tempo: ex.tempo }),
+                ...(ex.notes && { notes: ex.notes }),
+                ...(ex.column1Label && { column1Label: ex.column1Label }),
+                ...(ex.column2Label && { column2Label: ex.column2Label }),
               },
             });
           }
@@ -661,6 +671,11 @@ export const SectionBuilder = ({
               instanceId: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
               supersetGroupId: null,
               sets,
+              ...(ex.eachSide != null && { eachSide: ex.eachSide }),
+              ...(ex.tempo && { tempo: ex.tempo }),
+              ...(ex.notes && { notes: ex.notes }),
+              ...(ex.column1Label && { column1Label: ex.column1Label }),
+              ...(ex.column2Label && { column2Label: ex.column2Label }),
             },
           });
         });
@@ -814,31 +829,57 @@ export const SectionBuilder = ({
       description,
       items: workoutSchema.items.map((item) => {
         if (item.itemType === 'section') {
+          const sec = item.section;
           return {
             itemType: 'section',
-            type: item.section.type,
-            exercises: (item.section.exercises || []).map((ex) => ({
-              name: ex.name,
+            name: sec.name || '',
+            type: sec.type,
+            ...(sec.roundDurationSec != null && { roundDurationSec: sec.roundDurationSec }),
+            ...(sec.workSec != null && { workSec: sec.workSec }),
+            ...(sec.restSec != null && { restSec: sec.restSec }),
+            ...(sec.rounds != null && { rounds: sec.rounds }),
+            ...(sec.intervalSec != null && { intervalSec: sec.intervalSec }),
+            ...(sec.durationMin != null && { durationMin: sec.durationMin }),
+            ...(sec.notes && { notes: sec.notes }),
+            exercises: (sec.exercises || []).map((ex) => ({
+              name: ex.name || '',
+              exerciseType: ex.exerciseType || 'weight_reps',
+              column1Label: ex.column1Label || 'Reps',
+              column2Label: ex.column2Label || 'kg',
+              eachSide: ex.eachSide || false,
+              tempo: ex.tempo || '',
+              notes: ex.notes || '',
               sets: ex.sets?.map((s) => ({
-                reps: s.reps,
-                weight: s.weight,
-                rest: s.rest,
-                duration: s.duration,
-                distance: s.distance,
-              })),
+                setNumber: s.setNumber,
+                type: s.type || 'normal',
+                reps: s.reps || '',
+                weight: s.weight || '',
+                rest: s.rest || '',
+                duration: s.duration || '',
+                distance: s.distance || '',
+              })) || [],
             })),
           };
         }
+        const ex = item.exercise;
         return {
           itemType: 'exercise',
-          name: item.exercise.name,
-          sets: item.exercise.sets?.map((s) => ({
-            reps: s.reps,
-            weight: s.weight,
-            rest: s.rest,
-            duration: s.duration,
-            distance: s.distance,
-          })),
+          name: ex.name || '',
+          exerciseType: ex.exerciseType || 'weight_reps',
+          column1Label: ex.column1Label || 'Reps',
+          column2Label: ex.column2Label || 'kg',
+          eachSide: ex.eachSide || false,
+          tempo: ex.tempo || '',
+          notes: ex.notes || '',
+          sets: ex.sets?.map((s) => ({
+            setNumber: s.setNumber,
+            type: s.type || 'normal',
+            reps: s.reps || '',
+            weight: s.weight || '',
+            rest: s.rest || '',
+            duration: s.duration || '',
+            distance: s.distance || '',
+          })) || [],
         };
       }),
     }), [workoutTitle, sectionType, difficulty, description, workoutSchema]);

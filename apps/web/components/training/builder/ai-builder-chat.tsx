@@ -86,33 +86,63 @@ export function AIBuilderChat({
       .catch(() => {});
   }, []);
 
+  // Schema reference for the AI so it knows all available fields
+  const exerciseSchema = [
+    'Exercise fields:',
+    '- name: string (exercise name)',
+    '- exerciseType: "weight_reps" | "reps" | "distance_duration"',
+    '- column1Label: "Reps" | "kg" | "lbs" | "km" | "m" | "yards" | "miles" | "feet" | "minutes" | "seconds" | "(Optional)" | "None"',
+    '- column2Label: same options as column1Label',
+    '- column1Value: string (prescribed value for column1, e.g. "10" for reps)',
+    '- column2Value: string (prescribed value for column2, e.g. "60" for kg)',
+    '- eachSide: boolean (true if exercise is performed each side, e.g. single-arm curls)',
+    '- tempo: string (4-digit eccentric-pause-concentric-pause format, e.g. "3-1-2-0")',
+    '- notes: string (coach notes for the exercise)',
+    '- sets: number (number of sets, default 3 for workouts, always 1 for sections)',
+    '- rest: number (rest between sets in seconds, e.g. 60, 90, 120)',
+    '- category: string (equipment category: "Barbell", "Dumbbells", "Bodyweight", "Machine", "Cables", "Kettlebells", etc.)',
+  ].join('\n');
+
+  const sectionConfigSchema = [
+    'Section config fields by type:',
+    '- regular: no extra config needed',
+    '- amrap: roundDurationSec (total duration in seconds, e.g. 600 for 10 min)',
+    '- tabata: workSec (default 20), restSec (default 10), rounds (default 8)',
+    '- hiit: workSec (default 40), restSec (default 20), rounds (default 10)',
+    '- emom: intervalSec (default 60), durationMin (total minutes, default 10)',
+    '- circuits: rounds (number of rounds, default 3)',
+  ].join('\n');
+
   // Build context message for the AI (prepended to every message)
   const buildContextPrefix = useCallback((isFollowUp: boolean) => {
+    const toolReminder = isFollowUp
+      ? '[IMPORTANT: You MUST use the tool to apply changes. Do NOT output raw JSON. Always use the tool AND provide a brief text response explaining what you changed.]\n\n'
+      : '';
+
     if (builderType === 'section' && sectionType) {
       const desc = SECTION_TYPE_DESCRIPTIONS[sectionType] || sectionType;
-      if (isFollowUp) {
-        return (
-          `[IMPORTANT: You MUST use the create_section tool with type="${sectionType}" to apply changes. ` +
-          `Do NOT output raw JSON. Always use the tool and always provide a text response.]\n\n`
-        );
-      }
       return (
-        `I am building a ${desc} section. ` +
-        `Generate exercises formatted for a ${sectionType.toUpperCase()} section. ` +
-        `Use the create_section tool with type="${sectionType}".\n\n`
+        toolReminder +
+        `I am building a ${desc} section. Use the create_section tool with type="${sectionType}".\n` +
+        `Section exercises always have exactly 1 set (the section handles rounds/timing).\n\n` +
+        `${exerciseSchema}\n\n${sectionConfigSchema}\n\n` +
+        `Always provide realistic prescribed values (column1Value, column2Value) for every exercise. ` +
+        `Set eachSide=true for unilateral exercises. Include tempo for strength exercises when appropriate.\n\n`
       );
     }
     if (builderType === 'workout') {
-      if (isFollowUp) {
-        return (
-          `[IMPORTANT: You MUST use the create_workout tool to apply changes. ` +
-          `Do NOT output raw JSON. Always use the tool and always provide a text response.]\n\n`
-        );
-      }
-      return 'I am building a workout. Use the create_workout tool.\n\n';
+      return (
+        toolReminder +
+        `I am building a workout. Use the create_workout tool.\n` +
+        `Workouts have sections, each section contains exercises.\n\n` +
+        `${exerciseSchema}\n\n${sectionConfigSchema}\n\n` +
+        `Always provide realistic prescribed values (column1Value, column2Value) for every exercise. ` +
+        `Set eachSide=true for unilateral exercises. Include rest times between sets. ` +
+        `Include tempo for strength exercises when appropriate.\n\n`
+      );
     }
     return '';
-  }, [builderType, sectionType]);
+  }, [builderType, sectionType, exerciseSchema, sectionConfigSchema]);
 
   // Use refs for callbacks to avoid stale closures in the SSE stream handler.
   // The useAIChat hook captures onAction at sendMessage-call time, but the
@@ -600,6 +630,9 @@ interface RawExercise {
   category?: string;
   sets?: number;
   rest?: number;
+  eachSide?: boolean;
+  tempo?: string;
+  notes?: string;
 }
 
 interface RawSection {
@@ -634,6 +667,11 @@ function convertRawExercise(ex: RawExercise) {
         exerciseType: determineExerciseType(ex),
         equipment: ex.category ? [ex.category] : [],
         sets: generateSetsFromExercise(ex),
+        ...(ex.eachSide != null && { eachSide: ex.eachSide }),
+        ...(ex.tempo && { tempo: ex.tempo }),
+        ...(ex.notes && { notes: ex.notes }),
+        ...(ex.column1Label && { column1Label: ex.column1Label }),
+        ...(ex.column2Label && { column2Label: ex.column2Label }),
       },
     ],
   };
