@@ -1,5 +1,16 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, Keyboard, useWindowDimensions, Platform, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  ScrollView,
+  Keyboard,
+  useWindowDimensions,
+  Platform,
+  KeyboardAvoidingView,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Ellipsis, Plus, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,13 +31,28 @@ import { useThemePreference, useColorScheme } from '@/stores';
 import { useTranslations } from '@/stores';
 import { useAIChat, type ChatMessage } from '@/hooks/useAIChat';
 import { fetchChats, type AiChatListItem } from '@/services/ai/ai-chat-history-service';
+import type { ActionPayload } from '@/services/ai/ai-service';
 import { IconButton } from '@/components/ui/icon-button';
 import { StatusBarBlur } from '@/components/ui/status-bar-blur';
 import { AnimatedSearchBar } from '@/components/ui/animated-search-bar';
 import { SlidingPanel, SlidingPanelRef } from '@/components/ui/sliding-panel';
 import { haptics } from '@/utils/haptics';
+import { Markdown } from '@/components/ai/Markdown';
+import { ActionCard, type ActionType, getActionDisplayName } from '@/components/ai/ActionCard';
+import { ClientSelectCards } from '@/components/ai/ClientSelectCards';
+import { AIChart } from '@/components/ai/AIChart';
 
-// Session type
+// ── Services for action confirmation ─────────────────────────────
+import { createWorkout } from '@/services/coach/coach-workout-service';
+import { assignWorkout } from '@/services/client/client-training-service';
+import { assignMetric } from '@/services/client/client-metric-service';
+import { createAthleteGoal, createAthleteInjury } from '@/services/client/client-service';
+import { addCheckIn } from '@/services/coach/coach-check-in-service';
+import { createMetric } from '@/services/coach/coach-metric-service';
+import { supabase } from '@/lib/supabase';
+
+// ── Types ────────────────────────────────────────────────────────
+
 type ChatSession = {
   id: string;
   summary: string;
@@ -36,7 +62,8 @@ type ChatSession = {
 
 const COLLAPSED_WIDTH_RATIO = 0.8;
 
-// Session list item - extracted and memoized for performance
+// ── Session List Item ────────────────────────────────────────────
+
 type SessionListItemProps = {
   session: ChatSession;
   activeSessionId: string;
@@ -47,12 +74,10 @@ type SessionListItemProps = {
 const SessionListItem = React.memo(
   ({ session, activeSessionId, themeColors, onSelectSession }: SessionListItemProps) => {
     const isActive = session.id === activeSessionId;
-
     return (
       <PressableOpacity onPress={() => onSelectSession(session.id)} style={styles.sessionItem}>
         {({ progress }) => (
           <>
-            {/* Base background for active state */}
             {isActive && (
               <View
                 style={[
@@ -61,18 +86,12 @@ const SessionListItem = React.memo(
                 ]}
               />
             )}
-            {/* Press overlay */}
             <Animated.View
               style={[
                 StyleSheet.absoluteFill,
-                {
-                  backgroundColor: themeColors.surfacePrimary,
-                  opacity: progress,
-                  borderRadius: 14,
-                },
+                { backgroundColor: themeColors.surfacePrimary, opacity: progress, borderRadius: 14 },
               ]}
             />
-            {/* Content */}
             <Text
               style={[styles.sessionSummary, { color: themeColors.text }]}
               numberOfLines={1}
@@ -84,10 +103,11 @@ const SessionListItem = React.memo(
         )}
       </PressableOpacity>
     );
-  }
+  },
 );
 
-// Panel content as a separate component to properly use hooks
+// ── Panel Content ────────────────────────────────────────────────
+
 type PanelContentProps = {
   expansion: SharedValue<number>;
   collapsedOffset: number;
@@ -130,55 +150,36 @@ const PanelContent = React.memo(
     const insets = useSafeAreaInsets();
     const iconColor = useMemo(() => themeColors.text, [themeColors.text]);
 
-    // Trigger list width animation when fully expanded state changes
     useEffect(() => {
       if (isFullyExpanded) {
-        listWidthProgress.value = withTiming(1, {
-          duration: 250,
-          easing: Easing.out(Easing.cubic),
-        });
+        listWidthProgress.value = withTiming(1, { duration: 250, easing: Easing.out(Easing.cubic) });
       } else {
-        // Snap instantly to collapsed width (no animation)
         listWidthProgress.value = 0;
       }
     }, [isFullyExpanded, listWidthProgress]);
 
-    // Animated style for header padding - search bar expands
-    const headerPaddingStyle = useAnimatedStyle(() => {
-      const paddingRight = interpolate(expansion.value, [0, 1], [collapsedOffset + 16, 16]);
-      return {
-        paddingRight,
-      };
-    });
+    const headerPaddingStyle = useAnimatedStyle(() => ({
+      paddingRight: interpolate(expansion.value, [0, 1], [collapsedOffset + 16, 16]),
+    }));
 
-    // Animated style for list width - uses separate progress value
-    const listWidthStyle = useAnimatedStyle(() => {
-      const width = interpolate(listWidthProgress.value, [0, 1], [visibleWidth, screenWidth]);
-      return {
-        width,
-      };
-    });
+    const listWidthStyle = useAnimatedStyle(() => ({
+      width: interpolate(listWidthProgress.value, [0, 1], [visibleWidth, screenWidth]),
+    }));
 
-    // Filter sessions
     const filteredSessions = useMemo(
       () =>
         sessions.filter(
-          (session) =>
+          (s) =>
             searchQuery.trim() === '' ||
-            session.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            session.lastMessagePreview.toLowerCase().includes(searchQuery.toLowerCase())
+            s.summary.toLowerCase().includes(searchQuery.toLowerCase()),
         ),
-      [sessions, searchQuery]
+      [sessions, searchQuery],
     );
 
     return (
       <View
-        style={[
-          styles.panelInner,
-          { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top + 4 },
-        ]}
+        style={[styles.panelInner, { backgroundColor: themeColors.backgroundPrimary, paddingTop: insets.top + 4 }]}
       >
-        {/* Panel header - animated padding for search bar */}
         <Animated.View style={[styles.panelHeader, headerPaddingStyle]}>
           <View style={{ flex: 1, minWidth: 0 }}>
             <AnimatedSearchBar
@@ -190,25 +191,13 @@ const PanelContent = React.memo(
             />
           </View>
           {isSearchFocused ? (
-            <IconButton
-              icon={{ sf: 'xmark', IconComponent: X }}
-              onPress={onCloseSearch}
-              size="md"
-              color={iconColor}
-            />
+            <IconButton icon={{ sf: 'xmark', IconComponent: X }} onPress={onCloseSearch} size="md" color={iconColor} />
           ) : (
-            <IconButton
-              icon={{ sf: 'plus', IconComponent: Plus }}
-              onPress={onCreateNewSession}
-              size="md"
-              color={iconColor}
-            />
+            <IconButton icon={{ sf: 'plus', IconComponent: Plus }} onPress={onCreateNewSession} size="md" color={iconColor} />
           )}
         </Animated.View>
 
-        {/* Sessions list container - aligns list to left edge */}
         <View style={{ flex: 1, alignItems: 'flex-start' }}>
-          {/* Animated width list */}
           <Animated.View style={[{ flex: 1 }, listWidthStyle]}>
             <FlashList
               data={filteredSessions}
@@ -227,8 +216,32 @@ const PanelContent = React.memo(
         </View>
       </View>
     );
-  }
+  },
 );
+
+// ── Tool Status ──────────────────────────────────────────────────
+
+function ToolStatusIndicator({ toolCalls, themeColors }: { toolCalls: ChatMessage['toolCalls']; themeColors: any }) {
+  if (!toolCalls || toolCalls.length === 0) return null;
+  return (
+    <View style={{ marginBottom: 6 }}>
+      {toolCalls.map((tc, i) => (
+        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+          {tc.status === 'calling' ? (
+            <ActivityIndicator size="small" color={themeColors.primary} />
+          ) : (
+            <Text style={{ fontSize: 10, color: tc.status === 'error' ? themeColors.error : themeColors.success }}>
+              {tc.status === 'error' ? '✕' : '✓'}
+            </Text>
+          )}
+          <Text style={{ fontSize: 12, color: themeColors.mutedText }}>{tc.tool.replace(/_/g, ' ')}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// ── Main Screen ──────────────────────────────────────────────────
 
 export default function AssistantScreen() {
   const router = useRouter();
@@ -237,20 +250,13 @@ export default function AssistantScreen() {
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
   const { width: SCREEN_WIDTH } = useWindowDimensions();
-
-  // Calculate the offset that's hidden when collapsed
   const COLLAPSED_OFFSET = SCREEN_WIDTH * (1 - COLLAPSED_WIDTH_RATIO);
-
-  // Calculate visible width at collapsed state (80% of screen)
   const VISIBLE_WIDTH = SCREEN_WIDTH * COLLAPSED_WIDTH_RATIO;
 
-  // Refs
   const panelRef = useRef<SlidingPanelRef>(null);
-
-  // Shared values for animations
   const listWidthProgress = useSharedValue(0);
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  // Chat state - real AI
   const [composerHeight, setComposerHeight] = useState(48);
   const [activeChatId, setActiveChatId] = useState<string | undefined>(undefined);
   const {
@@ -260,24 +266,29 @@ export default function AssistantScreen() {
     sendMessage,
     stopStreaming,
     clearChat,
+    markClientSelected,
+    markActionConfirmed,
   } = useAIChat({ chatId: activeChatId });
 
-  // Panel state
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isFullyExpanded, setIsFullyExpanded] = useState(false);
-
-  // Real chat sessions
   const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Fetch real chat sessions (debounced)
+  // Get current user ID for action confirmation
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id ?? null);
+    });
+  }, []);
+
+  // ── Session loading ──────────────────────────────────────────────
+
   const loadSessionsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadSessions = useCallback(async () => {
-    // Debounce: cancel pending load if called again within 300ms
     if (loadSessionsTimeoutRef.current) clearTimeout(loadSessionsTimeoutRef.current);
     loadSessionsTimeoutRef.current = setTimeout(async () => {
-      setIsLoadingSessions(true);
       try {
         const chats = await fetchChats();
         setSessions(
@@ -290,37 +301,34 @@ export default function AssistantScreen() {
         );
       } catch (e) {
         console.error('[Assistant] Failed to load sessions:', e);
-      } finally {
-        setIsLoadingSessions(false);
       }
     }, 300);
   }, []);
 
-  // Load sessions on mount and when panel opens
   useEffect(() => {
     loadSessions();
   }, [loadSessions]);
 
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    if (aiMessages.length > 0) {
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+    }
+  }, [aiMessages.length, aiMessages[aiMessages.length - 1]?.content]);
+
   const iconColor = themeColors.text;
 
-  // Navigation
-  const handleBackPress = () => {
-    router.back();
-  };
+  // ── Navigation ───────────────────────────────────────────────────
 
-  // Panel controls
-  const handleOpenPanel = () => {
-    panelRef.current?.open();
-  };
+  const handleBackPress = () => router.back();
+  const handleOpenPanel = () => panelRef.current?.open();
 
-  // Close panel
   const closePanel = useCallback(() => {
     setIsSearchFocused(false);
     setSearchQuery('');
     panelRef.current?.close();
   }, []);
 
-  // Create new session
   const handleCreateNewSession = useCallback(() => {
     haptics.light();
     closePanel();
@@ -330,68 +338,151 @@ export default function AssistantScreen() {
     }, 350);
   }, [closePanel, clearChat]);
 
-  // Select session
   const handleSelectSession = useCallback(
     (sessionId: string) => {
       haptics.light();
       setActiveChatId(sessionId);
       closePanel();
     },
-    [closePanel]
+    [closePanel],
   );
 
-  // Search focus - expand panel
   const handleSearchFocus = useCallback(() => {
     setIsSearchFocused(true);
-    // search active // Unhighlight during search
     panelRef.current?.expand();
   }, []);
 
-  // Search blur - don't auto-collapse
-  const handleSearchBlur = useCallback(() => {
-    // Wait for explicit close action
-  }, []);
+  const handleSearchBlur = useCallback(() => {}, []);
 
-  // Close search (snap to collapsed state instantly)
   const handleCloseSearch = useCallback(() => {
     haptics.light();
     Keyboard.dismiss();
     setSearchQuery('');
     setIsSearchFocused(false);
-    // reset
-    // Snap list width instantly before collapsing panel
     listWidthProgress.value = 0;
     panelRef.current?.snapToCollapsed();
   }, [listWidthProgress]);
 
-  // Search handler
-  const handleSearchSessions = useCallback((query: string) => {
-    setSearchQuery(query);
-  }, []);
+  const handleSearchSessions = useCallback((query: string) => setSearchQuery(query), []);
+  const handleExpansionChange = useCallback((isExpanded: boolean) => setIsFullyExpanded(isExpanded), []);
 
-  // Handle expansion state changes
-  const handleExpansionChange = useCallback((isExpanded: boolean) => {
-    setIsFullyExpanded(isExpanded);
-  }, []);
+  // ── Action confirmation handler ──────────────────────────────────
 
-  // Chat handlers
+  const handleConfirmAction = useCallback(
+    async (actionType: ActionType, payload: any, modifiedPayload?: any) => {
+      const finalPayload = modifiedPayload || payload;
+
+      try {
+        if (actionType === 'create_workout') {
+          // For now, workout creation on mobile uses the simplified payload
+          // The backend API expects the same format as web
+          if (payload.clientId) {
+            const date = payload.date || new Date().toISOString().split('T')[0];
+            await assignWorkout({
+              clientId: payload.clientId,
+              coachId: userId || '',
+              date,
+              workoutPayload: finalPayload,
+              isNew: true,
+            });
+            Alert.alert('Success', `Workout assigned to ${payload.clientName || 'client'}!`);
+          } else {
+            await createWorkout(finalPayload);
+            Alert.alert('Success', 'Workout added to library!');
+          }
+        } else if (actionType === 'assign_workout') {
+          await assignWorkout({
+            workoutId: payload.workoutId,
+            clientId: payload.clientId,
+            date: payload.date,
+            coachId: userId,
+          });
+          Alert.alert('Success', `Workout assigned to ${payload.clientName || 'client'}!`);
+        } else if (actionType === 'assign_metric_to_client') {
+          await assignMetric({
+            clientId: payload.clientId,
+            coachId: userId!,
+            metricIds: [payload.metricId],
+            schedule_config: { type: 'metric', frequency: 'daily' },
+          });
+          Alert.alert('Success', `${payload.metricName} assigned to ${payload.clientName}!`);
+        } else if (actionType === 'add_client_goal') {
+          await createAthleteGoal(payload.clientId, userId!, {
+            goal: payload.goalType,
+            target_date: payload.targetDate || null,
+            achieved: false,
+            details: payload.description || '',
+          });
+          Alert.alert('Success', `Goal added for ${payload.clientName}!`);
+        } else if (actionType === 'add_client_injury') {
+          await createAthleteInjury(payload.clientId, userId!, {
+            injury: `${payload.injuryType} - ${payload.bodyPart}`,
+            date: payload.dateOccurred || null,
+            details: `Severity: ${payload.severity || 'moderate'}${payload.notes ? `. ${payload.notes}` : ''}`,
+          });
+          Alert.alert('Success', `Injury recorded for ${payload.clientName}!`);
+        } else if (actionType === 'create_checkin_template') {
+          const checkIn = await addCheckIn({ name: payload.name, description: payload.description || '' });
+          // TODO: Add questions via API when addQuestion is available on mobile
+          Alert.alert('Success', `Check-in "${payload.name}" created!`);
+        } else if (actionType === 'create_metric') {
+          const valueKindMap: Record<string, string> = {
+            weight: 'number', measurement: 'number', percentage: 'percent',
+            count: 'number', time: 'duration', custom: 'number',
+          };
+          await createMetric({
+            name: payload.name,
+            value_kind: (valueKindMap[payload.metricType] || 'number') as any,
+            unit: payload.unit || '',
+            description: payload.description || '',
+          });
+          Alert.alert('Success', `Metric "${payload.name}" created!`);
+        } else if (actionType === 'draft_message') {
+          // On mobile, just copy the message text for now
+          // TODO: integrate with messaging service
+          Alert.alert('Draft Message', finalPayload.message || 'No message content');
+        } else {
+          Alert.alert('Info', 'This action is not yet supported on mobile.');
+        }
+
+        await markActionConfirmed(actionType);
+      } catch (error: any) {
+        console.error('[Assistant] Action failed:', error);
+        Alert.alert('Error', error.message || 'Failed to complete action');
+        throw error;
+      }
+    },
+    [userId, markActionConfirmed],
+  );
+
+  // ── Chat handlers ────────────────────────────────────────────────
+
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
     try {
       await sendMessage(text, { currentPage: '/assistant' });
     } catch (err) {
-      // Error is captured in useAIChat's error state
       console.error('[Assistant] sendMessage failed:', err);
     }
-    // Refresh sessions list after sending (new chat may have been created)
     loadSessions();
   };
 
-  const handleStop = () => {
-    stopStreaming();
-  };
+  const handleStop = () => stopStreaming();
 
-  // Panel content renderer
+  const handleClientSelect = useCallback(
+    ({ id, name }: { id: string; name: string }) => {
+      markClientSelected(id);
+      sendMessage(
+        `I select the client "${name}" (client ID: ${id})`,
+        { currentPage: '/assistant' },
+        name,
+      );
+    },
+    [markClientSelected, sendMessage],
+  );
+
+  // ── Panel renderer ───────────────────────────────────────────────
+
   const renderPanelContent = useCallback(
     (expansion: SharedValue<number>) => (
       <PanelContent
@@ -414,22 +505,129 @@ export default function AssistantScreen() {
       />
     ),
     [
-      COLLAPSED_OFFSET,
-      VISIBLE_WIDTH,
-      SCREEN_WIDTH,
-      isFullyExpanded,
-      listWidthProgress,
-      sessions,
-      activeChatId,
-      searchQuery,
-      isSearchFocused,
-      handleSearchSessions,
-      handleSearchFocus,
-      handleSearchBlur,
-      handleCloseSearch,
-      handleCreateNewSession,
+      COLLAPSED_OFFSET, VISIBLE_WIDTH, SCREEN_WIDTH, isFullyExpanded, listWidthProgress,
+      sessions, activeChatId, searchQuery, isSearchFocused, handleSearchSessions,
+      handleSearchFocus, handleSearchBlur, handleCloseSearch, handleCreateNewSession,
       handleSelectSession,
-    ]
+    ],
+  );
+
+  // ── Message renderer ─────────────────────────────────────────────
+
+  const renderMessage = (message: ChatMessage) => {
+    const isAssistant = message.role === 'assistant';
+
+    if (!isAssistant) {
+      return (
+        <View
+          key={message.id}
+          style={[styles.messageBubble, styles.userMessage, { backgroundColor: themeColors.primary }]}
+        >
+          <Text style={[styles.messageText, { color: '#FFFFFF' }]}>{message.content}</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View key={message.id} style={styles.assistantContainer}>
+        {/* Tool call indicators — only while content is empty */}
+        {message.toolCalls && message.toolCalls.length > 0 && !message.content && (
+          <ToolStatusIndicator toolCalls={message.toolCalls} themeColors={themeColors} />
+        )}
+
+        {/* Message content with markdown */}
+        {message.content ? (
+          <View style={[styles.messageBubble, styles.assistantMessage, { backgroundColor: themeColors.translucentBackground }]}>
+            <Markdown>{message.content}</Markdown>
+          </View>
+        ) : message.role === 'assistant' && !message.toolCalls?.length ? (
+          <View style={[styles.messageBubble, styles.assistantMessage, { backgroundColor: themeColors.translucentBackground }]}>
+            <ActivityIndicator size="small" color={themeColors.primary} />
+          </View>
+        ) : null}
+
+        {/* Client selection cards */}
+        {message.clientSelect && message.clientSelect.length > 0 && (
+          <ClientSelectCards
+            clients={message.clientSelect}
+            selectedClientId={message.selectedClientId}
+            onSelect={handleClientSelect}
+          />
+        )}
+
+        {/* Charts */}
+        {message.charts?.map((chart, i) => (
+          <AIChart key={i} chart={chart} />
+        ))}
+
+        {/* Action card */}
+        {message.action && (
+          <ActionCard
+            actionType={message.action.type as ActionType}
+            payload={message.action.payload}
+            initialConfirmed={message.action.confirmed}
+            onConfirm={(modifiedPayload) =>
+              handleConfirmAction(message.action!.type as ActionType, message.action!.payload, modifiedPayload)
+            }
+          />
+        )}
+      </View>
+    );
+  };
+
+  // ── Render ───────────────────────────────────────────────────────
+
+  const chatContent = (
+    <>
+      <View style={{ height: insets.top + 52 }} />
+      <ScrollView
+        ref={scrollViewRef}
+        style={[styles.scrollView, { backgroundColor: themeColors.backgroundPrimary }]}
+        contentContainerStyle={styles.scrollContent}
+        keyboardDismissMode="on-drag"
+      >
+        {aiMessages.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={[styles.emptyStateText, { color: themeColors.mutedText }]}>
+              {t('clientDetail.assistant.emptyState')}
+            </Text>
+          </View>
+        ) : (
+          aiMessages.map(renderMessage)
+        )}
+      </ScrollView>
+
+      {/* Error banner */}
+      {chatError && (
+        <View
+          style={{
+            marginHorizontal: 16,
+            marginBottom: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            backgroundColor: themeColors.error + '15',
+            borderRadius: 8,
+          }}
+        >
+          <Text style={{ fontSize: 12, color: themeColors.error }}>{chatError}</Text>
+        </View>
+      )}
+
+      {/* Composer */}
+      <View style={[styles.composerContainer, Platform.OS === 'android' && { paddingBottom: insets.bottom + 8 }]}>
+        <View style={[styles.composerWrapper, { height: composerHeight, backgroundColor: themeColors.translucentBackground }]}>
+          <KeyboardComposer
+            placeholder={t('clientDetail.assistant.placeholder')}
+            onSend={handleSend}
+            onStop={handleStop}
+            onHeightChange={setComposerHeight}
+            isStreaming={isStreaming}
+            minHeight={48}
+            maxHeight={120}
+          />
+        </View>
+      </View>
+    </>
   );
 
   return (
@@ -441,9 +639,7 @@ export default function AssistantScreen() {
       renderPanel={renderPanelContent}
       onExpansionChange={handleExpansionChange}
       onOpenChange={(isOpen) => {
-        if (isOpen) {
-          loadSessions();
-        }
+        if (isOpen) loadSessions();
         if (!isOpen) {
           setIsSearchFocused(false);
           setSearchQuery('');
@@ -453,204 +649,20 @@ export default function AssistantScreen() {
       <View style={[styles.screen, { backgroundColor: themeColors.backgroundPrimary }]}>
         {Platform.OS === 'ios' ? (
           <KeyboardAwareWrapper style={{ flex: 1 }} extraBottomInset={composerHeight}>
-            <View style={{ height: insets.top + 52 }} />
-            <ScrollView
-              style={[styles.scrollView, { backgroundColor: themeColors.backgroundPrimary }]}
-              contentContainerStyle={styles.scrollContent}
-              keyboardDismissMode="on-drag"
-            >
-              {aiMessages.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={[styles.emptyStateText, { color: themeColors.mutedText }]}>
-                    {t('clientDetail.assistant.emptyState')}
-                  </Text>
-                </View>
-              ) : (
-                aiMessages.map((message) => (
-                  <View
-                    key={message.id}
-                    style={[
-                      styles.messageBubble,
-                      message.role === 'user' ? styles.userMessage : styles.assistantMessage,
-                      {
-                        backgroundColor:
-                          message.role === 'user'
-                            ? themeColors.primary
-                            : themeColors.translucentBackground,
-                      },
-                    ]}
-                  >
-                    {message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0 && (
-                      <View style={{ marginBottom: 6 }}>
-                        {message.toolCalls.map((tc, i) => (
-                          <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                            {tc.status === 'calling' ? (
-                              <ActivityIndicator size="small" color={themeColors.primary} />
-                            ) : (
-                              <Text style={{ fontSize: 10, color: tc.status === 'error' ? themeColors.error : themeColors.success }}>
-                                {tc.status === 'error' ? '✕' : '✓'}
-                              </Text>
-                            )}
-                            <Text style={{ fontSize: 12, color: themeColors.mutedText }}>{tc.tool.replace(/_/g, ' ')}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                    {message.content ? (
-                      <Text
-                        style={[
-                          styles.messageText,
-                          {
-                            color: message.role === 'user' ? '#FFFFFF' : themeColors.text,
-                          },
-                        ]}
-                      >
-                        {message.content}
-                      </Text>
-                    ) : message.role === 'assistant' && (
-                      <ActivityIndicator size="small" color={themeColors.primary} />
-                    )}
-                  </View>
-                ))
-              )}
-            </ScrollView>
-
-            {/* Error banner */}
-            {chatError && (
-              <View style={{ marginHorizontal: 16, marginBottom: 8, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: themeColors.error + '15', borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ fontSize: 12, color: themeColors.error, flex: 1 }}>{chatError}</Text>
-              </View>
-            )}
-            {/* Composer */}
-            <View style={styles.composerContainer}>
-              <View
-                style={[
-                  styles.composerWrapper,
-                  {
-                    height: composerHeight,
-                    backgroundColor: themeColors.translucentBackground,
-                  },
-                ]}
-              >
-                <KeyboardComposer
-                  placeholder={t('clientDetail.assistant.placeholder')}
-                  onSend={handleSend}
-                  onStop={handleStop}
-                  onHeightChange={setComposerHeight}
-                  isStreaming={isStreaming}
-                  minHeight={48}
-                  maxHeight={120}
-                />
-              </View>
-            </View>
+            {chatContent}
           </KeyboardAwareWrapper>
         ) : (
           <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-            <View style={{ height: insets.top + 52 }} />
-            <ScrollView
-              style={[styles.scrollView, { backgroundColor: themeColors.backgroundPrimary }]}
-              contentContainerStyle={styles.scrollContent}
-              keyboardDismissMode="on-drag"
-            >
-              {aiMessages.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={[styles.emptyStateText, { color: themeColors.mutedText }]}>
-                    {t('clientDetail.assistant.emptyState')}
-                  </Text>
-                </View>
-              ) : (
-                aiMessages.map((message) => (
-                  <View
-                    key={message.id}
-                    style={[
-                      styles.messageBubble,
-                      message.role === 'user' ? styles.userMessage : styles.assistantMessage,
-                      {
-                        backgroundColor:
-                          message.role === 'user'
-                            ? themeColors.primary
-                            : themeColors.translucentBackground,
-                      },
-                    ]}
-                  >
-                    {message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0 && (
-                      <View style={{ marginBottom: 6 }}>
-                        {message.toolCalls.map((tc, i) => (
-                          <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                            {tc.status === 'calling' ? (
-                              <ActivityIndicator size="small" color={themeColors.primary} />
-                            ) : (
-                              <Text style={{ fontSize: 10, color: tc.status === 'error' ? themeColors.error : themeColors.success }}>
-                                {tc.status === 'error' ? '✕' : '✓'}
-                              </Text>
-                            )}
-                            <Text style={{ fontSize: 12, color: themeColors.mutedText }}>{tc.tool.replace(/_/g, ' ')}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                    {message.content ? (
-                      <Text
-                        style={[
-                          styles.messageText,
-                          {
-                            color: message.role === 'user' ? '#FFFFFF' : themeColors.text,
-                          },
-                        ]}
-                      >
-                        {message.content}
-                      </Text>
-                    ) : message.role === 'assistant' && (
-                      <ActivityIndicator size="small" color={themeColors.primary} />
-                    )}
-                  </View>
-                ))
-              )}
-            </ScrollView>
-
-            {/* Composer */}
-            <View style={[styles.composerContainer, { paddingBottom: insets.bottom + 8 }]}>
-              <View
-                style={[
-                  styles.composerWrapper,
-                  {
-                    height: composerHeight,
-                    backgroundColor: themeColors.translucentBackground,
-                  },
-                ]}
-              >
-                <KeyboardComposer
-                  placeholder={t('clientDetail.assistant.placeholder')}
-                  onSend={handleSend}
-                  onStop={handleStop}
-                  onHeightChange={setComposerHeight}
-                  isStreaming={isStreaming}
-                  minHeight={48}
-                  maxHeight={120}
-                />
-              </View>
-            </View>
+            {chatContent}
           </KeyboardAvoidingView>
         )}
 
         <StatusBarBlur blurHeight={52} largeHeader />
 
         <View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
-          <IconButton
-            icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }}
-            onPress={handleBackPress}
-            size="md"
-            color={iconColor}
-          />
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>
-            {t('clientDetail.assistant.title')}
-          </Text>
-          <IconButton
-            icon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
-            onPress={handleOpenPanel}
-            size="md"
-            color={iconColor}
-          />
+          <IconButton icon={{ sf: 'arrow.left', IconComponent: ChevronLeft }} onPress={handleBackPress} size="md" color={iconColor} />
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('clientDetail.assistant.title')}</Text>
+          <IconButton icon={{ sf: 'ellipsis', IconComponent: Ellipsis }} onPress={handleOpenPanel} size="md" color={iconColor} />
         </View>
       </View>
     </SlidingPanel>
@@ -709,6 +721,11 @@ const styles = StyleSheet.create({
   assistantMessage: {
     alignSelf: 'flex-start',
     borderBottomLeftRadius: 4,
+  },
+  assistantContainer: {
+    alignSelf: 'flex-start',
+    maxWidth: '90%',
+    marginBottom: 12,
   },
   messageText: {
     ...typography.p2,

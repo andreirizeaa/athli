@@ -19,6 +19,7 @@ import {
   appendMessage as appendMessageApi,
   summarizeTitle,
   updateChatTitle,
+  updateChatData,
   type ChatMessageData,
 } from '@/services/ai/ai-chat-history-service';
 
@@ -119,6 +120,7 @@ export function useAIChat(options?: UseAIChatOptions) {
               action: m.action as ActionPayload | undefined,
               charts: m.charts as ChartPayload[] | undefined,
               clientSelect: m.clientSelect as ClientSelectOption[] | undefined,
+              selectedClientId: (m as any).selectedClientId as string | undefined,
             })),
           );
         }
@@ -165,7 +167,7 @@ export function useAIChat(options?: UseAIChatOptions) {
   // ── Send a message ───────────────────────────────────────────────
 
   const sendMessage = useCallback(
-    async (content: string, context?: ChatContext) => {
+    async (content: string, context?: ChatContext, displayText?: string) => {
       const trimmed = content.trim();
       if (!trimmed) return;
 
@@ -179,6 +181,8 @@ export function useAIChat(options?: UseAIChatOptions) {
       setIsStreaming(true);
       setPendingAction(null);
       setCurrentToolCall(null);
+
+      const displayContent = displayText || trimmed;
 
       // Create chat record if this is a new conversation
       if (!chatIdRef.current) {
@@ -205,10 +209,10 @@ export function useAIChat(options?: UseAIChatOptions) {
           .catch((e) => console.error('[useAIChat] Title generation failed:', e));
       }
 
-      // Add user message to UI
-      const userMsg: ChatMessage = { id: uuid(), role: 'user', content: trimmed, timestamp: new Date() };
+      // Add user message to UI (show displayContent, persist displayContent)
+      const userMsg: ChatMessage = { id: uuid(), role: 'user', content: displayContent, timestamp: new Date() };
       setMessages((prev) => [...prev, userMsg]);
-      persist('user', trimmed);
+      persist('user', displayContent);
 
       // Placeholder for assistant response
       const asstId = uuid();
@@ -398,6 +402,82 @@ export function useAIChat(options?: UseAIChatOptions) {
     sessionIdRef.current = uuid();
   }, []);
 
+  const markClientSelected = useCallback(
+    (clientId: string) => {
+      // Update local state immediately
+      setMessages((prev) => {
+        const updated = [...prev];
+        for (let i = updated.length - 1; i >= 0; i--) {
+          if (updated[i].role === 'assistant' && updated[i].clientSelect?.length) {
+            updated[i] = { ...updated[i], selectedClientId: clientId };
+            break;
+          }
+        }
+        return updated;
+      });
+
+      // Persist to backend
+      const cid = chatIdRef.current;
+      if (cid) {
+        setTimeout(async () => {
+          try {
+            const chat = await fetchChat(cid);
+            if (!chat?.data?.messages) return;
+            const msgs = chat.data.messages;
+            for (let i = msgs.length - 1; i >= 0; i--) {
+              if (msgs[i].role === 'assistant' && msgs[i].clientSelect?.length) {
+                (msgs[i] as any).selectedClientId = clientId;
+                break;
+              }
+            }
+            await updateChatData(cid, { messages: msgs });
+          } catch (e) {
+            console.error('[useAIChat] markClientSelected persist failed:', e);
+          }
+        }, 3000);
+      }
+    },
+    [],
+  );
+
+  const markActionConfirmed = useCallback(
+    async (actionType: string) => {
+      if (!chatIdRef.current) return;
+      try {
+        const chat = await fetchChat(chatIdRef.current);
+        if (!chat?.data?.messages) return;
+
+        const msgs = chat.data.messages;
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          if (msgs[i].role === 'assistant' && msgs[i].action?.type === actionType) {
+            msgs[i].action!.confirmed = true;
+            break;
+          }
+        }
+
+        await updateChatData(chatIdRef.current, { messages: msgs });
+
+        // Update local state
+        setMessages((prev) => {
+          const updated = [...prev];
+          for (let i = updated.length - 1; i >= 0; i--) {
+            if (updated[i].role === 'assistant' && updated[i].action?.type === actionType) {
+              updated[i] = {
+                ...updated[i],
+                action: { ...updated[i].action!, confirmed: true },
+              };
+              break;
+            }
+          }
+          return updated;
+        });
+      } catch (e) {
+        console.error('[useAIChat] markActionConfirmed failed:', e);
+      }
+    },
+    [],
+  );
+
   return {
     chatId: activeChatId,
     messages,
@@ -409,5 +489,7 @@ export function useAIChat(options?: UseAIChatOptions) {
     sendMessage,
     stopStreaming,
     clearChat,
+    markClientSelected,
+    markActionConfirmed,
   };
 }

@@ -61,7 +61,9 @@ export interface StreamEvent {
 }
 
 export interface ActionPayload {
-  type: 'create_workout' | 'create_section' | 'create_program' | 'assign_workout';
+  type: 'create_workout' | 'create_section' | 'create_program' | 'assign_workout'
+    | 'assign_metric_to_client' | 'add_client_goal' | 'add_client_injury'
+    | 'draft_message' | 'update_client_profile' | 'create_checkin_template' | 'create_metric';
   payload: unknown;
   confirmed?: boolean;
 }

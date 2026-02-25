@@ -82,6 +82,7 @@
     "react-native-ios-utilities": "^5.2.0",
     "react-native-keyboard-controller": "^1.20.1",
     "react-native-linear-gradient": "^2.8.3",
+    "react-native-markdown-display": "^7.0.2",
     "react-native-mmkv": "^4.1.1",
     "react-native-nitro-modules": "^0.32.1",
     "react-native-pager-view": "^8.0.0",
