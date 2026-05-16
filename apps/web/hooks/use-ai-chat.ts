@@ -70,6 +70,12 @@ export function useAIChat(options?: UseAIChatOptions) {
   const streamingMessageRef = useRef<string>('');
   const chatIdRef = useRef<string | null>(options?.chatId ?? null);
   const titleGeneratedRef = useRef(false);
+
+  // Keep onAction in a ref so the SSE stream handler always calls the latest version,
+  // even if the options object is recreated between when sendMessage starts and when the
+  // action event arrives. This prevents stale closure issues for long-running SSE streams.
+  const onActionRef = useRef(options?.onAction);
+  useEffect(() => { onActionRef.current = options?.onAction; }, [options?.onAction]);
   const [activeChatId, setActiveChatId] = useState<string | null>(options?.chatId ?? null);
 
   const queryClient = useQueryClient();
@@ -181,7 +187,16 @@ export function useAIChat(options?: UseAIChatOptions) {
       streamingMessageRef.current = '';
 
       // Build conversation history (last 10 messages)
-      const conversationHistory: ConversationMessage[] = messages.slice(-10).map((m) => ({ role: m.role, content: m.content }));
+      // For assistant messages that had tool-call actions, include a summary
+      // of the action so the AI knows what it previously generated.
+      const conversationHistory: ConversationMessage[] = messages.slice(-10).map((m) => {
+        let content = m.content;
+        if (m.role === 'assistant' && m.action) {
+          const actionSummary = `[Used ${m.action.type} tool]`;
+          content = content ? `${content}\n${actionSummary}` : actionSummary;
+        }
+        return { role: m.role, content };
+      });
 
       abortControllerRef.current = new AbortController();
 
@@ -234,7 +249,8 @@ export function useAIChat(options?: UseAIChatOptions) {
                   finalAction = action;
                   setPendingAction(action);
                   setMessages((prev) => prev.map((m) => (m.id === asstId ? { ...m, action } : m)));
-                  options?.onAction?.(action);
+                  // Use ref to always call the latest onAction callback, avoiding stale closures
+                  onActionRef.current?.(action);
                 }
                 break;
 
@@ -264,14 +280,48 @@ export function useAIChat(options?: UseAIChatOptions) {
                 setError(event.data?.message || 'An error occurred');
                 break;
 
-              case 'done':
+              case 'done': {
                 setIsStreaming(false);
                 setCurrentToolCall(null);
+
+                // Fallback: if the AI output raw JSON instead of using a tool,
+                // try to detect and parse it as an action so it still works.
+                if (!finalAction && streamingMessageRef.current) {
+                  const raw = streamingMessageRef.current.trim();
+                  // Check for JSON that looks like an action payload (starts with { and contains "action" or has section/workout keys)
+                  const jsonMatch = raw.match(/\{[\s\S]*"(?:action|name|sections|exercises)"[\s\S]*\}/);
+                  if (jsonMatch) {
+                    try {
+                      const parsed = JSON.parse(jsonMatch[0]);
+                      // Check if it's a wrapped action like { action: "create_section", payload: {...} }
+                      if (parsed.action && parsed.payload) {
+                        const action: ActionPayload = { type: parsed.action, payload: parsed.payload };
+                        finalAction = action;
+                        setPendingAction(action);
+                        setMessages((prev) => prev.map((m) => (m.id === asstId ? { ...m, action, content: '' } : m)));
+                        onActionRef.current?.(action);
+                      }
+                      // Check if it looks like a direct section payload (has name + exercises or type)
+                      else if (parsed.name && (parsed.exercises || parsed.sections)) {
+                        const actionType = parsed.sections ? 'create_workout' : 'create_section';
+                        const action: ActionPayload = { type: actionType, payload: parsed };
+                        finalAction = action;
+                        setPendingAction(action);
+                        setMessages((prev) => prev.map((m) => (m.id === asstId ? { ...m, action, content: '' } : m)));
+                        onActionRef.current?.(action);
+                      }
+                    } catch {
+                      // Not valid JSON, ignore
+                    }
+                  }
+                }
+
                 // Persist assistant message (including tool calls, actions, charts & client selection)
-                if (streamingMessageRef.current) {
+                if (streamingMessageRef.current || finalAction) {
                   persist('assistant', streamingMessageRef.current, finalToolCalls, finalAction, finalCharts, finalClientSelect);
                 }
                 break;
+              }
             }
           },
           abortControllerRef.current.signal,

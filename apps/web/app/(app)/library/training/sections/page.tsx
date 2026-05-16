@@ -42,6 +42,9 @@ import {
   Trash2,
   Copy,
 } from 'lucide-react';
+import { SECTION_TYPES } from '@athli/shared-types';
+
+import Lottie from 'lottie-react';
 
 import type { Section } from '@/api/coach/coach-section-service';
 import { starSections, deleteSections, duplicateSection, createSection, getSectionById, updateSection } from '@/api/coach/coach-section-service';
@@ -76,11 +79,16 @@ const SectionsPage = () => {
   const router = useRouter();
   const { sections, isLoadingSections, setSections, refreshSections } = useTrainingData();
   const { hasAccess: hasCustomSectionsAccess } = useFeatureAccess('custom_sections');
+  const { hasAccess: hasAiWorkoutBuilderAccess } = useFeatureAccess('ai_workout_builder');
   const [selectedSections, setSelectedSections] = useState<Set<string>>(new Set());
   const [starredSections, setStarredSections] = useState<Set<string>>(new Set());
   const [filteredCount, setFilteredCount] = useState<number>(0);
   const [isCreateSectionOpen, setIsCreateSectionOpen] = useState<boolean>(false);
+  const [isAiSectionBuilderOpen, setIsAiSectionBuilderOpen] = useState<boolean>(false);
+  const [isSelectTypeOpen, setIsSelectTypeOpen] = useState(false);
+  const [aiSectionType, setAiSectionType] = useState<SectionType>('regular');
   const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState<boolean>(false);
+  const [aiAnimationData, setAiAnimationData] = useState<object | null>(null);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
   const [sectionToDelete, setSectionToDelete] = useState<string | null>(null);
   const [isSectionBuilderOpen, setIsSectionBuilderOpen] = useState<boolean>(false);
@@ -101,6 +109,22 @@ const SectionsPage = () => {
     const starred = new Set(sections.filter(s => s.isFavourite).map(s => s.id));
     setStarredSections(starred);
   }, [sections]);
+
+  // Load AI animation
+  useEffect(() => {
+    fetch('/animations/ai-sphere-animation.json')
+      .then((res) => res.json())
+      .then(setAiAnimationData)
+      .catch(() => {});
+  }, []);
+
+  const handleOpenAiSection = () => {
+    if (!hasAiWorkoutBuilderAccess) {
+      setIsUpgradeDialogOpen(true);
+      return;
+    }
+    setIsSelectTypeOpen(true);
+  };
 
   const handleToggleSection = (sectionId: string) => {
     setSelectedSections((prev) => {
@@ -556,6 +580,22 @@ const SectionsPage = () => {
             </div>
             <div>
               <ButtonGroup>
+                <Button
+                  variant="ghost"
+                  onClick={handleOpenAiSection}
+                  className="gap-0 border border-primary pl-2"
+                  aria-label="Athli AI"
+                >
+                  {aiAnimationData && (
+                    <Lottie
+                      className="size-10 -ml-2 -mr-1"
+                      animationData={aiAnimationData}
+                      loop
+                      autoplay
+                    />
+                  )}
+                  <span>{t('common.athliAI')}</span>
+                </Button>
                 <Button onClick={() => {
                   if (!hasCustomSectionsAccess) {
                     setIsUpgradeDialogOpen(true);
@@ -761,6 +801,57 @@ const SectionsPage = () => {
           }}
         />
       )}
+
+      {/* AI Section Builder for creating new sections with AI */}
+      <SectionBuilder
+        open={isAiSectionBuilderOpen}
+        onOpenChange={setIsAiSectionBuilderOpen}
+        initialAiMode={true}
+        sectionType={aiSectionType}
+        meta={null}
+        onSaveSuccess={async (payload: WorkoutProgramPayload) => {
+          try {
+            await createSection({ ...payload, sectionType: aiSectionType });
+            await refreshSections();
+            toast.success(t('library.sections.toast.savedSuccessfully', { name: payload.name || 'Section', type: '' }));
+            setIsAiSectionBuilderOpen(false);
+          } catch (error) {
+            console.error('Failed to create section:', error);
+            toast.error(t('general.error'));
+          }
+        }}
+      />
+
+      {/* Section Type Selection Dialog */}
+      <Dialog open={isSelectTypeOpen} onOpenChange={setIsSelectTypeOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {t('library.sections.selectSectionType')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('library.sections.selectSectionTypeDescription')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-2">
+            {SECTION_TYPES.map((st) => (
+              <button
+                key={st.value}
+                type="button"
+                onClick={() => {
+                  setAiSectionType(st.value as SectionType);
+                  setIsSelectTypeOpen(false);
+                  setIsAiSectionBuilderOpen(true);
+                }}
+                className="flex flex-col items-start gap-1 rounded-lg border p-4 text-left transition-colors hover:bg-accent hover:border-primary"
+              >
+                <span className="text-sm font-medium">{st.label}</span>
+                <span className="text-xs text-muted-foreground">{st.description}</span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Upgrade Dialog */}
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>

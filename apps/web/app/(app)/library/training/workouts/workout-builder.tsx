@@ -46,6 +46,7 @@ import type {
 import type { SetData } from '@/components/training/builder/exercise-card';
 import { ExerciseCard } from '@/components/training/builder/exercise-card';
 import { ExerciseSelectionPanel } from '@/components/training/builder/exercise-selection-panel';
+import { AIBuilderChat } from '@/components/training/builder/ai-builder-chat';
 import { CoachSectionsSidebar } from '@/components/training/builder/coach-sections-sidebar';
 import { InlineSectionCreator } from '@/components/training/builder/inline-section-creator';
 import { getSectionById, createSection, type Section } from '@/api/coach/coach-section-service';
@@ -119,7 +120,6 @@ import {
   handleTopLevelSlotDrop,
 } from '@/components/training/shared/utils/drop-handlers';
 import {
-  handleExerciseClick as scrollToExercise,
   handleExerciseClickById,
 } from '@/components/training/shared/utils/exercise-scroll';
 
@@ -631,6 +631,7 @@ const SectionItem = memo(function SectionItem({
                                   isLinkedToNext={isLinkedToNext}
                                   onVideoClick={onVideoClick}
                                   sectionType={section.type}
+                                  isInSection
                                   validationErrors={validationErrors[exercise.instanceId]}
                                   hasSupersetError={validationErrors[exercise.instanceId]?.supersetMismatch}
                                   onClearValidationField={(setIndex, field) =>
@@ -939,7 +940,18 @@ export const WorkoutBuilder = ({
   const { hasAccess: hasAiWorkoutBuilderAccess } = useFeatureAccess('ai_workout_builder');
   
   // Get exercise lookup function from cached exercises
-  const { findExerciseById } = useExerciseLookup();
+  const { findExerciseById, allExercises } = useExerciseLookup();
+
+  // Fuzzy name-based exercise lookup for AI-generated exercises whose ID doesn't match the cache
+  const findExerciseByName = useCallback((name: string): Exercise | undefined => {
+    if (!name || !allExercises?.length) return undefined;
+    const lower = name.toLowerCase();
+    const exact = allExercises.find((e: Exercise) => e.name.toLowerCase() === lower);
+    if (exact) return exact;
+    const startsWith = allExercises.find((e: Exercise) => e.name.toLowerCase().startsWith(lower));
+    if (startsWith) return startsWith;
+    return allExercises.find((e: Exercise) => e.name.toLowerCase().includes(lower) || lower.includes(e.name.toLowerCase()));
+  }, [allExercises]);
   const queryClient = useQueryClient();
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -1345,16 +1357,25 @@ export const WorkoutBuilder = ({
   });
 
   const processGeneratedWorkout = (aiGenerated: GeneratedWorkout) => {
+    console.log('[processGeneratedWorkout] Starting with:', aiGenerated.title, 'sections:', aiGenerated.sections.length);
+
+    // Update builder metadata from AI-generated data
+    if (aiGenerated.title) setWorkoutTitle(aiGenerated.title);
+    if (aiGenerated.description) setDescription(aiGenerated.description);
+    if (aiGenerated.type) setWorkoutType(aiGenerated.type);
+    if (aiGenerated.difficulty) setDifficulty(aiGenerated.difficulty);
+
     // Convert AI generated sections to items format
     const sectionsWithStructure: WorkoutSchemaItem[] = aiGenerated.sections.map((section: any) => {
       const sectionData: WorkoutSection = {
         id: section.id as string,
+        name: section.name || '',
         type: section.type as 'regular' | 'amrap' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary',
         exercises: [] as ExerciseWithSuperset[],
-        ...(section.type === 'amrap' && { roundDurationSec: section.roundDurationSec }),
-        ...((section.type === 'tabata' || section.type === 'hiit') && { workSec: section.workSec, restSec: section.restSec, rounds: section.rounds }),
-        ...(section.type === 'emom' && { intervalSec: section.intervalSec, durationMin: section.durationMin }),
-        ...(section.type === 'circuits' && { rounds: section.rounds }),
+        ...(section.type === 'amrap' && { roundDurationSec: section.roundDurationSec || 600 }),
+        ...((section.type === 'tabata' || section.type === 'hiit') && { workSec: section.workSec || 20, restSec: section.restSec || 10, rounds: section.rounds || 8 }),
+        ...(section.type === 'emom' && { intervalSec: section.intervalSec || 60, durationMin: section.durationMin || 10 }),
+        ...(section.type === 'circuits' && { rounds: section.rounds || 3 }),
         ...(section.type === 'auxiliary' && { category: section.category }),
       };
       return {
@@ -1373,13 +1394,13 @@ export const WorkoutBuilder = ({
     }> = [];
 
     aiGenerated.sections.forEach((section: any) => {
-      if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom' || section.type === 'circuits') {
+      if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'tabata' || section.type === 'hiit' || section.type === 'emom' || section.type === 'circuits' || section.type === 'amrap') {
         section.exercises?.forEach((group: any) => {
           if (group.isSuperset && group.exercises) {
             const supersetGroupId = `superset_${section.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
             group.exercises.forEach((ex: any) => {
-              const foundExercise = findExerciseById(ex.id);
+              const foundExercise = findExerciseById(ex.id) || findExerciseByName(ex.name);
               const exercise = foundExercise || {
                 exerciseId: ex.id,
                 name: ex.name,
@@ -1413,15 +1434,21 @@ export const WorkoutBuilder = ({
                 sectionId: section.id,
                 exercise: {
                   ...exercise,
+                  exerciseType: ex.exerciseType || exercise.exerciseType,
                   instanceId: ex.id,
                   supersetGroupId,
                   sets,
+                  ...(ex.eachSide != null && { eachSide: ex.eachSide }),
+                  ...(ex.tempo && { tempo: ex.tempo }),
+                  ...(ex.notes && { notes: ex.notes }),
+                  ...(ex.column1Label && { column1Label: ex.column1Label }),
+                  ...(ex.column2Label && { column2Label: ex.column2Label }),
                 },
               });
             });
           } else if (group.exercises && group.exercises.length > 0) {
             const ex = group.exercises[0];
-            const foundExercise = findExerciseById(ex.id);
+            const foundExercise = findExerciseById(ex.id) || findExerciseByName(ex.name);
             const exercise = foundExercise || {
               exerciseId: ex.id,
               name: ex.name,
@@ -1455,16 +1482,22 @@ export const WorkoutBuilder = ({
               sectionId: section.id,
               exercise: {
                 ...exercise,
+                exerciseType: ex.exerciseType || exercise.exerciseType,
                 instanceId: ex.id,
                 supersetGroupId: null,
                 sets,
+                ...(ex.eachSide != null && { eachSide: ex.eachSide }),
+                ...(ex.tempo && { tempo: ex.tempo }),
+                ...(ex.notes && { notes: ex.notes }),
+                ...(ex.column1Label && { column1Label: ex.column1Label }),
+                ...(ex.column2Label && { column2Label: ex.column2Label }),
               },
             });
           }
         });
       } else {
         section.exercises?.forEach((ex: any) => {
-          const foundExercise = findExerciseById(ex.id);
+          const foundExercise = findExerciseById(ex.id) || findExerciseByName(ex.name);
           const exercise = foundExercise || {
             exerciseId: ex.id,
             name: ex.name,
@@ -1498,18 +1531,32 @@ export const WorkoutBuilder = ({
             sectionId: section.id,
             exercise: {
               ...exercise,
+              exerciseType: ex.exerciseType || exercise.exerciseType,
               instanceId: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
               supersetGroupId: null,
               sets,
+              ...(ex.eachSide != null && { eachSide: ex.eachSide }),
+              ...(ex.tempo && { tempo: ex.tempo }),
+              ...(ex.notes && { notes: ex.notes }),
+              ...(ex.column1Label && { column1Label: ex.column1Label }),
+              ...(ex.column2Label && { column2Label: ex.column2Label }),
             },
           });
         });
       }
     });
 
+    console.log('[processGeneratedWorkout] Collected exercises:', exercisesToAdd.length,
+      exercisesToAdd.map(e => ({ section: e.sectionId, name: e.exercise.name, id: e.exercise.exerciseId })));
+
     // Mark as dirty if there are items or exercises to add
     if (sectionsWithStructure.length > 0 || exercisesToAdd.length > 0) {
       markDirty();
+    }
+
+    if (exercisesToAdd.length === 0) {
+      console.warn('[processGeneratedWorkout] No exercises to add! Check the conversion output.');
+      return;
     }
 
     // Calculate delay per exercise
@@ -1522,21 +1569,29 @@ export const WorkoutBuilder = ({
     // Add exercises gradually
     exercisesToAdd.forEach((item, index) => {
       setTimeout(() => {
-        setWorkoutSchema((prev) => ({
-          ...prev,
-          items: prev.items.map((schemaItem) => {
-            if (schemaItem.itemType === 'section' && schemaItem.section.id === item.sectionId) {
-              return {
-                ...schemaItem,
-                section: {
-                  ...schemaItem.section,
-                  exercises: [...(schemaItem.section.exercises || []), item.exercise],
-                },
-              };
-            }
-            return schemaItem;
-          }),
-        }));
+        setWorkoutSchema((prev) => {
+          const sectionExists = prev.items.some(
+            (si) => si.itemType === 'section' && si.section.id === item.sectionId
+          );
+          if (!sectionExists) {
+            console.warn('[processGeneratedWorkout] Section not found for exercise:', item.sectionId, item.exercise.name);
+          }
+          return {
+            ...prev,
+            items: prev.items.map((schemaItem) => {
+              if (schemaItem.itemType === 'section' && schemaItem.section.id === item.sectionId) {
+                return {
+                  ...schemaItem,
+                  section: {
+                    ...schemaItem.section,
+                    exercises: [...(schemaItem.section.exercises || []), item.exercise],
+                  },
+                };
+              }
+              return schemaItem;
+            }),
+          };
+        });
 
         if (index === 0) {
           markDirty();
@@ -1653,8 +1708,70 @@ export const WorkoutBuilder = ({
     }
   };
 
-  const handleUseAiExample = () => {
-    const examplePrompt = `Create a full-body strength and conditioning workout for intermediate level. Include:
+  // Provide current workout state to AI so it knows what was manually edited
+  const getCurrentPayload = useCallback(() => ({
+    name: workoutTitle,
+    type: workoutType,
+    difficulty,
+    description,
+    items: workoutSchema.items.map((item) => {
+      if (item.itemType === 'section') {
+        const sec = item.section;
+        return {
+          itemType: 'section',
+          name: sec.name || '',
+          type: sec.type,
+          ...(sec.roundDurationSec != null && { roundDurationSec: sec.roundDurationSec }),
+          ...(sec.workSec != null && { workSec: sec.workSec }),
+          ...(sec.restSec != null && { restSec: sec.restSec }),
+          ...(sec.rounds != null && { rounds: sec.rounds }),
+          ...(sec.intervalSec != null && { intervalSec: sec.intervalSec }),
+          ...(sec.durationMin != null && { durationMin: sec.durationMin }),
+          ...(sec.notes && { notes: sec.notes }),
+          exercises: (sec.exercises || []).map((ex) => ({
+            name: ex.name || '',
+            exerciseType: ex.exerciseType || 'weight_reps',
+            column1Label: ex.column1Label || 'Reps',
+            column2Label: ex.column2Label || 'kg',
+            eachSide: ex.eachSide || false,
+            tempo: ex.tempo || '',
+            notes: ex.notes || '',
+            sets: ex.sets?.map((s) => ({
+              setNumber: s.setNumber,
+              type: s.type || 'normal',
+              reps: s.reps || '',
+              weight: s.weight || '',
+              rest: s.rest || '',
+              duration: s.duration || '',
+              distance: s.distance || '',
+            })) || [],
+          })),
+        };
+      }
+      const ex = item.exercise;
+      return {
+        itemType: 'exercise',
+        name: ex.name || '',
+        exerciseType: ex.exerciseType || 'weight_reps',
+        column1Label: ex.column1Label || 'Reps',
+        column2Label: ex.column2Label || 'kg',
+        eachSide: ex.eachSide || false,
+        tempo: ex.tempo || '',
+        notes: ex.notes || '',
+        sets: ex.sets?.map((s) => ({
+          setNumber: s.setNumber,
+          type: s.type || 'normal',
+          reps: s.reps || '',
+          weight: s.weight || '',
+          rest: s.rest || '',
+          duration: s.duration || '',
+          distance: s.distance || '',
+        })) || [],
+      };
+    }),
+  }), [workoutTitle, workoutType, difficulty, description, workoutSchema]);
+
+  const examplePrompt = `Create a full-body strength and conditioning workout for intermediate level. Include:
 
 - 3-4 compound exercises (squats, deadlifts, bench press variations)
 - 2-3 accessory movements for arms and core
@@ -1664,19 +1781,14 @@ export const WorkoutBuilder = ({
 - Total workout duration: 45-60 minutes
 
 Focus on proper form and progressive overload.`;
+
+  const handleUseAiExample = () => {
     setAiPrompt(examplePrompt);
   };
 
   const handleExerciseClick = (exercise: Exercise) => {
-    scrollToExercise(
-      exercise,
-      exerciseRefs,
-      contentScrollRef,
-      (ex) => {
-        setSelectedExercise(ex);
-        setIsVideoModalOpen(true);
-      }
-    );
+    setSelectedExercise(exercise);
+    setIsVideoModalOpen(true);
   };
 
   // Extract sections from items for handleExerciseClickById
@@ -1767,7 +1879,80 @@ Focus on proper form and progressive overload.`;
       setValidationErrors(exerciseErrors);
       setSectionValidationErrors(sectionErrors);
 
-      toast.error(t('toasts.fillAllFields'));
+      // Build descriptive error messages
+      const errorMessages: string[] = [];
+
+      // Section config errors
+      for (const sectionId of Object.keys(sectionErrors)) {
+        const schemaItem = workoutSchema.items.find(
+          (item) => item.itemType === 'section' && item.section.id === sectionId
+        );
+        if (schemaItem && schemaItem.itemType === 'section') {
+          const sName = schemaItem.section.name || schemaItem.section.type;
+          const errs = sectionErrors[sectionId];
+          if (errs.missingConfig) {
+            if (schemaItem.section.type === 'amrap') {
+              errorMessages.push(`${sName}: ${t('toasts.validationAmrapDuration')}`);
+            } else if (schemaItem.section.type === 'circuits') {
+              errorMessages.push(`${sName}: ${t('toasts.validationCircuitsRounds')}`);
+            } else if (schemaItem.section.type === 'auxiliary') {
+              errorMessages.push(`${sName}: ${t('toasts.validationAuxiliaryCategory')}`);
+            } else {
+              errorMessages.push(`${sName}: ${t('toasts.validationMissingConfig')}`);
+            }
+          }
+          if (errs.emptyExercises) {
+            errorMessages.push(`${sName}: ${t('toasts.validationNoExercises')}`);
+          }
+        }
+      }
+
+      // Exercise field errors
+      for (const instanceId of Object.keys(exerciseErrors)) {
+        let exerciseName = '';
+        for (const item of workoutSchema.items) {
+          if (item.itemType === 'exercise' && item.exercise.instanceId === instanceId) {
+            exerciseName = item.exercise.name || '';
+            break;
+          }
+          if (item.itemType === 'section') {
+            const found = item.section.exercises?.find((ex) => ex.instanceId === instanceId);
+            if (found) {
+              exerciseName = found.name || '';
+              break;
+            }
+          }
+        }
+
+        const fieldErrors = exerciseErrors[instanceId];
+        const missingFields = new Set<string>();
+        for (const setIndex of Object.keys(fieldErrors)) {
+          const setErrs = fieldErrors[parseInt(setIndex)];
+          if (setErrs) {
+            if (setErrs.reps) missingFields.add(t('toasts.fieldReps'));
+            if (setErrs.weight) missingFields.add(t('toasts.fieldWeight'));
+            if (setErrs.distance) missingFields.add(t('toasts.fieldDistance'));
+            if (setErrs.duration) missingFields.add(t('toasts.fieldDuration'));
+            if ((setErrs as any).tempo) missingFields.add(t('toasts.fieldTempo'));
+          }
+        }
+
+        if (missingFields.size > 0) {
+          const name = exerciseName || t('toasts.unnamedExercise');
+          errorMessages.push(`${name}: ${t('toasts.validationMissing')} ${Array.from(missingFields).join(', ')}`);
+        }
+      }
+
+      // Show descriptive errors
+      if (errorMessages.length > 0) {
+        errorMessages.slice(0, 4).forEach((msg) => toast.error(msg));
+        if (errorMessages.length > 4) {
+          toast.error(`+${errorMessages.length - 4} ${t('toasts.validationMoreIssues')}`);
+        }
+      } else {
+        toast.error(t('toasts.fillAllFields'));
+      }
+
       if (onSaveError) onSaveError();
       return;
     }
@@ -2880,240 +3065,70 @@ Focus on proper form and progressive overload.`;
                   </div>
 
                   <div className="flex-1 overflow-hidden flex flex-col pt-4">
-                    {activeBuilder === 'manual' ? (
-                      <div className="flex flex-col px-4 h-full min-h-0 w-full">
-                        <Tabs
-                          value={builderMode}
-                          onValueChange={(value) => {
-                            if (value) setBuilderMode(value as 'exercise' | 'section');
-                          }}
-                          className="mb-4"
-                        >
-                          <TabsList className="w-full">
-                            <TabsTrigger
-                              value="exercise"
-                              className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                            >
-                              Exercises
-                            </TabsTrigger>
-                            <TabsTrigger
-                              value="section"
-                              className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                            >
-                              Sections
-                            </TabsTrigger>
-                          </TabsList>
-                        </Tabs>
-
-                        {builderMode === 'exercise' && (
-                          <div className="flex-1 min-h-0">
-                            <ExerciseSelectionPanel
-                              onExerciseClick={handleExerciseClick}
-                              onDragStart={handleDragStart}
-                              onDragEnd={handleDragEnd}
-                              activeExerciseIds={activeExerciseIds}
-                            />
-                          </div>
-                        )}
-                        {builderMode === 'section' && (
-                          <div className="flex-1 min-h-0">
-                            <CoachSectionsSidebar
-                              onDragStart={handleSectionSourceDragStart}
-                              onDragEnd={() => {
-                                handleDragEnd();
-                                setDraggedSection(null);
-                              }}
-                              onNavigateRequest={handleNavigateRequest}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div
-                        className="flex flex-col px-4 h-full min-h-0 w-full relative"
-                        onDragEnter={(e) => {
-                          if (selectedFile) return;
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setIsDraggingAiFile(true);
+                    <div className={cn(
+                      'flex flex-col px-4 h-full min-h-0 w-full',
+                      activeBuilder !== 'manual' && 'hidden'
+                    )}>
+                      <Tabs
+                        value={builderMode}
+                        onValueChange={(value) => {
+                          if (value) setBuilderMode(value as 'exercise' | 'section');
                         }}
-                        onDragLeave={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                            setIsDraggingAiFile(false);
-                          }
-                        }}
-                        onDragOver={(e) => {
-                          if (selectedFile) return;
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                        onDrop={(e) => {
-                          if (selectedFile) return;
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setIsDraggingAiFile(false);
-                          const files = Array.from(e.dataTransfer.files);
-                          const validFile = files.find((file) => file.type === 'application/pdf');
-                          if (validFile) {
-                            setSelectedFile(validFile);
-                          }
-                        }}
+                        className="mb-4"
                       >
-                        {!selectedFile && isDraggingAiFile && (
-                          <div
-                            className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm border-2 border-dashed border-primary flex items-center justify-center pointer-events-auto rounded-lg"
-                            onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingAiFile(true); }}
-                            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setIsDraggingAiFile(false);
-                              const files = Array.from(e.dataTransfer.files);
-                              const validFile = files.find((file) => file.type === 'application/pdf');
-                              if (validFile) {
-                                setSelectedFile(validFile);
-                              }
-                            }}
+                        <TabsList className="w-full">
+                          <TabsTrigger
+                            value="exercise"
+                            className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
                           >
-                            <div className="flex flex-col items-center gap-4 text-center">
-                              <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-background/50 backdrop-blur-sm shadow-xl p-3 border border-white/20">
-                                <Image
-                                  src="/icons/pdf.png"
-                                  alt="PDF"
-                                  width={40}
-                                  height={40}
-                                  className="object-contain"
-                                />
-                              </div>
-                              <div>
-                                <p className="text-lg font-semibold">{t('library.dropPdfHere')}</p>
-                                <p className="text-sm text-muted-foreground">{t('library.pdfFilesOnly')}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        <div className="flex-col items-center gap-4 flex-shrink-0 pb-4 flex relative z-0 w-full">
-                          <div className="relative flex items-center justify-center w-36 h-36 -mb-4">
-                            {aiAnimationData && (
-                              <Lottie
-                                className="w-full h-full"
-                                animationData={aiAnimationData}
-                                loop
-                                autoplay
-                              />
-                            )}
-                          </div>
-                          <h2 className="text-xl font-semibold text-center">{t('library.athliAiBuilder')}</h2>
-                          <p className="text-sm text-foreground text-center max-w-md">
-                            {t('library.dragDropPdf')}
-                          </p>
+                            Exercises
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="section"
+                            className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                          >
+                            Sections
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+
+                      {builderMode === 'exercise' && (
+                        <div className="flex-1 min-h-0">
+                          <ExerciseSelectionPanel
+                            onExerciseClick={handleExerciseClick}
+                            onDragStart={handleDragStart}
+                            onDragEnd={handleDragEnd}
+                            activeExerciseIds={activeExerciseIds}
+                          />
                         </div>
-                        <div className="flex-1 overflow-y-auto flex flex-col w-full">
-                          <div className="flex-1 flex flex-col min-h-0 w-full">
-                            <div className="flex flex-col gap-2 flex-1 min-h-0 w-full">
-                              <div className="flex items-center gap-2 mb-1">
-                                <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground">
-                                  <Sparkles className="h-4 w-4" />
-                                </div>
-                                <h3 className="text-sm font-semibold">
-                                  {t('library.letsBuildWorkout')}<RequiredAsterisk />
-                                </h3>
-                              </div>
-                              <div className="relative flex-1 min-h-0 flex flex-col">
-                                <Textarea
-                                  value={aiPrompt}
-                                  onChange={(e) => setAiPrompt(e.target.value)}
-                                  className="resize-none text-sm flex-1 min-h-[200px] pb-12 bg-muted/30"
-                                  placeholder={t('library.workoutPromptPlaceholder')}
-                                />
-                                <input
-                                  ref={fileInputRef}
-                                  type="file"
-                                  accept=".pdf"
-                                  onChange={handleAiFileChange}
-                                  className="hidden"
-                                  aria-label={t('library.selectPdfFile')}
-                                />
-                                {!aiPrompt.trim() && (
-                                  <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={handleUseAiExample}
-                                      className="h-7 px-3 text-xs"
-                                      aria-label={t('library.useExample')}
-                                    >
-                                      {t('library.useExample')}
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      onClick={() => fileInputRef.current?.click()}
-                                      disabled={!!selectedFile}
-                                      className="h-7 px-3 text-xs gap-1.5"
-                                      aria-label={t('library.selectPdfFile')}
-                                    >
-                                      <FileText className="h-3.5 w-3.5" />
-                                      {t('messages.pdf')}
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                              {selectedFile && (
-                                <div className="flex items-center gap-2 p-2 rounded-lg border bg-background mt-2">
-                                  <div className="flex items-center justify-center h-8 w-8 rounded-md bg-transparent flex-shrink-0">
-                                    <Image
-                                      src="/icons/pdf.png"
-                                      alt="PDF"
-                                      width={24}
-                                      height={24}
-                                      className="object-contain"
-                                    />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-[11px] font-medium text-foreground truncate">
-                                      {selectedFile.name}
-                                    </p>
-                                    <p className="text-[10px] text-muted-foreground">{t('messages.pdf')}</p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={handleRemoveAiFile}
-                                    className="flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all p-1 rounded-md"
-                                    aria-label={t('library.removePdfFile')}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              )}
-                              <div className="pt-2 mt-auto pb-1">
-                                <Button
-                                  onClick={handleAiGenerate}
-                                  disabled={isGeneratingAi || !aiPrompt.trim()}
-                                  className="w-full gap-2 h-11 font-bold shadow-lg"
-                                >
-                                  {isGeneratingAi ? (
-                                    <>
-                                      <Loader2 className="h-5 w-5 animate-spin" />
-                                      {t('library.generate')}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Sparkles className="h-5 w-5" />
-                                      {t('library.generate')}
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
+                      )}
+                      {builderMode === 'section' && (
+                        <div className="flex-1 min-h-0">
+                          <CoachSectionsSidebar
+                            onDragStart={handleSectionSourceDragStart}
+                            onDragEnd={() => {
+                              handleDragEnd();
+                              setDraggedSection(null);
+                            }}
+                            onNavigateRequest={handleNavigateRequest}
+                          />
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                    <div className={cn(
+                      'flex-1 min-h-0',
+                      activeBuilder !== 'ai' && 'hidden'
+                    )}>
+                      <AIBuilderChat
+                        builderType="workout"
+                        onWorkoutGenerated={(workout) => {
+                          processGeneratedWorkout(workout);
+                        }}
+                        onSwitchToManual={() => setActiveBuilder("manual")}
+                        examplePrompt={examplePrompt}
+                        getCurrentPayload={getCurrentPayload}
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="w-[60%] flex flex-col h-full min-h-0">

@@ -535,6 +535,7 @@ type ExerciseCardProps = {
   isLinkedToPrev?: boolean;
   isLinkedToNext?: boolean;
   sectionType?: 'regular' | 'amrap' | 'timed' | 'tabata' | 'hiit' | 'emom' | 'circuits' | 'auxiliary';
+  isInSection?: boolean;
   validationErrors?: Record<number, SetFieldValidation>;
   onClearValidationField?: (setIndex: number, field: keyof SetFieldValidation) => void;
   hasSupersetError?: boolean;
@@ -561,6 +562,7 @@ export const ExerciseCard = memo(function ExerciseCard({
   isLinkedToPrev = false,
   isLinkedToNext = false,
   sectionType = 'regular',
+  isInSection = false,
   validationErrors,
   onClearValidationField,
   hasSupersetError = false,
@@ -579,7 +581,7 @@ export const ExerciseCard = memo(function ExerciseCard({
   );
   const containerRef = useRef<HTMLDivElement>(null);
   const isEmpty = !exercise.name || exercise.name === '';
-  const isSingleSetOnly = sectionType === 'amrap' || sectionType === 'timed' || sectionType === 'tabata' || sectionType === 'hiit' || sectionType === 'emom' || sectionType === 'circuits';
+  const isSingleSetOnly = isInSection;
 
   // Helper to create a default set with category-aware values
   const createDefaultSetWithCategoryValues = (setNumber: number, exerciseType: string, category?: string): SetData => {
@@ -747,7 +749,8 @@ export const ExerciseCard = memo(function ExerciseCard({
   }, [allCachedExercises]);
 
   // Get rawThumbnailUrl from exercise prop, or look it up from cache if missing
-  // This handles the case where a workout is loaded before the exercise cache is ready
+  // This handles the case where a workout is loaded before the exercise cache is ready,
+  // or when AI-generated exercise IDs don't match the cache
   const exerciseRawThumbnailUrl = useMemo(() => {
     // First try the exercise prop
     const propUrl = (exercise as any).rawThumbnailUrl;
@@ -755,8 +758,18 @@ export const ExerciseCard = memo(function ExerciseCard({
 
     // If not present, look up from cached exercises using exerciseId
     const cachedExercise = findExerciseById(exercise.exerciseId);
-    return cachedExercise?.rawThumbnailUrl || '';
-  }, [(exercise as any).rawThumbnailUrl, exercise.exerciseId, findExerciseById]);
+    if (cachedExercise?.rawThumbnailUrl) return cachedExercise.rawThumbnailUrl;
+
+    // Last resort: look up by name (handles AI-generated exercises whose ID doesn't match cache)
+    if (exercise.name && allCachedExercises.length > 0) {
+      const lower = exercise.name.toLowerCase();
+      const byName = allCachedExercises.find(e => e.name.toLowerCase() === lower)
+        || allCachedExercises.find(e => e.name.toLowerCase().includes(lower) || lower.includes(e.name.toLowerCase()));
+      if (byName?.rawThumbnailUrl) return byName.rawThumbnailUrl;
+    }
+
+    return '';
+  }, [(exercise as any).rawThumbnailUrl, exercise.exerciseId, exercise.name, findExerciseById, allCachedExercises]);
 
   // Single thumbnail for the main exercise (with automatic fetch and cache subscription)
   const { thumbnailUrl: mainExerciseThumbnailUrl, isLoading: isMainThumbnailLoading } = useSingleThumbnail(

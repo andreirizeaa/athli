@@ -1,7 +1,7 @@
 import { apiFetch } from '@/lib/api-client';
-import type { CheckInReview, CheckIn, ReorderQuestionsData, AddCheckInData, EditCheckInDetailsData } from '@athli/shared-types';
+import type { CheckInReview, CheckIn, ReorderQuestionsData, AddCheckInData, EditCheckInDetailsData, AddQuestionData, Question } from '@athli/shared-types';
 
-export type { CheckInReview, CheckIn, ReorderQuestionsData, AddCheckInData, EditCheckInDetailsData };
+export type { CheckInReview, CheckIn, ReorderQuestionsData, AddCheckInData, EditCheckInDetailsData, AddQuestionData, Question };
 
 /**
  * Service method to get all check-ins awaiting review
@@ -83,4 +83,42 @@ export const reorderQuestions = async (data: ReorderQuestionsData): Promise<void
       questions: questions,
     } as any,
   });
+};
+
+/** Generate a v4 UUID. Uses crypto.randomUUID when available. */
+function uuid(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+/**
+ * Add a question to a check-in.
+ * Fetches the current check-in, appends the new question, and patches the array.
+ */
+export const addQuestion = async (data: AddQuestionData): Promise<Question> => {
+  const { formId, ...questionData } = data;
+
+  // Get current check-in to get existing questions
+  const response = await apiFetch<{ data: { checkIn: CheckIn } }>(`/coach/forms/check-ins/${formId}`);
+  const currentQuestions = response.data.checkIn.questions || [];
+
+  const newQuestion: Question = {
+    ...questionData,
+    id: uuid(),
+  };
+
+  // Update check-in with new questions array
+  await apiFetch(`/coach/forms/check-ins/${formId}`, {
+    method: 'PATCH',
+    body: {
+      questions: [...currentQuestions, newQuestion],
+    } as any,
+  });
+
+  return newQuestion;
 };
